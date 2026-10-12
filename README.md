@@ -178,7 +178,9 @@ at the "Free" level go through PowerShell.
   servers, behind an **approval gate**: nothing that changes something happens without your
   go-ahead. LinkedIn connects a profile and, through a second LinkedIn app, a company Page;
   Palmier Pro, a video editor for Apple silicon Macs, lets agents edit on its timeline while it
-  is open on the instance's Mac.
+  is open on the instance's Mac. Roblox Studio (macOS, Windows) and Blender (macOS, Windows,
+  Linux) let agents read and build a place or a 3D scene open on the instance's machine; running
+  code, editing and generating always ask for your approval.
 - **Scheduled tasks**: an instruction and a rhythm (every day, Monday to Friday, a day of the week
   or of the month), run with your tools, even with the window closed, by the agent you choose.
 - **Always-on agents**: scheduled missions, replies to incoming mail and messaging apps, with

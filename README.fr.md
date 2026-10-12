@@ -189,7 +189,10 @@ toujours actif au palier « Libre » passent par PowerShell.
   serveurs MCP, derrière une **barrière d'approbation** : rien qui modifie quelque chose ne se
   fait sans votre accord. LinkedIn branche un profil et, par une seconde application LinkedIn,
   une Page d'entreprise ; Palmier Pro, monteur vidéo pour Mac à puce Apple, laisse les agents
-  monter sur sa timeline tant qu'il est ouvert sur le Mac de l'instance.
+  monter sur sa timeline tant qu'il est ouvert sur le Mac de l'instance. Roblox Studio (macOS,
+  Windows) et Blender (macOS, Windows, Linux) laissent les agents lire et construire une place ou
+  une scène 3D ouverte sur la machine de l'instance ; exécuter du code, modifier et générer
+  demandent toujours votre accord.
 - **Tâches programmées** : une consigne et un rythme (chaque jour, du lundi au vendredi, un jour
   de la semaine ou du mois), exécutée avec vos outils, même fenêtre fermée, par l'agent de votre
   choix.

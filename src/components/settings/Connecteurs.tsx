@@ -278,7 +278,7 @@ export function Connecteurs({ maison = [] }: { maison?: ServiceMaison[] } = {}) 
     setSaisie(
       entree.oauth === "appli"
         ? { clientId: "", clientSecret: "" }
-        : entree.local
+        : entree.local || entree.lanceur
           ? {}
           : Object.fromEntries(entree.secrets.map((s) => [s.nom, ""])),
     );
@@ -357,7 +357,7 @@ export function Connecteurs({ maison = [] }: { maison?: ServiceMaison[] } = {}) 
     if (!resultat.ok) {
       // Un service qui réclame une application, ou une application locale fermée : on ouvre le panneau et son pas à pas.
       // Déjà branchée (« Réessayer ») : le message seul, en tête de l'écran ; la ligne n'a pas de panneau à refermer.
-      if ((entree.oauth === "appli" || (entree.local && !installe(entree.id))) && ouvert !== entree.id) ouvrir(entree);
+      if ((entree.oauth === "appli" || ((entree.local || entree.lanceur) && !installe(entree.id))) && ouvert !== entree.id) ouvrir(entree);
       /*
        * Après `ouvrir`, qui efface le message (revérification du 28/09/2026) :
        * posé avant, il disparaissait aussitôt, et avec lui l'adresse de retour
@@ -455,7 +455,8 @@ export function Connecteurs({ maison = [] }: { maison?: ServiceMaison[] } = {}) 
     const actif = entree.integre ? true : (vivant?.running ?? false);
     const distant = Boolean(entree.url);
     // Une application ouverte sur la machine de l'instance (Palmier Pro, 29/09/2026).
-    const local = Boolean(entree.local);
+    // Et Roblox Studio, Blender (12/10/2026) : installées sur la machine, leur serveur lancé par l'instance.
+    const local = Boolean(entree.local || entree.lanceur);
 
     return (
       <div key={entree.id} className="rounded-xl border border-border">
@@ -477,9 +478,11 @@ export function Connecteurs({ maison = [] }: { maison?: ServiceMaison[] } = {}) 
                   title={
                     distant
                       ? t("Service distant : rien ne s'installe sur cette machine.")
-                      : local
-                        ? t("Application ouverte sur la machine de l'instance, reliée par la boucle locale.")
-                        : t("Serveur exécuté sur la machine de l'instance.")
+                      : entree.lanceur
+                        ? t("Application installée sur la machine de l'instance, dont l'instance lance le serveur d'outils.")
+                        : local
+                          ? t("Application ouverte sur la machine de l'instance, reliée par la boucle locale.")
+                          : t("Serveur exécuté sur la machine de l'instance.")
                   }
                 >
                   {distant ? (
@@ -825,14 +828,18 @@ export function Connecteurs({ maison = [] }: { maison?: ServiceMaison[] } = {}) 
 
       <InfoBox className="mt-4" leading={<Lock size={15} strokeWidth={1.75} />}>
         {/* Une troisième façon depuis le 29/09/2026 (Palmier Pro), dite seulement là où elle est proposée. */}
-        {etat.catalogue.some((e) => e.local)
+        {etat.catalogue.some((e) => e.local || e.lanceur)
           ? t("Trois façons de brancher, et aucune ne passe par un tiers.")
           : t("Deux façons de brancher, et aucune ne passe par un tiers.")}{" "}
         <strong className="font-medium">{t("Se connecter")}</strong>{" "}{t("vous envoie chez le service, qui vous demande votre accord ; le jeton revient chiffré dans l'instance et n'en sort plus.")}{" "}<strong className="font-medium">{t("Par jeton")}</strong>{" "}{tf("lance un serveur sur la machine de l'instance : {0} ne lance que les commandes de son catalogue, jamais une commande venue de cet écran, et le jeton est transmis par l'environnement, sans jamais apparaître dans la liste des processus.", branding.name)}
-        {etat.catalogue.some((e) => e.local) && (
+        {etat.catalogue.some((e) => e.local || e.lanceur) && (
           <>
             {" "}
-            <strong className="font-medium">{t("Brancher")}</strong>{" "}{t("relie une application ouverte sur la machine de l'instance, par la boucle locale, après avoir vérifié que c'est bien elle qui répond.")}
+            <strong className="font-medium">{t("Brancher")}</strong>{" "}
+            {/* Roblox Studio et Blender (12/10/2026) : leur serveur se lance sur la machine, il ne passe pas toujours par la boucle locale. */}
+            {etat.catalogue.some((e) => e.lanceur)
+              ? t("relie une application installée sur la machine de l'instance : son serveur d'outils est pris dans l'installation de l'application elle-même, jamais une commande venue de cet écran.")
+              : t("relie une application ouverte sur la machine de l'instance, par la boucle locale, après avoir vérifié que c'est bien elle qui répond.")}
           </>
         )}
         {etat.commandeLibre && (

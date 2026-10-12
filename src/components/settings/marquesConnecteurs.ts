@@ -80,6 +80,9 @@ export const MARQUE_DU_CONNECTEUR: Record<string, CleMarquePetite> = {
   zoom: "zoom",
   // Palmier Pro (29/09/2026) : l'icône de son site, scripts/marques/sources.json.
   palmier: "palmier",
+  // Roblox Studio et Blender (12/10/2026) : l'icône du site de Roblox, le logo du kit de la Blender Foundation.
+  roblox: "roblox",
+  blender: "blender",
 };
 
 /**

@@ -225,7 +225,7 @@ export interface DemandeApprobation {
      * les crédits du compte), une transcription par son service, un message à
      * son équipe.
      */
-    horsMachine?: "generation" | "transcription" | "retour";
+    horsMachine?: "generation" | "transcription" | "retour" | "roblox-generation" | "roblox-televersement" | "blender-bibliotheque" | "blender-generation";
   };
   createdAt: number;
 }

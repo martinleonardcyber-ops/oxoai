@@ -195,7 +195,10 @@ dauerhaft aktiven Agenten auf der Stufe „Frei“ über PowerShell.
   und MCP-Server, hinter einer **Freigabeschranke**: Nichts, was etwas verändert, geschieht ohne
   Ihre Zustimmung. LinkedIn verbindet ein Profil und, über eine zweite LinkedIn-App, eine
   Unternehmensseite; Palmier Pro, ein Videoeditor für Macs mit Apple Silicon, lässt Agenten auf
-  seiner Timeline schneiden, solange er auf dem Mac der Instanz geöffnet ist.
+  seiner Timeline schneiden, solange er auf dem Mac der Instanz geöffnet ist. Roblox Studio
+  (macOS, Windows) und Blender (macOS, Windows, Linux) lassen Agenten einen Place oder eine
+  3D-Szene lesen und aufbauen, die auf dem Rechner der Instanz geöffnet ist; Code ausführen,
+  ändern und erzeugen braucht immer Ihre Freigabe.
 - **Geplante Aufgaben**: eine Anweisung und ein Rhythmus (jeden Tag, Montag bis Freitag, ein
   Wochentag oder ein Tag im Monat), ausgeführt mit Ihren Werkzeugen, auch bei geschlossenem
   Fenster, von dem Agenten, den Sie wählen.

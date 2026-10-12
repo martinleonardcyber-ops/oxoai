@@ -32,6 +32,7 @@
     "essai:cli": "node scripts/essai-cli.mjs",
     "essai:vscode": "node scripts/essai-vscode.mjs",
     "essai:palmier": "node scripts/essai-palmier.mjs",
+    "essai:roblox-blender": "node scripts/essai-roblox-blender.mjs",
     "essai:design": "node --experimental-strip-types scripts/essai-design.mjs",
     "motdepasse": "node --experimental-strip-types gateway/tools/motdepasse.ts",
     "typecheck:gateway": "tsc --noEmit -p tsconfig.gateway.json",

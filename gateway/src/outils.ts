@@ -15,6 +15,8 @@ import { definirEspaceDeTravail } from "./approbation.ts";
 import { estAdministrateur } from "./roles.ts";
 import { estEcritureMcpProjet } from "./natifs/projetsRegles.ts";
 import { estEcriturePalmier } from "./palmierRegles.ts";
+import { estEcritureRoblox } from "./robloxRegles.ts";
+import { estEcritureBlender, refusArgumentsBlender } from "./blenderRegles.ts";
 
 // La barrière juge un déplacement « vers un dossier » comme `adapterFichiers` l'exécute, depuis le même dossier de travail.
 definirEspaceDeTravail(workspace);
@@ -71,6 +73,7 @@ export function outilsDeFamille(famille: Famille): DefinitionOutil[] {
       // Les serveurs MCP de l'instance : le serveur de fichiers, et ceux du catalogue ; plus le contrôle du code web.
       // Sans les écritures de Trello, Monday, ClickUp, Todoist, Calendly et Zoom : un employé ne parle pas au nom de l'organisation (SECURITE.md § 48).
       // Ni celles de Palmier Pro (29/09/2026) : il tourne sous le compte de qui l'a ouvert, avec ses crédits.
+      // Celles de Roblox Studio et de Blender restent offertes aux employés (12/10/2026, demande de Medhi), derrière la carte à chaque appel et l'administrateur seul (plus bas).
       const mcp = outilsMcp().filter((o) => !estEcritureMcpProjet(o.function.name) && !estEcriturePalmier(o.function.name));
       return mcp.length > 0 ? [...mcp, ...controleWeb.toolsForModel()] : mcp;
     }
@@ -143,6 +146,21 @@ export async function executerOutil(
        */
       if (estEcriturePalmier(nom) && !(pour?.userId && (await estAdministrateur(pour.userId)))) {
         return { ok: false, content: "Refusé : faire modifier un projet ou générer par Palmier Pro, ouvert sur la machine de l'instance avec le compte Palmier de la personne qui l'a lancé, est réservé à l'administrateur de l'instance. Dis-le à l'utilisateur ; rien n'a été fait." };
+      }
+      /*
+       * Roblox Studio et Blender (12/10/2026, SECURITE.md § 65) : même règle.
+       * Exécuter du Python dans Blender, c'est exécuter du code sur la machine
+       * de l'instance, sous le compte de qui a ouvert Blender ; modifier une
+       * place ou générer chez Roblox se fait au nom du compte Roblox ouvert
+       * dans Studio. L'administrateur seul, au moment d'agir, et la carte à
+       * chaque appel (approbation.ts). Les lectures restent à tous.
+       */
+      if ((estEcritureRoblox(nom) || estEcritureBlender(nom)) && !(pour?.userId && (await estAdministrateur(pour.userId)))) {
+        return { ok: false, content: "Refusé : modifier, exécuter du code ou générer par Roblox Studio ou Blender, ouverts sur la machine de l'instance avec le compte de la personne qui les a lancés, est réservé à l'administrateur de l'instance. Dis-le à l'utilisateur ; rien n'a été fait." };
+      }
+      {
+        const refus = refusArgumentsBlender(nom, args);
+        if (refus) return { ok: false, content: refus };
       }
       return appelerMcp(nom, adapterFichiers(nom, args));
   }

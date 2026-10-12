@@ -6,6 +6,7 @@ import { db, type StoredCollection } from "./db.ts";
 import { deployment } from "./deployment.ts";
 import { journaliser } from "./audit.ts";
 import {
+  callTool as appelerOutilMcp,
   declarer,
   estDeclare,
   relancable,
@@ -16,6 +17,8 @@ import {
   type McpServerConfig,
 } from "./mcp.ts";
 import { ecouteurPalmier, palmierProposable, portPalmier, PORT_PALMIER, TELECHARGEMENT_PALMIER, type VerdictEcouteur } from "./palmier.ts";
+import { commandeRoblox, conseilRoblox, DOCUMENTATION_ROBLOX, refusRoblox, robloxProposable, TELECHARGEMENT_ROBLOX } from "./roblox.ts";
+import { blenderProposable, commandeBlender, envBlender, preparerBlender, refusBlender, TELECHARGEMENT_BLENDER } from "./blender.ts";
 import * as bureau from "./bureau.ts";
 import * as courrier from "./courrier.ts";
 import * as agenda from "./agenda.ts";
@@ -103,6 +106,14 @@ export interface EntreeCatalogue {
    * (mcp.ts, `local`). Aucune autre adresse locale n'est ouverte par là.
    */
   local?: { port: number; chemin: string };
+  /**
+   * Serveur MCP d'une **application installée sur cette machine**, lancé en
+   * stdio par une commande que Helix tire de l'installation de l'application
+   * (Roblox Studio, Blender, 12/10/2026) : ni adresse, ni commande écrite ici
+   * ou reçue ; `APPLICATIONS_STDIO` la donne, et reconnaît l'application
+   * avant de lancer quoi que ce soit.
+   */
+  lanceur?: true;
   /** Page officielle où la personne télécharge l'application elle-même (Helix ne la télécharge pas). */
   telechargement?: string;
   /**
@@ -516,6 +527,37 @@ export const CATALOGUE: EntreeCatalogue[] = [
     documentation: "https://github.com/palmier-io/palmier-pro#mcp-server",
     secrets: [],
   },
+  /*
+   * Roblox Studio et Blender (12/10/2026, demande de Medhi : « on nous le
+   * réclame »). Deux applications de création installées sur la machine de
+   * l'instance, dont le serveur MCP se lance en stdio : celui de Roblox est
+   * livré avec Studio (roblox.ts), celui de Blender est posé par Helix,
+   * version et empreintes figées (blender.ts). Lire est libre ; modifier,
+   * exécuter du code, générer se confirme à chaque appel (robloxRegles.ts,
+   * blenderRegles.ts).
+   */
+  {
+    id: "roblox",
+    label: "Roblox Studio",
+    description:
+      "Lire et modifier la place ouverte dans Roblox Studio, sur cette machine (macOS ou Windows) : scripts, instances, essais de jeu. Lire est libre ; chaque modification, chaque code exécuté et chaque génération demande votre accord.",
+    categorie: "Développement",
+    lanceur: true,
+    telechargement: TELECHARGEMENT_ROBLOX,
+    documentation: DOCUMENTATION_ROBLOX,
+    secrets: [],
+  },
+  {
+    id: "blender",
+    label: "Blender",
+    description:
+      "Lire et modifier la scène ouverte dans Blender, sur cette machine. Lire est libre ; chaque code exécuté, chaque import et chaque génération demande votre accord. Les bibliothèques et générateurs en ligne du module restent éteints tant que vous ne les allumez pas dans Blender.",
+    categorie: "Documents et données",
+    lanceur: true,
+    telechargement: TELECHARGEMENT_BLENDER,
+    documentation: "https://github.com/ahujasid/mcp-for-blender",
+    secrets: [],
+  },
   {
     id: "airtable-mcp",
     label: "Airtable",
@@ -739,13 +781,57 @@ function applicationLocale(entree: EntreeCatalogue | undefined) {
   return entree?.local ? APPLICATIONS_LOCALES[entree.id] : undefined;
 }
 
+/**
+ * Les applications dont le serveur MCP se lance en stdio (`lanceur`, Roblox
+ * Studio et Blender, 12/10/2026) : où la fiche se montre, la commande (tirée
+ * de l'installation, jamais d'une requête), ce qui est vérifié avant de la
+ * lancer et avant chaque appel, ce qui se prépare au clic (Blender : le
+ * serveur posé par Helix), et ce qu'il faut dire après le démarrage (Roblox :
+ * aucun Studio n'a activé son serveur). Une entrée `lanceur` sans ligne ici
+ * n'est jamais lancée.
+ */
+interface ApplicationStdio {
+  proposable: () => boolean;
+  commande: () => { command: string; args: string[] };
+  env?: () => Record<string, string>;
+  avantLancement: () => Promise<string | null>;
+  avantAppel?: () => Promise<string | null>;
+  preparer?: () => Promise<{ ok: true } | { ok: false; message: string }>;
+  conseil?: (id: string) => Promise<string | null>;
+}
+const APPLICATIONS_STDIO: Record<string, ApplicationStdio> = {
+  roblox: {
+    proposable: robloxProposable,
+    commande: commandeRoblox,
+    avantLancement: refusRoblox,
+    // Une lecture, faite par Helix lui-même au branchement : un Studio a-t-il activé son serveur ?
+    conseil: async (id) => conseilRoblox(await appelerOutilMcp(`${id}__list_roblox_studios`, {}).catch(() => null)),
+  },
+  blender: {
+    proposable: blenderProposable,
+    commande: commandeBlender,
+    env: envBlender,
+    avantLancement: refusBlender,
+    avantAppel: refusBlender,
+    preparer: preparerBlender,
+  },
+};
+
+function applicationStdio(entree: EntreeCatalogue | undefined): ApplicationStdio | undefined {
+  return entree?.lanceur ? APPLICATIONS_STDIO[entree.id] : undefined;
+}
+
+/** Une application de cette machine, par la boucle locale (Palmier Pro) ou en stdio (Roblox Studio, Blender). */
+const estApplication = (entree: EntreeCatalogue | undefined): boolean => Boolean(entree?.local || entree?.lanceur);
+
 /** L'adresse d'une application locale : 127.0.0.1, son port, son chemin, rien venu d'ailleurs. */
 function adresseLocale(entree: EntreeCatalogue, port: number): string {
   return `http://127.0.0.1:${port}${entree.local!.chemin}`;
 }
 
 /** Une entrée qui ne peut pas servir sur cette machine (Palmier Pro hors d'un Mac à puce Apple) n'est pas montrée. */
-const visibleIci = (e: EntreeCatalogue): boolean => !e.local || applicationLocale(e)?.proposable() === true;
+const visibleIci = (e: EntreeCatalogue): boolean =>
+  e.lanceur ? applicationStdio(e)?.proposable() === true : !e.local || applicationLocale(e)?.proposable() === true;
 
 /**
  * Une commande libre est-elle permise sur cette instance ?
@@ -911,12 +997,12 @@ export function aligner(c: ConnecteurEnregistre): ConnecteurEnregistre {
    * une commande glissées dans le magasin sont oubliées). Sans entrée locale
    * au catalogue, elle n'est pas déclarée.
    */
-  if (c.local === true || (e?.local && !c.url && !c.command)) {
-    if (!applicationLocale(e)) throw new Error(tf("connecteur « {0} » hors catalogue, ignoré (les connecteurs libres ne sont pas autorisés sur cette instance)", c.id));
+  if (c.local === true || (estApplication(e) && !c.url && !c.command)) {
+    if (!applicationLocale(e) && !applicationStdio(e)) throw new Error(tf("connecteur « {0} » hors catalogue, ignoré (les connecteurs libres ne sont pas autorisés sur cette instance)", c.id));
     return { id: c.id, label: e!.label, description: e!.description, local: true, secrets: {}, depuis: c.depuis };
   }
   // Une adresse ou une commande enregistrées sous l'identifiant d'une application locale : refusées.
-  if (e?.local) throw new Error(tf("connecteur « {0} » hors catalogue, ignoré (les connecteurs libres ne sont pas autorisés sur cette instance)", c.id));
+  if (estApplication(e)) throw new Error(tf("connecteur « {0} » hors catalogue, ignoré (les connecteurs libres ne sont pas autorisés sur cette instance)", c.id));
   /*
    * Hors régime libre, un connecteur local lance la commande du catalogue, et
    * elle seule, relue ici à chaque démarrage (revue du 26/09/2026) : le
@@ -991,6 +1077,23 @@ function envPublic(id: string): { envPublic?: Record<string, string> } {
 
 const versConfig = (brut: ConnecteurEnregistre): McpServerConfig => {
   const c = aligner(brut);
+  const stdio = c.local ? applicationStdio(entreeCatalogue(c.id)) : undefined;
+  if (stdio) {
+    // La commande de l'application, relue maintenant ; l'environnement sans secret (Blender : la télémétrie coupée).
+    const { command, args } = stdio.commande();
+    return {
+      id: c.id,
+      label: c.label,
+      description: c.description,
+      command,
+      args,
+      env: {},
+      ...(stdio.env ? { envPublic: stdio.env() } : {}),
+      avantLancement: stdio.avantLancement,
+      ...(stdio.avantAppel ? { avantAppel: stdio.avantAppel } : {}),
+      autoStart: true,
+    };
+  }
   if (c.local) {
     const entree = entreeCatalogue(c.id)!;
     const appli = applicationLocale(entree)!;
@@ -1194,8 +1297,14 @@ export async function etat(base?: string): Promise<EtatConnecteurs> {
          * que mcp.ts a gardée date du démarrage de la passerelle, souvent hors de
          * toute requête, donc dans la langue par défaut (vu à l'écran le 29/09/2026).
          */
-        const appli = c.local && vivant && !vivant.running ? applicationLocale(entreeCatalogue(c.id)) : undefined;
-        const raison = appli ? await appli.reconnaitre(appli.port()) : null;
+        const arretee = c.local && vivant && !vivant.running;
+        const appli = arretee ? applicationLocale(entreeCatalogue(c.id)) : undefined;
+        const stdio = arretee ? applicationStdio(entreeCatalogue(c.id)) : undefined;
+        const raison = appli
+          ? await appli.reconnaitre(appli.port())
+          : stdio
+            ? await stdio.avantLancement().then((m) => (m ? { ok: false as const, message: m } : null)).catch(() => null)
+            : null;
         return {
           id: c.id,
           label: t(c.label),
@@ -1290,7 +1399,7 @@ function resoudreCommande(
   const entree = entreeCatalogue(id);
 
   if (entree) {
-    if (entree.local) {
+    if (estApplication(entree)) {
       return {
         ok: false,
         message: tf("« {0} » se branche d'un clic, quand l'application est ouverte sur cette machine : utilisez « Brancher ».", entree.label),
@@ -1600,7 +1709,7 @@ export async function connecter(
   await charger();
   const entree = entreeCatalogue(id);
   // Une application ouverte sur cette machine : ni navigateur, ni jeton à garder (Palmier Pro, 29/09/2026).
-  if (entree?.local) {
+  if (entree && estApplication(entree)) {
     const r = await brancherLocal(entree, qui);
     return r.ok ? { ok: true, pret: true, message: r.message } : r;
   }
@@ -1850,11 +1959,20 @@ async function brancherLocal(
   qui: string,
 ): Promise<{ ok: true; message: string } | { ok: false; message: string }> {
   const appli = applicationLocale(entree);
-  if (!appli || !appli.proposable()) {
+  const stdio = applicationStdio(entree);
+  if (!(appli?.proposable() || stdio?.proposable())) {
     return { ok: false, message: tf("{0} ne peut pas tourner sur la machine de cette instance.", t(entree.label)) };
   }
-  const verdict = await appli.reconnaitre(appli.port());
-  if (!verdict.ok) return { ok: false, message: verdict.message };
+  if (appli) {
+    const verdict = await appli.reconnaitre(appli.port());
+    if (!verdict.ok) return { ok: false, message: verdict.message };
+  } else if (stdio) {
+    // Blender : le serveur posé au premier clic (empreintes vérifiées), puis Blender doit répondre.
+    const prepare = stdio.preparer ? await stdio.preparer() : ({ ok: true } as const);
+    if (!prepare.ok) return { ok: false, message: prepare.message };
+    const refus = await stdio.avantLancement();
+    if (refus) return { ok: false, message: refus };
+  }
 
   const deja = enMemoire.find((c) => c.id === entree.id);
   const enregistre: ConnecteurEnregistre = deja ?? {
@@ -1875,13 +1993,12 @@ async function brancherLocal(
   if (!deja) await ecrire([...enMemoire, enregistre]);
   const outils = mcpStatus().find((s) => s.id === entree.id)?.toolCount ?? 0;
   journaliser("connecteur.ajoute", qui, { connecteur: entree.id, local: true, outils, ...(deja ? { etape: "rebranché" } : {}) });
-  return {
-    ok: true,
-    message:
-      outils > 1
-        ? tf("{0} est branché : {1} outils disponibles.", t(entree.label), outils)
-        : tf("{0} est branché : {1} outil disponible.", t(entree.label), outils),
-  };
+  const branche =
+    outils > 1
+      ? tf("{0} est branché : {1} outils disponibles.", t(entree.label), outils)
+      : tf("{0} est branché : {1} outil disponible.", t(entree.label), outils);
+  const conseil = stdio?.conseil ? await stdio.conseil(entree.id).catch(() => null) : null;
+  return { ok: true, message: conseil ? `${branche} ${conseil}` : branche };
 }
 
 /**

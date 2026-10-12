@@ -58,6 +58,16 @@ export interface McpServerConfig {
    */
   local?: { port: number; reconnaitre: () => Promise<string | null> };
   /**
+   * Serveur stdio d'une application de cette machine (Roblox Studio, Blender,
+   * 12/10/2026) : `avantLancement` est appelé avant de lancer la commande, et
+   * `avantAppel` avant **chaque** appel d'outil ; chacun rend la raison d'un
+   * refus (l'application introuvable, fermée, un autre programme sur le port
+   * de Blender…), et rien n'est alors lancé ni envoyé. Posés par le catalogue
+   * (connecteurs.ts), jamais par une requête.
+   */
+  avantLancement?: () => Promise<string | null>;
+  avantAppel?: () => Promise<string | null>;
+  /**
    * Variables d'environnement du processus serveur.
    *
    * C'est par ici, et uniquement par ici, que passe un jeton d'accès. Le mettre
@@ -622,6 +632,9 @@ async function demarrer(id: string, entry: Live): Promise<{ ok: boolean; error?:
   let clientLocal: Client | undefined;
   try {
     if (entry.config.url) return await demarrerDistant(id, entry);
+    // Une application de la machine (Roblox Studio, Blender) : rien n'est lancé tant qu'elle n'est pas reconnue.
+    const refus = entry.config.avantLancement ? await entry.config.avantLancement() : null;
+    if (refus) throw new Error(refus);
     const npx = entry.config.command === "npx" ? await resoudreNpx() : null;
     if (entry.config.command === "npx" && !npx) throw new Error(t("npx est absent de cette machine, et Node n'a pas pu être installé."));
     const defaut = getDefaultEnvironment();
@@ -906,9 +919,10 @@ export async function statusFrais(): Promise<McpServerStatus[]> {
   const liste = status();
   return Promise.all(
     liste.map(async (s) => {
-      const local = servers.get(s.id)?.config.local;
-      if (!local || s.running || !s.error) return s;
-      const refus = await local.reconnaitre().catch(() => null);
+      const config = servers.get(s.id)?.config;
+      const reconnaitre = config?.local?.reconnaitre ?? config?.avantLancement;
+      if (!reconnaitre || s.running || !s.error) return s;
+      const refus = await reconnaitre().catch(() => null);
       return refus ? { ...s, error: refus } : s;
     }),
   );
@@ -945,6 +959,15 @@ export async function callTool(
 
   const entry = servers.get(tool.serverId);
   if (!entry) return { ok: false, content: `Serveur ${tool.serverId} arrêté.` };
+  /*
+   * Blender (12/10/2026) : le programme qui tient le port de son module est
+   * relu avant chaque appel, comme Palmier Pro avant chaque requête. Fermé, ou
+   * remplacé par un autre programme, rien n'est envoyé.
+   */
+  if (entry.config.avantAppel) {
+    const refus = await entry.config.avantAppel().catch((err: unknown) => (err instanceof Error ? err.message : String(err)));
+    if (refus) return { ok: false, content: `${refus} Rien n'a été envoyé. Dis-le à l'utilisateur.` };
+  }
   /*
    * Arrêté de lui-même (plantage, serveur distant qui a redémarré) : on le
    * relance ici, au moment où l'on en a besoin. Arrêté par la passerelle

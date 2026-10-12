@@ -8824,7 +8824,7 @@ console.log("\n39. Palmier Pro : application locale reconnue avant de lui parler
   );
   verifier(
     "écritures et générations de Palmier Pro : carte à chaque appel (toujoursConfirmer), administrateur seul au moment d'agir, absentes des outils des employés et de l'agent de code",
-    /toujoursConfirmer = \(outil: string\) => [^\n]*estEcriturePalmier\(outil\)/.test(approSrc) && /estEcriturePalmier\(nom\) && !\(pour\?\.userId && \(await estAdministrateur\(pour\.userId\)\)\)/.test(outilsSrc) && /!estEcritureMcpProjet\(o\.function\.name\) && !estEcriturePalmier\(o\.function\.name\)/.test(outilsSrc) && /!estEcritureMcpProjet\(o\.function\.name\) && !estEcriturePalmier\(o\.function\.name\)/.test(codeSrc),
+    (/toujoursConfirmer = \(outil: string\) => [^\n]*estEcriturePalmier\(outil\)/.test(approSrc) || (/toujoursConfirmer = \(outil: string\) => [^\n]*estEcritureApplication\(outil\)/.test(approSrc) && /const estEcritureApplication = \(outil: string\): boolean => estEcriturePalmier\(outil\)/.test(approSrc))) && /estEcriturePalmier\(nom\) && !\(pour\?\.userId && \(await estAdministrateur\(pour\.userId\)\)\)/.test(outilsSrc) && /!estEcritureMcpProjet\(o\.function\.name\) && !estEcriturePalmier\(o\.function\.name\)/.test(outilsSrc) && /!estEcritureMcpProjet\(o\.function\.name\) && !estEcriturePalmier\(o\.function\.name\)/.test(codeSrc),
     "approbation.ts, outils.ts, outilsCode.ts",
   );
   verifier(
@@ -9719,6 +9719,95 @@ console.log("\n45. Agent retiré sous Windows (instance arrêtée avant d'efface
   verifier(
     "OpenCode : on ne passe à la variante suivante que si la précédente ne démarre pas (pas sur une panne de réseau ni une empreinte fausse)",
     /if \(!\(err instanceof NeDemarrePas\)\) throw err;/.test(opencode) && /throw new NeDemarrePas\(/.test(opencode),
+  );
+}
+
+/*
+ * 46. Roblox Studio et Blender (12/10/2026, SECURITE.md § 65) : deux
+ * applications de la machine dont le serveur MCP se lance en stdio. La
+ * commande vient de l'installation de l'application (jamais d'une requête),
+ * l'application est reconnue avant le lancement (et, pour Blender, avant
+ * chaque appel), tout ce qui n'est pas une lecture passe par la carte, et le
+ * serveur de Blender est posé avec ses empreintes, télémétrie coupée.
+ * scripts/essai-roblox-blender.mjs, repris sous « roblox-blender : », contre
+ * des faux serveurs stdio et un faux module de Blender ; puis le code.
+ */
+console.log("\n46. Roblox Studio et Blender : commande tirée de l'application, reconnaissance, carte d'accord, paquets figés, télémétrie coupée (12/10/2026)");
+{
+  const essai = await new Promise((fin) => {
+    const e = spawn(process.execPath, [join(RACINE, "scripts", "essai-roblox-blender.mjs")], { stdio: ["ignore", "pipe", "pipe"], env: { ...process.env, HELIX_ESSAI_BLENDER_RESEAU: "" } });
+    let sortie = "";
+    e.stdout.on("data", (b) => (sortie += b));
+    e.stderr.on("data", (b) => (sortie += b));
+    const minuterie = setTimeout(() => e.kill(), 5 * 60_000);
+    e.on("close", (status) => {
+      clearTimeout(minuterie);
+      fin({ status, sortie });
+    });
+  });
+  const lignes = essai.sortie.split("\n");
+  for (const ligne of lignes) {
+    const ok = /^\s+✓ (.*)$/.exec(ligne);
+    const ko = /^\s+✗ (.*?)(?:  —  obtenu : .*)?$/.exec(ligne);
+    if (ok) verifier(`roblox-blender : ${ok[1]}`, true, "");
+    else if (ko) verifier(`roblox-blender : ${ko[1]}`, false, ligne.split("  —  obtenu : ")[1] ?? "");
+    else if (/^[A-C]\. /.test(ligne)) console.log(`  ${ligne}`);
+  }
+  verifier("roblox-blender : l'essai s'est déroulé jusqu'au bout", essai.status === 0, `${essai.status} ${lignes.slice(-6).join(" ")}`);
+
+  const src = (...p) => readFileSync(join(RACINE, ...p), "utf8");
+  const mcpSrc = src("gateway", "src", "mcp.ts");
+  const robloxSrc = src("gateway", "src", "roblox.ts");
+  const blenderSrc = src("gateway", "src", "blender.ts");
+  const connSrc = src("gateway", "src", "connecteurs.ts");
+  const outilsSrc = src("gateway", "src", "outils.ts");
+  const approSrc = src("gateway", "src", "approbation.ts");
+  verifier(
+    "mcp.ts : une application de la machine est reconnue avant que sa commande soit lancée (avantLancement), et avant chaque appel quand elle le demande (avantAppel)",
+    /const refus = entry\.config\.avantLancement \? await entry\.config\.avantLancement\(\) : null;\s*if \(refus\) throw new Error\(refus\);\s*const npx/.test(mcpSrc) && /if \(entry\.config\.avantAppel\) \{\s*const refus = await entry\.config\.avantAppel\(\)/.test(mcpSrc),
+    "mcp.ts",
+  );
+  verifier(
+    "connecteurs.ts : la commande vient d'APPLICATIONS_STDIO (relue à chaque démarrage), sans secret dans l'environnement, et une entrée « lanceur » sans ligne n'est jamais lancée",
+    /const \{ command, args \} = stdio\.commande\(\);/.test(connSrc) && /env: \{\},/.test(connSrc) && /return entree\?\.lanceur \? APPLICATIONS_STDIO\[entree\.id\] : undefined;/.test(connSrc) && /roblox: \{\s*proposable: robloxProposable,\s*commande: commandeRoblox,/.test(connSrc) && /blender: \{\s*proposable: blenderProposable,\s*commande: commandeBlender,\s*env: envBlender,\s*avantLancement: refusBlender,\s*avantAppel: refusBlender,/.test(connSrc),
+    "connecteurs.ts",
+  );
+  verifier(
+    "roblox.ts : chemins fixes donnés par Roblox (StudioMCP dans l'application, mcp.bat sous Windows), signature vérifiée par codesign sur macOS ; rien de téléchargé, rien venu d'une requête",
+    /join\(appMac\(\), "Contents", "MacOS", "StudioMCP"\)/.test(robloxSrc) && /"Roblox", "mcp\.bat"/.test(robloxSrc) && /"\/usr\/bin\/codesign", \["--verify", "--strict", `-R=\$\{DEVELOPER_ID\}`, programme\]/.test(robloxSrc) && !/fetch\(|req\.|body\./.test(robloxSrc),
+    "roblox.ts",
+  );
+  verifier(
+    "blender.ts : pip --require-hashes --no-deps --only-binary depuis la liste figée, module complémentaire contrôlé par son empreinte, Python isolé (-I), télémétrie et mise à jour coupées ; aucun appel réseau de Helix lui-même",
+    /"--require-hashes", "--no-deps", "--only-binary=:all:", "-r", exigences/.test(blenderSrc) && /digest\("hex"\) !== paquets\.module\.sha256/.test(blenderSrc) && /args: \["-I", "-c", "from blender_mcp\.server import main; main\(\)"\]/.test(blenderSrc) && /DISABLE_TELEMETRY: "1",\s*BLENDER_MCP_DISABLE_TELEMETRY: "1",\s*MCP_DISABLE_TELEMETRY: "1",\s*BLENDERMCP_NO_UPDATE_CHECK: "1",\s*BLENDER_HOST: "127\.0\.0\.1",/.test(blenderSrc) && !/fetch\(|req\.|body\./.test(blenderSrc),
+    "blender.ts",
+  );
+  verifier(
+    "blender.ts : le programme qui tient le port du module est lu au système (lsof sur macOS, /proc sous Linux, PowerShell sous Windows) et doit être Blender signé (codesign, Authenticode) avant tout envoi",
+    /"\/usr\/bin\/codesign", \["--verify", `-R=\$\{EXIGENCE_BLENDER\}`, String\(e\.pid\)\]/.test(blenderSrc) && /Get-AuthenticodeSignature/.test(blenderSrc) && /\/proc\/net\/tcp/.test(blenderSrc) && /e\.signature\?\.statut === "Valid" && \/Blender Foundation\/i/.test(blenderSrc),
+    "blender.ts",
+  );
+  const paquets = JSON.parse(src("gateway", "src", "blender-paquets.json"));
+  verifier(
+    "blender-paquets.json : chaque exigence à version exacte avec son empreinte SHA-256, mcp-for-blender à la version épinglée, licence relevée pour chacune",
+    paquets.exigences.length > 10 && paquets.exigences.every((l) => /^[A-Za-z0-9._-]+==[^\s;]+/.test(l) && /--hash=sha256:[0-9a-f]{64}/.test(l)) && paquets.exigences.some((l) => l.startsWith(`mcp-for-blender==${paquets.version} `)) && Object.keys(paquets.licences).length === paquets.exigences.length,
+    paquets.version,
+  );
+  verifier(
+    "écritures de Roblox Studio et de Blender : carte à chaque appel (toujoursConfirmer), administrateur seul au moment d'agir ; chemin de fichier refusé dans look",
+    /toujoursConfirmer = \(outil: string\) => [^\n]*estEcritureApplication\(outil\)/.test(approSrc) && /estEcriturePalmier\(outil\) \|\| estEcritureRoblox\(outil\) \|\| estEcritureBlender\(outil\)/.test(approSrc) && /\(estEcritureRoblox\(nom\) \|\| estEcritureBlender\(nom\)\) && !\(pour\?\.userId && \(await estAdministrateur\(pour\.userId\)\)\)/.test(outilsSrc) && /refusArgumentsBlender\(nom, args\)/.test(outilsSrc),
+    "approbation.ts, outils.ts",
+  );
+  const ecran = src("src", "components", "settings", "Connecteurs.tsx");
+  const guides = src("src", "lib", "guidesApplications.ts");
+  const carte = src("src", "components", "cowork", "ToolApproval.tsx");
+  const aide = src("src", "lib", "aide.ts");
+  verifier(
+    "écran : « Brancher » pour Roblox Studio et Blender, leur pas à pas (pages officielles), ce qui sort de la machine sur la carte ; aide intégrée ; logos reliés aux fiches",
+    /const local = Boolean\(entree\.local \|\| entree\.lanceur\);/.test(ecran) && /if \(id === "roblox"\) return guideRoblox\(\);/.test(guides) && /if \(id === "blender"\) return guideBlender\(\);/.test(guides) && /url: "https:\/\/create\.roblox\.com\/docs\/studio\/setup"/.test(guides) && /url: "https:\/\/www\.blender\.org\/download\/"/.test(guides) &&
+      /horsMachine === "roblox-generation"/.test(carte) && /horsMachine === "blender-generation"/.test(carte) && /id: "roblox",/.test(aide) && /id: "blender",/.test(aide) &&
+      /"roblox": \{/.test(src("scripts", "marques", "sources.json")) && /"blender": \{/.test(src("scripts", "marques", "sources.json")) && /roblox: "roblox",/.test(src("src", "components", "settings", "marquesConnecteurs.ts")) && /blender: "blender",/.test(src("src", "components", "settings", "marquesConnecteurs.ts")),
+    "Connecteurs.tsx, guidesApplications.ts, ToolApproval.tsx, aide.ts, marques",
   );
 }
 

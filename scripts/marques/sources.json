@@ -640,6 +640,28 @@
         "palmier.png": "310f38442cbf71628a0512ffb141800e92a624fd035d5301927b72e299248bda"
       }
     },
+    "roblox": {
+      "titre": "Roblox Studio",
+      "clair": "roblox.png",
+      "source": "https://images.rbxcdn.com/905bd722ee0a6ceda3caacde54c0b081.png (icône que roblox.com déclare pour son site, link rel=apple-touch-icon, relevée le 12/10/2026 ; empreinte du fichier servi : 7afe92edde27ce7949b0ebea760d2a009eac696db5686a8efe9c7d17ef590af3)",
+      "page": "https://www.roblox.com/",
+      "regle": "Décision de Medhi du 28/09/2026 : le vrai logo, en couleur, sans attendre l'accord de la marque. Le carré incliné blanc sur tuile bleue, icône du site de Roblox. Ajouté le 12/10/2026 avec le connecteur Roblox Studio.",
+      "retouche": "Servie en PNG de 180 pixels : réduite à 128 pixels par sips (macOS), dessin et couleurs inchangés.",
+      "empreintes": {
+        "roblox.png": "800fa96058d935e5d278424273e04baac89bdc1bc9ab8b5574606b4a5990d62c"
+      }
+    },
+    "blender": {
+      "titre": "Blender",
+      "clair": "blender.png",
+      "source": "https://download.blender.org/branding/blender_logo_kit.zip (kit de la page https://www.blender.org/about/logo/, relevé le 12/10/2026 ; empreinte de l'archive : 61d79b4c71264709a3d8dad2628e77eb4179cda99bf63125bcc1e4dd7261e35d), fichier square/blender_icon_128x128.png",
+      "page": "https://www.blender.org/about/logo/",
+      "regle": "Décision de Medhi du 28/09/2026 : le vrai logo, en couleur. La Blender Foundation permet d'employer son logo pour désigner le logiciel Blender (page du logo) ; ici il désigne le connecteur qui parle à Blender, sans laisser croire à un produit de la Fondation. Ajouté le 12/10/2026 avec le connecteur Blender.",
+      "retouche": "PNG officiel de 128 pixels du kit, non modifié.",
+      "empreintes": {
+        "blender.png": "3901beb349fd2048f98938cece73b90ee61c797521bf56892e6eb1444b658f6f"
+      }
+    },
     "square": {
       "titre": "Square",
       "clair": "square.svg",

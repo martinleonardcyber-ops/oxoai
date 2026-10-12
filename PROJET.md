@@ -1324,6 +1324,88 @@ passe par la carte). Incertain : si `inspect_media` transcrit toujours sur la ma
 versions récentes (vrai dans la 0.7.6) ; où se coupe son serveur MCP dans ses réglages. SECURITE.md
 § 63.
 
+**Roblox Studio et Blender, deux applications de création sur la machine (12/10/2026).** Demandé
+par Medhi : « Ajoute un MCP pour Roblox et Blender, on nous le réclame. » Branchés comme Palmier
+Pro (un clic, « Brancher », « Réessayer »), mais leurs serveurs MCP se lancent en **stdio** : une
+quatrième sorte d'entrée au catalogue, `lanceur` (`gateway/src/connecteurs.ts`,
+`APPLICATIONS_STDIO`) : la commande est tirée de l'installation de l'application, relue à chaque
+démarrage, jamais reçue d'une requête ni relue du magasin ; `mcp.ts` appelle `avantLancement` avant
+de lancer la commande et `avantAppel` avant chaque appel. *Ce qui est fait* :
+- **Roblox Studio** (`gateway/src/roblox.ts`, `robloxRegles.ts`), rubrique « Développement »,
+  macOS et Windows seulement. Le serveur MCP **intégré à Studio** (doc
+  https://create.roblox.com/docs/studio/mcp relue le 12/10/2026 ; `Roblox/studio-rust-mcp-server`
+  est archivé) : `/Applications/RobloxStudio.app/Contents/MacOS/StudioMCP` (ou ~/Applications),
+  `cmd.exe /c %LOCALAPPDATA%\Roblox\mcp.bat` sous Windows. Rien n'est téléchargé. Sur macOS, la
+  signature de StudioMCP est vérifiée avant chaque lancement (Developer ID d'Apple, même équipe que
+  l'application). Après le branchement, Helix lit `list_roblox_studios` : aucun Studio ne répond,
+  l'écran dit d'activer « Enable Studio as MCP server » (Assistant, « … », Manage MCP Servers).
+  Treize lectures sans carte ; les quatorze autres outils (dont `execute_luau`, `multi_edit`, les
+  générations par l'IA de Roblox, `upload_image`, `store_image` qui lit un fichier de la machine,
+  les entrées clavier et souris) et tout outil inconnu : carte à chaque appel, à tout niveau.
+- **Blender** (`gateway/src/blender.ts`, `blenderRegles.ts`), rubrique « Documents et données »,
+  les trois systèmes. Par « MCP for Blender » (https://github.com/ahujasid/mcp-for-blender,
+  MIT, 30 000 étoiles), **version 2.1.9 épinglée**. *Voie choisie pour l'installer* : au premier
+  clic, Helix crée `<données>/blender-mcp/venv` (Python du système en 3.10 ou plus, sinon celui de
+  Helix, `pythonPrive.ts`) et y pose le serveur par `pip --require-hashes --no-deps
+  --only-binary=:all:` sur `gateway/src/blender-paquets.json` : 33 exigences (le paquet et ses 32
+  dépendances), chacune à version exacte avec les empreintes de toutes ses roues, résolues par
+  `uv` pour Python 3.10 à 3.14 et les trois systèmes (`node scripts/blender-empreintes.mjs`, qui
+  relève aussi la licence de chaque paquet et l'empreinte du module complémentaire). Le module
+  complémentaire est celui de la roue vérifiée, contrôlé une seconde fois par son empreinte, recopié
+  dans `<données>/blender-mcp/blender_mcp.py` : l'écran donne ce chemin et la marche à suivre
+  (Édition, Préférences, Modules complémentaires, « Installer depuis le disque ») ; Helix n'écrit
+  pas dans les dossiers de Blender. Le module ouvre le port 9876 sans authentification et exécute ce
+  qu'on lui envoie : le programme à l'écoute est reconnu avant le lancement et avant chaque appel
+  (signature du processus sur macOS, Authenticode sous Windows, nom de l'exécutable sous Linux).
+  Le serveur est lancé **télémétrie coupée** (il envoie sinon un relevé d'usage à la base Supabase
+  de l'auteur, même sans consentement : vu avec le vrai serveur et un mandataire piège) et sans
+  vérification de mise à jour. Bibliothèques et générateurs en ligne du module : éteints par défaut
+  dans le module, et sur carte (« hors de cette machine »). Trois lectures sans carte
+  (`get_addon_status`, `get_scene_info`, `look`, ce dernier sans chemin de fichier) ; tout le
+  reste sur carte à chaque appel.
+- **Droits** : écrire, exécuter du code et générer, pour les deux, réservé à l'administrateur au
+  moment d'agir. Contrairement à Palmier Pro, ces écritures restent proposées aux employés et à
+  l'agent de code (« que les agents, le Chat, Cowork et Code peuvent utiliser »), derrière la carte.
+- **Écran** : deux lignes avec leur logo (icône du site de Roblox ; logo du kit de la Blender
+  Foundation), pas à pas (`guidesApplications.ts`), messages d'état honnêtes (Roblox Studio
+  introuvable, serveur MCP à activer, Blender introuvable, Blender ne répond pas sur le port de son
+  module, un autre programme sur ce port), carte d'accord qui dit ce qui sort de la machine ;
+  articles d'aide « Créer dans Roblox Studio avec vos agents » et « Créer en 3D dans Blender avec
+  vos agents ». Six langues à 100 %.
+- **Essai** : `npm run essai:roblox-blender` (44 vérifications avec la partie C, 40 sans),
+  repris par `npm run securite`, section 46 : faux StudioMCP et faux serveur de Blender en stdio
+  (scripts Node qui imitent les outils réels), faux module de Blender sur un port libre, `nc` comme
+  « autre programme ». Partie C, seulement avec `HELIX_ESSAI_BLENDER_RESEAU=1` : le **vrai**
+  serveur posé par le code de Helix depuis pypi.org (empreintes vérifiées, 5 s), lancé contre le
+  faux module : 9 outils listés, tous classés ; aucune sortie réseau.
+
+*Licences des dépendances du serveur de Blender* (relevées sur PyPI le 12/10/2026, écrites dans
+`blender-paquets.json`) : MIT ou Apache 2.0 pour la plupart (mcp-for-blender, mcp, pydantic,
+pydantic-core, anyio, attrs, jsonschema, h11, httpx-sse, pyjwt, referencing, rpds-py,
+python-multipart, cryptography en Apache 2.0 ou BSD au choix…). **Hors MIT et Apache, décision à
+prendre par Medhi** : BSD-3-Clause (click, httpcore, httpx, idna, pycparser, python-dotenv,
+sse-starlette, starlette, uvicorn), MIT-0 (cffi), PSF (typing-extensions ; pywin32 sous Windows
+seulement), **MPL-2.0 (certifi)**. Ces mêmes licences sont déjà présentes dans l'atelier et la
+dictée (atelier-paquets.json : certifi, click, httpx, idna, pycparser… y sont), sans décision
+écrite à ce sujet. Rien n'est livré dans l'application : ces paquets sont téléchargés au clic sur
+la machine de la personne. Si Medhi refuse, la voie de repli est de ne rien installer et de donner
+à la personne la commande officielle (`uvx mcp-for-blender`), ce qui perd l'épinglage.
+
+*Licences des applications* : Roblox Studio est propriétaire ; Helix lance le programme de
+l'installation de la personne, n'en distribue ni n'en lit rien. Blender est sous GPL ; Helix ne le
+distribue pas et ne s'y lie pas (il parle à un port). Le module complémentaire (MIT) n'est pas livré
+dans l'application : il vient de la roue téléchargée et vérifiée.
+
+**Pas essayé** : ni Roblox Studio ni Blender ne sont sur la machine de travail (et ne devaient pas
+y être installés). Pas vus : la signature réelle de StudioMCP, `mcp.bat` sous Windows, le
+comportement de StudioMCP Studio fermé, la forme de la réponse de `list_roblox_studios` ; la
+signature réelle de Blender (identifiant `org.blenderfoundation.blender` et équipe `68UA947AUU`
+écrits de mémoire, pas relus sur un binaire : s'ils sont faux, Helix refuse de parler au port, ce
+qui échoue fermé), son signataire Authenticode exact, l'installation du module dans Blender 4.x et
+5.x, un vrai appel jusqu'à Blender. Laissé : la vérification de mise à jour que le module fait
+lui-même au démarrage de Blender (lecture de GitHub, sans la scène), que Helix ne peut pas couper.
+SECURITE.md § 65.
+
 ### 3.6 Découpage des tâches lourdes
 
 Ajouté en septembre 2026, après mesure. Un modèle de 8 milliards de paramètres perd le
@@ -4121,6 +4203,18 @@ la reconnaissance par la signature réelle (identifiant `io.palmier.pro`, équip
 le nombre d'outils listés, une lecture de la timeline sans carte, un ajout de plan avec carte,
 une génération (carte « hors de cette machine », crédits du compte), Palmier Pro fermé puis
 rouvert et « Réessayer ».
+
+**Roblox Studio et Blender (12/10/2026, § 3.5)** : sur un Mac (puis un PC Windows), installer
+Roblox Studio, ouvrir une place, activer « Enable Studio as MCP server », cliquer « Brancher ». À
+voir : la signature de StudioMCP acceptée (même équipe que l'application), le nombre d'outils, le
+conseil « aucun Studio ne répond » quand le serveur est coupé, la réponse de `list_roblox_studios`,
+un `script_read` sans carte, un `execute_luau` avec carte, et sous Windows le chemin de `mcp.bat`.
+Installer Blender (4.x ou 5.x), cliquer « Brancher » : le serveur se pose (pypi.org), le message
+donne le fichier du module ; l'installer dans Blender, « Réessayer ». À voir : la reconnaissance par
+la signature réelle (identifiant `org.blenderfoundation.blender`, équipe `68UA947AUU` sur macOS ;
+« Blender Foundation » en Authenticode sous Windows ; à corriger dans `blender.ts` s'ils diffèrent),
+`get_scene_info` et `look` sans carte, `execute_blender_code` avec carte, Blender fermé puis
+rouvert.
 
 **Parcours à l'écran du 28/09/2026 (2026.928.6)**, interface en serveur de développement
 contre une instance jetable et un faux modèle compatible OpenAI (flux, réflexion, appels

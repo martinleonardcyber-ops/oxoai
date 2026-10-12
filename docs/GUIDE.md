@@ -552,6 +552,25 @@ puce Apple, et demande macOS 26 ou plus récent.
 Essai : `npm run essai:palmier` (faux Palmier Pro sur un port libre, repris par
 `npm run securite`).
 
+**Roblox Studio et Blender** (12/10/2026, `gateway/src/roblox.ts`, `gateway/src/blender.ts`) :
+deux applications de création dont le serveur MCP se lance en stdio sur la machine de l'instance
+(entrées `lanceur` du catalogue : la commande vient de l'installation de l'application, jamais
+d'une requête). Lignes « Roblox Studio » (rubrique « Développement », macOS et Windows) et
+« Blender » (« Documents et données », les trois systèmes), bouton « Brancher ».
+
+- Roblox Studio : le serveur MCP intégré à Studio (`StudioMCP` dans l'application sur macOS,
+  `%LOCALAPPDATA%\Roblox\mcp.bat` sous Windows), à activer dans Studio (Assistant, « … », Manage
+  MCP Servers, « Enable Studio as MCP server »). Rien n'est téléchargé ; signature vérifiée sur macOS.
+- Blender : « MCP for Blender » 2.1.9 (MIT), posé au premier clic dans `<données>/blender-mcp`
+  par `pip --require-hashes` sur `gateway/src/blender-paquets.json`, lancé télémétrie coupée ; son
+  module complémentaire (vérifié par son empreinte) s'installe une fois dans Blender, depuis le
+  fichier que l'écran indique. Le programme qui tient le port du module (9876) est reconnu avant
+  chaque appel.
+- Lectures sans carte ; exécuter du code, modifier, générer : carte à chaque appel, à tout niveau,
+  administrateur seul. SECURITE.md § 65.
+
+Essai : `npm run essai:roblox-blender` (repris par `npm run securite`, section 46).
+
 Pour Gmail et Google Agenda, il faut un **mot de passe d'application** Google,
 pas le mot de passe habituel : le formulaire l'indique et pré-remplit le serveur
 d'après le domaine de l'adresse. Une boîte Workspace ou Microsoft 365 se branche aussi
@@ -984,6 +1003,7 @@ npm run securite          # la batterie de sécurité, contre une instance jetab
 npm run essai:cli         # la ligne de commande (-- --modele : avec LM Studio)
 npm run essai:vscode      # l'extension VS Code, avec un faux module vscode (-- --modele : avec LM Studio)
 npm run essai:palmier     # le connecteur Palmier Pro, contre un faux Palmier Pro
+npm run essai:roblox-blender  # Roblox Studio et Blender, contre des faux serveurs stdio et un faux module de Blender
 ```
 
 ## Rebrander pour un nouveau client
@@ -1099,6 +1119,8 @@ Modules ajoutés ou changés le 29/09/2026 (`gateway/src/`) :
 |---|---|
 | `palmier.ts` | Palmier Pro : reconnaissance de l'application à l'écoute (`lsof`, `codesign`), branchement de l'entrée `local` |
 | `palmierRegles.ts` | Palmier Pro : lectures sans carte, écritures et générations sur carte, ce qui sort de la machine |
+| `roblox.ts`, `robloxRegles.ts` | Roblox Studio : commande du serveur MCP de Studio, signature vérifiée sur macOS ; lectures sans carte, le reste sur carte |
+| `blender.ts`, `blenderRegles.ts`, `blender-paquets.json` | Blender : serveur « MCP for Blender » posé avec ses empreintes, télémétrie coupée, reconnaissance de Blender sur le port du module ; lectures sans carte, le reste sur carte |
 | `oauthNatif.ts`, `outilsNatifs.ts` | Seconde application LinkedIn (`linkedinPage`) et outils de page aiguillés vers ses jetons |
 | `mcp.ts` | `adresseServeurPermise` : aucune adresse locale hors d'une entrée `local` du catalogue |
 | `modelesCloud.ts` | `abreger` : refus d'un fournisseur abrégé pour l'écran, clé masquée comprise |

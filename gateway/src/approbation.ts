@@ -10,6 +10,12 @@ import { APERCU_REQUIS, ECRITURES_PROJETS, estEcritureMcpProjet, estLectureMcpPr
 import { ECRITURES_MICROSOFT, LECTURES_MICROSOFT, resumeMicrosoft } from "./natifs/microsoftBase.ts";
 // Palmier Pro (29/09/2026) : ses lectures pures, par leur nom exact ; tout le reste se confirme à chaque appel.
 import { estEcriturePalmier, estLecturePalmier, horsMachinePalmier, resumePalmier } from "./palmierRegles.ts";
+// Roblox Studio et Blender (12/10/2026) : de même, leurs lectures par leur nom exact, tout le reste sur carte à chaque appel.
+import { estEcritureRoblox, estLectureRoblox, horsMachineRoblox, resumeRoblox } from "./robloxRegles.ts";
+import { estEcritureBlender, estLectureBlender, horsMachineBlender, resumeBlender } from "./blenderRegles.ts";
+
+/** Une écriture d'une application de création ouverte sur la machine (Palmier Pro, Roblox Studio, Blender). */
+const estEcritureApplication = (outil: string): boolean => estEcriturePalmier(outil) || estEcritureRoblox(outil) || estEcritureBlender(outil);
 
 /**
  * Approbation des actions de l'agent.
@@ -302,7 +308,12 @@ const TOUJOURS_CONFIRMER = new Set(["agenda__supprimer", "taches__programmer", .
  * payée sur les crédits de la personne chez Palmier) se confirme à chaque
  * appel, à tout niveau, y compris pour un employé « autonome ».
  */
-const toujoursConfirmer = (outil: string) => TOUJOURS_CONFIRMER.has(outil) || estEcritureMcpProjet(outil) || estEcriturePalmier(outil);
+/*
+ * Roblox Studio et Blender (12/10/2026, SECURITE.md § 65) : de même. Exécuter
+ * du Luau dans Studio ou du Python dans Blender, modifier un script, générer
+ * chez Roblox ou chez un service de Blender : une carte à chaque appel.
+ */
+const toujoursConfirmer = (outil: string) => TOUJOURS_CONFIRMER.has(outil) || estEcritureMcpProjet(outil) || estEcritureApplication(outil);
 
 export const demandeToujours = (outil: string) => toujoursConfirmer(outil) || (ENVOI.has(outil) && !envoiSansAccord());
 
@@ -393,6 +404,8 @@ export function modifie(outil: string): boolean {
   if (estLectureMcpProjet(outil)) return false;
   // Lectures pures de Palmier Pro, par leur nom exact (palmierRegles.ts).
   if (estLecturePalmier(outil)) return false;
+  // Et celles de Roblox Studio et de Blender (robloxRegles.ts, blenderRegles.ts).
+  if (estLectureRoblox(outil) || estLectureBlender(outil)) return false;
   if (DRIVE_LECTURE.has(outil) || SLACK_LECTURE.has(outil) || BIBLIOTHEQUE_LECTURE.has(outil) || CONNAISSANCES_LECTURE.has(outil) || CONTROLE_LECTURE.has(outil) || WEB_LECTURE.has(outil)) return false;
   if (outil.startsWith("bureau__")) return !BUREAU_LECTURE.has(outil.slice("bureau__".length));
 
@@ -580,6 +593,8 @@ export function resumerOutil(outil: string, args: Record<string, unknown>): stri
   if (natif) return natif;
   const palmier = resumePalmier(outil, args);
   if (palmier) return palmier;
+  const creation = resumeRoblox(outil, args) ?? resumeBlender(outil, args);
+  if (creation) return creation;
 
   /*
    * Outil d'un connecteur ajouté. On ne sait pas ce qu'il fait, mais on sait
@@ -1189,7 +1204,8 @@ export async function verifierOutil(
   const toujours = toujoursConfirmer(outil);
   // Les écritures des serveurs MCP de la famille « projets » : même carte, arguments entiers (SECURITE.md § 48).
   // Et celles de Palmier Pro : arguments montrés en entier, ou refusés s'ils ne tiennent pas sur la carte.
-  const native = ECRITURES_NATIVES.has(outil) || estEcritureMcpProjet(outil) || estEcriturePalmier(outil);
+  // De même pour Roblox Studio et Blender : le code à exécuter se lit en entier sur la carte.
+  const native = ECRITURES_NATIVES.has(outil) || estEcritureMcpProjet(outil) || estEcritureApplication(outil);
   /*
    * Brevo et Mailchimp : la carte d'une campagne est préparée par projets.ts
    * (campagne relue chez le service, destinataires comptés). Sans cet aperçu,
@@ -1272,7 +1288,10 @@ export async function verifierOutil(
         })(),
         ...(tacheEnCours ? { tache: tacheEnCours } : {}),
         // Ce qui sort de la machine (une génération chez Palmier…) : la carte le dit dans la langue de l'écran.
-        ...(horsMachinePalmier(outil) ? { horsMachine: horsMachinePalmier(outil) } : {}),
+        ...(() => {
+          const dehors = horsMachinePalmier(outil) ?? horsMachineRoblox(outil) ?? horsMachineBlender(outil);
+          return dehors ? { horsMachine: dehors } : {};
+        })(),
       },
     },
     surCarte,

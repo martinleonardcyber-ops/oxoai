@@ -142,7 +142,16 @@ export function ToolApproval() {
         ? t("Palmier Pro peut envoyer le son à ses services pour le transcrire, hors de cette machine, avec les crédits de votre compte Palmier.")
         : horsMachine === "retour"
           ? t("Ce message part vers l'équipe de Palmier, hors de cette machine.")
-          : null;
+          : // Roblox Studio et Blender (12/10/2026) : gateway/src/robloxRegles.ts, blenderRegles.ts.
+            horsMachine === "roblox-generation"
+            ? t("Cette génération part vers les services de Roblox, hors de cette machine, au nom du compte Roblox ouvert dans Studio.")
+            : horsMachine === "roblox-televersement"
+              ? t("Cette image part sur les serveurs de Roblox, hors de cette machine, au nom du compte Roblox ouvert dans Studio.")
+              : horsMachine === "blender-bibliotheque"
+                ? t("Cette demande part vers une bibliothèque en ligne (Poly Haven, Sketchfab ou Poly Pizza), hors de cette machine, si vous l'avez allumée dans le module de Blender.")
+                : horsMachine === "blender-generation"
+                  ? t("Cette génération part vers le service réglé dans le module de Blender (Hyper3D, Hunyuan3D ou Tripo), hors de cette machine, sur votre compte ou vos crédits chez lui. Elle ne se reprend pas.")
+                  : null;
   const contenu =
     donnees || dehors || (cibles && cibles.length > 1) ? (
       <div className="space-y-2">

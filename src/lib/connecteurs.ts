@@ -48,6 +48,12 @@ export interface EntreeCatalogue {
    * vient jamais d'ici : l'instance la tire de son catalogue.
    */
   local?: { port: number; chemin: string };
+  /**
+   * Application installée sur la machine de l'instance, dont l'instance lance
+   * le serveur d'outils elle-même (Roblox Studio, Blender, 12/10/2026) : même
+   * « Brancher » que `local`, la commande ne vient jamais d'ici.
+   */
+  lanceur?: true;
   /** Page officielle où la personne télécharge l'application elle-même. */
   telechargement?: string;
   /** Livré avec Helix : déjà là, ne s'ajoute ni ne se retire. */

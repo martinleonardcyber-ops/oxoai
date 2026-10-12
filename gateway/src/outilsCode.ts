@@ -163,6 +163,7 @@ export function outilsPourCode(): DefinitionOutil[] {
   return [
     // Ni les écritures de Trello, Monday, ClickUp, Todoist, Calendly et Zoom : réservées au Chat de l'administrateur (SECURITE.md § 48).
     // Ni celles de Palmier Pro (29/09/2026) : modifier un montage ou générer n'a rien à faire dans un projet de code.
+    // Celles de Roblox Studio et de Blender restent (12/10/2026, demande de Medhi) : un script Luau ou Python est du code ; carte à chaque appel, administrateur seul (outils.ts).
     ...outilsMcp().filter((o) => !o.function.name.startsWith("fichiers__") && !estEcritureMcpProjet(o.function.name) && !estEcriturePalmier(o.function.name)),
     ...courrier.toolsForModel(),
     ...agenda.toolsForModel(),

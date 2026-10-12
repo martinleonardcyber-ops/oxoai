@@ -189,6 +189,9 @@ siempre activo en el nivel «Libre» pasan por PowerShell.
   visto bueno. LinkedIn conecta un perfil y, mediante una segunda aplicación de LinkedIn, una
   página de empresa; Palmier Pro, un editor de vídeo para los Mac con Apple Silicon, permite a
   los agentes editar en su línea de tiempo mientras está abierto en el Mac de la instancia.
+  Roblox Studio (macOS, Windows) y Blender (macOS, Windows, Linux) permiten a los agentes leer y
+  construir una place o una escena 3D abierta en la máquina de la instancia; ejecutar código,
+  modificar y generar siempre piden tu aprobación.
 - **Tareas programadas**: una instrucción y un ritmo (cada día, de lunes a viernes, un día de la
   semana o del mes), ejecutadas con tus herramientas, incluso con la ventana cerrada, por el
   agente que elijas.

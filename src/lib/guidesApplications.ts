@@ -1074,9 +1074,70 @@ function guidePalmier(): GuideAppli {
   };
 }
 
-/** Le pas à pas d'une application ouverte sur la machine de l'instance (`local` au catalogue), ou `null`. */
+/**
+ * Roblox Studio (12/10/2026) : le serveur MCP est livré avec Studio, il faut
+ * seulement l'activer. Lu le 12/10/2026 sur
+ * https://create.roblox.com/docs/studio/mcp (chemin « Assistant › … › Manage
+ * MCP Servers › Enable Studio as MCP server », témoin vert, `studio_id` pour
+ * choisir parmi plusieurs Studio ouverts). Studio lui-même n'a pas été ouvert.
+ */
+function guideRoblox(): GuideAppli {
+  return {
+    nom: "Roblox Studio",
+    sansConsole: true,
+    introduction: tf("Roblox Studio est l'atelier de création de Roblox, d'un autre éditeur que {0}. Il doit être installé et ouvert sur la machine de cette instance (macOS ou Windows) : {0} lance le serveur d'outils livré avec Studio, sans rien télécharger.", branding.name),
+    consoles: [
+      { libelle: t("la page d'installation de Roblox Studio"), url: "https://create.roblox.com/docs/studio/setup" },
+      { libelle: t("la documentation du serveur MCP de Studio"), url: "https://create.roblox.com/docs/studio/mcp" },
+    ],
+    etapes: [
+      { texte: t("Pas encore installé : installez Roblox Studio depuis sa page officielle (sur Mac, dans le dossier Applications), puis connectez-vous à votre compte Roblox.") },
+      { texte: t("Ouvrez Roblox Studio et une place. Ouvrez l'Assistant, cliquez « … », puis Manage MCP Servers, et activez « Enable Studio as MCP server ». Un témoin vert confirme qu'il est prêt.") },
+      { texte: tf("Revenez ici et cliquez « Brancher ». {0} vérifie l'installation de Studio (sur Mac, la signature de son serveur) avant de le lancer, puis demande à Studio quelles places sont ouvertes.", branding.name) },
+      { texte: t("Plusieurs Studio ouverts : vos agents voient la liste et choisissent celui que vous nommez. Lire les scripts et les instances est libre ; modifier un script, exécuter du code, lancer un essai de jeu ou générer demande votre accord à chaque fois.") },
+    ],
+    aEviter: [
+      t("Ne laissez pas un agent travailler sur une place publiée que vous ne voulez pas voir modifiée : ouvrez plutôt une copie."),
+      t("Ne fermez pas Roblox Studio pendant qu'un agent travaille : ses outils ne répondent que tant que Studio est ouvert. Rouvert, « Réessayer » le rebranche."),
+    ],
+  };
+}
+
+/**
+ * Blender (12/10/2026) : le serveur « MCP for Blender » est posé par
+ * l'instance (gateway/src/blender.ts, version et empreintes figées), et son
+ * module complémentaire s'installe une fois dans Blender. Lu le 12/10/2026 :
+ * README et code de https://github.com/ahujasid/mcp-for-blender à la
+ * version 2.1.9 (module « MCP for Blender », rubrique Interface, panneau
+ * « MCP for Blender » de la barre latérale de la vue 3D, démarrage automatique
+ * du serveur, bibliothèques et générateurs éteints par défaut). Blender
+ * lui-même n'a pas été ouvert.
+ */
+function guideBlender(): GuideAppli {
+  return {
+    nom: "Blender",
+    sansConsole: true,
+    introduction: tf("Blender est un logiciel libre de création 3D. {0} lui parle par le module complémentaire « MCP for Blender » (licence MIT), d'un auteur indépendant de la Blender Foundation : {0} pose lui-même son serveur, à une version vérifiée, et vous installez le module une fois dans Blender.", branding.name),
+    consoles: [{ libelle: t("la page de téléchargement de Blender"), url: "https://www.blender.org/download/" }],
+    etapes: [
+      { texte: t("Pas encore installé : installez Blender depuis sa page officielle, puis ouvrez-le.") },
+      { texte: tf("Cliquez « Brancher ». La première fois, {0} télécharge le serveur depuis pypi.org (quelques mégaoctets, chaque fichier vérifié par son empreinte) et vous donne le chemin du fichier du module.", branding.name) },
+      { texte: t("Dans Blender : Édition, Préférences, Modules complémentaires, « Installer depuis le disque », choisissez ce fichier, puis cochez « MCP for Blender ». Le module démarre son serveur avec Blender (panneau « MCP for Blender » de la vue 3D, touche N).") },
+      { texte: t("Revenez ici et cliquez « Réessayer » ou « Brancher ». Lire la scène est libre ; exécuter du code, importer et générer demande votre accord à chaque fois.") },
+    ],
+    aEviter: [
+      t("N'allumez les bibliothèques en ligne (Poly Haven, Sketchfab, Poly Pizza) et les générateurs (Hyper3D, Hunyuan3D, Tripo) du module que si vous voulez que les demandes partent chez eux : ils sont éteints par défaut."),
+      t("Ne fermez pas Blender pendant qu'un agent travaille : rouvert, « Réessayer » le rebranche."),
+    ],
+  };
+}
+
+/** Le pas à pas d'une application ouverte sur la machine de l'instance (`local` ou `lanceur` au catalogue), ou `null`. */
 export function guideApplicationLocale(id: string): GuideAppli | null {
-  return id === "palmier" ? guidePalmier() : null;
+  if (id === "palmier") return guidePalmier();
+  if (id === "roblox") return guideRoblox();
+  if (id === "blender") return guideBlender();
+  return null;
 }
 
 /** Le guide d'un service, ou `null` s'il n'en a pas (il se branche d'un clic, ou par un simple jeton). */
