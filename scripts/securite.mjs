@@ -6155,8 +6155,12 @@ console.log("\n14. Chaîne d'approvisionnement : versions figées, empreintes é
   const entr = sansCommentaires(src("gateway", "src", "entrainement.ts"));
   const pipEntr = [...entr.matchAll(/"pip", "install"[^\]]*\]/g)].map((m) => m[0]);
   verifier("entraînement : chaque `pip install` est figé par empreintes, sauf la pile NVIDIA (exception écrite)", pipEntr.length >= 2 && pipEntr.every((a) => a.includes("--require-hashes") || a.includes("INDEX_TORCH_CUDA")) && pipEntr.some((a) => a.includes("--require-hashes")), pipEntr.join(" / "));
-  const autresPip = readdirSync(join(RACINE, "gateway", "src")).filter((f) => f.endsWith(".ts") && !["atelier.ts", "entrainement.ts"].includes(f) && /"pip",\s*"install"|\bpip\w*(?:\(\))?,\s*\[\s*"install"/.test(sansCommentaires(src("gateway", "src", f))));
+  const autresPip = readdirSync(join(RACINE, "gateway", "src")).filter((f) => f.endsWith(".ts") && !["atelier.ts", "entrainement.ts", "blender.ts"].includes(f) && /"pip",\s*"install"|\bpip\w*(?:\(\))?,\s*\[\s*"install"/.test(sansCommentaires(src("gateway", "src", f))));
   verifier("aucun autre module de la passerelle ne lance `pip install`", autresPip.length === 0, autresPip.join(", "));
+  // Le serveur MCP de Blender (12/10/2026) : chaque `pip install` figé par empreintes, sans dépendance résolue à la volée ni source à compiler.
+  const blender = sansCommentaires(src("gateway", "src", "blender.ts"));
+  const pipBlender = [...blender.matchAll(/"install"[^\]]*\]/g)].map((m) => m[0]);
+  verifier("Blender : chaque `pip install` porte --require-hashes, --no-deps et --only-binary", pipBlender.length >= 1 && pipBlender.every((a) => a.includes("--require-hashes") && a.includes("--no-deps") && a.includes("--only-binary")), pipBlender.join(" | "));
 
   // Modèles et archives : révision et empreinte écrites.
   const images = src("gateway", "src", "images.ts");
