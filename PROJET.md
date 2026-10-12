@@ -5896,6 +5896,25 @@ de cette section) ; ce qui est dit plus bas des « phrases encore en anglais » 
   « Toujours autoriser ») sont traduits sans avoir été lus sur un système dans ces langues ;
   relecture par des personnes dont c'est la langue.
 
+**Décidé et vérifié le 12/10/2026 : connecteurs Roblox Studio et Blender.** Medhi : « je veux
+juste que ça fonctionne, fais au mieux ». Décisions prises en conséquence :
+- **Licences** : les dépendances du serveur MCP de Blender sous BSD-3 (click, httpx, httpcore, idna,
+  pycparser, python-dotenv, starlette, sse-starlette, uvicorn), MIT-0 (cffi), PSF (typing-extensions,
+  pywin32 sous Windows) et MPL-2.0 (certifi) sont **acceptées**, comme exception écrite dans
+  `CLAUDE.md` : licences libres et permissives, chaque roue figée par version et empreinte
+  (`gateway/src/blender-paquets.json`). MPL-2.0 ne s'étend qu'aux fichiers de certifi, non modifiés.
+- **Roblox** : `search_asset` et `http_get` restent des lectures sans carte (ils envoient chez Roblox
+  des mots de recherche ou une adresse de documentation, jamais la place).
+- **Vu de bout en bout sur le Mac**, avec le vrai Blender 5.2.2 (macOS arm64, téléchargé chez
+  blender.org pour l'essai puis effacé) : sa signature est bien `org.blenderfoundation.blender`,
+  équipe `68UA947AUU` (« Developer ID Application: Stichting Blender Foundation »), ce que
+  `EXIGENCE_BLENDER` attend ; le serveur posé par le code de Helix en 7 s (empreintes) ; le module
+  installé et démarré dans ce Blender ; `ecouteurBlender()` reconnaît le processus à l'écoute ; le
+  serveur liste ses 9 outils et `get_scene_info` rend la vraie scène (cube, lumière, caméra, Suzanne
+  ajoutée par l'essai). **Pas vus** : Blender sous Windows et Linux (signature Authenticode, nom de
+  l'exécutable), un vrai Roblox Studio (signature de StudioMCP, `mcp.bat`, réponse de
+  `list_roblox_studios`), l'écran du connecteur dans l'application de bureau.
+
 **Fait le 04/10/2026 : Cowork a ses sessions, comme Code.** Demandé par Medhi : « comme la
 session Code, il doit avoir une session Cowork, car partir du Chat renvoie à l'interface
 normale ». Ce qui manquait, dans le code : une conversation de Cowork était un Chat comme un
