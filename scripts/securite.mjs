@@ -8828,7 +8828,7 @@ console.log("\n39. Palmier Pro : application locale reconnue avant de lui parler
   );
   verifier(
     "écritures et générations de Palmier Pro : carte à chaque appel (toujoursConfirmer), administrateur seul au moment d'agir, absentes des outils des employés et de l'agent de code",
-    (/toujoursConfirmer = \(outil: string\) => [^\n]*estEcriturePalmier\(outil\)/.test(approSrc) || (/toujoursConfirmer = \(outil: string\) => [^\n]*estEcritureApplication\(outil\)/.test(approSrc) && /const estEcritureApplication = \(outil: string\): boolean => estEcriturePalmier\(outil\)/.test(approSrc))) && /estEcriturePalmier\(nom\) && !\(pour\?\.userId && \(await estAdministrateur\(pour\.userId\)\)\)/.test(outilsSrc) && /!estEcritureMcpProjet\(o\.function\.name\) && !estEcriturePalmier\(o\.function\.name\)/.test(outilsSrc) && /!estEcritureMcpProjet\(o\.function\.name\) && !estEcriturePalmier\(o\.function\.name\)/.test(codeSrc),
+    (/toujoursConfirmer = \(outil: string\) => [^\n]*estEcriturePalmier\(outil\)/.test(approSrc) || (/toujoursConfirmer = \(outil: string\) => [^\n]*estEcritureApplication\(outil\)/.test(approSrc) && /const estEcritureApplication = \(outil: string\): boolean => estEcriturePalmier\(outil\)/.test(approSrc))) && (/estEcriturePalmier\(nom\) && !\(pour\?\.userId && \(await estAdministrateur\(pour\.userId\)\)\)/.test(outilsSrc) || (/if \(estEcriturePalmier\(nom\) && !\(await administre\(pour\?\.userId\)\)\)/.test(outilsSrc) && /const administre = async \(compte: string \| undefined\): Promise<boolean> => Boolean\(compte\) && \(await estAdministrateur\(compte!\)\);/.test(outilsSrc))) && /!estEcritureMcpProjet\(o\.function\.name\) && !estEcriturePalmier\(o\.function\.name\)/.test(outilsSrc) && /!estEcritureMcpProjet\(o\.function\.name\) && !estEcriturePalmier\(o\.function\.name\)/.test(codeSrc),
     "approbation.ts, outils.ts, outilsCode.ts",
   );
   verifier(
@@ -9777,8 +9777,11 @@ console.log("\n46. Roblox Studio et Blender : commande tirée de l'application, 
     "connecteurs.ts",
   );
   verifier(
-    "roblox.ts : chemins fixes donnés par Roblox (StudioMCP dans l'application, mcp.bat sous Windows), signature vérifiée par codesign sur macOS ; rien de téléchargé, rien venu d'une requête",
-    /join\(appMac\(\), "Contents", "MacOS", "StudioMCP"\)/.test(robloxSrc) && /"Roblox", "mcp\.bat"/.test(robloxSrc) && /"\/usr\/bin\/codesign", \["--verify", "--strict", `-R=\$\{DEVELOPER_ID\}`, programme\]/.test(robloxSrc) && !/fetch\(|req\.|body\./.test(robloxSrc),
+    "roblox.ts : chemins fixes donnés par Roblox (StudioMCP dans l'application, mcp.bat sous Windows), signature stricte de l'application et de StudioMCP à l'équipe de Roblox (2CFABCH843) sur macOS, cmd.exe en /d /c ; rien de téléchargé, rien venu d'une requête",
+    /join\(appMac\(\), "Contents", "MacOS", "StudioMCP"\)/.test(robloxSrc) && /"Roblox", "mcp\.bat"/.test(robloxSrc) &&
+      /"\/usr\/bin\/codesign", \["--verify", "--strict", `-R=\$\{EXIGENCE_ROBLOX\}`, app\]/.test(robloxSrc) && /"\/usr\/bin\/codesign", \["--verify", "--strict", `-R=\$\{EXIGENCE_ROBLOX\}`, programme\]/.test(robloxSrc) &&
+      /export const EQUIPE_ROBLOX = "2CFABCH843";/.test(robloxSrc) && /certificate leaf\[subject\.OU\] = "\$\{EQUIPE_ROBLOX\}"/.test(robloxSrc) &&
+      /\["\/d", "\/c", bat\]/.test(robloxSrc) && /if \(!cheminPourCmd\(batWindows\(\)\)\)/.test(robloxSrc) && !/fetch\(|req\.|body\./.test(robloxSrc),
     "roblox.ts",
   );
   verifier(
@@ -9798,9 +9801,43 @@ console.log("\n46. Roblox Studio et Blender : commande tirée de l'application, 
     paquets.version,
   );
   verifier(
-    "écritures de Roblox Studio et de Blender : carte à chaque appel (toujoursConfirmer), administrateur seul au moment d'agir ; chemin de fichier refusé dans look",
-    /toujoursConfirmer = \(outil: string\) => [^\n]*estEcritureApplication\(outil\)/.test(approSrc) && /estEcriturePalmier\(outil\) \|\| estEcritureRoblox\(outil\) \|\| estEcritureBlender\(outil\)/.test(approSrc) && /\(estEcritureRoblox\(nom\) \|\| estEcritureBlender\(nom\)\) && !\(pour\?\.userId && \(await estAdministrateur\(pour\.userId\)\)\)/.test(outilsSrc) && /refusArgumentsBlender\(nom, args\)/.test(outilsSrc),
+    "écritures de Roblox Studio et de Blender : carte à chaque appel (toujoursConfirmer), administrateur ou employé d'une administratrice au moment d'agir (refusApplication, dans executerOutil) ; Palmier Pro à l'administrateur seul",
+    /toujoursConfirmer = \(outil: string\) => [^\n]*estEcritureApplication\(outil\)/.test(approSrc) && /estEcriturePalmier\(outil\) \|\| estEcritureRoblox\(outil\) \|\| estEcritureBlender\(outil\)/.test(approSrc) &&
+      /if \(estEcriturePalmier\(nom\) && !\(await administre\(pour\?\.userId\)\)\)/.test(outilsSrc) && /if \(\(estEcritureRoblox\(nom\) \|\| accordRequisBlender\(nom, args\)\) && !\(\(await administre\(pour\?\.userId\)\) \|\| \(await administre\(pour\?\.proprietaire\)\)\)\)/.test(outilsSrc) &&
+      /const refus = await refusApplication\(nom, args, pour\);\s*if \(refus\) return \{ ok: false, content: refus \};\s*\}\s*return appelerMcp\(/.test(outilsSrc),
     "approbation.ts, outils.ts",
+  );
+  const serveurOutilsSrc = src("gateway", "src", "serveurOutils.ts");
+  const chatSrc = src("gateway", "src", "chat.ts");
+  const codeSrc = src("gateway", "src", "outilsCode.ts");
+  verifier(
+    "le droit d'agir sur Roblox Studio, Blender et Palmier Pro se vérifie avant la carte : Chat, agent de code, employés (relecture du 12/10/2026)",
+    /const refus = await refusApplication\(call\.name, args, qui \? \{ userId: qui \} : undefined\);\s*return refus\s*\? \(\{ autorise: false, message: refus \} as approbation\.Verdict\)\s*: approbation\.verifierOutil\(/.test(chatSrc) &&
+      /const refusAppli = await refusApplication\(nom, args, \{ userId: qui \}\);\s*if \(refusAppli\) return texte\(refusAppli, true\);\s*const verdict = await verifierOutil\(/.test(codeSrc) &&
+      /const refusAppli = await refusApplication\(nom, args, \{ userId: qui, proprietaire: courant\.ownerId \}\);\s*if \(refusAppli\) return texte\(refusAppli, true\);/.test(serveurOutilsSrc) && serveurOutilsSrc.indexOf("refusApplication(nom, args") < serveurOutilsSrc.indexOf("await verifierOutil("),
+    "chat.ts, outilsCode.ts, serveurOutils.ts",
+  );
+  verifier(
+    "employés : les écritures de Roblox Studio et de Blender ne sont listées que si la propriétaire administre l'instance ; un employé autonome demande quand même pour look hors de la scène",
+    /const ecritures = await ecrituresApplicationsPourEmploye\(e\.ownerId\);\s*const familles = ecritures \? toutes : toutes\.filter\(\(o\) => !estEcritureRoblox\(o\.function\.name\) && !estEcritureBlender\(o\.function\.name\)\);/.test(serveurOutilsSrc) &&
+      /executerOutil\(nom, args, \{ userId: qui, groupes: \[\], proprietaire: courant\.ownerId \}\)/.test(serveurOutilsSrc) && /!demandeToujours\(nom, args\)/.test(serveurOutilsSrc),
+    "serveurOutils.ts",
+  );
+  const reglesBlender = src("gateway", "src", "blenderRegles.ts");
+  verifier(
+    "look de Blender : sans carte seulement sans image, ou « Render Result » / « Viewer Node » exactement ; sinon carte (toujours, arguments entiers) et administrateur",
+    /IMAGES_BLENDER_SANS_CARTE = new Set\(\["Render Result", "Viewer Node"\]\)/.test(reglesBlender) && /return !\(typeof image === "string" && IMAGES_BLENDER_SANS_CARTE\.has\(image\)\);/.test(reglesBlender) && !/png\|jpe\?g/.test(reglesBlender) &&
+      /const toujours = toujoursConfirmer\(outil\) \|\| confirmerSelonArguments\(outil, args\);/.test(approSrc) && /\|\| estEcritureApplication\(outil\) \|\| confirmerSelonArguments\(outil, args\);/.test(approSrc),
+    "blenderRegles.ts, approbation.ts",
+  );
+  verifier(
+    "Blender : Python du système en 3.10 à 3.14 seulement, roue absente dite clairement ; ancien serveur arrêté puis effacé avant une mise à jour ; retrait qui efface <données>/blender-mcp et dit de décocher le module ; Blender introuvable ne bloque plus l'installation",
+    /majeure === 3 && mineure >= 10 && mineure <= 14/.test(blenderSrc) && /No matching distribution/.test(blenderSrc) &&
+      /try \{\s*mkdirSync\(racine\(\), \{ recursive: true, mode: 0o700 \}\);\s*rmSync\(marque\(\), \{ force: true \}\);\s*rmSync\(dossierVenv\(\), \{ recursive: true, force: true \}\);\s*\} catch/.test(blenderSrc) &&
+      /if \(stdio\.remplaceServeur\?\.\(\) && enMemoire\.some\(\(c\) => c\.id === entree\.id\)\) await stopServer\(entree\.id\);\s*const prepare/.test(connSrc) &&
+      /rmSync\(racine\(\), \{ recursive: true, force: true \}\);/.test(blenderSrc) && /const apres = stdio\?\.retirer \? await stdio\.retirer\(\)/.test(connSrc) && /décochez aussi le module « MCP for Blender »/.test(connSrc) &&
+      !/if \(!avant\.ok && !blenderInstalle\(\)/.test(blenderSrc) && /reconnus\.get\(e\.pid\) === qui/.test(blenderSrc),
+    "blender.ts, connecteurs.ts",
   );
   const ecran = src("src", "components", "settings", "Connecteurs.tsx");
   const guides = src("src", "lib", "guidesApplications.ts");

@@ -23,8 +23,11 @@ export const ID_BLENDER = "blender";
  *  - `get_scene_info` : la scène en texte ;
  *  - `look` : une image de la scène (« Every setting changed to take the
  *    picture is restored afterwards »). Son champ `image` peut aussi désigner
- *    un fichier de la machine : Helix refuse un chemin de fichier dans ce
- *    champ (`refusArgumentsBlender`), la lecture reste celle de la scène.
+ *    une image du fichier ouvert ou **un fichier de la machine** (« or a file
+ *    path », docstring de `look`) : sans carte seulement sans `image`, ou avec
+ *    exactement « Render Result » ou « Viewer Node » ; tout autre nom passe par
+ *    la carte et l'administrateur (`lookHorsScene`, relecture du 12/10/2026 :
+ *    la liste d'extensions d'avant laissait passer un fichier sans extension).
  *
  * Écartés : `search_assets` (une recherche chez Poly Haven, Sketchfab ou
  * Poly Pizza, hors de la machine), `import_asset` (télécharge et ajoute à la
@@ -60,21 +63,25 @@ export function horsMachineBlender(outil: string): "blender-bibliotheque" | "ble
   return null;
 }
 
+/** Les seules images que `look` montre sans carte : celles que Blender produit lui-même, au caractère près. */
+export const IMAGES_BLENDER_SANS_CARTE = new Set(["Render Result", "Viewer Node"]);
+
 /**
- * Un argument que Helix refuse avant tout appel, `null` sinon : le champ
- * `image` de `look` désigne une image de Blender (« Render Result », une image
- * du fichier) ou **un fichier de la machine**. Un chemin, Helix ne le passe
- * pas : ce serait lire hors du dossier de travail, sans les zones protégées
- * du serveur de fichiers (zonesProtegees.ts).
+ * `look` avec un champ `image` autre que « Render Result » ou « Viewer Node » :
+ * ce peut être un fichier de la machine, hors du dossier de travail et des
+ * zones protégées du serveur de fichiers (zonesProtegees.ts). Ce n'est plus
+ * une lecture : carte à chaque appel (approbation.ts) et administrateur
+ * (outils.ts), comme une écriture.
  */
-export function refusArgumentsBlender(outil: string, args: Record<string, unknown>): string | null {
-  if (court(outil) !== "look") return null;
+export function lookHorsScene(outil: string, args: Record<string, unknown> | undefined): boolean {
+  if (court(outil) !== "look" || !args) return false;
   const image = args.image;
-  if (typeof image === "string" && /[\\/]|^~|^[A-Za-z]:|\.(png|jpe?g|exr|hdr|tiff?|bmp|webp|tga)$/i.test(image.trim())) {
-    return "Refusé : l'outil « look » de Blender ne lit pas un fichier de la machine par ce chemin. Montre la scène, ou une image déjà ouverte dans Blender (« Render Result »). Rien n'a été fait.";
-  }
-  return null;
+  if (image === undefined || image === null) return false;
+  return !(typeof image === "string" && IMAGES_BLENDER_SANS_CARTE.has(image));
 }
+
+/** Ce qui demande la carte et l'administrateur pour cet appel précis : une écriture, ou `look` hors de la scène. */
+export const accordRequisBlender = (outil: string, args?: Record<string, unknown>): boolean => estEcritureBlender(outil) || lookHorsScene(outil, args);
 
 /** La phrase de la carte d'accord (en français, comme les autres : approbation.ts). */
 export function resumeBlender(outil: string, args: Record<string, unknown>): string | null {
@@ -85,7 +92,10 @@ export function resumeBlender(outil: string, args: Record<string, unknown>): str
     case "execute_blender_code":
       return "exécuter du code Python dans Blender, sur cette machine";
     case "generate_3d":
-      return `générer un objet 3D${texte(args.prompt) ? ` : « ${texte(args.prompt)} »` : ""} ; la demande part vers le service de génération réglé dans Blender (Hyper3D, Hunyuan3D ou Tripo), hors de cette machine, sur votre compte ou vos crédits chez lui`;
+      return `générer un objet 3D${texte(args.prompt) ? ` : « ${texte(args.prompt)} »` : ""} ; la demande part vers le service de génération réglé dans Blender (Hyper3D, Hunyuan3D ou Tripo), hors de cette machine, sur votre compte ou vos crédits chez lui${texte(args.image, 120) ? ` ; le fichier ou l'adresse d'image « ${texte(args.image, 120)} » part aussi chez ce service` : ""}`;
+    case "look":
+      if (lookHorsScene(outil, args)) return `faire lire par Blender l'image « ${texte(args.image, 120) || JSON.stringify(args.image)} » (une image du fichier ouvert, ou un fichier de cette machine) et la montrer à l'agent`;
+      break;
     case "search_assets":
       return `chercher des modèles ou des textures${texte(args.source, 40) ? ` chez ${texte(args.source, 40)}` : ""}${texte(args.query, 80) ? ` (« ${texte(args.query, 80)} »)` : ""} ; la recherche part hors de cette machine`;
     case "import_asset":

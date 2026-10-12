@@ -6529,16 +6529,26 @@ Helix tire de l'installation de l'application. PROJET.md § 3.5 dit le détail ;
   https://create.roblox.com/docs/studio/mcp (lu le 12/10/2026 ; l'ancien
   `Roblox/studio-rust-mcp-server` est archivé). macOS : `RobloxStudio.app/Contents/MacOS/StudioMCP`
   dans /Applications ou ~/Applications, sans argument ; avant chaque lancement, `codesign
-  --verify --strict` contre une exigence Developer ID d'Apple, et l'équipe du programme doit être
-  celle de l'application Roblox Studio qui le contient (l'identifiant d'équipe de Roblox n'a pas pu
-  être relu ici : il n'est pas écrit en dur). Windows : `cmd.exe` de System32, `/c
-  %LOCALAPPDATA%\Roblox\mcp.bat` ; ce fichier de commandes est dans le dossier de l'utilisateur,
-  sans signature à vérifier : qui peut l'écrire peut déjà lancer ce qu'il veut sous ce compte.
+  --verify --strict` sur `RobloxStudio.app` (ressources scellées comprises) **et** sur
+  `StudioMCP`, contre une exigence Developer ID d'Apple épinglée à l'équipe de Roblox Corporation,
+  `2CFABCH843` (`EXIGENCE_ROBLOX`). Équipe relue le 12/10/2026 sur l'installateur officiel
+  (https://www.roblox.com/download/studio, redirigé vers `setup.rbxcdn.com/mac/RobloxStudio.dmg`,
+  10 595 062 octets, SHA-256 `697179990b17db9a…`) : « Developer ID Application: Roblox Corporation
+  (2CFABCH843) », notarié (`spctl` : « Notarized Developer ID ») ; l'image ouverte en lecture seule,
+  rien exécuté, effacée ensuite. Pas encore relue sur un Studio installé : s'il était signé par une
+  autre équipe, Helix refuse de le lancer (échec fermé). Windows : `cmd.exe` de System32, `/d /c
+  %LOCALAPPDATA%\Roblox\mcp.bat` (`/d` : sans les commandes « AutoRun » du registre) ; un chemin
+  qui contient `& | < > ( ) ^ % ! "` est refusé avant tout lancement (cmd relit la ligne : un nom
+  de compte « Jean & Cie » y enchaînerait une commande), jamais échappé à la main. Ce fichier de
+  commandes est dans le dossier de l'utilisateur, sans signature à vérifier : qui peut l'écrire
+  peut déjà lancer ce qu'il veut sous ce compte.
   Linux : pas de fiche (Studio n'y existe pas). Rien n'est téléchargé.
 - **Blender** (`gateway/src/blender.ts`) : le serveur « MCP for Blender »
   (https://github.com/ahujasid/mcp-for-blender, MIT), version 2.1.9 publiée sur PyPI le
   06/10/2026, posé par Helix **au clic sur « Brancher »** dans `<données>/blender-mcp/venv`
-  (Python du système s'il est en 3.10 ou plus avec `venv`, sinon celui de Helix, `pythonPrive.ts`)
+  (Python du système s'il est en 3.10 à 3.14 avec `venv`, les versions pour lesquelles la liste a
+  des roues, sinon celui de Helix, `pythonPrive.ts` ; un échec de pip faute de roue, « No
+  matching distribution », est dit comme tel, traduit)
   par `pip install --require-hashes --no-deps --only-binary=:all: -r` sur la liste figée de
   `gateway/src/blender-paquets.json` (33 lignes : chaque paquet à version exacte avec les
   empreintes SHA-256 de ses roues, pour Python 3.10 à 3.14 et les trois systèmes, refaite par
@@ -6547,7 +6557,11 @@ Helix tire de l'installation de l'application. PROJET.md § 3.5 dit le détail ;
   `<données>/blender-mcp/blender_mcp.py` pour que la personne l'installe dans Blender : Helix
   n'écrit pas dans les dossiers de Blender. Le serveur est lancé par l'interpréteur de cet
   environnement en mode isolé (`-I`), qui appelle `blender_mcp.server:main`. Blender introuvable
-  et rien à l'écoute : rien n'est téléchargé.
+  à ses emplacements habituels ne bloque plus l'installation (relecture du 12/10/2026 : il peut
+  être installé ailleurs) ; la détection (`Blender*.app`, `Program Files\Blender Foundation\Blender
+  *`, Steam, PATH, snap, flatpak, `~/blender*`, `/opt/blender*`) ne sert qu'au message. Une mise à
+  jour (autre version épinglée) arrête d'abord le serveur qui tourne, puis efface l'ancien
+  environnement (erreur traduite si l'effacement échoue).
 
 ### 65.2 Le port du module de Blender
 
@@ -6562,8 +6576,18 @@ leaf[subject.OU] = "68UA947AUU"' <pid>` (signature du processus en cours) ; Wind
 `Valid`, signataire « Blender Foundation ») ; Linux, `/proc/net/tcp` et `/proc/<pid>/fd`,
 l'exécutable doit s'appeler `blender` (il n'y a pas de signature à lire : c'est plus faible, dit
 ici). Tous les processus à l'écoute doivent être reconnus ; une socket dont on ne trouve pas le
-processus (un autre compte) fait refuser. L'adresse et le port du module sont écrits par Helix dans
-l'environnement du serveur (`BLENDER_HOST=127.0.0.1`, `BLENDER_PORT`).
+processus (un autre compte) fait refuser. Un processus reconnu l'est par son identité entière
+(numéro, exécutable, heure de départ : `ps -o lstart=,comm=`, `/proc/<pid>/stat`, `StartTime`),
+pas par son seul numéro, qu'un autre programme pourrait recevoir après la fermeture de Blender.
+L'adresse et le port du module sont écrits par Helix dans l'environnement du serveur
+(`BLENDER_HOST=127.0.0.1`, `BLENDER_PORT`). L'écran des connecteurs réutilise un verdict de moins
+de cinq secondes (`refusBlenderRecent`) ; le lancement et chaque appel relisent tout.
+
+**Retrait.** Retirer Blender des connecteurs efface `<données>/blender-mcp` (environnement et
+module recopié). Le module coché dans Blender, Helix n'y touche pas : tant qu'il l'est, il rouvre
+son port, sans authentification, à chaque démarrage de Blender, Helix branché ou non. L'écran le
+dit au retrait, et l'aide aussi : décocher « MCP for Blender » dans Édition, Préférences, Modules
+complémentaires.
 
 Laissé : quelques millisecondes entre la vérification et la connexion du serveur Python au port,
 pendant lesquelles Blender pourrait se fermer et un autre programme prendre le port (même limite
@@ -6600,7 +6624,11 @@ avec Blender ne change pas de destinataire.
   Roblox permises par Studio) sont des lectures, sans carte : elles envoient chez Roblox des mots de
   recherche ou une adresse de documentation, pas la place.
 - **Installation** : au premier clic sur « Brancher » de Blender, pip télécharge depuis pypi.org
-  (et files.pythonhosted.org) les roues de la liste, refusées si l'empreinte diffère. Rien d'autre.
+  (et files.pythonhosted.org) les roues de la liste, refusées si l'empreinte diffère. Avant, si la
+  machine n'a pas de Python 3.10 à 3.14, Helix pose le sien (Python 3.12, python-build-standalone,
+  depuis github.com, empreinte vérifiée, `pythonPrive.ts`) : 25 Mo sur Mac, 43 à 46 Mo sous
+  Windows, 84 à 111 Mo sous Linux (`taillePythonPriveMo()`). L'écran et l'aide le disent. Rien
+  d'autre.
 
 ### 65.4 Cartes d'accord et droits
 
@@ -6613,12 +6641,19 @@ carte) : `execute_luau`, `multi_edit`, `insert_asset`, les générations, `uploa
 `store_image` (lit un fichier de la machine), `start_stop_play`, les entrées clavier et souris
 simulées, `subagent` ; `execute_blender_code`, `generate_3d`, `search_assets`, `import_asset`,
 `disable_telemetry`, `record_trajectory_feedback`. Écrire, exécuter et générer : **administrateur
-seul**, vérifié au moment d'agir (`outils.ts`) : exécuter du Python dans Blender, c'est exécuter du
-code sur la machine de l'instance, sous le compte de qui a ouvert Blender. À la demande de Medhi,
-ces écritures restent offertes aux employés et à l'agent de code (contrairement à Palmier Pro),
-derrière la même carte et la même règle. `look` de Blender : un chemin de fichier dans son champ
-`image` est refusé par Helix avant l'appel (il ferait lire un fichier de la machine hors des zones
-protégées du serveur de fichiers).
+seul**, vérifié **avant la carte** (Chat, agent de code, employés : on n'accepte pas une carte pour
+être refusé ensuite) et de nouveau au moment d'agir (`refusApplication`, `outils.ts`) : exécuter du
+Python dans Blender, c'est exécuter du code sur la machine de l'instance, sous le compte de qui a
+ouvert Blender. Employés OpenClaw (relecture du 12/10/2026, décision de Medhi) : leur identité
+(`employe:<id>`) n'est jamais administratrice ; un employé **dont la propriétaire administre
+l'instance** reçoit ces écritures et peut s'en servir, derrière la carte (adressée à elle), relu à
+chaque liste et à chaque appel ; aux autres, elles ne sont pas listées et chaque appel est refusé.
+Palmier Pro reste à l'administrateur seul, sans ses employés (§ 63, décision du 29/09/2026). `look`
+de Blender : sans carte seulement sans `image`, ou avec exactement « Render Result » ou « Viewer
+Node » ; tout autre nom (un fichier de la machine, même sans extension) se confirme à chaque appel,
+à tout niveau, et relève de l'administrateur, comme une écriture (`lookHorsScene`). La liste
+d'extensions d'avant laissait passer un fichier sans extension. `generate_3d` avec `image` : la
+carte dit que ce fichier ou cette adresse part chez le service de génération.
 
 ### 65.5 Variables réservées aux essais
 
@@ -6630,13 +6665,15 @@ qui lance la passerelle, jamais par une requête. Ne pas les poser en production
 
 ### 65.6 Pas essayé
 
-Ni Roblox Studio ni Blender ne sont installés sur la machine de travail. Pas vus : la signature
-réelle de StudioMCP et l'équipe de Roblox, l'emplacement réel de `mcp.bat` sous Windows, ce que
-fait StudioMCP quand Studio est fermé ou son serveur coupé, la forme réelle de la réponse de
-`list_roblox_studios` (le conseil « activez le serveur » n'est donné que sur un échec ou une liste
-manifestement vide) ; la signature réelle de Blender (identifiant et équipe ci-dessus, relevés de
-mémoire et non sur un binaire : s'ils diffèrent, Helix refuse, ce qui échoue fermé), son signataire
-Authenticode exact sous Windows, l'installation du module par « Installer depuis le disque » dans
-Blender 4.x et 5.x. Vu tenir : le vrai serveur de Blender 2.1.9 posé par le code de Helix (pip avec
+Roblox Studio n'est pas installé sur la machine de travail. Pas vus : la signature de StudioMCP et
+de `RobloxStudio.app` installés (l'équipe `2CFABCH843` est relue sur l'installateur officiel, pas
+sur Studio : à relire sur un vrai Studio, `codesign -dv --verbose=2`), l'emplacement réel de
+`mcp.bat` sous Windows, ce que fait StudioMCP quand Studio est fermé ou son serveur coupé, la
+forme réelle de la réponse de `list_roblox_studios` (« aucun Studio » n'est dit que sur une liste
+manifestement vide ; un échec de la demande est dit comme tel). Blender : identifiant
+`org.blenderfoundation.blender` et équipe `68UA947AUU` relus le 12/10/2026 sur le vrai Blender
+5.2.2 (essai de bout en bout, PROJET.md) ; pas vus : son signataire Authenticode exact sous
+Windows, l'heure de départ lue par PowerShell, la détection des archives Linux sur une vraie
+machine. Vu tenir : le vrai serveur de Blender 2.1.9 posé par le code de Helix (pip avec
 empreintes, Python 3.14 de ce Mac), sa liste d'outils (9, tous classés), un appel jusqu'à un faux
 module, et l'absence de sortie réseau avec les variables de Helix.

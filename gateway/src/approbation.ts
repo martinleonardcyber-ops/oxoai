@@ -12,7 +12,7 @@ import { ECRITURES_MICROSOFT, LECTURES_MICROSOFT, resumeMicrosoft } from "./nati
 import { estEcriturePalmier, estLecturePalmier, horsMachinePalmier, resumePalmier } from "./palmierRegles.ts";
 // Roblox Studio et Blender (12/10/2026) : de même, leurs lectures par leur nom exact, tout le reste sur carte à chaque appel.
 import { estEcritureRoblox, estLectureRoblox, horsMachineRoblox, resumeRoblox } from "./robloxRegles.ts";
-import { estEcritureBlender, estLectureBlender, horsMachineBlender, resumeBlender } from "./blenderRegles.ts";
+import { estEcritureBlender, estLectureBlender, horsMachineBlender, lookHorsScene, resumeBlender } from "./blenderRegles.ts";
 
 /** Une écriture d'une application de création ouverte sur la machine (Palmier Pro, Roblox Studio, Blender). */
 const estEcritureApplication = (outil: string): boolean => estEcriturePalmier(outil) || estEcritureRoblox(outil) || estEcritureBlender(outil);
@@ -315,7 +315,16 @@ const TOUJOURS_CONFIRMER = new Set(["agenda__supprimer", "taches__programmer", .
  */
 const toujoursConfirmer = (outil: string) => TOUJOURS_CONFIRMER.has(outil) || estEcritureMcpProjet(outil) || estEcritureApplication(outil);
 
-export const demandeToujours = (outil: string) => toujoursConfirmer(outil) || (ENVOI.has(outil) && !envoiSansAccord());
+/*
+ * Ce qui se confirme à chaque fois selon les arguments de l'appel, pas
+ * seulement son nom (12/10/2026) : `look` de Blender avec une image qui n'est
+ * pas « Render Result » ni « Viewer Node » (un fichier de la machine, peut-être).
+ */
+const confirmerSelonArguments = (outil: string, args?: Record<string, unknown>) => lookHorsScene(outil, args);
+
+/** Avec les arguments, aussi ce qui se confirme selon eux (`look` de Blender hors de la scène). */
+export const demandeToujours = (outil: string, args?: Record<string, unknown>) =>
+  toujoursConfirmer(outil) || confirmerSelonArguments(outil, args) || (ENVOI.has(outil) && !envoiSansAccord());
 
 /**
  * Carte d'une campagne Brevo ou Mailchimp, préparée par natifs/projets.ts, qui
@@ -1201,11 +1210,11 @@ export async function verifierOutil(
     if (!forcer && !demandeToujours(outil) && courant === "tout") return { autorise: true };
     return verifierEnvoi(contexte, outil, args, qui, courant, employe, origine);
   }
-  const toujours = toujoursConfirmer(outil);
+  const toujours = toujoursConfirmer(outil) || confirmerSelonArguments(outil, args);
   // Les écritures des serveurs MCP de la famille « projets » : même carte, arguments entiers (SECURITE.md § 48).
   // Et celles de Palmier Pro : arguments montrés en entier, ou refusés s'ils ne tiennent pas sur la carte.
   // De même pour Roblox Studio et Blender : le code à exécuter se lit en entier sur la carte.
-  const native = ECRITURES_NATIVES.has(outil) || estEcritureMcpProjet(outil) || estEcritureApplication(outil);
+  const native = ECRITURES_NATIVES.has(outil) || estEcritureMcpProjet(outil) || estEcritureApplication(outil) || confirmerSelonArguments(outil, args);
   /*
    * Brevo et Mailchimp : la carte d'une campagne est préparée par projets.ts
    * (campagne relue chez le service, destinataires comptés). Sans cet aperçu,

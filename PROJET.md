@@ -1336,7 +1336,7 @@ de lancer la commande et `avantAppel` avant chaque appel. *Ce qui est fait* :
   https://create.roblox.com/docs/studio/mcp relue le 12/10/2026 ; `Roblox/studio-rust-mcp-server`
   est archivé) : `/Applications/RobloxStudio.app/Contents/MacOS/StudioMCP` (ou ~/Applications),
   `cmd.exe /c %LOCALAPPDATA%\Roblox\mcp.bat` sous Windows. Rien n'est téléchargé. Sur macOS, la
-  signature de StudioMCP est vérifiée avant chaque lancement (Developer ID d'Apple, même équipe que
+  signature de StudioMCP et de l'application est vérifiée avant chaque lancement (Developer ID d'Apple, équipe `2CFABCH843` depuis le 12/10, vérifiée aussi sur
   l'application). Après le branchement, Helix lit `list_roblox_studios` : aucun Studio ne répond,
   l'écran dit d'activer « Enable Studio as MCP server » (Assistant, « … », Manage MCP Servers).
   Treize lectures sans carte ; les quatorze autres outils (dont `execute_luau`, `multi_edit`, les
@@ -1345,7 +1345,7 @@ de lancer la commande et `avantAppel` avant chaque appel. *Ce qui est fait* :
 - **Blender** (`gateway/src/blender.ts`, `blenderRegles.ts`), rubrique « Documents et données »,
   les trois systèmes. Par « MCP for Blender » (https://github.com/ahujasid/mcp-for-blender,
   MIT, 30 000 étoiles), **version 2.1.9 épinglée**. *Voie choisie pour l'installer* : au premier
-  clic, Helix crée `<données>/blender-mcp/venv` (Python du système en 3.10 ou plus, sinon celui de
+  clic, Helix crée `<données>/blender-mcp/venv` (Python du système en 3.10 à 3.14, sinon celui de
   Helix, `pythonPrive.ts`) et y pose le serveur par `pip --require-hashes --no-deps
   --only-binary=:all:` sur `gateway/src/blender-paquets.json` : 33 exigences (le paquet et ses 32
   dépendances), chacune à version exacte avec les empreintes de toutes ses roues, résolues par
@@ -1361,11 +1361,11 @@ de lancer la commande et `avantAppel` avant chaque appel. *Ce qui est fait* :
   de l'auteur, même sans consentement : vu avec le vrai serveur et un mandataire piège) et sans
   vérification de mise à jour. Bibliothèques et générateurs en ligne du module : éteints par défaut
   dans le module, et sur carte (« hors de cette machine »). Trois lectures sans carte
-  (`get_addon_status`, `get_scene_info`, `look`, ce dernier sans chemin de fichier) ; tout le
+  (`get_addon_status`, `get_scene_info`, `look`, ce dernier sans `image` ou sur « Render Result » / « Viewer Node » seulement, 12/10) ; tout le
   reste sur carte à chaque appel.
 - **Droits** : écrire, exécuter du code et générer, pour les deux, réservé à l'administrateur au
   moment d'agir. Contrairement à Palmier Pro, ces écritures restent proposées aux employés et à
-  l'agent de code (« que les agents, le Chat, Cowork et Code peuvent utiliser »), derrière la carte.
+  l'agent de code (« que les agents, le Chat, Cowork et Code peuvent utiliser »), derrière la carte ; depuis le 12/10, à l'employé dont la propriétaire administre l'instance seulement.
 - **Écran** : deux lignes avec leur logo (icône du site de Roblox ; logo du kit de la Blender
   Foundation), pas à pas (`guidesApplications.ts`), messages d'état honnêtes (Roblox Studio
   introuvable, serveur MCP à activer, Blender introuvable, Blender ne répond pas sur le port de son
@@ -4206,7 +4206,7 @@ rouvert et « Réessayer ».
 
 **Roblox Studio et Blender (12/10/2026, § 3.5)** : sur un Mac (puis un PC Windows), installer
 Roblox Studio, ouvrir une place, activer « Enable Studio as MCP server », cliquer « Brancher ». À
-voir : la signature de StudioMCP acceptée (même équipe que l'application), le nombre d'outils, le
+voir : la signature de RobloxStudio.app et de StudioMCP acceptée (équipe `2CFABCH843`, relue sur l'installateur seulement), le nombre d'outils, le
 conseil « aucun Studio ne répond » quand le serveur est coupé, la réponse de `list_roblox_studios`,
 un `script_read` sans carte, un `execute_luau` avec carte, et sous Windows le chemin de `mcp.bat`.
 Installer Blender (4.x ou 5.x), cliquer « Brancher » : le serveur se pose (pypi.org), le message
@@ -5914,6 +5914,50 @@ juste que ça fonctionne, fais au mieux ». Décisions prises en conséquence :
   ajoutée par l'essai). **Pas vus** : Blender sous Windows et Linux (signature Authenticode, nom de
   l'exécutable), un vrai Roblox Studio (signature de StudioMCP, `mcp.bat`, réponse de
   `list_roblox_studios`), l'écran du connecteur dans l'application de bureau.
+
+**Corrigé le 12/10/2026 : relecture des connecteurs Roblox Studio et Blender.** Medhi : « je veux
+juste que ça fonctionne, fais au mieux ». Ce qui est corrigé (SECURITE.md § 65) :
+- **Employés** : leurs écritures Roblox/Blender étaient listées mais chaque appel échouait
+  (`employe:<id>` n'est jamais administrateur). Décision : l'employé **dont la propriétaire
+  administre l'instance** les reçoit et s'en sert, toujours derrière la carte (adressée à elle),
+  vérifié au moment d'agir ; aux autres, elles ne sont plus listées (`serveurOutils.ts`,
+  `refusApplication` dans `outils.ts`). **Palmier Pro inchangé** : réservé à l'administrateur sans
+  ses employés, volontairement (§ 63, 29/09/2026).
+- **Droit d'agir avant la carte** (Chat, agent de code, employés) pour Roblox, Blender et Palmier :
+  on n'accepte plus une carte pour être refusé ensuite. Refait par `executerOutil`.
+- **Blender installé ailleurs** : sa détection ne bloque plus l'installation du serveur, elle ne
+  sert qu'au message ; elle cherche aussi `Blender*.app` (/Applications, ~/Applications), toutes
+  les versions sous `Program Files\Blender Foundation`, les archives `~/blender*` et `/opt/blender*`.
+- **Python** : celui du système seulement en 3.10 à 3.14 (les roues figées), sinon celui de Helix ;
+  « No matching distribution » est dit clairement, traduit. L'écran (pas à pas, aide) et SECURITE
+  § 65.3 disent que Helix peut d'abord poser son Python depuis github.com (25 à 110 Mo).
+- **`look` de Blender** : plus de liste d'extensions (un fichier sans extension passait) ; sans carte
+  seulement sans `image` ou avec exactement « Render Result » / « Viewer Node », sinon carte à
+  chaque appel et administrateur. `generate_3d` avec `image` : la carte dit que ce fichier part
+  chez le service.
+- **Signature de Roblox Studio** : `codesign --verify --strict` sur `RobloxStudio.app` et sur
+  `StudioMCP`, équipe **épinglée `2CFABCH843`** (Roblox Corporation), relue sur l'installateur
+  officiel téléchargé ce jour (roblox.com/download/studio → setup.rbxcdn.com, signé « Developer ID
+  Application: Roblox Corporation (2CFABCH843) », notarié ; ouvert en lecture seule, rien exécuté,
+  effacé). **À relire sur un vrai Studio installé** (`codesign -dv --verbose=2
+  /Applications/RobloxStudio.app` et `…/Contents/MacOS/StudioMCP`) : s'il différait, Helix refuse.
+- **Mise à jour du serveur Blender** : le serveur en marche est arrêté avant de réinstaller,
+  l'effacement est dans le `try`, erreur traduite.
+- **Retrait de Blender** : efface `<données>/blender-mcp`, et l'écran dit de décocher le module
+  dans Blender (sinon son port 9876, sans authentification, reste ouvert tant que Blender tourne) ;
+  dit aussi dans l'aide et le pas à pas.
+- **Windows** : `cmd.exe /d /c`, et un chemin de `mcp.bat` avec `& | < > ( ) ^ % ! "` est refusé.
+- Mineurs : un processus reconnu l'est par numéro + exécutable + heure de départ ; messages exacts
+  (« n'a pas démarré » en stdio au lieu de « est ouvert » ; « aucun Studio » seulement sur une liste
+  vide, un échec de la demande dit comme tel) ; l'écran réutilise un verdict de Blender de moins de
+  5 s (pas deux PowerShell par rafraîchissement) ; commentaires à jour (signature de Blender relue
+  sur 5.2.2). `BLENDER_MCP_SAFE_MODE` volontairement non posé.
+- **Vérifié** : `npm run essai:roblox-blender` (50 vérifications, sans la partie C réseau), section
+  46 de `npm run securite` lancée seule (63) et section 39 (Palmier, 39), `npm run typecheck`, six
+  catalogues à 100 %. `npm run securite` en entier n'a pas tourné (consigne mémoire) : à passer
+  avant la prochaine version. **Pas vus** : Windows (cmd, heure de départ par PowerShell, effacement
+  pendant une mise à jour), Linux (archives), un vrai Roblox Studio, un vrai employé OpenClaw
+  (vérifié par `refusApplication` contre les comptes de l'essai, pas par OpenClaw).
 
 **Fait le 04/10/2026 : Cowork a ses sessions, comme Code.** Demandé par Medhi : « comme la
 session Code, il doit avoir une session Cowork, car partir du Chat renvoie à l'interface

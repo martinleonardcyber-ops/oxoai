@@ -98,11 +98,22 @@ try {
     !rr.estEcritureRoblox("robloxx__execute_luau") && !rr.estLectureRoblox("autre__script_read") && !rb.estEcritureBlender("blenderx__execute_blender_code") && !rb.estLectureBlender("execute_blender_code"),
     "regles",
   );
-  verifier(
-    "look de Blender : un chemin de fichier dans « image » est refusé ; la scène, ou « Render Result », passe",
-    ["/Users/x/.ssh/id_rsa.png", "~/Documents/a.jpg", "C:\\Users\\x\\a.png", "../secret.exr"].every((i) => rb.refusArgumentsBlender(qb("look"), { image: i })) && rb.refusArgumentsBlender(qb("look"), {}) === null && rb.refusArgumentsBlender(qb("look"), { image: "Render Result" }) === null && rb.refusArgumentsBlender(qb("get_scene_info"), { image: "/etc/passwd" }) === null,
-    "refusArgumentsBlender",
-  );
+  {
+    // 12/10/2026 : plus de liste d'extensions ; sans carte seulement sans image, ou « Render Result » / « Viewer Node » exactement.
+    const avecCarte = ["/Users/x/.ssh/id_rsa.png", "~/Documents/a.jpg", "C:\\Users\\x\\a.png", "../secret.exr", "/Users/x/.ssh/id_rsa", "cle_sans_extension", "render result", "Render Result ", "MaTexture", "", 3];
+    const sansCarte = [{}, { image: "Render Result" }, { image: "Viewer Node" }, { image: null }, { mode: "camera" }];
+    const mal = [...avecCarte.filter((i) => !demandeToujours(qb("look"), { image: i }) || !rb.accordRequisBlender(qb("look"), { image: i })), ...sansCarte.filter((a) => demandeToujours(qb("look"), a) || rb.accordRequisBlender(qb("look"), a))];
+    verifier(
+      "look de Blender : sans carte seulement sans « image », ou avec exactement « Render Result » ou « Viewer Node » ; tout autre nom (fichier, même sans extension) demande la carte et l'administrateur",
+      mal.length === 0 && !demandeToujours(qb("look")) && !rb.accordRequisBlender(qb("get_scene_info"), { image: "/etc/passwd" }) && /fichier de cette machine/.test(resumerOutil(qb("look"), { image: "/etc/passwd" })),
+      mal,
+    );
+    verifier(
+      "generate_3d avec une image : la carte dit que ce fichier part aussi chez le service de génération",
+      /image « \/Users\/x\/photo\.png » part aussi chez ce service/.test(resumerOutil(qb("generate_3d"), { image: "/Users/x/photo.png" })) && !/part aussi/.test(resumerOutil(qb("generate_3d"), { prompt: "une chaise" })),
+      resumerOutil(qb("generate_3d"), { image: "/Users/x/photo.png" }),
+    );
+  }
 
   const { CATALOGUE, aligner } = await importer("gateway", "src", "connecteurs.ts");
   const roblox = CATALOGUE.find((e) => e.id === "roblox");
@@ -153,6 +164,42 @@ try {
     b.EXIGENCE_BLENDER,
   );
   verifier("serveur de Blender pas encore posé : il ne se lance pas, l'écran dit de cliquer « Brancher »", !b.serveurBlenderInstalle() && /pas installé|not installed/.test((await b.refusBlender()) ?? ""), await b.refusBlender());
+  verifier(
+    "Python du système pris seulement en 3.10 à 3.14 (les roues figées), sinon celui de Helix",
+    [[3, 10], [3, 12], [3, 14]].every(([a, c]) => b.versionPythonAcceptee(a, c)) && ![[3, 9], [3, 15], [2, 7], [4, 0]].some(([a, c]) => b.versionPythonAcceptee(a, c)),
+    "versionPythonAcceptee",
+  );
+  {
+    const sansRoue = b.messageEchecPip("ERROR: Could not find a version that satisfies the requirement pydantic-core==2.50.1\nERROR: No matching distribution found for pydantic-core==2.50.1");
+    const empreinte = b.messageEchecPip("ERROR: THESE PACKAGES DO NOT MATCH THE HASHES FROM THE REQUIREMENTS FILE.\n    mcp==1.30.0 from https://x: Expected sha256 a, Got b (hash mismatch)");
+    const reseau = b.messageEchecPip("ERROR: Could not install packages due to an OSError: Connection refused");
+    verifier(
+      "pip sans roue pour ce Python ou ce système : dit clairement (Python 3.10 à 3.14), distinct d'une empreinte fausse et d'une panne de réseau",
+      /paquet tout prêt|ready-made package/.test(sansRoue) && /3\.10 (à|to) 3\.14/.test(sansRoue) && /empreinte|fingerprint/.test(empreinte) && !/paquet tout prêt|ready-made/.test(empreinte) && /pypi\.org/.test(reseau) && !/ready-made|tout prêt/.test(reseau),
+      `${sansRoue} | ${empreinte} | ${reseau}`,
+    );
+  }
+  {
+    const r = await importer("gateway", "src", "roblox.ts");
+    const mauvais = ["C:\\Users\\Jean & Cie\\AppData\\Local\\Roblox\\mcp.bat", "C:\\Users\\a|b\\mcp.bat", "C:\\Users\\x (1)\\mcp.bat", "C:\\Users\\100%\\mcp.bat", "C:\\Users\\x!y\\mcp.bat", 'C:\\Users\\x"y\\mcp.bat', "C:\\Users\\a^b\\mcp.bat", "C:\\Users\\a<b>\\mcp.bat"];
+    verifier(
+      "Windows : cmd.exe lancé en /d /c (sans AutoRun) ; un chemin de mcp.bat avec & | < > ( ) ^ % ! \" est refusé, jamais échappé",
+      JSON.stringify(r.argumentsCmd("C:\\Users\\Jean\\AppData\\Local\\Roblox\\mcp.bat")) === JSON.stringify(["/d", "/c", "C:\\Users\\Jean\\AppData\\Local\\Roblox\\mcp.bat"]) && mauvais.every((c) => !r.cheminPourCmd(c)) && r.cheminPourCmd("C:\\Users\\Jean Dupont\\AppData\\Local\\Roblox\\mcp.bat"),
+      mauvais.filter((c) => r.cheminPourCmd(c)),
+    );
+    verifier(
+      "macOS : signature de Roblox exigée, équipe de Roblox Corporation épinglée (2CFABCH843), sur l'application et sur StudioMCP",
+      r.EQUIPE_ROBLOX === "2CFABCH843" && /anchor apple generic/.test(r.EXIGENCE_ROBLOX) && /leaf\[subject\.OU\] = "2CFABCH843"/.test(r.EXIGENCE_ROBLOX),
+      r.EXIGENCE_ROBLOX,
+    );
+    const { dansLaLangue } = await importer("gateway", "src", "langue.ts");
+    const conseil = (x) => dansLaLangue("fr", () => r.conseilRoblox(x)) ?? "";
+    verifier(
+      "conseil après branchement : « aucun Studio » seulement sur une liste vide ; un échec de la demande est dit comme tel",
+      /Aucun Roblox Studio ne répond/.test(conseil({ ok: true, content: "[]" })) && !/Aucun Roblox Studio/.test(conseil({ ok: false, content: "délai dépassé" })) && /n'a pas pu être lue \(délai dépassé\)/.test(conseil({ ok: false, content: "délai dépassé" })) && /n'a pas pu être lue\./.test(conseil(null)),
+      conseil({ ok: false, content: "délai dépassé" }),
+    );
+  }
 
   if (process.platform === "darwin") {
     // La vraie reconnaissance, sans variable d'essai : Node n'a pas la signature de la Blender Foundation.
@@ -425,6 +472,7 @@ const resultat = (r, i = 0) => `${r.fins[i]?.preview ?? ""} ${r.texte}`;
 console.log("\nB. La passerelle : branchement, cartes d'accord, reconnaissance de Blender, retrait");
 const passerelle = await lancerPasserelle();
 let module = null;
+const comptes = { alice: null, collegue: null };
 try {
   const cree = await api(passerelle, "/helix/auth/create", { fullName: "Alice Essai", email: "alice@example.test", password: "Mot2PasseSolide!42" }, passerelle.J);
   passerelle.A = { ...passerelle.J, "X-Helix-Session": cree.session?.token };
@@ -479,14 +527,16 @@ try {
 
   // Un collègue non administrateur : il lit, mais ne modifie ni n'exécute rien.
   const coll = await api(passerelle, "/helix/auth/create", { fullName: "Collègue", email: "collegue@example.test", password: "Provisoire2Collegue!7" });
+  comptes.alice = cree.account?.id ?? null;
+  comptes.collegue = coll.account?.id ?? null;
   const connexion = await api(passerelle, "/helix/auth/mot-de-passe-provisoire", { accountId: coll.account?.id, password: "Provisoire2Collegue!7", nouveau: "Collegue2PasseSolide!9" }, passerelle.J);
   const B = { ...passerelle.J, "X-Helix-Session": connexion.session?.token };
   const avantB = appelsDe(JOURNAL_ROBLOX).length;
   const parB = await chat(passerelle, [["roblox__script_read", { studio_id: "a1b2" }], ["roblox__execute_luau", { studio_id: "a1b2", code: "print(1)" }], ["blender__execute_blender_code", { code: "print(1)" }]], () => true, B);
   verifier(
-    "collègue non administrateur : il lit ; exécuter du Luau, même accepté sur sa carte, est refusé (administrateur seul) et n'arrive pas à Studio",
-    Boolean(connexion.session?.token) && parB.fins[0]?.ok && parB.fins[1]?.ok === false && /réservé à l'administrateur/.test(resultat(parB, 1)) && !appelsDe(JOURNAL_ROBLOX).slice(avantB).includes("execute_luau"),
-    `${JSON.stringify(parB.fins)}`,
+    "collègue non administrateur : il lit ; exécuter du Luau est refusé (administrateur seul) **avant toute carte**, et n'arrive pas à Studio",
+    Boolean(connexion.session?.token) && parB.fins[0]?.ok && parB.fins[1]?.ok === false && /réservé à l'administrateur/.test(resultat(parB, 1)) && parB.cartes.length === 0 && !appelsDe(JOURNAL_ROBLOX).slice(avantB).includes("execute_luau"),
+    `${JSON.stringify(parB.fins)} cartes : ${JSON.stringify(parB.cartes.map((c) => c.detail?.outil))}`,
   );
 
   /* ---- Blender ---- */
@@ -522,8 +572,14 @@ try {
   verifier("Chat : lire la scène passe sans carte, la demande arrive au module", scene.cartes.length === 0 && scene.fins[0]?.ok && /Cube, Camera, Light/.test(scene.texte) && recuModule.some((c) => c.type === "get_scene_info"), `${JSON.stringify(scene.cartes)} ${scene.texte}`);
 
   const avantLook = recuModule.length;
-  const look = await chat(passerelle, [["blender__look", { image: "/Users/alice/.ssh/cle-privee.png" }]]);
-  verifier("look avec un chemin de fichier : refusé par Helix, rien n'arrive au module", look.fins[0]?.ok === false && /ne lit pas un fichier de la machine/.test(resultat(look)) && recuModule.length === avantLook, `${JSON.stringify(look.fins)}`);
+  const look = await chat(passerelle, [["blender__look", { image: "/Users/alice/.ssh/cle-privee" }]], () => false);
+  verifier(
+    "look avec une image qui n'est pas celle de Blender (ici un fichier sans extension) : une carte qui le dit ; refusée, rien n'arrive au module",
+    look.cartes.length === 1 && look.cartes[0].detail?.unique === true && /fichier de cette machine/.test(look.cartes[0].resume) && look.fins[0]?.ok === false && recuModule.length === avantLook,
+    `${JSON.stringify(look.cartes)} ${JSON.stringify(look.fins)}`,
+  );
+  const rendu = await chat(passerelle, [["blender__look", { image: "Render Result" }], ["blender__look", {}]]);
+  verifier("look de « Render Result » ou de la scène : sans carte, la demande arrive au module", rendu.cartes.length === 0 && rendu.fins.every((f) => f.ok) && recuModule.filter((c) => c.type === "look").length === 2, `${JSON.stringify(rendu.cartes)} ${JSON.stringify(rendu.fins)}`);
 
   const code = await chat(passerelle, [["blender__execute_blender_code", { code: "import bpy; bpy.ops.mesh.primitive_cube_add()  # REPERE-CODE-PY" }]]);
   verifier(
@@ -557,7 +613,16 @@ try {
   const ligneB = (etatFerme.installes ?? []).find((c) => c.id === "blender");
   verifier("l'écran des connecteurs dit l'état du moment : Blender ne répond pas", ligneB && (ligneB.running === false ? /ne répond pas/.test(ligneB.error ?? "") : true), ligneB);
 
-  for (const id of ["roblox", "blender"]) await api(passerelle, "/helix/connecteurs/retirer", { id });
+  // Ce que Helix aurait posé pour Blender (ici, un témoin) : effacé au retrait, et l'écran dit de décocher le module.
+  mkdirSync(join(DONNEES, "blender-mcp", "venv"), { recursive: true });
+  writeFileSync(join(DONNEES, "blender-mcp", "version.txt"), "2.1.9\n");
+  const retraitR = await api(passerelle, "/helix/connecteurs/retirer", { id: "roblox" });
+  const retraitB = await api(passerelle, "/helix/connecteurs/retirer", { id: "blender" });
+  verifier(
+    "retirer Blender : l'environnement posé par Helix (<données>/blender-mcp) est effacé, et l'écran dit de décocher le module « MCP for Blender » (port ouvert sans mot de passe sinon)",
+    retraitB.statut === 200 && !existsSync(join(DONNEES, "blender-mcp")) && /décochez aussi le module « MCP for Blender »/.test(retraitB.message ?? "") && !/décochez/.test(retraitR.message ?? ""),
+    `${retraitB.message} | ${existsSync(join(DONNEES, "blender-mcp"))}`,
+  );
   const plusLa = await chat(passerelle, [["roblox__script_read", {}]]);
   const etatFin = await api(passerelle, "/helix/connecteurs");
   verifier("retirés : plus dans la liste, plus aucun outil proposé au modèle", !(etatFin.installes ?? []).some((c) => c.id === "roblox" || c.id === "blender") && /OUTIL-ABSENT roblox__script_read/.test(plusLa.texte), plusLa.texte);
@@ -577,6 +642,56 @@ try {
 passerelle.processus.kill("SIGTERM");
 await attendre(1200);
 if (module) await fermerServeur(module);
+
+/*
+ * Les employés OpenClaw (relecture du 12/10/2026) : leur `userId` vaut
+ * `employe:<id>`, jamais administrateur. Une écriture de Roblox ou de Blender
+ * passe si la propriétaire de l'employé administre l'instance, pas sinon ;
+ * Palmier Pro reste à l'administrateur seul. Contre les comptes de la
+ * passerelle d'essai (Alice administratrice, le collègue non), dans un
+ * processus à part qui lit le même dossier de données, passerelle arrêtée.
+ */
+{
+  const script = join(AUX, "employes.mjs");
+  writeFileSync(
+    script,
+    `const o = await import(${JSON.stringify(pathToFileURL(join(RACINE, "gateway", "src", "outils.ts")).href)});
+const [alice, collegue] = process.argv.slice(2);
+const r = async (nom, args, pour) => (await o.refusApplication(nom, args, pour)) === null;
+console.log(JSON.stringify({
+  aliceEmploye: await r("roblox__execute_luau", {}, { userId: "employe:a1", proprietaire: alice }),
+  aliceEmployeBlender: await r("blender__execute_blender_code", {}, { userId: "employe:a1", proprietaire: alice }),
+  aliceEmployeLook: await r("blender__look", { image: "/etc/hosts" }, { userId: "employe:a1", proprietaire: alice }),
+  collegueEmploye: await r("roblox__execute_luau", {}, { userId: "employe:c1", proprietaire: collegue }),
+  sansProprietaire: await r("blender__execute_blender_code", {}, { userId: "employe:x" }),
+  lectureCollegue: await r("blender__get_scene_info", {}, { userId: "employe:c1", proprietaire: collegue }),
+  palmierEmployeAlice: await r("palmier__generate_video", {}, { userId: "employe:a1", proprietaire: alice }),
+  palmierAlice: await r("palmier__generate_video", {}, { userId: alice }),
+  listeAlice: await o.ecrituresApplicationsPourEmploye(alice),
+  listeCollegue: await o.ecrituresApplicationsPourEmploye(collegue),
+}));
+process.exit(0);
+`,
+  );
+  let sortie = "";
+  try {
+    sortie = execFileSync(process.execPath, [script, comptes.alice ?? "", comptes.collegue ?? ""], { encoding: "utf8", timeout: 60_000, env: { ...process.env, HELIX_CONFIG: PROFIL, HELIX_DATA_DIR: DONNEES, HELIX_WORKSPACE: ESPACE } });
+  } catch (err) {
+    sortie = String(err?.stdout ?? "") + String(err?.stderr ?? err);
+  }
+  let v = {};
+  try {
+    v = JSON.parse(sortie.trim().split("\n").pop());
+  } catch {
+    v = { sortie };
+  }
+  verifier(
+    "employés : écritures de Roblox Studio et de Blender (et look hors de la scène) permises à l'employé d'une administratrice, listées pour lui ; refusées et non listées pour l'employé d'un non-administrateur ou sans propriétaire ; lectures à tous",
+    Boolean(comptes.alice && comptes.collegue) && v.aliceEmploye === true && v.aliceEmployeBlender === true && v.aliceEmployeLook === true && v.collegueEmploye === false && v.sansProprietaire === false && v.lectureCollegue === true && v.listeAlice === true && v.listeCollegue === false,
+    v,
+  );
+  verifier("Palmier Pro inchangé (SECURITE.md § 63) : l'administrateur seul, pas ses employés", v.palmierAlice === true && v.palmierEmployeAlice === false, v);
+}
 
 /* ------------------------------------------------------------------------- */
 /* C. Le vrai serveur de Blender (réseau requis)                              */

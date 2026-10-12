@@ -560,12 +560,12 @@ d'une requête). Lignes « Roblox Studio » (rubrique « Développement », macO
 
 - Roblox Studio : le serveur MCP intégré à Studio (`StudioMCP` dans l'application sur macOS,
   `%LOCALAPPDATA%\Roblox\mcp.bat` sous Windows), à activer dans Studio (Assistant, « … », Manage
-  MCP Servers, « Enable Studio as MCP server »). Rien n'est téléchargé ; signature vérifiée sur macOS.
+  MCP Servers, « Enable Studio as MCP server »). Rien n'est téléchargé ; signature de Roblox Corporation (équipe `2CFABCH843`) vérifiée sur macOS ; `cmd.exe /d /c` sous Windows.
 - Blender : « MCP for Blender » 2.1.9 (MIT), posé au premier clic dans `<données>/blender-mcp`
   par `pip --require-hashes` sur `gateway/src/blender-paquets.json`, lancé télémétrie coupée ; son
   module complémentaire (vérifié par son empreinte) s'installe une fois dans Blender, depuis le
   fichier que l'écran indique. Le programme qui tient le port du module (9876) est reconnu avant
-  chaque appel.
+  chaque appel. Retirer Blender efface ce serveur ; décochez aussi le module dans Blender, qui sinon garde son port ouvert.
 - Lectures sans carte ; exécuter du code, modifier, générer : carte à chaque appel, à tout niveau,
   administrateur seul. SECURITE.md § 65.
 

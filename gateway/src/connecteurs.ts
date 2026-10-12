@@ -18,7 +18,7 @@ import {
 } from "./mcp.ts";
 import { ecouteurPalmier, palmierProposable, portPalmier, PORT_PALMIER, TELECHARGEMENT_PALMIER, type VerdictEcouteur } from "./palmier.ts";
 import { commandeRoblox, conseilRoblox, DOCUMENTATION_ROBLOX, refusRoblox, robloxProposable, TELECHARGEMENT_ROBLOX } from "./roblox.ts";
-import { blenderProposable, commandeBlender, envBlender, preparerBlender, refusBlender, TELECHARGEMENT_BLENDER } from "./blender.ts";
+import { blenderProposable, commandeBlender, effacerServeurBlender, envBlender, preparerBlender, refusBlender, refusBlenderRecent, serveurBlenderAPoser, TELECHARGEMENT_BLENDER } from "./blender.ts";
 import * as bureau from "./bureau.ts";
 import * as courrier from "./courrier.ts";
 import * as agenda from "./agenda.ts";
@@ -797,7 +797,13 @@ interface ApplicationStdio {
   avantLancement: () => Promise<string | null>;
   avantAppel?: () => Promise<string | null>;
   preparer?: () => Promise<{ ok: true } | { ok: false; message: string }>;
+  /** La préparation va-t-elle remplacer des fichiers du serveur ? Il est alors arrêté avant (Blender, 12/10/2026). */
+  remplaceServeur?: () => boolean;
   conseil?: (id: string) => Promise<string | null>;
+  /** Pour l'écran seulement : un verdict récent suffit (Blender : pas deux PowerShell par rafraîchissement). */
+  raisonPourEcran?: () => Promise<string | null>;
+  /** Au retrait : ce que Helix efface, et ce qu'il faut dire de faire dans l'application. */
+  retirer?: () => Promise<string | null>;
 }
 const APPLICATIONS_STDIO: Record<string, ApplicationStdio> = {
   roblox: {
@@ -814,6 +820,22 @@ const APPLICATIONS_STDIO: Record<string, ApplicationStdio> = {
     avantLancement: refusBlender,
     avantAppel: refusBlender,
     preparer: preparerBlender,
+    remplaceServeur: serveurBlenderAPoser,
+    raisonPourEcran: refusBlenderRecent,
+    /*
+     * Retirer Blender (relecture du 12/10/2026) : l'environnement posé par
+     * Helix est effacé, et l'écran dit de décocher le module dans Blender. Tant
+     * qu'il est coché, il rouvre son port (9876, sans authentification) à
+     * chaque démarrage de Blender, que Helix soit branché ou non.
+     */
+    retirer: async () => {
+      try {
+        await effacerServeurBlender();
+      } catch (err) {
+        console.error("[blender] effacement de l'environnement :", err instanceof Error ? err.message : err);
+      }
+      return t("Dans Blender, décochez aussi le module « MCP for Blender » (Édition, Préférences, Modules complémentaires) : tant qu'il est coché, il garde un port ouvert sur cette machine, sans mot de passe, chaque fois que Blender tourne.");
+    },
   },
 };
 
@@ -1303,7 +1325,7 @@ export async function etat(base?: string): Promise<EtatConnecteurs> {
         const raison = appli
           ? await appli.reconnaitre(appli.port())
           : stdio
-            ? await stdio.avantLancement().then((m) => (m ? { ok: false as const, message: m } : null)).catch(() => null)
+            ? await (stdio.raisonPourEcran ?? stdio.avantLancement)().then((m) => (m ? { ok: false as const, message: m } : null)).catch(() => null)
             : null;
         return {
           id: c.id,
@@ -1673,10 +1695,14 @@ export async function retirer(id: string, qui: string): Promise<Resultat> {
    */
   if (connecteur.url) await oublierOauth(id, qui);
   definirEcriture(id, false);
+  // Une application en stdio (Blender) : ce que Helix avait posé pour elle, et ce qu'il reste à faire dans l'application.
+  const stdio = connecteur.local ? applicationStdio(entreeCatalogue(id)) : undefined;
+  const apres = stdio?.retirer ? await stdio.retirer().catch(() => null) : null;
 
   journaliser("connecteur.retire", qui, { connecteur: id });
 
-  return { ok: true, message: tf("« {0} » a été retiré de cette instance.", t(connecteur.label)) };
+  const retire = tf("« {0} » a été retiré de cette instance.", t(connecteur.label));
+  return { ok: true, message: apres ? `${retire} ${apres}` : retire };
 }
 
 /* ------------------------------------------------------------------ */
@@ -1967,7 +1993,13 @@ async function brancherLocal(
     const verdict = await appli.reconnaitre(appli.port());
     if (!verdict.ok) return { ok: false, message: verdict.message };
   } else if (stdio) {
-    // Blender : le serveur posé au premier clic (empreintes vérifiées), puis Blender doit répondre.
+    /*
+     * Blender : le serveur posé au premier clic (empreintes vérifiées), puis
+     * Blender doit répondre. Une mise à jour (autre version épinglée) remplace
+     * les fichiers du serveur : celui qui tourne est arrêté d'abord (sous
+     * Windows, il les tient ouverts), relecture du 12/10/2026.
+     */
+    if (stdio.remplaceServeur?.() && enMemoire.some((c) => c.id === entree.id)) await stopServer(entree.id);
     const prepare = stdio.preparer ? await stdio.preparer() : ({ ok: true } as const);
     if (!prepare.ok) return { ok: false, message: prepare.message };
     const refus = await stdio.avantLancement();
@@ -1988,7 +2020,13 @@ async function brancherLocal(
   const demarrage = await startServer(entree.id);
   if (!demarrage.ok) {
     if (!deja) await retirerServeur(entree.id);
-    return { ok: false, message: tf("{0} est ouvert, mais son serveur d'outils n'a pas répondu : {1}", t(entree.label), demarrage.error ?? t("cause inconnue")) };
+    // En stdio (Roblox Studio, Blender), c'est le programme lancé par Helix qui a échoué : « est ouvert » n'est vérifié que pour Palmier Pro (relecture du 12/10/2026).
+    return {
+      ok: false,
+      message: stdio
+        ? tf("Le serveur d'outils de {0} n'a pas démarré : {1}", t(entree.label), demarrage.error ?? t("cause inconnue"))
+        : tf("{0} est ouvert, mais son serveur d'outils n'a pas répondu : {1}", t(entree.label), demarrage.error ?? t("cause inconnue")),
+    };
   }
   if (!deja) await ecrire([...enMemoire, enregistre]);
   const outils = mcpStatus().find((s) => s.id === entree.id)?.toolCount ?? 0;

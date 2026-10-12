@@ -10,7 +10,7 @@ import * as slack from "./slack.ts";
 import * as bibliotheque from "./bibliotheque.ts";
 import * as reunions from "./reunions.ts";
 import { groupesDe } from "./groupes.ts";
-import { executerOutil, cibleDe, type DefinitionOutil } from "./outils.ts";
+import { executerOutil, cibleDe, refusApplication, type DefinitionOutil } from "./outils.ts";
 import { verifierOutil } from "./approbation.ts";
 import { journaliser } from "./audit.ts";
 import { api, cleOutilsValide, portEnCours } from "./opencode.ts";
@@ -285,6 +285,9 @@ export async function servirOutilsCode(
       );
     }
 
+    // Roblox Studio, Blender : le droit d'agir avant la carte (12/10/2026), refait par executerOutil.
+    const refusAppli = await refusApplication(nom, args, { userId: qui });
+    if (refusAppli) return texte(refusAppli, true);
     const verdict = await verifierOutil(null, nom, args, qui, undefined, false, "code");
     if (!verdict.autorise) return texte(verdict.message, true);
     if (ferme) {

@@ -16,7 +16,7 @@ import { estAdministrateur } from "./roles.ts";
 import { estEcritureMcpProjet } from "./natifs/projetsRegles.ts";
 import { estEcriturePalmier } from "./palmierRegles.ts";
 import { estEcritureRoblox } from "./robloxRegles.ts";
-import { estEcritureBlender, refusArgumentsBlender } from "./blenderRegles.ts";
+import { accordRequisBlender } from "./blenderRegles.ts";
 
 // La barrière juge un déplacement « vers un dossier » comme `adapterFichiers` l'exécute, depuis le même dossier de travail.
 definirEspaceDeTravail(workspace);
@@ -73,7 +73,7 @@ export function outilsDeFamille(famille: Famille): DefinitionOutil[] {
       // Les serveurs MCP de l'instance : le serveur de fichiers, et ceux du catalogue ; plus le contrôle du code web.
       // Sans les écritures de Trello, Monday, ClickUp, Todoist, Calendly et Zoom : un employé ne parle pas au nom de l'organisation (SECURITE.md § 48).
       // Ni celles de Palmier Pro (29/09/2026) : il tourne sous le compte de qui l'a ouvert, avec ses crédits.
-      // Celles de Roblox Studio et de Blender restent offertes aux employés (12/10/2026, demande de Medhi), derrière la carte à chaque appel et l'administrateur seul (plus bas).
+      // Celles de Roblox Studio et de Blender restent offertes aux employés dont la propriétaire administre l'instance (12/10/2026, demande de Medhi) : serveurOutils.ts les retire aux autres, carte à chaque appel (refusApplication).
       const mcp = outilsMcp().filter((o) => !estEcritureMcpProjet(o.function.name) && !estEcriturePalmier(o.function.name));
       return mcp.length > 0 ? [...mcp, ...controleWeb.toolsForModel()] : mcp;
     }
@@ -88,6 +88,51 @@ export function familleDe(nom: string): Famille {
   return "fichiers";
 }
 
+/** Pour qui un outil travaille. `proprietaire` : pour un employé OpenClaw (`userId` vaut `employe:<id>`), le compte de sa propriétaire. */
+export interface PourQui {
+  userId: string;
+  groupes: string[];
+  proprietaire?: string;
+}
+
+const administre = async (compte: string | undefined): Promise<boolean> => Boolean(compte) && (await estAdministrateur(compte!));
+
+/**
+ * Les applications de la machine (Palmier Pro, Roblox Studio, Blender) : ce
+ * qui n'est pas une lecture tourne sous le compte de qui les a ouvertes.
+ * `null` si l'appel peut partir, sinon le refus, pour le modèle.
+ *
+ * Appelé **avant la carte** par le Chat, l'agent de code et le serveur des
+ * employés (relecture du 12/10/2026 : sinon on acceptait une carte pour être
+ * refusé ensuite), et refait par `executerOutil` au moment d'agir.
+ *
+ *  - Palmier Pro (29/09/2026, SECURITE.md § 63) : ses générations se paient
+ *    avec les crédits du compte Palmier de qui l'a ouvert. L'administrateur
+ *    seul ; les employés ne reçoivent pas ces outils (`outilsDeFamille`), et
+ *    cela reste ainsi : décision du 29/09/2026, inchangée.
+ *  - Roblox Studio et Blender (12/10/2026, SECURITE.md § 65) : exécuter du
+ *    Python dans Blender, c'est exécuter du code sur la machine de l'instance ;
+ *    modifier une place ou générer chez Roblox se fait au nom du compte Roblox
+ *    ouvert dans Studio. L'administrateur, ou un employé **dont la
+ *    propriétaire est administratrice** (décision de Medhi du 12/10/2026 :
+ *    c'est elle qui reçoit sa carte), vérifié à cet instant. `look` de
+ *    Blender hors de la scène compte comme une écriture (blenderRegles.ts).
+ */
+export async function refusApplication(nom: string, args: Record<string, unknown>, pour?: Pick<PourQui, "userId" | "proprietaire">): Promise<string | null> {
+  if (estEcriturePalmier(nom) && !(await administre(pour?.userId))) {
+    return "Refusé : faire modifier un projet ou générer par Palmier Pro, ouvert sur la machine de l'instance avec le compte Palmier de la personne qui l'a lancé, est réservé à l'administrateur de l'instance. Dis-le à l'utilisateur ; rien n'a été fait.";
+  }
+  if ((estEcritureRoblox(nom) || accordRequisBlender(nom, args)) && !((await administre(pour?.userId)) || (await administre(pour?.proprietaire)))) {
+    return "Refusé : modifier, exécuter du code, générer ou lire un fichier de la machine par Roblox Studio ou Blender, ouverts sur la machine de l'instance avec le compte de la personne qui les a lancés, est réservé à l'administrateur de l'instance et à ses employés. Dis-le à l'utilisateur ; rien n'a été fait.";
+  }
+  return null;
+}
+
+/** Un employé voit-il les écritures de Roblox Studio et de Blender ? Seulement si sa propriétaire administre l'instance, relu à chaque liste. */
+export async function ecrituresApplicationsPourEmploye(proprietaire: string | undefined): Promise<boolean> {
+  return administre(proprietaire);
+}
+
 /**
  * Exécute un outil de l'instance. Ne vérifie ni l'approbation ni le journal :
  * c'est à l'appelant, qui sait pour qui il travaille, de le faire avant et
@@ -100,7 +145,7 @@ export async function executerOutil(
    * Pour qui l'outil travaille, quand ce qu'il voit en dépend (la
    * bibliothèque). Absent : il ne voit que ce qui est ouvert à toute l'équipe.
    */
-  pour?: { userId: string; groupes: string[] },
+  pour?: PourQui,
 ): Promise<{ ok: boolean; content: string }> {
   // Les tâches programmées (tachesProgrammees.ts) : au nom de la personne, hors des familles des employés.
   if (nom.startsWith("taches__")) return tachesProgrammees.callTool(nom, args, pour?.userId);
@@ -137,29 +182,9 @@ export async function executerOutil(
       if (estEcritureMcpProjet(nom) && !(pour?.userId && (await estAdministrateur(pour.userId)))) {
         return { ok: false, content: "Refusé : écrire par ce connecteur, au nom de l'organisation, est réservé à l'administrateur de l'instance. Dis-le à l'utilisateur ; rien n'a été fait." };
       }
-      /*
-       * Palmier Pro (29/09/2026, SECURITE.md § 63) : il tourne sur la machine
-       * de l'instance, sous le compte de la personne qui l'a ouvert, et ses
-       * générations se paient avec les crédits de son compte Palmier. Sur une
-       * instance partagée, un collègue ne doit pas pouvoir les dépenser ni
-       * modifier ses projets : l'administrateur seul, vérifié au moment d'agir.
-       */
-      if (estEcriturePalmier(nom) && !(pour?.userId && (await estAdministrateur(pour.userId)))) {
-        return { ok: false, content: "Refusé : faire modifier un projet ou générer par Palmier Pro, ouvert sur la machine de l'instance avec le compte Palmier de la personne qui l'a lancé, est réservé à l'administrateur de l'instance. Dis-le à l'utilisateur ; rien n'a été fait." };
-      }
-      /*
-       * Roblox Studio et Blender (12/10/2026, SECURITE.md § 65) : même règle.
-       * Exécuter du Python dans Blender, c'est exécuter du code sur la machine
-       * de l'instance, sous le compte de qui a ouvert Blender ; modifier une
-       * place ou générer chez Roblox se fait au nom du compte Roblox ouvert
-       * dans Studio. L'administrateur seul, au moment d'agir, et la carte à
-       * chaque appel (approbation.ts). Les lectures restent à tous.
-       */
-      if ((estEcritureRoblox(nom) || estEcritureBlender(nom)) && !(pour?.userId && (await estAdministrateur(pour.userId)))) {
-        return { ok: false, content: "Refusé : modifier, exécuter du code ou générer par Roblox Studio ou Blender, ouverts sur la machine de l'instance avec le compte de la personne qui les a lancés, est réservé à l'administrateur de l'instance. Dis-le à l'utilisateur ; rien n'a été fait." };
-      }
       {
-        const refus = refusArgumentsBlender(nom, args);
+        // Palmier Pro, Roblox Studio, Blender : refait ici, au moment d'agir, même si l'appelant l'a vérifié avant la carte.
+        const refus = await refusApplication(nom, args, pour);
         if (refus) return { ok: false, content: refus };
       }
       return appelerMcp(nom, adapterFichiers(nom, args));

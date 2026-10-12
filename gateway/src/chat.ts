@@ -8,7 +8,7 @@ import { niveauEffort } from "./config.ts";
 import { resolve, invalidate, peutVoir } from "./router.ts";
 import { loadModel } from "./backends.ts";
 import { toolsForModel, hasTools, workspace } from "./mcp.ts";
-import { executerOutil, cibleDe } from "./outils.ts";
+import { executerOutil, cibleDe, refusApplication } from "./outils.ts";
 import { cheminReel, estProtege } from "./zonesProtegees.ts";
 import * as computer from "./computer.ts";
 import * as bureau from "./bureau.ts";
@@ -1957,7 +1957,13 @@ export async function handleChatRequest(
               message: `L'outil « ${call.name} » ne fait pas partie de ceux qui te sont proposés : il n'a pas été lancé. Utilise uniquement les outils de ta liste.`,
             } as approbation.Verdict)
           : call.lisible
-            ? await approbation.verifierOutil(portee, call.name, args, qui ?? "agent", undefined, false, "chat", undefined, options.tache)
+            ? await (async () => {
+                // Roblox Studio, Blender, Palmier Pro : le droit d'agir se vérifie avant la carte, pas après l'accord (12/10/2026).
+                const refus = await refusApplication(call.name, args, qui ? { userId: qui } : undefined);
+                return refus
+                  ? ({ autorise: false, message: refus } as approbation.Verdict)
+                  : approbation.verifierOutil(portee, call.name, args, qui ?? "agent", undefined, false, "chat", undefined, options.tache);
+              })()
             : ({ autorise: true } as approbation.Verdict);
 
         /*

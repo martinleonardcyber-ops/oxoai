@@ -6,7 +6,7 @@ import { basename, delimiter, isAbsolute, join } from "node:path";
 import { promisify } from "node:util";
 import paquets from "./blender-paquets.json" with { type: "json" };
 import { t, tf } from "./langue.ts";
-import { assurerPythonPrive, pythonPrive } from "./pythonPrive.ts";
+import { assurerPythonPrive, pythonPrive, taillePythonPriveMo } from "./pythonPrive.ts";
 
 /**
  * Blender, par le serveur MCP « MCP for Blender » (12/10/2026, demande de
@@ -25,7 +25,7 @@ import { assurerPythonPrive, pythonPrive } from "./pythonPrive.ts";
  * --only-binary=:all:` et la liste figée de blender-paquets.json (version et
  * empreinte de chaque roue, dépendances comprises, refaite par
  * `node scripts/blender-empreintes.mjs`). Python : celui du système s'il est
- * en 3.10 ou plus et sait créer un environnement, sinon celui que Helix pose
+ * en 3.10 à 3.14 et sait créer un environnement, sinon celui que Helix pose
  * (pythonPrive.ts). Le module complémentaire est celui que livre la roue
  * vérifiée, contrôlé une seconde fois par son empreinte, puis recopié à part
  * pour que la personne l'installe dans Blender (Helix n'écrit pas dans les
@@ -64,9 +64,9 @@ export const TELECHARGEMENT_BLENDER = "https://www.blender.org/download/";
 /*
  * Signature attendue sur macOS : Developer ID d'Apple, identifiant et équipe
  * de la Stichting Blender Foundation. Identifiant `org.blenderfoundation.blender`
- * (Info.plist de Blender) ; équipe `68UA947AUU`. Ni l'un ni l'autre n'a été
- * relu sur un vrai Blender ici (PROJET.md § 3.5) : s'ils diffèrent, Helix
- * refuse de parler au port, ce qui échoue fermé.
+ * et équipe `68UA947AUU` relus le 12/10/2026 sur le vrai Blender 5.2.2
+ * (`codesign -dv`, essai de bout en bout noté dans PROJET.md). Une autre
+ * signature : Helix refuse de parler au port, ce qui échoue fermé.
  */
 export const EXIGENCE_BLENDER = 'anchor apple generic and identifier "org.blenderfoundation.blender" and certificate leaf[subject.OU] = "68UA947AUU"';
 
@@ -102,26 +102,51 @@ function dansLePath(nom: string): string | null {
   return null;
 }
 
-/** Le Blender installé, pour dire « introuvable » plutôt que « fermé » ; `null` s'il n'est nulle part où on le cherche. */
+/** Les entrées d'un dossier dont le nom commence par `prefixe` (sans casse), chemins complets ; rien si le dossier est illisible. */
+function entreesCommencantPar(dossier: string, prefixe: RegExp): string[] {
+  try {
+    return readdirSync(dossier)
+      .filter((n) => prefixe.test(n))
+      .sort()
+      .reverse()
+      .map((n) => join(dossier, n));
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * Le Blender installé, `null` s'il n'est nulle part où on le cherche. Ne sert
+ * qu'à formuler le message (« introuvable » ou « fermé ») : Blender peut être
+ * ailleurs, et rien n'est refusé faute de le trouver ici (relecture du
+ * 12/10/2026). Cherché : macOS, `Blender*.app` dans /Applications et
+ * ~/Applications (« Blender 4.2.app »…) ; Windows, toutes les versions sous
+ * `Program Files\Blender Foundation\Blender *`, et Steam ; Linux, le PATH,
+ * snap, flatpak, et les archives décompressées dans `~/blender*` ou
+ * `/opt/blender*`.
+ */
 export function blenderInstalle(): string | null {
   if (process.platform === "darwin") {
-    return ["/Applications/Blender.app", join(homedir(), "Applications", "Blender.app")].find((c) => existsSync(c)) ?? null;
+    for (const d of ["/Applications", join(homedir(), "Applications")]) {
+      const app = entreesCommencantPar(d, /^blender.*\.app$/i).find((c) => existsSync(join(c, "Contents", "MacOS")));
+      if (app) return app;
+    }
+    return null;
   }
   if (process.platform === "win32") {
-    const racines = [process.env.ProgramFiles, process.env["ProgramFiles(x86)"]].filter((r): r is string => Boolean(r));
+    const racines = [process.env.ProgramFiles, process.env["ProgramFiles(x86)"], process.env.ProgramW6432].filter((r): r is string => Boolean(r));
     for (const r of racines) {
-      const fondation = join(r, "Blender Foundation");
-      try {
-        for (const d of readdirSync(fondation)) if (existsSync(join(fondation, d, "blender.exe"))) return join(fondation, d, "blender.exe");
-      } catch {
-        /* pas de dossier de la Fondation ici */
-      }
+      const exe = entreesCommencantPar(join(r, "Blender Foundation"), /^blender/i)
+        .map((d) => join(d, "blender.exe"))
+        .find((f) => existsSync(f));
+      if (exe) return exe;
       const steam = join(r, "Steam", "steamapps", "common", "Blender", "blender.exe");
       if (existsSync(steam)) return steam;
     }
     return null;
   }
-  return dansLePath("blender") ?? ["/snap/bin/blender", "/usr/bin/blender", "/var/lib/flatpak/exports/bin/org.blender.Blender"].find((c) => existsSync(c)) ?? null;
+  const archives = [homedir(), "/opt"].flatMap((d) => entreesCommencantPar(d, /^blender/i)).map((d) => join(d, "blender"));
+  return dansLePath("blender") ?? ["/snap/bin/blender", "/usr/bin/blender", "/var/lib/flatpak/exports/bin/org.blender.Blender", ...archives].find((c) => existsSync(c)) ?? null;
 }
 
 /* ------------------------------------------------------------------ */
@@ -130,6 +155,13 @@ export function blenderInstalle(): string | null {
 
 export type VerdictBlender = { ok: true; pid: number } | { ok: false; raison: "absent" | "autre" | "illisible"; message: string };
 
+/**
+ * Les processus déjà reconnus, par numéro, avec leur identité (numéro,
+ * exécutable, heure de départ) : un numéro réattribué à un autre programme
+ * après la fermeture de Blender n'hérite pas de la reconnaissance (relecture
+ * du 12/10/2026). Sans identité lisible, rien n'est gardé : la signature est
+ * relue à chaque fois.
+ */
 const reconnus = new Map<number, string>();
 
 interface Ecouteur {
@@ -138,6 +170,26 @@ interface Ecouteur {
   exe: string | null;
   /** Windows : la signature Authenticode, lue par PowerShell. */
   signature?: { statut: string; sujet: string };
+  /** Windows : l'heure de départ du processus, lue par PowerShell. */
+  debut?: string;
+}
+
+/** Numéro, exécutable et heure de départ du processus ; `null` si le système ne les donne pas. */
+async function identite(e: Ecouteur): Promise<string | null> {
+  try {
+    if (process.platform === "win32") return e.exe && e.debut ? `${e.pid}|${e.exe}|${e.debut}` : null;
+    if (process.platform === "linux") {
+      const stat = readFileSync(`/proc/${e.pid}/stat`, "utf8");
+      const champs = stat.slice(stat.lastIndexOf(")") + 2).split(" ");
+      const exe = e.exe ?? readlinkSync(`/proc/${e.pid}/exe`);
+      return champs[19] ? `${e.pid}|${exe}|${champs[19]}` : null;
+    }
+    const { stdout } = await executer("/bin/ps", ["-o", "lstart=", "-o", "comm=", "-p", String(e.pid)], { timeout: 15_000 });
+    const ligne = stdout.trim();
+    return ligne ? `${e.pid}|${ligne}` : null;
+  } catch {
+    return null;
+  }
 }
 
 /** macOS : `lsof`, comme palmier.ts. */
@@ -216,12 +268,14 @@ async function ecouteursWindows(port: number): Promise<Ecouteur[]> {
     `$r = @(Get-NetTCPConnection -LocalPort ${port} -State Listen -ErrorAction SilentlyContinue | ForEach-Object { ` +
     `$p = Get-Process -Id $_.OwningProcess -ErrorAction SilentlyContinue; $s = $null; ` +
     `if ($p -and $p.Path) { $s = Get-AuthenticodeSignature -LiteralPath $p.Path }; ` +
-    `[pscustomobject]@{ pid = [int]$_.OwningProcess; exe = [string]$p.Path; statut = [string]$s.Status; sujet = [string]$s.SignerCertificate.Subject } }); ` +
+    `$d = $null; if ($p) { try { $d = [string]$p.StartTime.ToFileTimeUtc() } catch { } }; ` +
+    `[pscustomobject]@{ pid = [int]$_.OwningProcess; exe = [string]$p.Path; statut = [string]$s.Status; sujet = [string]$s.SignerCertificate.Subject; debut = [string]$d } }); ` +
     `ConvertTo-Json -InputObject $r -Compress`;
   const powershell = join(process.env.SystemRoot ?? "C:\\Windows", "System32", "WindowsPowerShell", "v1.0", "powershell.exe");
   const { stdout } = await executer(powershell, ["-NoProfile", "-NonInteractive", "-Command", script], { timeout: 30_000, windowsHide: true });
-  const brut = JSON.parse(stdout.trim() || "[]") as { pid: number; exe: string; statut: string; sujet: string }[] | { pid: number; exe: string; statut: string; sujet: string };
-  return (Array.isArray(brut) ? brut : [brut]).map((e) => ({ pid: e.pid, exe: e.exe || null, signature: { statut: e.statut, sujet: e.sujet } }));
+  type Brut = { pid: number; exe: string; statut: string; sujet: string; debut?: string };
+  const brut = JSON.parse(stdout.trim() || "[]") as Brut[] | Brut;
+  return (Array.isArray(brut) ? brut : [brut]).map((e) => ({ pid: e.pid, exe: e.exe || null, signature: { statut: e.statut, sujet: e.sujet }, ...(e.debut ? { debut: e.debut } : {}) }));
 }
 
 async function ecouteurs(port: number): Promise<Ecouteur[]> {
@@ -283,17 +337,19 @@ export async function ecouteurBlender(port = portBlender()): Promise<VerdictBlen
   for (const pid of [...reconnus.keys()]) if (!liste.some((e) => e.pid === pid)) reconnus.delete(pid);
   if (liste.length === 0) {
     if (!blenderInstalle() && !executableEssai()) {
-      return { ok: false, raison: "absent", message: tf("Blender est introuvable sur cette machine. Installez-le depuis {0}, ouvrez-le, puis réessayez.", TELECHARGEMENT_BLENDER) };
+      return { ok: false, raison: "absent", message: tf("Blender ne répond pas sur le port de son module MCP ({0}), et il n'a pas été trouvé à ses emplacements habituels. S'il n'est pas installé, installez-le depuis {1} ; sinon, ouvrez-le et vérifiez que le module « MCP for Blender » est installé et coché (Édition, Préférences, Modules complémentaires). Puis réessayez.", port, TELECHARGEMENT_BLENDER) };
     }
     return { ok: false, raison: "absent", message: tf("Blender ne répond pas sur le port de son module MCP ({0}). Ouvrez Blender et vérifiez que le module « MCP for Blender » est installé et coché (Édition, Préférences, Modules complémentaires) : il démarre son serveur avec Blender. Puis réessayez.", port) };
   }
   for (const e of liste) {
-    if (reconnus.has(e.pid)) continue;
+    const qui = await identite(e);
+    if (qui && reconnus.get(e.pid) === qui) continue;
+    reconnus.delete(e.pid);
     const exe = await estBlender(e);
     if (!exe) {
       return { ok: false, raison: "autre", message: tf("Un autre programme occupe le port du module MCP de Blender ({0}) sur cette machine : ce n'est pas Blender, et rien ne lui a été envoyé. Fermez ce programme, ouvrez Blender, puis réessayez.", port) };
     }
-    reconnus.set(e.pid, exe);
+    if (qui) reconnus.set(e.pid, qui);
   }
   return { ok: true, pid: liste[0]!.pid };
 }
@@ -319,7 +375,15 @@ export function serveurBlenderInstalle(): boolean {
   }
 }
 
-/** Un Python 3.10 ou plus, qui sait créer un environnement : celui du système, sinon celui de Helix. */
+/**
+ * Les versions de Python pour lesquelles blender-paquets.json a des roues :
+ * 3.10 à 3.14 (`paquets.python`). Un Python 3.15 trouvé sur la machine
+ * créerait un environnement où pip ne trouve aucune roue de pydantic-core
+ * (relecture du 12/10/2026) : on prend alors celui de Helix.
+ */
+export const versionPythonAcceptee = (majeure: number, mineure: number): boolean => majeure === 3 && mineure >= 10 && mineure <= 14;
+
+/** Un Python 3.10 à 3.14 qui sait créer un environnement : celui de Helix s'il est posé, sinon celui du système, sinon Helix pose le sien. */
 async function pythonPourVenv(): Promise<string> {
   const prive = pythonPrive();
   if (prive) return prive;
@@ -327,15 +391,32 @@ async function pythonPourVenv(): Promise<string> {
     const candidats = [dansLePath("python3"), "/opt/homebrew/bin/python3", "/usr/local/bin/python3", "/usr/bin/python3"].filter((c): c is string => Boolean(c) && existsSync(c!));
     for (const c of candidats) {
       try {
-        const { stdout } = await executer(c, ["-I", "-c", "import sys, venv, ensurepip; print(sys.version_info[:2] >= (3, 10))"], { timeout: 20_000 });
-        if (stdout.trim() === "True") return c;
+        const { stdout } = await executer(c, ["-I", "-c", "import sys, venv, ensurepip; print(sys.version_info[0], sys.version_info[1])"], { timeout: 20_000 });
+        const [maj, min] = stdout.trim().split(/\s+/).map(Number);
+        if (versionPythonAcceptee(maj!, min!)) return c;
       } catch {
         /* suivant */
       }
     }
   }
-  // Ni l'un ni l'autre : Helix pose son Python (empreinte vérifiée, pythonPrive.ts).
+  // Ni l'un ni l'autre : Helix pose son Python 3.12 (github.com, empreinte vérifiée, pythonPrive.ts).
+  console.log(`[blender] pas de Python 3.10 à 3.14 sur cette machine : Python privé posé d'abord (${taillePythonPriveMo()} Mo).`);
   return assurerPythonPrive();
+}
+
+/**
+ * Le message d'un échec de pip, dans la langue de qui lit : empreinte
+ * différente, ou aucune roue pour ce Python ou ce système (« No matching
+ * distribution », « is not a supported wheel »), ou le reste.
+ */
+export function messageEchecPip(detail: string): string {
+  if (/hash/i.test(detail) && /mismatch|do not match|THESE PACKAGES DO NOT MATCH/i.test(detail)) {
+    return t("Un paquet du serveur de Blender ne correspond pas à son empreinte : rien n'a été installé.");
+  }
+  if (/No matching distribution|Could not find a version that satisfies|is not a supported wheel|no matching wheel/i.test(detail)) {
+    return tf("Le serveur de Blender n'existe pas en paquet tout prêt pour ce Python ou ce système : rien n'a été installé. Il faut Python 3.10 à 3.14 sur macOS, Windows ou Linux (Intel ou ARM). Détail : {0}", detail.trim().split("\n").slice(-2).join(" ").slice(-200));
+  }
+  return tf("Le serveur de Blender n'a pas pu être installé (pypi.org est-il joignable ?) : {0}", detail.trim().split("\n").slice(-3).join(" ").slice(-300));
 }
 
 /** Les `site-packages` de l'environnement (le nom dépend de la version de Python). */
@@ -360,9 +441,20 @@ export function assurerServeurBlender(): Promise<void> {
 }
 
 async function installerServeur(): Promise<void> {
-  mkdirSync(racine(), { recursive: true, mode: 0o700 });
-  rmSync(dossierVenv(), { recursive: true, force: true });
-  rmSync(marque(), { force: true });
+  /*
+   * L'ancien environnement est effacé avant d'en poser un neuf. Le serveur qui
+   * tourne dessus a été arrêté par l'appelant (brancherLocal, connecteurs.ts) :
+   * sous Windows, un python.exe en marche bloque l'effacement. Un échec est dit,
+   * traduit, au lieu d'une exception brute (relecture du 12/10/2026). La marque
+   * d'abord : un environnement à moitié effacé n'est jamais pris pour posé.
+   */
+  try {
+    mkdirSync(racine(), { recursive: true, mode: 0o700 });
+    rmSync(marque(), { force: true });
+    rmSync(dossierVenv(), { recursive: true, force: true });
+  } catch (err) {
+    throw new Error(tf("L'ancien serveur de Blender n'a pas pu être effacé avant sa mise à jour ({0}) : fermez ce qui l'utilise encore, puis réessayez.", (err as Error).message.slice(-200)));
+  }
   const python = await pythonPourVenv();
   try {
     await executer(python, ["-m", "venv", dossierVenv()], { timeout: 5 * 60_000 });
@@ -379,11 +471,7 @@ async function installerServeur(): Promise<void> {
     );
   } catch (err) {
     rmSync(dossierVenv(), { recursive: true, force: true });
-    const detail = String((err as { stderr?: string }).stderr || (err as Error).message);
-    if (/hash/i.test(detail) && /mismatch|do not match|THESE PACKAGES DO NOT MATCH/i.test(detail)) {
-      throw new Error(t("Un paquet du serveur de Blender ne correspond pas à son empreinte : rien n'a été installé."));
-    }
-    throw new Error(tf("Le serveur de Blender n'a pas pu être installé (pypi.org est-il joignable ?) : {0}", detail.trim().split("\n").slice(-3).join(" ").slice(-300)));
+    throw new Error(messageEchecPip(String((err as { stderr?: string }).stderr || (err as Error).message)));
   }
   // Le module complémentaire, tel que la roue vérifiée le livre, contrôlé encore par son empreinte.
   const source = sitePackages().map((d) => join(d, ...paquets.module.chemin.split("/"))).find((f) => existsSync(f));
@@ -426,22 +514,54 @@ export function envBlender(): Record<string, string> {
 }
 
 /** Avant de lancer le serveur, et avant chaque appel : `null` si tout va, sinon la raison, dans la langue de qui lit. */
-export async function refusBlender(): Promise<string | null> {
-  if (!serveurBlenderInstalle()) return t("Le serveur MCP de Blender n'est pas installé sur cette machine : cliquez « Brancher » dans Connecteurs.");
-  const v = await ecouteurBlender();
-  return v.ok ? null : v.message;
+/** Le dernier verdict, ou celui qui se calcule, pour que l'écran ne relance pas PowerShell à chaque rafraîchissement. */
+let dernierVerdict: { quand: number; verdict: Promise<string | null> } | null = null;
+
+export function refusBlender(): Promise<string | null> {
+  const verdict = (async () => {
+    if (!serveurBlenderInstalle()) return t("Le serveur MCP de Blender n'est pas installé sur cette machine : cliquez « Brancher » dans Connecteurs.");
+    const v = await ecouteurBlender();
+    return v.ok ? null : v.message;
+  })();
+  dernierVerdict = { quand: Date.now(), verdict };
+  return verdict;
 }
 
 /**
- * Au clic sur « Brancher » : Blender introuvable, on le dit sans rien
- * télécharger ; sinon le serveur est posé (une fois), puis Blender doit
- * répondre sur son port. Le message d'un module absent donne le fichier à
- * installer dans Blender.
+ * Pour l'écran des connecteurs seulement (`etat`, connecteurs.ts) : le verdict
+ * de moins de cinq secondes, ou celui qui se calcule déjà (la relance de
+ * `relancerLocaux` part en même temps). Le lancement et chaque appel, eux,
+ * appellent `refusBlender` et relisent tout (relecture du 12/10/2026 : deux
+ * PowerShell par rafraîchissement sous Windows).
+ */
+export function refusBlenderRecent(): Promise<string | null> {
+  if (dernierVerdict && Date.now() - dernierVerdict.quand < 5_000) return dernierVerdict.verdict;
+  return refusBlender();
+}
+
+/** Faut-il (re)poser le serveur ? L'appelant arrête d'abord celui qui tourne (brancherLocal). */
+export const serveurBlenderAPoser = (): boolean => !serveurBlenderInstalle();
+
+/**
+ * Au retrait du connecteur : l'environnement de Helix (`<données>/blender-mcp`)
+ * est effacé, après la fin d'une installation en cours. Le module coché dans
+ * Blender, Helix n'y touche pas : la personne le décoche (l'écran le dit).
+ */
+export async function effacerServeurBlender(): Promise<void> {
+  await installation?.catch(() => undefined);
+  rmSync(racine(), { recursive: true, force: true });
+}
+
+/**
+ * Au clic sur « Brancher » : le serveur est posé (une fois), puis Blender doit
+ * répondre sur son port. Blender introuvable à ses emplacements habituels ne
+ * bloque rien : il peut être installé ailleurs (relecture du 12/10/2026), la
+ * détection ne sert qu'au message. Le message d'un module absent donne le
+ * fichier à installer dans Blender.
  */
 export async function preparerBlender(): Promise<{ ok: true } | { ok: false; message: string }> {
   const avant = await ecouteurBlender();
   if (!avant.ok && avant.raison !== "absent") return avant;
-  if (!avant.ok && !blenderInstalle() && !executableEssai()) return avant;
   try {
     await assurerServeurBlender();
   } catch (err) {
@@ -451,12 +571,20 @@ export async function preparerBlender(): Promise<{ ok: true } | { ok: false; mes
   const apres = await ecouteurBlender();
   if (apres.ok) return { ok: true };
   if (apres.raison !== "absent") return apres;
+  const introuvable = !blenderInstalle() && !executableEssai();
   return {
     ok: false,
-    message: tf(
-      "Blender ne répond pas sur le port de son module MCP ({0}). Ouvrez Blender. Première fois : installez le module, Édition, Préférences, Modules complémentaires, « Installer depuis le disque », choisissez le fichier {1}, puis cochez « MCP for Blender ». Il démarre son serveur avec Blender. Puis réessayez.",
-      portBlender(),
-      fichierModuleBlender(),
-    ),
+    message: introuvable
+      ? tf(
+          "Blender ne répond pas sur le port de son module MCP ({0}), et il n'a pas été trouvé à ses emplacements habituels. S'il n'est pas installé, installez-le depuis {1}. Puis ouvrez-le et, la première fois, installez le module : Édition, Préférences, Modules complémentaires, « Installer depuis le disque », choisissez le fichier {2}, puis cochez « MCP for Blender ». Puis réessayez.",
+          portBlender(),
+          TELECHARGEMENT_BLENDER,
+          fichierModuleBlender(),
+        )
+      : tf(
+          "Blender ne répond pas sur le port de son module MCP ({0}). Ouvrez Blender. Première fois : installez le module, Édition, Préférences, Modules complémentaires, « Installer depuis le disque », choisissez le fichier {1}, puis cochez « MCP for Blender ». Il démarre son serveur avec Blender. Puis réessayez.",
+          portBlender(),
+          fichierModuleBlender(),
+        ),
   };
 }

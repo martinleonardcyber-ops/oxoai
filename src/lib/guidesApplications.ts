@@ -1121,13 +1121,14 @@ function guideBlender(): GuideAppli {
     consoles: [{ libelle: t("la page de téléchargement de Blender"), url: "https://www.blender.org/download/" }],
     etapes: [
       { texte: t("Pas encore installé : installez Blender depuis sa page officielle, puis ouvrez-le.") },
-      { texte: tf("Cliquez « Brancher ». La première fois, {0} télécharge le serveur depuis pypi.org (quelques mégaoctets, chaque fichier vérifié par son empreinte) et vous donne le chemin du fichier du module.", branding.name) },
+      { texte: tf("Cliquez « Brancher ». La première fois, {0} télécharge le serveur depuis pypi.org (quelques mégaoctets, chaque fichier vérifié par son empreinte) et vous donne le chemin du fichier du module. Si cette machine n'a pas Python 3.10 à 3.14, {0} pose d'abord son propre Python, téléchargé depuis github.com et vérifié par son empreinte (de 25 à 110 Mo environ selon le système).", branding.name) },
       { texte: t("Dans Blender : Édition, Préférences, Modules complémentaires, « Installer depuis le disque », choisissez ce fichier, puis cochez « MCP for Blender ». Le module démarre son serveur avec Blender (panneau « MCP for Blender » de la vue 3D, touche N).") },
       { texte: t("Revenez ici et cliquez « Réessayer » ou « Brancher ». Lire la scène est libre ; exécuter du code, importer et générer demande votre accord à chaque fois.") },
     ],
     aEviter: [
       t("N'allumez les bibliothèques en ligne (Poly Haven, Sketchfab, Poly Pizza) et les générateurs (Hyper3D, Hunyuan3D, Tripo) du module que si vous voulez que les demandes partent chez eux : ils sont éteints par défaut."),
       t("Ne fermez pas Blender pendant qu'un agent travaille : rouvert, « Réessayer » le rebranche."),
+      t("Si vous retirez Blender des connecteurs, décochez aussi le module « MCP for Blender » dans Blender : tant qu'il est coché, il garde un port ouvert sur cette machine, sans mot de passe, chaque fois que Blender tourne."),
     ],
   };
 }

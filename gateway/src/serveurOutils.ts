@@ -15,7 +15,9 @@ import {
   traiteUnMailRecu,
   type Employe,
 } from "./employes.ts";
-import { outilsDeFamille, executerOutil, cibleDe, type DefinitionOutil } from "./outils.ts";
+import { outilsDeFamille, executerOutil, cibleDe, ecrituresApplicationsPourEmploye, refusApplication, type DefinitionOutil } from "./outils.ts";
+import { estEcritureRoblox } from "./robloxRegles.ts";
+import { estEcritureBlender } from "./blenderRegles.ts";
 import { demandeToujours, modifie, verifierOutil } from "./approbation.ts";
 import { journaliser } from "./audit.ts";
 import { OUTIL_EMPLOYE, chercherPourEmploye, outilEmploye } from "./connaissances.ts";
@@ -43,8 +45,16 @@ import * as webGarde from "./webGarde.ts";
  * Ce qu'un employé voit en ce moment : ses familles, et ce que chacune offre ;
  * plus la recherche dans ses bases de connaissances, si son agent en a.
  */
-function outilsDe(e: Employe): DefinitionOutil[] {
-  const familles = famillesEffectives(e).flatMap((f) => outilsDeFamille(f));
+async function outilsDe(e: Employe): Promise<DefinitionOutil[]> {
+  const toutes = famillesEffectives(e).flatMap((f) => outilsDeFamille(f));
+  /*
+   * Les écritures de Roblox Studio et de Blender (12/10/2026, SECURITE.md
+   * § 65) : seulement pour un employé dont la propriétaire administre
+   * l'instance, relu à chaque liste et à chaque appel. Aux autres, on ne les
+   * montre pas : chaque appel serait refusé (relecture du 12/10/2026).
+   */
+  const ecritures = await ecrituresApplicationsPourEmploye(e.ownerId);
+  const familles = ecritures ? toutes : toutes.filter((o) => !estEcritureRoblox(o.function.name) && !estEcritureBlender(o.function.name));
   const avecBases = (e.connaissances?.length ?? 0) > 0 ? [...familles, outilEmploye()] : familles;
   /*
    * Le web gardé (webGarde.ts), pour les paliers qui ont le web : c'est lui
@@ -73,7 +83,7 @@ export async function servirOutils(
 
   serveur.setRequestHandler(ListToolsRequestSchema, async () => {
     if (e.enPause) return { tools: [] };
-    const outils = outilsDe(e);
+    const outils = await outilsDe(e);
     /*
      * Les descriptions renvoient d'un outil à l'autre (« rappelle
      * courrier__lire ») ; chez OpenClaw, ils portent le préfixe du serveur.
@@ -97,7 +107,7 @@ export async function servirOutils(
     // Relu à chaque appel : une pause ou un outil retiré prend effet tout de suite.
     const courant = await employe(id);
     if (!courant || courant.enPause) return texte("Tu es en pause : aucun outil n'est disponible.", true);
-    if (!outilsDe(courant).some((o) => o.function.name === nom)) {
+    if (!(await outilsDe(courant)).some((o) => o.function.name === nom)) {
       return texte(`L'outil ${nom} ne fait pas partie des tiens.`, true);
     }
 
@@ -118,8 +128,12 @@ export async function servirOutils(
      *
      * La lecture reste libre : c'est ce pour quoi l'agent a été déclenché.
      */
+    // Roblox Studio, Blender, Palmier Pro : refusé avant la carte, pour que sa propriétaire n'accepte pas pour rien.
+    const refusAppli = await refusApplication(nom, args, { userId: qui, proprietaire: courant.ownerId });
+    if (refusAppli) return texte(refusAppli, true);
+
     const forcer = (nom === "courrier__envoyer" || modifie(nom)) && traiteUnMailRecu(id);
-    const sansAccord = courant.autonome && !demandeToujours(nom) && !forcer;
+    const sansAccord = courant.autonome && !demandeToujours(nom, args) && !forcer;
     if (!sansAccord) {
       /*
        * La carte est pour sa propriétaire : c'est elle qui répond. Jusqu'au
@@ -151,7 +165,7 @@ export async function servirOutils(
     // Plusieurs personnes lui parlent : dans la bibliothèque, il ne voit que ce qui est ouvert à toute l'équipe.
     const r =
       bases ??
-      (nom.startsWith("web__") ? await webGarde.callTool(nom, args, courant.id) : await executerOutil(nom, args, { userId: qui, groupes: [] }));
+      (nom.startsWith("web__") ? await webGarde.callTool(nom, args, courant.id) : await executerOutil(nom, args, { userId: qui, groupes: [], proprietaire: courant.ownerId }));
     // Pendant un mail reçu : ce qu'un outil rend (un autre mail, un document) devient ouvrable par web__lire, et rien d'autre.
     // Seulement un résultat réussi, et sans les adresses que la demande contenait déjà.
     if (traiteUnMailRecu(courant.id) && r.ok) webGarde.noterVues(courant.id, r.content, JSON.stringify(args));
