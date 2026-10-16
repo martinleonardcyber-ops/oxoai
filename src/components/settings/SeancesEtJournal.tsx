@@ -103,6 +103,7 @@ const LIBELLES: Record<string, string> = {
   "employe.deploye": t("Agent mis en service"),
   "employe.modifie": t("Agent modifié"),
   "employe.supprime": t("Agent retiré"),
+  "memoire.chat_effacee": t("Mémoire d'un Chat effacée"),
   "employe.message": t("Message traité par un agent"),
   "employe.mission_lancee": t("Mission lancée à la main"),
   "employe.mission_courrier": t("Mail reçu confié à un agent"),

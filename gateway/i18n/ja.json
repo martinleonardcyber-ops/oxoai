@@ -1463,6 +1463,7 @@
   "Téléchargement de {0} ({1} Go)...": "{0} をダウンロードしています（{1} GB）...",
   "Téléchargement de {0} (~{1} Go)...": "{0} をダウンロードしています（約 {1} GB）...",
   "Téléchargement de {0} déjà en cours, reprise du suivi...": "{0} はすでにダウンロード中です。進捗の表示を再開します...",
+  "Téléchargement de {0} interrompu, reprise ({1} sur 2)...": "{0} のダウンロードが中断しました。再開しています（{1}/2）...",
   "Téléchargement de {0}... {1}%": "{0} をダウンロードしています... {1}%",
   "Téléchargement de la machine (environ 2 Go)...": "マシンをダウンロードしています（約 2 GB）...",
   "Téléchargement de la machine macOS : {0} %": "macOS マシンをダウンロードしています：{0} %",

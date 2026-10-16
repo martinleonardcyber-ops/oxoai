@@ -1146,16 +1146,35 @@ async function provision(
         percent: 0,
       });
 
-      // Dix minutes sans un mot de `lms` : téléchargement arrêté, dit comme tel.
-      const got = await run(lms, ["get", choice.key, "--yes"], (line) => {
-        const percent = parsePercent(line);
-        if (percent !== undefined) {
-          setState({
-            percent,
-            message: tf("Téléchargement de {0}... {1}%", choice.label, Math.round(percent)),
-          });
+      /*
+       * Dix minutes sans un mot de `lms` : téléchargement arrêté, dit comme tel.
+       *
+       * Un échec en cours de route est repris sur le même modèle, deux fois
+       * (16/10/2026). Vu sur la machine Linux de l'essai GitHub : Qwen3 1.7B
+       * s'est arrêté à 40 %, et Helix est passé au suivant du classement,
+       * Qwen3 8B (5 Go), puis Granite 4.1 8B, encore plus long à venir sur la
+       * même connexion : trois quarts d'heure plus tard, rien n'était prêt.
+       * LM Studio reprend un téléchargement interrompu (non vérifié : au pire,
+       * il recommence le fichier).
+       */
+      let got: { ok: boolean; output: string; muet?: boolean } = { ok: false, output: "" };
+      for (let essai = 0; essai < 3; essai++) {
+        if (essai > 0) {
+          setState({ message: tf("Téléchargement de {0} interrompu, reprise ({1} sur 2)...", choice.label, essai) });
+          await new Promise((r) => setTimeout(r, essai * 5_000));
         }
-      }, 10 * 60_000, tailleDesModeles);
+        got = await run(lms, ["get", choice.key, "--yes"], (line) => {
+          const percent = parsePercent(line);
+          if (percent !== undefined) {
+            setState({
+              percent,
+              message: tf("Téléchargement de {0}... {1}%", choice.label, Math.round(percent)),
+            });
+          }
+        }, 10 * 60_000, tailleDesModeles);
+        // Réussi, réseau muet (dit plus bas) ou moteur absent : rien à reprendre.
+        if (got.ok || got.muet || /daemon is not running|no valid installation|failed to start or connect to local LM Studio/i.test(got.output)) break;
+      }
 
       if (!got.ok) {
         const message = tf("Le téléchargement de {0} a échoué.", choice.label);
@@ -1181,6 +1200,8 @@ async function provision(
           return state;
         }
         echec = { message, error: got.output.slice(-400) };
+        // Après un téléchargement raté, jamais un modèle plus lourd à télécharger : il échouerait plus sûrement encore.
+        plafondGo = Math.min(plafondGo, choice.downloadGb + 0.01);
         continue;
       }
     }

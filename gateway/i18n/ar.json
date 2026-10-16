@@ -1463,6 +1463,7 @@
   "Téléchargement de {0} ({1} Go)...": "جارٍ تنزيل {0} ({1} غيغابايت)...",
   "Téléchargement de {0} (~{1} Go)...": "جارٍ تنزيل {0} (~{1} غيغابايت)...",
   "Téléchargement de {0} déjà en cours, reprise du suivi...": "تنزيل {0} جارٍ بالفعل، استئناف المتابعة...",
+  "Téléchargement de {0} interrompu, reprise ({1} sur 2)...": "توقّف تنزيل {0}، جارٍ الاستئناف ({1} من 2)...",
   "Téléchargement de {0}... {1}%": "جارٍ تنزيل {0}... {1}%",
   "Téléchargement de la machine (environ 2 Go)...": "جارٍ تنزيل الجهاز الافتراضي (نحو 2 غيغابايت)...",
   "Téléchargement de la machine macOS : {0} %": "تنزيل جهاز macOS الافتراضي: {0}%",

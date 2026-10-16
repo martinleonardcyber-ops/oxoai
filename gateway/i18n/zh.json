@@ -1463,6 +1463,7 @@
   "Téléchargement de {0} ({1} Go)...": "正在下载 {0}（{1} GB）...",
   "Téléchargement de {0} (~{1} Go)...": "正在下载 {0}（约 {1} GB）…",
   "Téléchargement de {0} déjà en cours, reprise du suivi...": "{0} 已在下载中，正在重新跟踪进度…",
+  "Téléchargement de {0} interrompu, reprise ({1} sur 2)...": "{0} 下载中断，正在继续（第 {1} 次，共 2 次）...",
   "Téléchargement de {0}... {1}%": "正在下载 {0}… {1}%",
   "Téléchargement de la machine (environ 2 Go)...": "正在下载机器（约 2 GB）...",
   "Téléchargement de la machine macOS : {0} %": "正在下载 macOS 机器：{0}%",

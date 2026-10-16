@@ -6116,6 +6116,14 @@ de cette section) ; ce qui est dit plus bas des « phrases encore en anglais » 
   « Toujours autoriser ») sont traduits sans avoir été lus sur un système dans ces langues ;
   relecture par des personnes dont c'est la langue.
 
+**Fait le 16/10/2026 : un téléchargement de modèle interrompu ne fait plus passer à un modèle plus
+lourd.** Vu sur la machine Linux de l'essai GitHub (réseau lent vers l'hébergeur des modèles) :
+Qwen3 1.7B arrêté à 40 %, puis Helix passait au suivant du classement, Qwen3 8B (5 Go), puis
+Granite 4.1 8B ; trois quarts d'heure plus tard rien n'était prêt. `provision.ts` : le même modèle
+est repris deux fois (5 s puis 10 s d'attente) ; s'il échoue encore, seuls des modèles de taille
+égale ou moindre restent essayés (`plafondGo`). Que LM Studio reprenne un téléchargement là où il
+s'était arrêté n'est pas vérifié (au pire il recommence le fichier).
+
 **Décidé et vérifié le 12/10/2026 : connecteurs Roblox Studio et Blender.** Medhi : « je veux
 juste que ça fonctionne, fais au mieux ». Décisions prises en conséquence :
 - **Licences** : les dépendances du serveur MCP de Blender sous BSD-3 (click, httpx, httpcore, idna,

@@ -1463,6 +1463,7 @@
   "Téléchargement de {0} ({1} Go)...": "{0} wird heruntergeladen ({1} GB)...",
   "Téléchargement de {0} (~{1} Go)...": "{0} wird heruntergeladen (~{1} GB)...",
   "Téléchargement de {0} déjà en cours, reprise du suivi...": "Download von {0} läuft bereits, die Verfolgung wird wieder aufgenommen...",
+  "Téléchargement de {0} interrompu, reprise ({1} sur 2)...": "Download von {0} unterbrochen, wird fortgesetzt ({1} von 2)...",
   "Téléchargement de {0}... {1}%": "{0} wird heruntergeladen... {1}%",
   "Téléchargement de la machine (environ 2 Go)...": "Die Maschine wird heruntergeladen (etwa 2 GB)...",
   "Téléchargement de la machine macOS : {0} %": "Die macOS-Maschine wird heruntergeladen: {0} %",

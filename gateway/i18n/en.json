@@ -1463,6 +1463,7 @@
   "Téléchargement de {0} ({1} Go)...": "Downloading {0} ({1} GB)...",
   "Téléchargement de {0} (~{1} Go)...": "Downloading {0} (~{1} GB)…",
   "Téléchargement de {0} déjà en cours, reprise du suivi...": "{0} is already downloading, following it again…",
+  "Téléchargement de {0} interrompu, reprise ({1} sur 2)...": "Download of {0} interrupted, resuming ({1} of 2)...",
   "Téléchargement de {0}... {1}%": "Downloading {0}… {1}%",
   "Téléchargement de la machine (environ 2 Go)...": "Downloading the machine (about 2 GB)...",
   "Téléchargement de la machine macOS : {0} %": "Downloading the macOS machine: {0}%",
