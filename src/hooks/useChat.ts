@@ -124,6 +124,8 @@ export interface Message {
   documents?: DocumentEnvoye[];
   /** Image créée en réponse (bouton « Image » du composeur). */
   image?: ImageCreee;
+  /** Réponse coupée par sa longueur (16/10/2026) : ce que l'écran en dit, sous la réponse, avec « Continuer ». */
+  coupee?: string;
   /**
    * Passages des bases de connaissances donnés au modèle pour cette réponse.
    * `ignorees` : bases choisies que la personne ne voit pas (l'instance les a
@@ -591,6 +593,8 @@ async function repondre(
               if (!content.trim()) durees.premierMot = undefined;
               patch(replyId, { content, reasoning, durees: { ...durees } });
             }
+          } else if (event.type === "coupee") {
+            patch(replyId, { coupee: event.message });
           } else if (event.type === "error") {
             patch(replyId, { error: event.message });
           } else if (event.type === "statut") {

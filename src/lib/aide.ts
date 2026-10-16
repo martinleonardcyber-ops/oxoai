@@ -56,6 +56,15 @@ const ARTICLES: Article[] = [
     corps: t("Avant d'écrire, le modèle peut prendre du temps, surtout sur un ordinateur sans carte graphique : plus d'une minute n'a rien d'anormal. Le Chat dit ce qui se passe, avec le temps écoulé et le nom du modèle : « … organise le travail », puis « … lit la demande », puis « Réflexion en cours » quand le modèle réfléchit. Cliquez sur la réflexion pour la lire ; sa durée reste affichée une fois la réponse écrite.\n\nVous pouvez envoyer un autre message pendant ce temps : il attend son tour dans la file, au-dessus de la zone de saisie."),
   },
   {
+    // Conversation trop longue, réponse coupée (16/10/2026, gateway/src/chat.ts et historique.ts).
+    id: "conversation-longue",
+    titre: t("La conversation est trop longue, ou la réponse est coupée"),
+    resume: t("Pourquoi un modèle ne relit pas tout, s'arrête en route, et quoi faire."),
+    motsCles: ["coupe", "coupée", "coupure", "contexte", "trop long", "longue", "limite", "jetons", "tokens", "continuer", "context length", "s'arrête", "incomplet"],
+    lien: "/",
+    corps: t("Un modèle ne lit qu'une certaine quantité de texte à la fois : sa place de conversation, comptée en jetons (un jeton fait environ trois lettres). Les consignes, les outils, les documents joints, l'historique du Chat et la réponse se partagent cette place.\n\nCe que fait le Chat quand la place manque :\n- les plus anciens messages ne sont plus relus, et c'est dit en tête de la réponse ;\n- les longs résultats d'outils sont raccourcis ;\n- si la place est trop petite pour les outils, le modèle répond sans eux, et c'est dit ;\n- si le modèle refuse une demande trop longue, elle est raccourcie et renvoyée d'elle-même ;\n- une réponse coupée par sa longueur est poursuivie d'elle-même quand il reste de la place ; sinon, une note le dit sous la réponse, avec un bouton « Continuer ».\n\nQuoi faire :\n- pour un nouveau sujet, ouvrez un nouveau Chat : il repart avec toute la place ;\n- un modèle de la machine chargé par LM Studio avec une petite place (4 096 jetons, son réglage par défaut) : dans LM Studio, éjectez-le puis rechargez-le avec une « Context Length » de 32 768 jetons, ou éjectez-le simplement, et le modèle sera rechargé avec cette taille à la question suivante ;\n- si la réflexion prend toute la place, choisissez un niveau de réflexion plus bas ;\n- un très long document est lu en parties : posez une question précise plutôt que « résume tout »."),
+  },
+  {
     id: "documents-joints",
     titre: t("Joindre un document au Chat"),
     resume: t("Ce que le modèle lit d'un fichier joint, et ce qu'il ne lit pas."),

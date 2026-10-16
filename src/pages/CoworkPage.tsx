@@ -663,7 +663,7 @@ export function CoworkPage() {
           <>
             <div className="min-h-0 flex-1 overflow-y-auto">
               <div className="mx-auto w-full max-w-[720px] px-6 py-8">
-                <MessageList messages={chat.messages} />
+                <MessageList messages={chat.messages} onContinuer={chat.busy ? undefined : () => void chat.send(t("Continue ta réponse."))} />
               </div>
             </div>
             <div className="shrink-0 px-6 pb-5">

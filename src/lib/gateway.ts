@@ -124,6 +124,12 @@ export type HelixEvent =
   | { type: "sources"; sources: Citation[]; ignorees?: number; aReindexer?: number; erreur?: string }
   /* Sources de la recherche sur le web, au fil des recherches et des pages lues (gateway/src/rechercheWeb.ts). */
   | { type: "sources_web"; sources: SourceWeb[]; moteur?: string }
+  /*
+   * La réponse s'est arrêtée par sa longueur, sans place pour la suite
+   * (gateway/src/chat.ts, 16/10/2026) : ce qui est écrit reste une réponse,
+   * l'écran le dit et propose « Continuer ».
+   */
+  | { type: "coupee"; message: string }
   | { type: "error"; message: string };
 
 export interface StreamHandlers {

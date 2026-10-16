@@ -3517,6 +3517,12 @@ console.log("\n7 decies. Petit modèle local sans carte graphique : ce qui part 
   );
 
   // B. Chargé ailleurs avec 4 096 jetons (le défaut de LM Studio) : huit échanges ne débordent jamais, la question et la consigne restent.
+  /*
+   * « Ailleurs » : l'application LM Studio de la personne, déclarée. Sur le
+   * seul moteur de Helix, le modèle serait rechargé avec 32 768 jetons
+   * (16/10/2026, `agrandirLaConversation`, backends.ts ; essai-contexte.mjs).
+   */
+  writeFileSync(join(ICI, "maison", ".lmstudio", ".internal", "app-install-location.json"), JSON.stringify({ path: process.execPath }));
   poser([{ cle: MINISTRAL, contexte: 4096 }]);
   await attendre(5200);
   const fil = [{ role: "system", content: SYSTEME }];
@@ -9963,6 +9969,48 @@ console.log("\n47. Blender muet, Unreal Editor, serveurs MCP ajoutés par l'admi
       /id: "unreal",/.test(aide) && /id: "mcp-personnalise",/.test(aide) && /unreal: Gamepad2,/.test(src("src", "components", "settings", "marquesConnecteurs.ts")),
     "Connecteurs.tsx, guidesApplications.ts, aide.ts, marquesConnecteurs.ts",
   );
+}
+
+/* ------------------------------------------------------------------------- */
+/*
+ * Signalé par Medhi le 16/10/2026 : « des fois il y a des soucis avec le
+ * contexte chez certaines personnes, ça se coupe ». scripts/essai-contexte.mjs,
+ * repris sous « contexte : » : modèle chargé à 4 096 jetons (rechargé sur le
+ * moteur de Helix, jamais dans l'application LM Studio de la personne, outils
+ * retirés et dit), refus « context length » raccourci et renvoyé, réponse
+ * coupée poursuivie, réflexion qui prend toute la place, résultat d'outil trop
+ * grand, refus reconnus, tailles des modèles cloud. Puis le code.
+ */
+console.log("\n48. Conversations coupées : place du modèle, réponses coupées, refus « context length » (16/10/2026)");
+{
+  const essai = await new Promise((fin) => {
+    const e = spawn(process.execPath, [join(RACINE, "scripts", "essai-contexte.mjs")], { stdio: ["ignore", "pipe", "pipe"] });
+    let sortie = "";
+    e.stdout.on("data", (b) => (sortie += b));
+    e.stderr.on("data", (b) => (sortie += b));
+    const minuterie = setTimeout(() => e.kill(), 5 * 60_000);
+    e.on("close", (status) => {
+      clearTimeout(minuterie);
+      fin({ status, sortie });
+    });
+  });
+  const lignes = essai.sortie.split("\n");
+  for (const ligne of lignes) {
+    const ok = /^\s+✓ (.*)$/.exec(ligne);
+    const ko = /^\s+✗ (.*?)(?:  —  obtenu : .*)?$/.exec(ligne);
+    if (ok) verifier(`contexte : ${ok[1]}`, true, "");
+    else if (ko) verifier(`contexte : ${ko[1]}`, false, ligne.split("  —  obtenu : ")[1] ?? "");
+  }
+  verifier("contexte : l'essai s'est déroulé jusqu'au bout", essai.status === 0, `${essai.status} ${lignes.slice(-6).join(" ")}`);
+  const src = (...p) => readFileSync(join(RACINE, ...p), "utf8");
+  const employesSrc = src("gateway", "src", "employes.ts");
+  verifier(
+    "employés : la taille de conversation du modèle est dite à OpenClaw (`contextWindow`), qui sinon compte sur 200 000 jetons et ne résume jamais",
+    /models: \[\{ id: e\.modele, name: e\.modele, \.\.\.\(taille \? \{ contextWindow: taille \} : \{\}\) \}\]/.test(employesSrc) && (employesSrc.match(/appliquerConfiguration\(employes, await taillesDesModeles\(employes\)\)/g) ?? []).length === 2,
+    "employes.ts",
+  );
+  const aide = src("src", "lib", "aide.ts");
+  verifier("aide : un article « La conversation est trop longue, ou la réponse est coupée »", /id: "conversation-longue",/.test(aide), "aide.ts");
 }
 
 console.log(`\n${reussis} vérification(s) réussie(s), ${echecs.length} échec(s).`);

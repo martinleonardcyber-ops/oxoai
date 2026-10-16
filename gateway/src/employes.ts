@@ -36,7 +36,8 @@ import {
   poserPath,
   type Lancement,
 } from "./plateformeOpenClaw.ts";
-import { backendById, discover, type Discovery } from "./backends.ts";
+import { backendById, contexteDuModele, discover, type Discovery } from "./backends.ts";
+import { moteurDeLaMachine } from "./types.ts";
 
 /**
  * Employés : des agents OpenClaw déployés et pilotés par Helix.
@@ -980,7 +981,30 @@ const objet = (v: unknown): Record<string, unknown> =>
  * dont il a la charge ; il garde ce qu'OpenClaw y a ajouté lui-même (dossiers
  * d'état des agents, métadonnées de migration).
  */
-function appliquerConfiguration(employes: Employe[]): void {
+/**
+ * Taille de conversation du modèle de chaque employé, quand elle est sue
+ * (16/10/2026) : la même mesure que le Chat (`contexteDuModele`, backends.ts),
+ * pour LM Studio, llama.cpp et un service qui publie la sienne. Sans attendre
+ * un LM Studio muet : une liste vide garde la configuration d'avant.
+ */
+async function taillesDesModeles(employes: Employe[]): Promise<Map<string, number>> {
+  const tailles = new Map<string, number>();
+  try {
+    const decouverte = await discover({ attendreLmStudio: false });
+    for (const e of employes) {
+      const m = decouverte.models.find((x) => x.uid === e.modele);
+      const b = m ? backendById(m.backendId) : undefined;
+      if (!m || !b) continue;
+      if (!moteurDeLaMachine(m.backendKind) && !b.contexte && !m.contextePublie) continue;
+      tailles.set(e.modele, await contexteDuModele(m, b));
+    }
+  } catch {
+    /* découverte impossible : OpenClaw garde sa supposition */
+  }
+  return tailles;
+}
+
+function appliquerConfiguration(employes: Employe[], tailles?: Map<string, number>): void {
   if (!passerelle) throw new Error(t("La passerelle n'est pas encore prête."));
   const cfg = lireConfig();
 
@@ -1004,12 +1028,21 @@ function appliquerConfiguration(employes: Employe[]): void {
   // Un fournisseur par employé : la passerelle sait ainsi au nom de qui compter la consommation.
   const fournisseurs: Record<string, unknown> = {};
   for (const e of employes) {
+    /*
+     * La taille de conversation du modèle, dite à OpenClaw (16/10/2026). Sans
+     * elle, OpenClaw compte sur 200 000 jetons (docs d'OpenClaw 2026.9.4,
+     * « custom providers » : « the standard 200000-token fallback ») et ne
+     * résume jamais la conversation d'un employé avant que le modèle de la
+     * machine, à 32 768 jetons, la refuse. Inconnue : rien n'est écrit, comme
+     * avant.
+     */
+    const taille = tailles?.get(e.modele);
     fournisseurs[nomOpenClaw(e.id)] = {
       baseUrl: `${passerelle.url}/v1`,
       api: "openai-completions",
       apiKey: passerelle.jeton,
       headers: { "X-Helix-Employe": e.id, "X-Helix-Cle": cleDe(e.id) },
-      models: [{ id: e.modele, name: e.modele }],
+      models: [{ id: e.modele, name: e.modele, ...(taille ? { contextWindow: taille } : {}) }],
     };
   }
   cfg.models = { mode: "replace", catalogRefresh: { enabled: false }, providers: fournisseurs };
@@ -1548,7 +1581,7 @@ export async function assurerMarche(): Promise<void> {
   if (premierAppel) {
     await chargerSecretsCanaux();
     for (const e of employes) ecrireEspace(e);
-    appliquerConfiguration(employes);
+    appliquerConfiguration(employes, await taillesDesModeles(employes));
     configurationFaite = true;
   }
   await demarrerProcessus(moteur);
@@ -1609,7 +1642,7 @@ async function reconfigurer(employes: Employe[], forcerRedemarrage = false): Pro
   const { moteur, raison } = await detecterMoteur();
   if (!moteur) throw new Error(raison);
   const nouvelleExtension = await preparerExtensions(employes);
-  appliquerConfiguration(employes);
+  appliquerConfiguration(employes, await taillesDesModeles(employes));
   configurationFaite = true;
   // Une extension installée ou un canal branché ne se chargent qu'au démarrage d'OpenClaw.
   if (processus && (nouvelleExtension || forcerRedemarrage)) await arreterProcessus();

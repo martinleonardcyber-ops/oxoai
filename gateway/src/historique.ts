@@ -40,6 +40,10 @@ export interface Ajustement {
   avant: number;
   apres: number;
   budget: number;
+  /** Index de la question dans `messages` après l'ajustement (les retraits la font remonter). */
+  question: number;
+  /** Le dernier résultat d'outil, trop grand à lui seul, a été coupé (16/10/2026). */
+  dernierCoupe: boolean;
 }
 
 /** Ce que la conversation peut occuper : la taille chargée moins la réponse, la marge et les outils. */
@@ -65,7 +69,7 @@ const NOTE_RESULTAT = "[Résultat plus ancien retiré faute de place dans la con
  */
 export function tenirDansLaPlace(messages: unknown[], budget: number, question = indexDeLaQuestion(messages)): Ajustement {
   const avant = jetonsDesMessages(messages);
-  if (avant <= budget || question < 0) return { messages, retires: 0, abreges: 0, avant, apres: avant, budget };
+  if (avant <= budget || question < 0) return { messages, retires: 0, abreges: 0, avant, apres: avant, budget, question, dernierCoupe: false };
   const copie = [...messages] as Message[];
   /*
    * Le total est tenu au fil des retraits, jamais recalculé sur toute la
@@ -103,6 +107,36 @@ export function tenirDansLaPlace(messages: unknown[], budget: number, question =
     }
   }
 
+  /*
+   * 2 bis. Le dernier résultat d'outil, s'il ne tient pas à lui seul
+   * (16/10/2026) : une page lue, un long fichier, jusqu'à 20 000 caractères,
+   * soit près de 7 000 jetons, dans une conversation chargée à 4 096. Il
+   * restait entier, et le moteur refusait la demande ou la coupait. On garde
+   * son début, ce qui tient, avec une note qui le dit au modèle.
+   */
+  let dernierCoupe = false;
+  if (total > budget) {
+    let i = -1;
+    for (let k = copie.length - 1; k > q; k--) {
+      if (copie[k]?.role === "tool" && typeof copie[k]!.content === "string" && copie[k]!.content !== NOTE_RESULTAT) {
+        i = k;
+        break;
+      }
+    }
+    if (i > 0) {
+      const contenu = copie[i]!.content as string;
+      const cout = jetonsDunMessage(copie[i]);
+      const reste = Math.max(150, cout - (total - budget));
+      const garde = Math.max(450, reste * 3 - 200);
+      if (garde < contenu.length) {
+        const coupe = `${contenu.slice(0, garde)}\n[… ${contenu.length - garde} caractères de plus retirés faute de place dans la conversation. Demande une partie précise si tu en as besoin.]`;
+        copie[i] = { ...copie[i]!, content: coupe };
+        total += jetonsDunMessage(copie[i]) - cout;
+        dernierCoupe = true;
+      }
+    }
+  }
+
   // 3. Dit au modèle, pour qu'il ne fasse pas semblant de se souvenir.
   if (retires > 0) {
     const note =
@@ -110,10 +144,28 @@ export function tenirDansLaPlace(messages: unknown[], budget: number, question =
       "Si la personne y fait référence, dis-lui que tu ne les vois plus et demande-lui de rappeler ce qu'il faut.";
     const systeme = copie[0];
     if (systeme?.role === "system" && typeof systeme.content === "string") copie[0] = { ...systeme, content: `${systeme.content}\n\n${note}` };
-    else if (systeme?.role !== "system") copie.unshift({ role: "system", content: note });
+    else if (systeme?.role !== "system") {
+      copie.unshift({ role: "system", content: note });
+      q++;
+    }
     total = jetonsDesMessages(copie);
   }
-  return { messages: copie, retires, abreges, avant, apres: total, budget };
+  return { messages: copie, retires, abreges, avant, apres: total, budget, question: q, dernierCoupe };
+}
+
+/**
+ * Le moteur a refusé la demande, trop longue pour sa place (16/10/2026) :
+ * l'estimation de Helix (3 caractères par jeton) s'est trompée, ou la taille
+ * n'était pas connue (un modèle cloud, un serveur qui ne la publie pas). On
+ * raccourcit à 60 % de l'estimation, avec les mêmes règles que
+ * `tenirDansLaPlace` (consigne et question gardées, tours entiers, résultats
+ * d'outils abrégés), pour un nouvel essai. `null` : rien à retirer, un nouvel
+ * essai échouerait de même.
+ */
+export function raccourcirApresRefus(messages: unknown[], question = indexDeLaQuestion(messages)): Ajustement | null {
+  const estime = jetonsDesMessages(messages);
+  const r = tenirDansLaPlace(messages, Math.floor(estime * 0.6), question);
+  return r.retires > 0 || r.abreges > 0 || r.dernierCoupe ? r : null;
 }
 
 /**

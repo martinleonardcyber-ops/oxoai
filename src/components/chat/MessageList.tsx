@@ -14,6 +14,7 @@ import {
   Timer,
   Globe,
   ExternalLink,
+  Scissors,
 } from "lucide-react";
 import { dureeCourte, dureeMesuree, useMaintenant } from "@/lib/durees";
 import type { Citation } from "@/lib/connaissances";
@@ -453,7 +454,7 @@ function SourcesWeb({ message }: { message: Message }) {
   );
 }
 
-function Bubble({ message }: { message: Message }) {
+function Bubble({ message, onContinuer }: { message: Message; onContinuer?: () => void }) {
   const isUser = message.role === "user";
 
   if (isUser) {
@@ -541,6 +542,27 @@ function Bubble({ message }: { message: Message }) {
             <span className="min-w-0 [overflow-wrap:anywhere]">{message.error}</span>
           </p>
         )}
+        {/*
+          * Réponse coupée par sa longueur (16/10/2026) : sans cette note, elle
+          * finissait au milieu d'une phrase sans rien qui le dise. « Continuer »
+          * demande la suite ; la conversation repart raccourcie si la place
+          * manque (gateway/src/historique.ts).
+          */}
+        {message.coupee && !message.streaming && !message.error && (
+          <div className="mt-3 flex flex-wrap items-center gap-2 rounded-xl border border-border bg-muted/40 px-3 py-2 text-sm text-muted-foreground">
+            <Scissors size={14} strokeWidth={1.75} className="shrink-0" />
+            <span className="min-w-0 flex-1 [overflow-wrap:anywhere]">{message.coupee}</span>
+            {onContinuer && (
+              <button
+                type="button"
+                onClick={onContinuer}
+                className="rounded-lg border border-border bg-background px-2.5 py-1 text-xs font-medium text-foreground transition-colors hover:bg-muted"
+              >
+                {t("Continuer")}
+              </button>
+            )}
+          </div>
+        )}
         {!message.streaming && <DureeReponse durees={message.durees} />}
       </div>
     </div>
@@ -566,7 +588,11 @@ function DureeReponse({ durees }: { durees?: DureesReponse }) {
   );
 }
 
-export function MessageList({ messages }: { messages: Message[] }) {
+/**
+ * `onContinuer` : demande la suite d'une réponse coupée par sa longueur ;
+ * proposé seulement sous la dernière réponse.
+ */
+export function MessageList({ messages, onContinuer }: { messages: Message[]; onContinuer?: () => void }) {
   const endRef = useRef<HTMLDivElement>(null);
   /*
    * Suivre le texte qui arrive seulement si la personne est en bas (vu par
@@ -599,8 +625,8 @@ export function MessageList({ messages }: { messages: Message[] }) {
 
   return (
     <div className="space-y-6">
-      {messages.map((m) => (
-        <Bubble key={m.id} message={m} />
+      {messages.map((m, i) => (
+        <Bubble key={m.id} message={m} onContinuer={i === messages.length - 1 ? onContinuer : undefined} />
       ))}
       <div ref={endRef} />
     </div>

@@ -6,11 +6,11 @@ import { homedir, totalmem } from "node:os";
 import { join } from "node:path";
 import { assurerServeurLlama, chargerModeleLlama, dechargerModeleLlama, infoGguf } from "./llamaCpp.ts";
 import { cleLlamaCpp, moteurOuvert, urlLlamaCpp } from "./llamaCppBase.ts";
-import { applicationLmStudio, lmsDeLlmster, moteurAPoser, moteurSansInterface, preparerDossiersLlmster } from "./engine.ts";
+import { applicationLmStudio, lmsDeLlmster, moteurAPoser, moteurGereParHelix, moteurSansInterface, preparerDossiersLlmster } from "./engine.ts";
 import { BACKENDS, classifyRoles, isReasoningModel, tousLesBackends } from "./config.ts";
 import type { BackendConfig, BackendStatus, ModelInfo } from "./types.ts";
 import { t, tf } from "./langue.ts";
-import { capacitesDistantes, entetesAvecCle, listerModelesDistants, type ModeleDistant } from "./modelesCloud.ts";
+import { capacitesDistantes, contexteConnuParNom, entetesAvecCle, listerModelesDistants, type ModeleDistant } from "./modelesCloud.ts";
 import { fournisseurDuBackend } from "./prixPublies.ts";
 // Cycle voulu (provision.ts importe ce module) : `detectHardware` n'est appelée qu'au chargement d'un modèle, jamais à l'import.
 import { calculSurProcesseur, detectHardware, relaisApresDefaillance } from "./provision.ts";
@@ -641,7 +641,8 @@ export async function discover(options: { attendreLmStudio?: boolean } = {}): Pr
         const models = entries.map((m, i) => {
           // Un fournisseur cloud : ce que sa liste déclare, lu dans son dialecte (modelesCloud.ts).
           const capacites = distant ? capacitesDistantes(distants[i]!) : null;
-          const publie = capacites ? capacites.contexteMax : contexteDeLaListe(m);
+          // Fournisseur qui ne publie pas la taille (OpenAI, Anthropic, Google…) : celle de la famille (modelesCloud.ts, 16/10/2026).
+          const publie = capacites ? (capacites.contexteMax ?? contexteConnuParNom(m.id)) : contexteDeLaListe(m);
           return {
             ...toModelInfo(m.id, backend, lmMeta),
             ...(backend.kind === "lmstudio" ? { loaded: charge(m.id) } : {}),
@@ -1159,4 +1160,94 @@ async function chargerModele(modelKey: string): Promise<{ ok: boolean; message: 
     }
     return { ok: false, message: detail };
   }
+}
+
+/** Taille de conversation que Helix vise pour un modèle de LM Studio : la sienne au chargement, 32 768 à défaut. */
+export function tailleVisee(): number {
+  const options = optionsDeChargement();
+  const i = options.indexOf("--context-length");
+  const n = i >= 0 ? Number(options[i + 1]) : NaN;
+  return Number.isFinite(n) && n > 0 ? n : 32_768;
+}
+
+/** Modèles déjà rechargés plus grands par cette instance : une seule tentative chacun (pas de boucle si `lms` n'en fait rien). */
+const agrandissementsTentes = new Set<string>();
+
+export type Agrandissement =
+  | { fait: true; avant: number; apres: number }
+  | { fait: false; avant: number; raison: "assez" | "application" | "occupe" | "inconnu" | "echec" | "deja" };
+
+/**
+ * Un modèle de LM Studio chargé avec une petite taille de conversation
+ * (16/10/2026, « des fois ça se coupe chez certaines personnes ») : 4 096
+ * jetons, le défaut de LM Studio quand il charge un modèle seul (chargement à
+ * la demande, ou depuis son application). Helix le prenait tel quel
+ * (`contexteCharge`) : ses consignes et ses outils dépassaient souvent cette
+ * place à eux seuls, et le moteur refusait la demande (« greater than the
+ * context length ») ou la coupait.
+ *
+ * Rechargé ici avec la taille de Helix (`optionsDeChargement`), seulement
+ * quand c'est sûr :
+ *  - le moteur est celui de Helix (`moteurGereParHelix`, engine.ts), ou c'est
+ *    Helix qui a chargé ce modèle ; jamais un modèle chargé par l'application
+ *    LM Studio de la personne, qui l'a peut-être réglé ainsi exprès et s'en
+ *    sert peut-être ailleurs ;
+ *  - le modèle est au repos (`lms ps` : `idle`) : on ne décharge pas sous une
+ *    réponse en cours ;
+ *  - une fois par modèle et par démarrage.
+ * Sinon rien n'est touché, et l'appelant réduit ce qui part et le dit (chat.ts).
+ */
+export async function agrandirLaConversation(model: ModelInfo, auRechargement?: () => void): Promise<Agrandissement> {
+  const avant = model.contexteCharge ?? 0;
+  const visee = model.contexteMax ? Math.min(tailleVisee(), model.contexteMax) : tailleVisee();
+  if (model.backendKind !== "lmstudio" || !avant || moteurOuvert()) return { fait: false, avant, raison: "inconnu" };
+  if (avant >= Math.min(visee, 16_384)) return { fait: false, avant, raison: "assez" };
+  /*
+   * Hors du moteur de Helix, seulement un modèle que Helix a chargé sans
+   * préciser de taille (poste de plus de 36 Go, `optionsDeChargement`) : la
+   * petite taille est alors de son fait. Chargé par Helix avec sa taille et
+   * revenu plus petit, c'est qu'un autre programme l'a rechargé : on n'y touche pas.
+   */
+  const parHelixSansTaille = chargesParHelix.has(model.id) && !optionsDeChargement().includes("--context-length");
+  if (!moteurGereParHelix() && !parHelixSansTaille) return { fait: false, avant, raison: "application" };
+  if (agrandissementsTentes.has(model.id)) return { fait: false, avant, raison: "deja" };
+  if (!/^[A-Za-z0-9@_./:+-]{1,300}$/.test(model.id) || model.id.startsWith("-")) return { fait: false, avant, raison: "inconnu" };
+  const lms = await findLms();
+  if (!lms) return { fait: false, avant, raison: "inconnu" };
+  let entree: LmsModelEntry | undefined;
+  try {
+    const { stdout } = await exec(lms, ["ps", "--json"], { timeout: 8000, maxBuffer: 4 * 1024 * 1024 });
+    const lu = JSON.parse(stdout) as LmsModelEntry[];
+    entree = Array.isArray(lu) ? lu.find((e) => (e.modelKey ?? e.path) === model.id) : undefined;
+  } catch {
+    return { fait: false, avant, raison: "inconnu" };
+  }
+  if (!entree) return { fait: false, avant, raison: "inconnu" };
+  if (entree.status && entree.status !== "idle") return { fait: false, avant, raison: "occupe" };
+  // Une seconde copie (« …:2 ») sert peut-être quelqu'un d'autre : on ne s'y risque pas.
+  if (entree.identifier && entree.identifier !== model.id) return { fait: false, avant, raison: "application" };
+  agrandissementsTentes.add(model.id);
+  auRechargement?.();
+  const options = optionsDeChargement().filter((_, i, tout) => tout[i] !== "--context-length" && tout[i - 1] !== "--context-length");
+  try {
+    await exec(lms, ["unload", model.id], { timeout: 30_000 });
+    chargesParHelix.delete(model.id);
+    preparerDossiersLlmster();
+    await exec(lms, ["load", model.id, "--yes", "--ttl", TTL_SECONDES, "--context-length", String(visee), ...options], { timeout: 300_000 });
+    chargesParHelix.add(model.id);
+  } catch (err) {
+    console.warn(`[helix] ${model.id} : rechargement avec ${visee} jetons raté (${err instanceof Error ? err.message.slice(0, 200) : String(err)})`);
+    return { fait: false, avant, raison: "echec" };
+  }
+  let apres = visee;
+  try {
+    const { stdout } = await exec(lms, ["ps", "--json"], { timeout: 8000, maxBuffer: 4 * 1024 * 1024 });
+    const lu = JSON.parse(stdout) as LmsModelEntry[];
+    const relu = Array.isArray(lu) ? lu.find((e) => (e.modelKey ?? e.path) === model.id) : undefined;
+    if (typeof relu?.contextLength === "number") apres = relu.contextLength;
+  } catch {
+    /* on garde la taille demandée */
+  }
+  console.log(`[helix] ${model.id} rechargé par Helix : conversation de ${avant} à ${apres} jetons`);
+  return apres > avant ? { fait: true, avant, apres } : { fait: false, avant, raison: "echec" };
 }

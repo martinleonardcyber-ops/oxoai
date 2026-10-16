@@ -219,6 +219,19 @@ export function moteurSansInterface(): boolean {
 }
 
 /**
+ * Le moteur est-il celui de Helix, et de lui seul (16/10/2026) ? Le moteur
+ * sans interface déclaré (`llmster-install-location.json`), et aucune
+ * application LM Studio déclarée sur la machine (`app-install-location.json`),
+ * sur tout système. Sert à décider si Helix peut recharger un modèle chargé
+ * avec une trop petite taille de conversation (backends.ts,
+ * `agrandirLaConversation`) : l'application LM Studio de la personne, et ce
+ * qu'elle y a chargé, ne sont jamais touchées.
+ */
+export function moteurGereParHelix(): boolean {
+  return installationDeclaree("llmster-install-location.json") && !installationDeclaree("app-install-location.json");
+}
+
+/**
  * Installe le moteur. Renvoie le chemin de l'application installée.
  *
  * Chaque étape échoue bruyamment plutôt que de continuer à moitié : une

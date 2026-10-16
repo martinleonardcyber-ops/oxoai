@@ -3,7 +3,7 @@ import { models, resolve } from "./router.ts";
 import { backendById, loadModel } from "./backends.ts";
 import * as usage from "./usage.ts";
 import { moteurDeLaMachine, type ModelInfo } from "./types.ts";
-import { appliquerCorrection, correctionPour, messageDuFournisseur } from "./modelesCloud.ts";
+import { appliquerCorrection, correctionPour, depasseLeContexte, messageDuFournisseur } from "./modelesCloud.ts";
 import { t, tf } from "./langue.ts";
 
 /**
@@ -54,6 +54,8 @@ export async function completer(
      * Helix Code se fait avec le modèle choisi pour le code (sequenceCode.ts).
      */
     modele?: string;
+    /** Second essai après une réponse coupée par la longueur : jamais de troisième. */
+    deuxiemeEssai?: boolean;
   },
 ): Promise<Completion> {
   // Le modèle nommé peut venir de la clé personnelle de la personne (Code, 27/09/2026) : il lui est servi.
@@ -81,12 +83,21 @@ export async function completer(
   const envoyes = sansRaisonnement
     ? messages.map((m, i) => (i === messages.length - 1 && m.role === "user" ? { ...m, content: `${m.content}\n\n/no_think` } : m))
     : messages;
+  /*
+   * Un modèle qui réfléchit sans interrupteur connu (gpt-oss, Magistral, un
+   * « thinking » ou « reasoning ») dépense ses jetons de sortie à réfléchir
+   * avant d'écrire (16/10/2026) : avec 800 jetons pour un résumé de réunion,
+   * la réflexion prenait tout, et il ne restait « rien répondu ». Sa
+   * réflexion a sa propre part, en plus de ce que l'appelant demande.
+   */
+  const reflechitQuandMeme = Boolean(model.reasoning) && !/qwen3/i.test(model.id);
+  const demandes = options.maxTokens ?? 2048;
   const payload: Record<string, unknown> = {
     model: model.id,
     messages: envoyes,
     stream: false,
     temperature: 0.2,
-    max_tokens: options.maxTokens ?? 2048,
+    max_tokens: reflechitQuandMeme ? demandes + 4096 : demandes,
     // Qwen3.5 et suivants : `/no_think` n'y fait plus rien, LM Studio suit ce champ (chat.ts).
     ...(moteurDeLaMachine(backend.kind) && /qwen3/i.test(model.id) ? { reasoning_effort: "none" } : {}),
     ...(options.schema && moteurDeLaMachine(backend.kind)
@@ -146,7 +157,7 @@ export async function completer(
     const parLeFournisseur =
       distant && reponse.status !== 400 && reponse.status !== 413 ? messageDuFournisseur(reponse.status, texteReponse, model.id, backend.fournisseur ?? backend.label) : null;
     if (parLeFournisseur) return { ok: false, message: parLeFournisseur };
-    const tropLong = reponse.status !== 429 && /context|too long|maximum|exceed/i.test(detail);
+    const tropLong = depasseLeContexte(reponse.status, detail || texteReponse);
     return {
       ok: false,
       tropLong,
@@ -155,7 +166,18 @@ export async function completer(
   }
   usage.releverReponse(options.qui, model, payload, corps);
   const brut = corps.choices?.[0]?.message?.content ?? "";
-  const texte = brut.replace(/<think>[\s\S]*?<\/think>/g, "").trim();
-  if (!texte) return { ok: false, message: t("Le modèle n'a rien répondu.") };
+  // Une réflexion jamais refermée (coupée par la longueur) n'est pas une réponse.
+  const texte = brut.replace(/<think>[\s\S]*?(<\/think>|$)/g, "").trim();
+  const fin = (corps.choices?.[0] as { finish_reason?: string } | undefined)?.finish_reason;
+  /*
+   * Coupée par la longueur (16/10/2026) : vide (la réflexion a tout pris), ou
+   * un JSON tenu à un schéma resté sans sa fin. Un second essai, une fois,
+   * avec deux fois plus de place pour la sortie.
+   */
+  if (fin === "length" && (!texte || options.schema) && !options.deuxiemeEssai) {
+    console.log(`[completion] réponse de ${model.id} coupée par la longueur (${texte.length} caractères) : nouvel essai avec plus de place`);
+    return completer(messages, { ...options, maxTokens: demandes * 2, deuxiemeEssai: true });
+  }
+  if (!texte) return { ok: false, message: fin === "length" ? tf("La réflexion de {0} a pris toute la place de la réponse.", model.id) : t("Le modèle n'a rien répondu.") };
   return { ok: true, texte, modele: model.id, origine: (model.origine ?? "local") === "local" ? "local" : "agence", ...(model.pays ? { pays: model.pays } : {}) };
 }

@@ -5786,6 +5786,83 @@ que fait un vrai 3B du contexte rendu.
    journal juste avant, et la sortie de `lms log stream` (ce que le moteur a reçu, au début de
    l'invite).
 
+**Fait le 16/10/2026 : conversations coupées, la place du modèle.** Signalé par Medhi : « des
+fois il y a des soucis avec le contexte chez certaines personnes, ça se coupe, limite ». Pas de
+capture : causes cherchées dans le code, chacune reproduite devant un faux LM Studio
+(`scripts/essai-contexte.mjs`, `npm run essai:contexte`, repris en section 48 de `securite.mjs`)
+avant d'être corrigée. Rejoué sur une copie du code d'avant (a03eedd) : 12 contrôles sur 15 en
+échec ; après : 15 sur 15.
+1. **Modèle déjà chargé avec une petite taille** (4 096, le défaut de LM Studio quand il charge seul,
+   ou depuis son application) : Helix le prenait tel quel (`contexteCharge`, backends.ts). Mesuré :
+   les 14 outils de fichiers d'un petit modèle font à eux seuls ~2 900 jetons (estimation de Helix),
+   pour 2 600 de place après la réponse et la marge ; `tenirDansLaPlace` retirait alors toute la
+   conversation sans que cela suffise. Corrigé : sur le **moteur de Helix** (llmster déclaré, aucune
+   application LM Studio déclarée : `moteurGereParHelix`, engine.ts), ou pour un modèle que Helix a
+   chargé sans préciser de taille (poste de plus de 36 Go), le modèle au repos est rechargé avec la
+   taille de Helix, une fois par démarrage (`agrandirLaConversation`, backends.ts) ; dans
+   l'application LM Studio de la personne, rien n'est touché : les outils qui ne tiennent pas sont
+   retirés pour la réponse (chat.ts), et l'écran dit pourquoi et comment agrandir (« Context
+   Length » de 32 768, ou éjecter le modèle pour que Helix le recharge). Un message d'erreur du moteur
+   sur un modèle de LM Studio à moins de 16 384 jetons dit la même chose (`erreurDuMoteur`).
+2. **Réponse coupée par sa longueur** (`finish_reason: "length"`) : ignorée jusqu'ici, la réponse
+   s'arrêtait au milieu d'une phrase. `max_tokens` relevés : Chat et Cowork n'en posent aucun (sauf
+   demande explicite, `basePayload`) ; lecture d'un document en parties, `jetonsNotes` ; Code,
+   `limit.output` d'OpenCode (8 192 au plus) ; employés, aucun (OpenClaw l'omet sans `maxTokens`) ;
+   `completion.ts`, 2 048 par défaut, 800 et 1 800 pour les réunions, 2 500 et 4 000 pour les
+   applications. Corrigé (boucle d'outils de l'écran, chat.ts) : s'il reste au moins 1 024 jetons, la
+   suite est demandée d'elle-même, deux fois au plus, et s'écrit à la suite ; sinon l'écran reçoit
+   l'événement `coupee` : une note sous la réponse et un bouton « Continuer » (MessageList.tsx,
+   Chat et Cowork), qui envoie « Continue ta réponse. ». La réponse coupée reste dans l'historique.
+3. **Refus « context length exceeded »** : le texte reconnu était trop large (« context »,
+   « exceed ») et rien n'était réessayé. Corrigé : `depasseLeContexte` (modelesCloud.ts), d'après les
+   messages réels de LM Studio, llama.cpp, OpenAI, vLLM, DeepSeek, Groq, Mistral, Anthropic, Google
+   et Ollama, en écartant un débit par minute (Groq « TPM ») et un quota. À l'écran : la demande est
+   raccourcie à 60 % de l'estimation (`raccourcirApresRefus`, historique.ts) et renvoyée, deux fois
+   au plus, en le disant. Au relais (`/v1`, OpenClaw et OpenCode) : l'erreur garde le message traduit
+   et porte en plus « context length exceeded » et `code: "context_length_exceeded"` (400 sans
+   flux) ; avant, le message en français seul ne laissait pas OpenClaw reconnaître le dépassement et
+   compacter (docs d'OpenClaw 2026.9.4, « Overflow error patterns »).
+4. **Document joint, long résultat d'outil** : Chat, Cowork et étapes de plan passent tous par la
+   même boucle et `tenirDansLaPlace` ; les documents par `integrerDocuments`. Trou trouvé : le
+   **dernier** résultat d'outil restait entier même plus grand que toute la place (20 000 caractères,
+   ~6 700 jetons, contre 4 096) ; il est maintenant coupé à ce qui tient, avec une note au modèle.
+   Agent de code : OpenCode tient sa conversation lui-même (`limit`, opencode.ts) et compacte sur le
+   refus désormais reconnaissable. **Employés OpenClaw** : Helix ne déclarait aucune taille ;
+   OpenClaw comptait alors sur 200 000 jetons (« the standard 200000-token fallback », docs de la
+   2026.9.4) et ne résumait jamais une conversation qu'un modèle local à 32 768 finissait par
+   refuser. La taille mesurée comme pour le Chat est écrite dans `contextWindow` (employes.ts,
+   `taillesDesModeles`), quand elle est sue.
+5. **Modèles cloud** : la taille publiée par la liste du fournisseur était bien utilisée (Mistral,
+   OpenRouter, Groq, Together) ; OpenAI, Anthropic, Google, DeepSeek et xAI n'en publient pas, et la
+   conversation n'était alors jamais mesurée. `contexteConnuParNom` (modelesCloud.ts) donne le bas
+   de chaque famille (gpt-4o 128 000, gpt-4.1 1 000 000, gpt-5 272 000, o1/o3/o4 200 000, Claude
+   200 000, Gemini 1 000 000, DeepSeek 64 000, Grok 128 000, Llama 3.1+ 128 000) ; trop haut, le
+   refus est rattrapé par le cas 3.
+6. **Réflexion** : à l'écran, une réflexion coupée par la longueur sans un mot de réponse est
+   relancée une fois sans réflexion (`reasoning_effort: "none"`), en le disant ; sinon un message dit
+   de baisser le niveau. `completion.ts` : un modèle qui réfléchit sans interrupteur connu (tout sauf
+   Qwen3) reçoit 4 096 jetons de plus que demandé ; vide ou JSON tenu à un schéma coupé par la
+   longueur, un second essai avec deux fois plus de place ; une balise `<think>` jamais refermée
+   n'est plus prise pour la réponse.
+Aide intégrée : article « La conversation est trop longue, ou la réponse est coupée »
+(`conversation-longue`). Section 7 decies : son cas B (« chargé ailleurs à 4 096 ») déclare
+maintenant l'application LM Studio, sinon le modèle serait rechargé ; section rejouée seule, 11 sur
+11 ; section 48 seule, 18 sur 18.
+**Vérifié ici** : `npm run typecheck` ; i18n à 100 % des deux côtés, sans caractère de contrôle de
+direction dans `ar.json` ; `essai-contexte.mjs` 15 sur 15 ; sections 7 decies et 48 de
+`securite.mjs` seules. **Pas vérifié** (mémoire du Mac) : la batterie entière ; aucun vrai modèle,
+ni vrai LM Studio ni llmster (le `lms unload` puis `lms load --context-length` du rechargement, et
+le `status` de `lms ps` pendant une réponse, sont ceux d'un faux `lms`) ; ce qu'un vrai modèle fait
+de « Continue-la exactement là où elle s'arrête » ; qu'OpenClaw 2026.9.4 accepte et applique
+`contextWindow` à 4 096 ou 32 768 (lu dans sa documentation, pas lancé) ; les messages d'erreur des
+fournisseurs ont été relevés dans leurs sources et leurs docs, pas obtenus de leurs services ; les
+tailles par famille sont des chiffres publiés, à revoir quand une famille change.
+**À essayer sur un poste** : dans l'application LM Studio, charger un modèle à 4 096 puis ouvrir un
+Chat avec outils (l'annonce doit le dire, sans refus du moteur) ; l'éjecter et reposer la question
+(`lms ps` doit montrer 32 768) ; une très longue réponse demandée à un petit modèle (note et
+« Continuer ») ; un employé sur un modèle local, dont la conversation dépasse la place (OpenClaw doit
+résumer au lieu d'échouer).
+
 **Fait le 28/09/2026 (pour la 2026.928.2) : le japonais, quatrième langue.** Demandé par Medhi.
 - **Traduit** : les 2 936 phrases de l'interface (`src/i18n/ja.json`) et les 966 de la passerelle
   (`gateway/i18n/ja.json`), à 100 % selon `npm run i18n` et `node scripts/i18n-passerelle.mjs`,

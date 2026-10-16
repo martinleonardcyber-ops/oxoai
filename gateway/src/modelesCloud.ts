@@ -438,3 +438,67 @@ export function messageDuFournisseur(statut: number, detail: string, modele: str
   }
   return null;
 }
+
+/* ------------------------------------------------------------------------ */
+/* Conversation trop longue                                                  */
+/* ------------------------------------------------------------------------ */
+
+/*
+ * Ce que les moteurs répondent quand la demande dépasse la place du modèle
+ * (relevé le 16/10/2026 dans leurs sources et leurs documentations) :
+ *  - LM Studio : « The number of tokens to keep from the initial prompt is
+ *    greater than the context length », ou « Trying to keep the first N tokens
+ *    when context the overflows. However, the model is loaded with context
+ *    length of only 4096 tokens, which is not enough » ;
+ *  - llama.cpp (serveur) : « the request exceeds the available context size,
+ *    try increasing it », type `exceed_context_size_error` ;
+ *  - OpenAI, vLLM, DeepSeek : « This model's maximum context length is 128000
+ *    tokens. However, your messages resulted in … », code
+ *    `context_length_exceeded` ; Groq : « Please reduce the length of the
+ *    messages or completion » ;
+ *  - Mistral : « Prompt contains 40000 tokens and 0 draft tokens, too large for
+ *    model with 32768 maximum context length » ;
+ *  - Anthropic : « prompt is too long: 210000 tokens > 200000 maximum » ;
+ *  - Google : « The input token count (…) exceeds the maximum number of tokens
+ *    allowed » ; Ollama : « context length exceeded ».
+ * Avant, une expression bien plus large (« context », « exceed ») prenait aussi
+ * pour une conversation trop longue des refus sans rapport ; et un débit limité
+ * par minute (Groq, « Request too large … tokens per minute ») n'en est pas un.
+ */
+const CONTEXTE_DEPASSE =
+  /context[_ ]length[_ ]exceeded|maximum context length|greater than the context length|context length of only|exceeds? the available context size|exceed_context_size_error|context[_ ]window[_ ]exceeded|exceeds? (?:the )?(?:model'?s? )?context (?:window|length|size)|prompt is too long|too large for model with \d+ maximum context|input token count.{0,40}exceeds the maximum|input (?:is )?too long for the model|reduce the length of the messages|n_ctx|context overflow|context size (?:has been )?exceeded/i;
+
+/** Le refus du moteur dit-il que la demande dépasse la place du modèle ? */
+export function depasseLeContexte(statut: number, detail: string): boolean {
+  if (statut === 429 || statut === 401 || statut === 403 || statut === 402) return false;
+  if (/per minute|\bTPM\b|rate.?limit|quota/i.test(detail)) return false;
+  return CONTEXTE_DEPASSE.test(detail);
+}
+
+/**
+ * Taille de conversation d'un modèle cloud quand le fournisseur ne la publie
+ * pas dans sa liste (OpenAI, Anthropic, Google, DeepSeek, xAI) : sans elle, la
+ * conversation n'était jamais mesurée (chat.ts, `tailleConnue`), et un long
+ * Chat finissait refusé par le fournisseur (16/10/2026). Chiffres bas de chaque
+ * famille, relevés dans les fiches des fournisseurs : trop bas, Helix retire un
+ * peu tôt les plus anciens messages ; trop haut, le refus du fournisseur est
+ * rattrapé par un nouvel essai raccourci (chat.ts).
+ */
+const TAILLES_PAR_NOM: [RegExp, number][] = [
+  [/gpt-4\.1/i, 1_000_000],
+  [/gpt-5/i, 272_000],
+  [/^o[134](?:-|$)/i, 200_000],
+  [/gpt-4o|gpt-4-turbo|gpt-4\.5|chatgpt-4o/i, 128_000],
+  [/gpt-3\.5/i, 16_385],
+  [/^gpt-4(?:-\d{4})?$/i, 8_192],
+  [/claude/i, 200_000],
+  [/gemini-(?:1\.5|2|3)/i, 1_000_000],
+  [/deepseek/i, 64_000],
+  [/grok-(?:3|4)/i, 128_000],
+  [/llama-?(?:3\.[1-3]|4)/i, 128_000],
+];
+
+export function contexteConnuParNom(id: string): number | undefined {
+  const nom = nomCourt(id);
+  return TAILLES_PAR_NOM.find(([motif]) => motif.test(nom))?.[1];
+}

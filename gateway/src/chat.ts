@@ -63,14 +63,15 @@ import { moteurDeLaMachine, type BackendConfig, type ChatRequest, type ModelInfo
 import { t, tf } from "./langue.ts";
 import { gardesDeFlux, type Degenerescence } from "./gardeBoucle.ts";
 import { SeparateurReflexion, type MorceauSepare } from "./reflexionEnLigne.ts";
-import { contexteDuModele, echantillonnageLocal } from "./backends.ts";
+import { agrandirLaConversation, contexteDuModele, echantillonnageLocal, tailleVisee } from "./backends.ts";
 import { apresCoupure } from "./provision.ts";
-import { integrerDocuments, jetonsEstimes, messagesAvecDocuments } from "./documentsJoints.ts";
-import { derniersEchanges, indexDeLaQuestion, placeDeLaConversation, tenirDansLaPlace } from "./historique.ts";
+import { integrerDocuments, jetonsDesMessages, jetonsDunMessage, jetonsEstimes, messagesAvecDocuments } from "./documentsJoints.ts";
+import { derniersEchanges, indexDeLaQuestion, placeDeLaConversation, raccourcirApresRefus, tenirDansLaPlace } from "./historique.ts";
 import {
   accumulerAppels,
   appliquerCorrection,
   correctionPour,
+  depasseLeContexte,
   erreurDansFlux,
   lireDelta,
   messageDuFournisseur,
@@ -741,13 +742,26 @@ function sansImages(messages: unknown[]): unknown[] {
  * texte dit « exceeded your current quota », passait pour une conversation
  * trop longue. Le cas du contexte n'est donc cherché qu'après.
  */
-function erreurDuMoteur(statut: number, detail: string, modele: string, backend?: BackendConfig): string {
+function erreurDuMoteur(statut: number, detail: string, modele: string, backend?: BackendConfig, contexte?: number): string {
   const distant = backend?.origine === "cle" || backend?.origine === "agence";
   const parLeFournisseur = distant && statut !== 400 && statut !== 413 && statut !== 422
     ? messageDuFournisseur(statut, detail, modele, backend?.fournisseur ?? backend?.label ?? "")
     : null;
   if (parLeFournisseur) return parLeFournisseur;
-  if (statut !== 429 && /context|n_ctx|too long|too many tokens|exceed|greater than the/i.test(detail)) {
+  /*
+   * Reconnu d'après les messages réels des moteurs (`depasseLeContexte`,
+   * modelesCloud.ts, 16/10/2026). Un modèle de LM Studio chargé avec une petite
+   * taille : un nouveau Chat n'y change presque rien, ses consignes et ses
+   * outils remplissent déjà la place. On dit donc comment l'agrandir.
+   */
+  if (depasseLeContexte(statut, detail)) {
+    if (backend?.kind === "lmstudio" && contexte && contexte < 16_384) {
+      return tf(
+        "La demande dépasse la place de {0}, chargé avec une conversation de {1} jetons seulement. Dans LM Studio, éjectez {0} puis rechargez-le avec une « Context Length » de 32 768 jetons, ou éjectez-le simplement : il sera rechargé avec cette taille à la question suivante.",
+        modele,
+        contexte,
+      );
+    }
     return tf(
       "La conversation dépasse ce que {0} peut lire d'un coup. Ouvrez un nouveau Chat, ou retirez une pièce jointe ou une partie du texte.",
       modele,
@@ -1049,10 +1063,18 @@ export async function handleChatRequest(
     res.end(texte);
   };
   /** Une erreur, dans la langue que le client comprend. */
-  const signalerErreur = (message: string) => {
+  /*
+   * `code` : la demande dépassait la place du modèle (16/10/2026). Un client
+   * de l'API (OpenClaw pour les employés, OpenCode pour Code) ne compacte sa
+   * conversation que s'il reconnaît ce refus, à son code ou à des mots anglais
+   * (« context length exceeded », docs d'OpenClaw, compaction) : le message
+   * traduit seul le laissait renvoyer la même demande, refusée de même.
+   */
+  const signalerErreur = (message: string, code?: "context_length_exceeded") => {
+    const erreur = code ? { message: `${message} (context length exceeded)`, type: "invalid_request_error", code } : { message };
     if (interfaceHelix) emitHelix(res, { type: "error", message });
-    else if (nonFlux) repondreJson(502, { error: { message } });
-    else sse(res, { error: { message } });
+    else if (nonFlux) repondreJson(code ? 400 : 502, { error: erreur });
+    else sse(res, { error: erreur });
   };
 
   const avecImages = contientDesImages(body.messages);
@@ -1255,6 +1277,35 @@ export async function handleChatRequest(
       return;
     }
     signaler({ type: "statut", message: "" });
+  }
+
+  /*
+   * Déjà en mémoire, mais avec une petite taille de conversation (16/10/2026,
+   * « des fois ça se coupe ») : chargé par LM Studio seul, à 4 096 jetons
+   * d'ordinaire. Sur le moteur de Helix, et au repos, il est rechargé avec la
+   * taille de Helix (`agrandirLaConversation`, backends.ts) ; ailleurs (dans
+   * l'application LM Studio de la personne), rien n'est touché, et ce qui part
+   * est réduit plus bas, en le disant.
+   */
+  let petiteConversation = false;
+  if (model.backendKind === "lmstudio" && model.loaded !== false && model.contexteCharge && model.contexteCharge < Math.min(tailleVisee(), 16_384)) {
+    let dit = false;
+    const agrandi = await agrandirLaConversation(model, () => {
+      dit = true;
+      signaler({ type: "statut", message: tf("Rechargement de {0} avec une conversation plus grande...", model.id) });
+      attente?.chargement(true);
+    });
+    if (dit) {
+      attente?.chargement(false);
+      signaler({ type: "statut", message: "" });
+    }
+    if (agrandi.fait) {
+      model.contexteCharge = agrandi.apres;
+      invalidate();
+    } else {
+      petiteConversation = true;
+      console.log(`[chat] ${model.id} chargé avec ${agrandi.avant} jetons, non rechargé (${agrandi.raison})`);
+    }
   }
 
   // Les instructions masquées d'un agent partagé : c'est l'instance qui les ajoute (instructionsAgents.ts).
@@ -1516,7 +1567,9 @@ export async function handleChatRequest(
       const upstream = await callUpstream(backend, payload, arret.signal);
       if (!upstream.ok || !upstream.body) {
         const detail = await upstream.text().catch(() => "");
-        signalerErreur(erreurDuMoteur(upstream.status, detail, model.id, backend));
+        const trop = depasseLeContexte(upstream.status, detail);
+        if (trop) console.log(`[chat] relais : demande trop longue pour ${model.id} (${upstream.status}), dite au client pour qu'il compacte`);
+        signalerErreur(erreurDuMoteur(upstream.status, detail, model.id, backend, model.contexteCharge), trop ? "context_length_exceeded" : undefined);
       } else {
         releve = new usage.Releve(qui, model, payload);
         const reponse = nonFlux ? new ReponseEntiere() : null;
@@ -1577,6 +1630,33 @@ export async function handleChatRequest(
   const reflechit = Boolean(model.reasoning) && niveauEffort(body.effort).raisonner;
   const tailleConnue = moteurDeLaMachine(model.backendKind) || Boolean(backend.contexte) || Boolean(model.contextePublie);
   const contexteConversation = tailleConnue ? await contexteDuModele(model, backend) : 0;
+  /*
+   * Place trop petite pour les outils (16/10/2026) : sur 4 096 jetons, les
+   * descriptions des outils branchés en prennent souvent plus que la place
+   * entière. Partis quand même, la demande était refusée par le moteur ou
+   * coupée, et `tenirDansLaPlace` retirait toute la conversation sans que cela
+   * suffise. Ils sont retirés pour cette réponse, et c'est dit, avec la façon
+   * d'agrandir la place.
+   */
+  const commentAgrandir =
+    model.backendKind === "lmstudio"
+      ? tf("Pour l'agrandir, rechargez {0} dans LM Studio avec une « Context Length » de 32 768 jetons, ou éjectez-le simplement : il sera rechargé avec cette taille à la question suivante.", model.id)
+      : "";
+  let agrandirDit = false;
+  if (contexteConversation && tools && tools.length > 0) {
+    const iq = indexDeLaQuestion(messages);
+    const premier = messages[0] as { role?: string } | undefined;
+    const essentiel = (premier?.role === "system" ? jetonsDunMessage(premier) : 0) + (iq > 0 ? jetonsDunMessage(messages[iq]) : 0);
+    const jetonsOutils = jetonsEstimes(JSON.stringify(tools));
+    if (placeDeLaConversation(contexteConversation, reflechit, jetonsOutils) < essentiel + 256) {
+      console.log(`[chat] ${tools.length} outils (~${jetonsOutils} jetons) retirés : ${model.id} n'a que ${contexteConversation} jetons de conversation`);
+      tools = undefined;
+      messages = avecConsigne(messages, "Pour cette réponse, tu n'as aucun outil : réponds avec ce que tu sais, sans prétendre avoir agi.");
+      const annonce = tf("{0} n'a qu'une conversation de {1} jetons : trop peu pour ses outils, il répond cette fois sans eux.", model.id, contexteConversation);
+      annoncesDocuments = [...annoncesDocuments, commentAgrandir ? `${annonce} ${commentAgrandir}` : annonce];
+      agrandirDit = true;
+    }
+  }
   const budgetConversation = contexteConversation
     ? placeDeLaConversation(contexteConversation, reflechit, tools && tools.length > 0 ? jetonsEstimes(JSON.stringify(tools)) : 0)
     : Number.POSITIVE_INFINITY;
@@ -1591,7 +1671,8 @@ export async function handleChatRequest(
       messages = ajuste.messages;
       annoncesDocuments = [
         ...annoncesDocuments,
-        tf("Ce Chat est long : les {0} premiers messages n'ont pas été relus par {1}, faute de place (conversation de {2} jetons).", ajuste.retires, model.id, contexteConversation),
+        tf("Ce Chat est long : les {0} premiers messages n'ont pas été relus par {1}, faute de place (conversation de {2} jetons).", ajuste.retires, model.id, contexteConversation) +
+          (petiteConversation && commentAgrandir && !agrandirDit ? ` ${commentAgrandir}` : ""),
       ];
     }
   }
@@ -1683,20 +1764,42 @@ export async function handleChatRequest(
     // Une boucle de contrôle (revue finale, vérification d'étape, compte rendu) cite volontiers du code : pas de relance « écris-le » là.
     const enControle = /^(Revue finale, avant de rendre|Contrôle avant de passer|Tu n'as rien répondu à la fin)/.test(petits.texteDuDernierMessage(fil));
 
+    /*
+     * Conversation trop longue et réponse coupée (16/10/2026, « des fois ça se
+     * coupe ») :
+     *  - `questionDuFil` : la demande de cette boucle, pour raccourcir ce qui
+     *    la précède quand le moteur refuse une demande trop longue ;
+     *  - `budgetFil` : la place, revue à la baisse après un tel refus (Helix
+     *    l'estime à 3 caractères par jeton, et le moteur a dit qu'il en a
+     *    moins) ;
+     *  - `prefixe`, `suites` : une réponse coupée par sa longueur
+     *    (`finish_reason: "length"`) est poursuivie, deux fois au plus ;
+     *  - `effortBoucle` : une réflexion qui a pris toute la place est relancée
+     *    sans réflexion, une fois.
+     */
+    let questionDuFil = indexDeLaQuestion(fil);
+    let budgetFil = budgetConversation;
+    let refusPlace = 0;
+    let prefixe = "";
+    let suites = 0;
+    let effortBoucle: ChatRequest["effort"];
     for (let iteration = 0; iteration < budget; iteration++) {
       siArrete();
       /*
        * Les résultats d'outils s'accumulent dans le fil (jusqu'à 20 000
        * caractères chacun) : au-delà de la place, les plus anciens sont
-       * abrégés, le dernier reste entier, et rien avant n'est retiré
-       * (historique.ts). Le moteur n'a ainsi jamais à couper lui-même.
+       * abrégés, le dernier reste entier s'il tient, et rien avant n'est
+       * retiré (historique.ts). Le moteur n'a ainsi jamais à couper lui-même.
        */
-      const ajuste = tenirDansLaPlace(fil, budgetConversation, (fil[0] as { role?: string } | undefined)?.role === "system" ? 1 : 0);
-      if (ajuste.abreges > 0) {
+      const ajuste = tenirDansLaPlace(fil, budgetFil, (fil[0] as { role?: string } | undefined)?.role === "system" ? 1 : 0);
+      if (ajuste.abreges > 0 || ajuste.dernierCoupe) {
         fil.splice(0, fil.length, ...ajuste.messages);
-        console.log(`[chat] ${ajuste.abreges} résultat(s) d'outil ancien(s) abrégé(s) : ~${ajuste.apres} jetons pour ${budgetConversation} de place (${model.id})`);
+        console.log(
+          `[chat] ${ajuste.abreges} résultat(s) d'outil ancien(s) abrégé(s)${ajuste.dernierCoupe ? ", le dernier coupé" : ""} : ~${ajuste.apres} jetons pour ${budgetFil} de place (${model.id})`,
+        );
       }
-      const payload = basePayload(body, model, fil);
+      const effort = effortBoucle ?? body.effort;
+      const payload = basePayload(effortBoucle ? { ...body, effort: effortBoucle } : body, model, fil);
       if (tools && tools.length > 0) {
         // Mêmes précautions que pour les outils d'un appelant : un serveur MCP
         // branché peut, lui aussi, déclarer de très grandes bornes.
@@ -1728,7 +1831,25 @@ export async function handleChatRequest(
       if (!upstream.ok || !upstream.body) {
         finAttente();
         const detail = await upstream.text().catch(() => "");
-        emitHelix(res, { type: "error", message: erreurDuMoteur(upstream.status, detail, model.id, backend) });
+        /*
+         * Demande trop longue pour le moteur (16/10/2026) : raccourcie (plus
+         * anciens échanges, résultats d'outils) et renvoyée, deux fois au plus,
+         * en le disant. Avant, la personne lisait le refus, sans rien de plus.
+         */
+        if (depasseLeContexte(upstream.status, detail) && refusPlace < 2) {
+          const r = raccourcirApresRefus(fil, questionDuFil);
+          if (r) {
+            refusPlace++;
+            fil.splice(0, fil.length, ...r.messages);
+            questionDuFil = r.question;
+            budgetFil = Math.min(budgetFil, r.budget);
+            console.log(`[chat] demande trop longue pour ${model.id} (${upstream.status}) : ${r.retires} message(s) retiré(s), ${r.abreges} résultat(s) abrégé(s), ~${r.avant} puis ~${r.apres} jetons, nouvel essai`);
+            ecrire(`*${tf("La conversation dépassait la place de {0} : les plus anciens messages ou résultats ont été retirés pour cette réponse, et la demande renvoyée.", model.id)}*\n\n`);
+            iteration--;
+            continue;
+          }
+        }
+        emitHelix(res, { type: "error", message: erreurDuMoteur(upstream.status, detail, model.id, backend, contexteConversation || undefined) });
         return { texte, interrompu: "moteur", modifications, echecs, lectures, derniereErreur, releves, refus };
       }
 
@@ -1743,11 +1864,11 @@ export async function handleChatRequest(
        * même pour un modèle que son nom ne dit pas raisonneur (OLMo Think,
        * Phi-4 Reasoning, gpt-oss) : c'est justement son gabarit qui ouvre la balise.
        */
-      const result = await consumeUpstream(upstream, res, releve, sortie, niveauEffort(body.effort).raisonner, finAttente).finally(() => {
+      const result = await consumeUpstream(upstream, res, releve, sortie, niveauEffort(effort).raisonner, finAttente).finally(() => {
         finAttente();
         releve.clore();
       });
-      if (result.content) texte = result.content;
+      if (result.content) texte = prefixe + result.content;
 
       /*
        * Réponse partie en boucle, coupée par la passerelle (27/09/2026) : dit
@@ -1798,6 +1919,55 @@ export async function handleChatRequest(
 
       // Pas d'outil demandé : la réponse est finale.
       if (result.toolCalls.length === 0) {
+        /*
+         * Coupée par sa longueur (`finish_reason: "length"`, 16/10/2026) : la
+         * réponse s'arrêtait au milieu d'une phrase, sans rien qui le dise.
+         *  - Rien d'écrit, la réflexion a tout pris : nouvel essai sans
+         *    réflexion, une fois, en le disant.
+         *  - Coupée en route et de la place pour la suite (un plafond de sortie
+         *    du fournisseur, ou un `max_tokens` demandé) : la suite est
+         *    demandée, deux fois au plus, et s'écrit à la suite.
+         *  - Sinon (sur la machine, c'est la place de la conversation qui est
+         *    pleine) : l'écran le dit, avec un bouton « Continuer » ; la
+         *    question suivante repart avec l'historique raccourci.
+         */
+        if (result.finishReason === "length") {
+          const vide = !result.content.trim();
+          if (vide && (result.reflexion ?? "").trim() && niveauEffort(effort).raisonner && !effortBoucle) {
+            effortBoucle = "aucun";
+            console.log(`[chat] réflexion de ${model.id} coupée par la longueur, sans réponse : nouvel essai sans réflexion`);
+            ecrire(`*${tf("La réflexion de {0} a pris toute la place de la réponse : nouvel essai sans réflexion.", model.id)}*\n\n`);
+            iteration--;
+            continue;
+          }
+          const occupe = jetonsDesMessages(fil) + jetonsEstimes(result.content) + jetonsEstimes(result.reflexion ?? "") + (tools ? jetonsEstimes(JSON.stringify(tools)) : 0);
+          const reste = contexteConversation ? contexteConversation - occupe : Number.POSITIVE_INFINITY;
+          if (!vide && suites < 2 && reste >= 1024) {
+            suites++;
+            prefixe = texte;
+            fil.push({ role: "assistant", content: result.content });
+            fil.push({
+              role: "user",
+              content:
+                "[Note de l'instance] Ta réponse a été coupée par sa longueur. Continue-la exactement là où elle s'arrête, dans la même langue, sans rien répéter ni annoncer.",
+            });
+            // La suite se colle à la réponse : pas de paragraphe neuf entre les deux (`rendreTexte`).
+            sortie.fin = "\n";
+            console.log(`[chat] réponse de ${model.id} coupée par la longueur : suite demandée (${suites}/2)`);
+            iteration--;
+            continue;
+          }
+          console.log(`[chat] réponse de ${model.id} coupée par la longueur (${vide ? "vide" : `${result.content.length} caractères`}, reste ~${reste} jetons)`);
+          if (vide) {
+            emitHelix(res, {
+              type: "error",
+              message: tf("La réflexion de {0} a occupé toute la place : la réponse n'a pas pu s'écrire. Choisissez un niveau de réflexion plus bas, ou ouvrez un nouveau Chat.", model.id),
+            });
+          } else {
+            emitHelix(res, { type: "coupee", message: tf("La réponse de {0} a été coupée : elle était plus longue que la place restante.", model.id) });
+          }
+          return { texte, interrompu: false, modifications, echecs, lectures, derniereErreur, releves, refus };
+        }
         /*
          * Un petit modèle qui donne le code au lieu de l'écrire (« Voici le
          * code… enregistrez-le dans app.py ») : une relance par boucle, avec
