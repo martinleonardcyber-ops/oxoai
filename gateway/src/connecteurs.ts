@@ -1,12 +1,14 @@
 import { chmodSync, copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
-import { chiffrer, dechiffrer, chiffrementActif } from "./secret.ts";
+import { chiffrer, dechiffrer, chiffrementActif, estChiffreLie } from "./secret.ts";
 import { db, type StoredCollection } from "./db.ts";
 import { deployment } from "./deployment.ts";
 import { journaliser } from "./audit.ts";
 import {
+  adresseServeurPermise,
   callTool as appelerOutilMcp,
+  outilDuModele,
   declarer,
   estDeclare,
   relancable,
@@ -18,6 +20,7 @@ import {
 } from "./mcp.ts";
 import { ecouteurPalmier, palmierProposable, portPalmier, PORT_PALMIER, TELECHARGEMENT_PALMIER, type VerdictEcouteur } from "./palmier.ts";
 import { commandeRoblox, conseilRoblox, DOCUMENTATION_ROBLOX, refusRoblox, robloxProposable, TELECHARGEMENT_ROBLOX } from "./roblox.ts";
+import { CHEMIN_UNREAL, conseilUnreal, DOCUMENTATION_UNREAL, ecouteurUnreal, PORT_UNREAL, portUnreal, TELECHARGEMENT_UNREAL, unrealProposable } from "./unreal.ts";
 import { blenderProposable, commandeBlender, effacerServeurBlender, envBlender, preparerBlender, refusBlender, refusBlenderRecent, serveurBlenderAPoser, TELECHARGEMENT_BLENDER } from "./blender.ts";
 import * as bureau from "./bureau.ts";
 import * as courrier from "./courrier.ts";
@@ -44,7 +47,9 @@ import { definirEcriture, estMcpProjet, porteesDemandees, porteesEnTrop } from "
 import { t, tf } from "./langue.ts";
 import { refusLisible } from "./refusOauth.ts";
 import { sansLocalhost } from "./oauthNatif.ts";
-import { definirNomsConnecteurs } from "./approbation.ts";
+import { definirLecturesPerso, definirNomsConnecteurs } from "./approbation.ts";
+import { jugerAdresse, jugerCommande, jugerVariables } from "./mcpPersoRegles.ts";
+import { PORT as PORT_PASSERELLE, surLeReseau } from "./config.ts";
 
 /**
  * Catalogue de connecteurs.
@@ -558,6 +563,25 @@ export const CATALOGUE: EntreeCatalogue[] = [
     documentation: "https://github.com/ahujasid/mcp-for-blender",
     secrets: [],
   },
+  /*
+   * Unreal Engine (16/10/2026, demande de Medhi) : le serveur MCP officiel
+   * d'Epic, dans l'éditeur (plugin « Unreal MCP », expérimental, Unreal
+   * Engine 5.8), en HTTP sur la boucle locale comme Palmier Pro. Rien n'est
+   * téléchargé ni distribué ; l'éditeur est reconnu avant chaque requête
+   * (unreal.ts), et tout ce qui n'est pas une lecture passe par la carte
+   * (unrealRegles.ts).
+   */
+  {
+    id: "unreal",
+    label: "Unreal Engine",
+    description:
+      "Lire et modifier le projet ouvert dans Unreal Editor, sur cette machine, par le serveur MCP officiel d'Epic (plugin « Unreal MCP », Unreal Engine 5.8 ou plus récent). Lister les jeux d'outils est libre ; chaque action de l'éditeur (créer, modifier, exécuter, lancer des tests) demande votre accord.",
+    categorie: "Développement",
+    local: { port: PORT_UNREAL, chemin: CHEMIN_UNREAL },
+    telechargement: TELECHARGEMENT_UNREAL,
+    documentation: DOCUMENTATION_UNREAL,
+    secrets: [],
+  },
   {
     id: "airtable-mcp",
     label: "Airtable",
@@ -772,8 +796,29 @@ export const entreeCatalogue = (id: string): EntreeCatalogue | undefined =>
  * quel port elle écoute, et comment la reconnaître avant de lui parler
  * (palmier.ts). Une entrée `local` sans ligne ici n'est jamais branchée.
  */
-const APPLICATIONS_LOCALES: Record<string, { proposable: () => boolean; port: () => number; reconnaitre: (port: number) => Promise<VerdictEcouteur> }> = {
+interface ApplicationLocale {
+  proposable: () => boolean;
+  port: () => number;
+  reconnaitre: (port: number) => Promise<VerdictEcouteur>;
+  /** Un appel à la fois (Unreal Editor : outils exécutés un par un sur le fil du jeu, mcp.ts `serie`). */
+  serie?: true;
+  /** Ce qu'il faut dire après le branchement (Unreal Editor sans « All Toolsets »). */
+  conseil?: (id: string) => Promise<string | null>;
+}
+const APPLICATIONS_LOCALES: Record<string, ApplicationLocale> = {
   palmier: { proposable: palmierProposable, port: portPalmier, reconnaitre: ecouteurPalmier },
+  // Unreal Editor (16/10/2026) : une lecture faite par Helix au branchement, ses jeux d'outils.
+  unreal: {
+    proposable: unrealProposable,
+    port: portUnreal,
+    reconnaitre: ecouteurUnreal,
+    serie: true,
+    conseil: async (id) => {
+      const nombre = mcpStatus().find((s) => s.id === id)?.toolCount ?? 0;
+      const liste = nombre > 0 ? await appelerOutilMcp(`${id}__list_toolsets`, {}, { ecriture: false }).catch(() => null) : null;
+      return conseilUnreal(liste, nombre);
+    },
+  },
 };
 
 /** L'application locale d'une entrée, si elle en est une et que Helix sait la reconnaître. */
@@ -804,6 +849,8 @@ interface ApplicationStdio {
   raisonPourEcran?: () => Promise<string | null>;
   /** Au retrait : ce que Helix efface, et ce qu'il faut dire de faire dans l'application. */
   retirer?: () => Promise<string | null>;
+  /** Un appel à la fois, et relance du serveur après un délai dépassé (Blender, 16/10/2026 : mcp.ts, `serie`, `relancerApresDelai`). */
+  serie?: true;
 }
 const APPLICATIONS_STDIO: Record<string, ApplicationStdio> = {
   roblox: {
@@ -822,6 +869,7 @@ const APPLICATIONS_STDIO: Record<string, ApplicationStdio> = {
     preparer: preparerBlender,
     remplaceServeur: serveurBlenderAPoser,
     raisonPourEcran: refusBlenderRecent,
+    serie: true,
     /*
      * Retirer Blender (relecture du 12/10/2026) : l'environnement posé par
      * Helix est effacé, et l'écran dit de décocher le module dans Blender. Tant
@@ -905,6 +953,14 @@ interface ConnecteurEnregistre {
   depuis: string;
   /** Ajouté hors catalogue, sur une instance qui l'autorise explicitement. */
   libre?: boolean;
+  /**
+   * Serveur ajouté par l'administrateur depuis l'écran (16/10/2026) : la
+   * commande ou l'adresse, et les outils marqués « lecture seule », **scellés**
+   * par `chiffrer` à la place du connecteur (`specPerso`). Un enregistrement
+   * glissé dans le magasin sans la clé de l'instance ne se déchiffre pas : il
+   * n'est jamais lancé.
+   */
+  perso?: unknown;
 }
 
 /**
@@ -934,7 +990,8 @@ async function lire(): Promise<ConnecteurEnregistre[]> {
       typeof (c as ConnecteurEnregistre).id === "string" &&
       (typeof (c as ConnecteurEnregistre).command === "string" ||
         typeof (c as ConnecteurEnregistre).url === "string" ||
-        (c as ConnecteurEnregistre).local === true),
+        (c as ConnecteurEnregistre).local === true ||
+        (c as ConnecteurEnregistre).perso !== undefined),
   );
 }
 
@@ -1098,6 +1155,8 @@ function envPublic(id: string): { envPublic?: Record<string, string> } {
 }
 
 const versConfig = (brut: ConnecteurEnregistre): McpServerConfig => {
+  // Un serveur ajouté par l'administrateur : tout vient de son enregistrement scellé, rien du reste (16/10/2026).
+  if (brut.perso !== undefined) return configPerso(brut);
   const c = aligner(brut);
   const stdio = c.local ? applicationStdio(entreeCatalogue(c.id)) : undefined;
   if (stdio) {
@@ -1113,6 +1172,7 @@ const versConfig = (brut: ConnecteurEnregistre): McpServerConfig => {
       ...(stdio.env ? { envPublic: stdio.env() } : {}),
       avantLancement: stdio.avantLancement,
       ...(stdio.avantAppel ? { avantAppel: stdio.avantAppel } : {}),
+      ...(stdio.serie ? { serie: true, relancerApresDelai: true } : {}),
       autoStart: true,
     };
   }
@@ -1132,6 +1192,7 @@ const versConfig = (brut: ConnecteurEnregistre): McpServerConfig => {
           return v.ok ? null : v.message;
         },
       },
+      ...(appli.serie ? { serie: true } : {}),
       autoStart: true,
     };
   }
@@ -1216,6 +1277,7 @@ export async function charger(): Promise<void> {
           `[connecteurs] ${c.id} non déclaré :`,
           err instanceof Error ? err.message : err,
         );
+        if (c.perso !== undefined) erreursPerso.set(c.id, err instanceof Error ? err.message : String(err));
       }
     }
   })();
@@ -1249,6 +1311,8 @@ export interface ConnecteurInstalle {
   autoriseDepuis?: string;
   /** Application ouverte sur cette machine (Palmier Pro) : « Réessayer » la rebranche quand elle a été fermée. */
   local?: true;
+  /** Serveur ajouté par l'administrateur (16/10/2026) : sa sorte, ses outils et ceux marqués « lecture seule ». */
+  personnalise?: DescriptionPerso;
 }
 
 export interface EtatConnecteurs {
@@ -1260,6 +1324,14 @@ export interface EtatConnecteurs {
   chiffrementDonnees: boolean;
   /** Le profil de déploiement autorise-t-il une commande hors catalogue ? */
   commandeLibre: boolean;
+  /**
+   * Ce que le demandeur peut ajouter lui-même (16/10/2026) : un serveur MCP à
+   * une adresse en https (administrateur), et un programme de cette machine
+   * ou un serveur sur sa boucle locale (administrateur, depuis cette machine,
+   * instance fermée aux collègues ; ou instance qui autorise les serveurs
+   * internes). Absent d'une instance plus ancienne.
+   */
+  personnalise?: { ajouter: boolean; programme: boolean };
   /** Issue du dernier retour d'autorisation, par connecteur (`issuesRetour`). */
   issues: Record<string, { ok: boolean; message: string; quand: string }>;
   /**
@@ -1302,7 +1374,7 @@ function catalogueTraduit(): EntreeCatalogue[] {
 }
 
 /** Ce que l'interface affiche. Aucun secret n'y figure, sous aucune forme. */
-export async function etat(base?: string): Promise<EtatConnecteurs> {
+export async function etat(base?: string, pour?: { administrateur: boolean; depuisCePoste: boolean }): Promise<EtatConnecteurs> {
   await charger();
   const serveurs = mcpStatus();
   relancerLocaux();
@@ -1336,14 +1408,19 @@ export async function etat(base?: string): Promise<EtatConnecteurs> {
           libre: c.libre === true,
           running: vivant?.running ?? false,
           toolCount: vivant?.toolCount ?? 0,
-          error: raison && !raison.ok ? raison.message : vivant?.error,
+          error: raison && !raison.ok ? raison.message : (vivant?.error ?? erreursPerso.get(c.id)),
           ...(c.url ? { distant: true as const, autoriseDepuis: await oauthDepuis(c.id) } : {}),
           ...(c.local ? { local: true as const } : {}),
+          ...(c.perso !== undefined ? { personnalise: descriptionPerso(c, vivant?.tools ?? [], pour?.administrateur === true) } : {}),
         };
       }),
     ),
     chiffrementDonnees: chiffrementActif(),
     commandeLibre: commandeLibreAutorisee(),
+    personnalise: {
+      ajouter: pour?.administrateur === true,
+      programme: pour?.administrateur === true && programmePermis(pour.depuisCePoste),
+    },
     issues: Object.fromEntries(issuesRetour),
     ...(base
       ? {
@@ -1694,12 +1771,17 @@ export async function retirer(id: string, qui: string): Promise<Resultat> {
    * fermée : le jeton resterait valable chez le fournisseur.
    */
   if (connecteur.url) await oublierOauth(id, qui);
+  // Un serveur ajouté par l'administrateur, à une adresse : son autorisation aussi (16/10/2026).
+  if (connecteur.perso !== undefined) {
+    if (lecturesPerso.get(id)?.adresse) await oublierOauth(id, qui);
+    lecturesPerso.delete(id);
+  }
   definirEcriture(id, false);
   // Une application en stdio (Blender) : ce que Helix avait posé pour elle, et ce qu'il reste à faire dans l'application.
   const stdio = connecteur.local ? applicationStdio(entreeCatalogue(id)) : undefined;
   const apres = stdio?.retirer ? await stdio.retirer().catch(() => null) : null;
 
-  journaliser("connecteur.retire", qui, { connecteur: id });
+  journaliser("connecteur.retire", qui, { connecteur: id, ...(connecteur.perso !== undefined ? { personnalise: true } : {}) });
 
   const retire = tf("« {0} » a été retiré de cette instance.", t(connecteur.label));
   return { ok: true, message: apres ? `${retire} ${apres}` : retire };
@@ -1733,6 +1815,8 @@ export async function connecter(
   ecriture?: unknown,
 ): Promise<{ ok: true; pret?: true; adresse?: string; message: string } | { ok: false; message: string }> {
   await charger();
+  // Un serveur ajouté par l'administrateur : « Réessayer » ou « Se reconnecter » (16/10/2026).
+  if (!entreeCatalogue(id) && enMemoire.some((c) => c.id === id && c.perso !== undefined)) return rebrancherPerso(id, qui, base);
   const entree = entreeCatalogue(id);
   // Une application ouverte sur cette machine : ni navigateur, ni jeton à garder (Palmier Pro, 29/09/2026).
   if (entree && estApplication(entree)) {
@@ -1888,6 +1972,7 @@ async function achever(
   code: string,
 ): Promise<{ ok: boolean; message: string; label?: string }> {
   const entree = entreeCatalogue(attendu.id);
+  if (!entree && enMemoire.some((c) => c.id === attendu.id && c.perso !== undefined)) return acheverPerso(attendu, code);
   if (!entree?.url) return { ok: false, message: t("Connecteur inconnu.") };
 
   const fournisseur = new FournisseurAutorisation(attendu.id, entree.url, attendu.retour);
@@ -2035,7 +2120,7 @@ async function brancherLocal(
     outils > 1
       ? tf("{0} est branché : {1} outils disponibles.", t(entree.label), outils)
       : tf("{0} est branché : {1} outil disponible.", t(entree.label), outils);
-  const conseil = stdio?.conseil ? await stdio.conseil(entree.id).catch(() => null) : null;
+  const conseil = stdio?.conseil ? await stdio.conseil(entree.id).catch(() => null) : appli?.conseil ? await appli.conseil(entree.id).catch(() => null) : null;
   return { ok: true, message: conseil ? `${branche} ${conseil}` : branche };
 }
 
@@ -2056,6 +2141,331 @@ function relancerLocaux(): void {
     derniereRelance.set(c.id, maintenant);
     void startServer(c.id).catch(() => undefined);
   }
+}
+
+/* ------------------------------------------------------------------ */
+/* Serveurs MCP ajoutés par l'administrateur                            */
+/* ------------------------------------------------------------------ */
+
+/*
+ * « Créer son propre MCP » (16/10/2026, demande de Medhi). Jusqu'ici, un
+ * serveur hors catalogue ne s'ajoutait que sur une instance réglée par
+ * l'intégrateur (`connecteursLibres`), et l'écran n'avait aucun champ pour
+ * cela. La règle d'origine tient (SECURITE.md § 6.1 : l'interface ne choisit
+ * pas ce qui tourne sur la machine de l'entreprise), avec une porte étroite :
+ *  - à une **adresse en https** (rien ne tourne ici) : l'administrateur ;
+ *  - un **programme de cette machine**, ou un serveur sur sa **boucle locale** :
+ *    l'administrateur, depuis cette machine même, sur une instance fermée aux
+ *    collègues ; c'est alors la personne assise devant son poste, qui pourrait
+ *    lancer ce programme elle-même. Une instance ouverte au réseau garde la
+ *    règle d'avant : l'intégrateur seul (`connecteursLibres`). Même barrière
+ *    que l'import depuis les logiciels du poste (index.ts, `depuisCePoste`).
+ * Sans interpréteur de commandes ni code en ligne (mcpPersoRegles.ts), avec
+ * l'environnement minimal du SDK (jamais celui de la passerelle) plus les
+ * variables que l'administrateur donne, chiffrées. Tout outil demande l'accord
+ * (`modifie`), sauf ceux que l'administrateur marque « lecture seule ».
+ * L'enregistrement est scellé par la clé de l'instance : glissé dans le
+ * magasin par qui n'a pas cette clé, il n'est jamais lancé. SECURITE.md § 67.
+ */
+
+type SpecPerso =
+  | { mode: "programme"; command: string; args: string[]; lectures: string[] }
+  | { mode: "adresse"; url: string; lectures: string[] };
+
+export interface DescriptionPerso {
+  mode: "programme" | "adresse";
+  /** La commande et ses arguments, ou l'adresse : pour l'administrateur seulement. */
+  cible?: string;
+  /** Les outils marqués « lecture seule » par l'administrateur. */
+  lectures: string[];
+  outils: { nom: string; description: string }[];
+}
+
+/** Par serveur ajouté : ses outils « lecture seule », et s'il est à une adresse (son autorisation s'oublie au retrait). */
+const lecturesPerso = new Map<string, { lectures: Set<string>; adresse: boolean }>();
+/** Pourquoi un serveur ajouté n'a pas été déclaré au démarrage (programme disparu, instance ouverte depuis…). */
+const erreursPerso = new Map<string, string>();
+
+definirLecturesPerso((outil) => {
+  const o = outilDuModele(outil);
+  return Boolean(o && lecturesPerso.get(o.serverId)?.lectures.has(o.toolName));
+});
+
+const placePerso = (id: string): string => `connecteurs#${id}#personnalise`;
+
+/** L'instance sert-elle d'autres personnes ? (même règle qu'index.ts, `instancePartagee`) */
+const instanceOuverte = (): boolean => deployment().share === true || surLeReseau();
+
+/** Ce connecteur est-il un serveur ajouté par l'administrateur ? */
+export async function estConnecteurPersonnalise(id: string): Promise<boolean> {
+  await charger();
+  return enMemoire.some((c) => c.id === id && c.perso !== undefined);
+}
+
+/** Un programme de cette machine, ou un serveur sur sa boucle, peut-il être ajouté par cette demande ? */
+export const programmePermis = (depuisCePoste: boolean): boolean => commandeLibreAutorisee() || (depuisCePoste && !instanceOuverte());
+
+/** L'enregistrement scellé d'un serveur ajouté, déchiffré et relu ; une erreur s'il ne l'est pas, ou s'il est mal formé. */
+function specPerso(c: ConnecteurEnregistre): SpecPerso {
+  if (!estChiffreLie(c.perso)) throw new Error(tf("connecteur « {0} » : enregistrement non scellé par la clé de l'instance, ignoré", c.id));
+  const v = dechiffrer(c.perso, placePerso(c.id)) as Record<string, unknown> | null;
+  const lectures = Array.isArray(v?.lectures) ? (v!.lectures as unknown[]).filter((x): x is string => typeof x === "string") : [];
+  if (v?.mode === "programme" && typeof v.command === "string" && Array.isArray(v.args) && v.args.every((a) => typeof a === "string")) {
+    return { mode: "programme", command: v.command, args: v.args as string[], lectures };
+  }
+  if (v?.mode === "adresse" && typeof v.url === "string") return { mode: "adresse", url: v.url, lectures };
+  throw new Error(tf("connecteur « {0} » : enregistrement illisible, ignoré", c.id));
+}
+
+/** La configuration d'un serveur ajouté, rejugée à chaque démarrage (règles du jour, régime de l'instance du moment). */
+function configPerso(c: ConnecteurEnregistre): McpServerConfig {
+  const spec = specPerso(c);
+  lecturesPerso.set(c.id, { lectures: new Set(spec.lectures), adresse: spec.mode === "adresse" });
+  const base = { id: c.id, label: c.label, description: c.description, autoStart: true };
+  const surLaMachine = t("Un programme de cette machine, ou un serveur sur sa boucle locale, ne tourne que sur une instance fermée aux collègues (ou réglée par l'intégrateur pour les serveurs internes).");
+  if (spec.mode === "programme") {
+    if (!commandeLibreAutorisee() && instanceOuverte()) throw new Error(surLaMachine);
+    const juge = jugerCommande(spec.command, spec.args);
+    if (!juge.ok) throw new Error(juge.message);
+    // L'environnement minimal du SDK (mcp.ts, `getDefaultEnvironment`) et les variables données par l'administrateur, rien de la passerelle.
+    return { ...base, command: juge.command, args: juge.args, env: environnement(c), cwd: homedir(), libre: true };
+  }
+  const a = jugerAdresse(spec.url, PORT_PASSERELLE);
+  if (!a.ok) throw new Error(a.message);
+  if (a.locale) {
+    if (!commandeLibreAutorisee() && instanceOuverte()) throw new Error(surLaMachine);
+    // Le port déclaré, celui-là seul (mcp.ts, `adresseServeurPermise`) ; aucune redirection suivie (`fetchLocal`).
+    return { ...base, url: a.url, local: { port: a.port, reconnaitre: async () => null } };
+  }
+  return { ...base, url: a.url, auth: new FournisseurAutorisation(c.id, a.url, retourDe(c.id)) };
+}
+
+/** Ce que l'écran montre d'un serveur ajouté. La commande ou l'adresse, à l'administrateur seulement. */
+function descriptionPerso(c: ConnecteurEnregistre, outils: { name: string; description: string }[], administrateur: boolean): DescriptionPerso {
+  try {
+    const spec = specPerso(c);
+    return {
+      mode: spec.mode,
+      ...(administrateur ? { cible: spec.mode === "programme" ? [spec.command, ...spec.args].join(" ") : spec.url } : {}),
+      lectures: spec.lectures,
+      outils: outils.map((o) => ({ nom: o.name, description: o.description.slice(0, 300) })),
+    };
+  } catch {
+    return { mode: "programme", lectures: [], outils: [] };
+  }
+}
+
+/** L'adresse d'un serveur pour le journal : sans ce qui suit le chemin (une clé glissée dans l'adresse n'y entre pas). */
+const adressePourJournal = (url: string): string => {
+  try {
+    const u = new URL(url);
+    return `${u.origin}${u.pathname}`.slice(0, 300);
+  } catch {
+    return "";
+  }
+};
+
+const phraseOutils = (label: string, outils: number): string =>
+  outils > 1
+    ? tf("« {0} » est connecté : {1} outils disponibles pour vos agents. Chacun demande votre accord avant d'agir ; marquez ceux qui ne font que lire.", label, outils)
+    : tf("« {0} » est connecté : {1} outil disponible pour vos agents. Il demande votre accord avant d'agir ; marquez-le s'il ne fait que lire.", label, outils);
+
+/**
+ * Ajoute un serveur MCP à la demande de l'administrateur (l'appelant, index.ts,
+ * l'a vérifié, et dit si la demande vient de cette machine). Démarré et essayé
+ * avant d'être écrit, comme `ajouter` ; un serveur à une adresse qui demande
+ * une autorisation est écrit, et l'adresse d'autorisation rendue à l'écran.
+ */
+export async function ajouterPersonnalise(
+  brut: unknown,
+  qui: string,
+  contexte: { depuisCePoste: boolean; base: string },
+): Promise<Resultat & { adresse?: string }> {
+  if (!brut || typeof brut !== "object") return { ok: false, message: t("Aucun connecteur fourni.") };
+  await charger();
+  const b = brut as Record<string, unknown>;
+  const id = typeof b.id === "string" ? b.id.trim().toLowerCase() : "";
+  if (!ID_VALIDE.test(id) || id.includes("__") || id.endsWith("_")) {
+    return { ok: false, message: t("Identifiant de connecteur invalide : lettres minuscules, chiffres, tiret et souligné, 32 caractères au plus.") };
+  }
+  if (IDS_RESERVES.has(id)) return { ok: false, message: tf("« {0} » est le nom d'un connecteur intégré : choisissez un autre identifiant.", id) };
+  if (entreeCatalogue(id)) return { ok: false, message: tf("« {0} » est le nom d'un connecteur du catalogue : choisissez un autre identifiant.", id) };
+  if (enMemoire.some((c) => c.id === id) || estDeclare(id)) return { ok: false, message: tf("L'identifiant « {0} » est déjà utilisé par un serveur de cette instance.", id) };
+  const label = typeof b.label === "string" ? b.label.trim().replace(/\s+/g, " ") : "";
+  if (!label || label.length > 60) return { ok: false, message: t("Donnez un nom au serveur, 60 caractères au plus.") };
+  const description = typeof b.description === "string" && b.description.trim() ? b.description.trim().replace(/\s+/g, " ").slice(0, 300) : t("Serveur MCP ajouté par l'administrateur.");
+  // Scellé par la clé de l'instance, ou rien : un enregistrement en clair serait la porte d'entrée que la règle ferme.
+  if (!chiffrementActif()) {
+    return { ok: false, message: tf("Le chiffrement des données n'est pas actif sur cette machine : {0} refuse d'enregistrer un serveur ajouté sans le sceller. Déverrouillez le trousseau du compte hôte, ou réglez « chiffrement » sur « fichier » dans helix.config.json, puis recommencez.", nomProduit()) };
+  }
+  const refusMachine = t("Un programme de cette machine, ou un serveur sur sa boucle locale, ne s'ajoute que depuis cette machine même, sur une instance fermée aux collègues. Sur une instance ouverte au réseau, c'est l'intégrateur qui l'autorise (« connecteursLibres » dans helix.config.json).");
+
+  let spec: SpecPerso;
+  let variables: Record<string, string> = {};
+  let distant = false;
+  if (b.mode === "programme") {
+    if (!programmePermis(contexte.depuisCePoste)) return { ok: false, message: refusMachine };
+    const juge = jugerCommande(b.command, b.args);
+    if (!juge.ok) return juge;
+    const v = jugerVariables(b.variables);
+    if (!v.ok) return v;
+    spec = { mode: "programme", command: juge.command, args: juge.args, lectures: [] };
+    variables = v.variables;
+  } else if (b.mode === "adresse") {
+    const a = jugerAdresse(b.url, PORT_PASSERELLE);
+    if (!a.ok) return a;
+    if (a.locale && !programmePermis(contexte.depuisCePoste)) return { ok: false, message: refusMachine };
+    if (!a.locale) {
+      const refus = adresseServeurPermise({ url: a.url });
+      if (refus) return { ok: false, message: refus };
+      distant = true;
+    }
+    spec = { mode: "adresse", url: a.url, lectures: [] };
+  } else {
+    return { ok: false, message: t("Choisissez « Programme de cette machine » ou « Adresse ».") };
+  }
+
+  const enregistre: ConnecteurEnregistre = {
+    id,
+    label,
+    description,
+    secrets: Object.fromEntries(Object.entries(variables).map(([nom, valeur]) => [nom, chiffrer(valeur, placeDuSecret(id, nom))])),
+    depuis: new Date().toISOString(),
+    perso: chiffrer(spec, placePerso(id)),
+  };
+  if (distant) {
+    // L'autorisation, si le serveur en demande une : même chemin que « Se connecter » (oauthMcp.ts).
+    const retour = adresseDeRetour(contexte.base);
+    issuesRetour.delete(id);
+    memoriserRetour(id, retour);
+    await noterDemandeur(id, (spec as { url: string }).url, qui);
+  }
+  let config: McpServerConfig;
+  try {
+    config = configPerso(enregistre);
+  } catch (err) {
+    lecturesPerso.delete(id);
+    return { ok: false, message: err instanceof Error ? err.message : String(err) };
+  }
+  declarer(config);
+  const demarrage = await startServer(id);
+  const fournisseur = config.auth as FournisseurAutorisation | undefined;
+  const cible =
+    spec.mode === "programme"
+      ? { commande: [spec.command, ...spec.args].join(" ").slice(0, 500), variables: Object.keys(variables) }
+      : { adresse: adressePourJournal(spec.url) };
+  if (!demarrage.ok) {
+    if (fournisseur?.adresseAutorisation) {
+      await ecrire([...enMemoire, enregistre]);
+      journaliser("connecteur.ajoute", qui, { connecteur: id, personnalise: spec.mode, ...cible, etape: "autorisation demandée" });
+      return { ok: true, adresse: fournisseur.adresseAutorisation, message: tf("Autorisez {0} dans la page qui vient de s'ouvrir.", label) };
+    }
+    await retirerServeur(id);
+    lecturesPerso.delete(id);
+    if (distant) await oublierOauth(id, qui).catch(() => undefined);
+    return { ok: false, message: tf("« {0} » n'a pas démarré : {1}", label, demarrage.error ?? t("cause inconnue")) };
+  }
+  await ecrire([...enMemoire, enregistre]);
+  const outils = mcpStatus().find((s) => s.id === id)?.toolCount ?? 0;
+  journaliser("connecteur.ajoute", qui, { connecteur: id, personnalise: spec.mode, ...cible, outils });
+  return { ok: true, message: phraseOutils(label, outils) };
+}
+
+/** L'administrateur marque des outils d'un serveur ajouté « lecture seule » (les autres demandent l'accord). */
+export async function definirLecturesPersonnalisees(id: string, brut: unknown, qui: string): Promise<Resultat> {
+  await charger();
+  const c = enMemoire.find((x) => x.id === id && x.perso !== undefined);
+  if (!c) return { ok: false, message: tf("Aucun serveur ajouté « {0} » sur cette instance.", id) };
+  if (!Array.isArray(brut) || brut.length > 2000 || brut.some((x) => typeof x !== "string")) return { ok: false, message: t("Liste d'outils illisible.") };
+  let spec: SpecPerso;
+  try {
+    spec = specPerso(c);
+  } catch (err) {
+    return { ok: false, message: err instanceof Error ? err.message : String(err) };
+  }
+  // Seulement des outils que ce serveur annonce (ou déjà marqués) : un nom inventé ne sert à rien.
+  const connus = new Set([...(mcpStatus().find((s) => s.id === id)?.tools ?? []).map((o) => o.name), ...spec.lectures]);
+  const lectures = [...new Set(brut as string[])].filter((n) => connus.has(n));
+  const enregistre: ConnecteurEnregistre = { ...c, perso: chiffrer({ ...spec, lectures }, placePerso(id)) };
+  await ecrire(enMemoire.map((x) => (x.id === id ? enregistre : x)));
+  lecturesPerso.set(id, { lectures: new Set(lectures), adresse: spec.mode === "adresse" });
+  journaliser("connecteur.ajoute", qui, { connecteur: id, personnalise: spec.mode, etape: "lectures", lectures });
+  if (lectures.length === 0) return { ok: true, message: tf("Tous les outils de « {0} » demandent votre accord avant d'agir.", t(c.label)) };
+  return {
+    ok: true,
+    message:
+      lectures.length > 1
+        ? tf("{0} outils de « {1} » sont marqués « lecture seule » : ils ne demandent plus d'accord au niveau « Demander avant de modifier ».", lectures.length, t(c.label))
+        : tf("Un outil de « {0} » est marqué « lecture seule » : il ne demande plus d'accord au niveau « Demander avant de modifier ».", t(c.label)),
+  };
+}
+
+/** « Réessayer » ou « Se reconnecter » sur un serveur ajouté : relancé, ou renvoyé vers son autorisation. */
+async function rebrancherPerso(
+  id: string,
+  qui: string,
+  base: string,
+): Promise<{ ok: true; pret?: true; adresse?: string; message: string } | { ok: false; message: string }> {
+  const c = enMemoire.find((x) => x.id === id && x.perso !== undefined)!;
+  let spec: SpecPerso;
+  try {
+    spec = specPerso(c);
+  } catch (err) {
+    return { ok: false, message: err instanceof Error ? err.message : String(err) };
+  }
+  const juge = spec.mode === "adresse" ? jugerAdresse(spec.url, PORT_PASSERELLE) : null;
+  if (juge?.ok && !juge.locale && spec.mode === "adresse") {
+    const retour = adresseDeRetour(base);
+    issuesRetour.delete(id);
+    memoriserRetour(id, retour);
+    await noterDemandeur(id, spec.url, qui);
+  }
+  let config: McpServerConfig;
+  try {
+    config = configPerso(c);
+  } catch (err) {
+    erreursPerso.set(id, err instanceof Error ? err.message : String(err));
+    return { ok: false, message: err instanceof Error ? err.message : String(err) };
+  }
+  erreursPerso.delete(id);
+  await stopServer(id);
+  declarer(config);
+  const demarrage = await startServer(id);
+  const fournisseur = config.auth as FournisseurAutorisation | undefined;
+  if (!demarrage.ok && fournisseur?.adresseAutorisation) {
+    journaliser("connecteur.ajoute", qui, { connecteur: id, personnalise: spec.mode, etape: "autorisation demandée" });
+    return { ok: true, adresse: fournisseur.adresseAutorisation, message: tf("Autorisez {0} dans la page qui vient de s'ouvrir.", t(c.label)) };
+  }
+  if (!demarrage.ok) return { ok: false, message: tf("« {0} » n'a pas démarré : {1}", t(c.label), demarrage.error ?? t("cause inconnue")) };
+  journaliser("connecteur.ajoute", qui, { connecteur: id, personnalise: spec.mode, etape: "rebranché" });
+  return { ok: true, pret: true, message: phraseOutils(t(c.label), mcpStatus().find((s) => s.id === id)?.toolCount ?? 0) };
+}
+
+/** Le retour d'autorisation d'un serveur ajouté à une adresse : l'échange, puis le démarrage, sans toucher à son enregistrement scellé. */
+async function acheverPerso(attendu: { id: string; url: string; retour: string; pour?: string }, code: string): Promise<{ ok: boolean; message: string; label?: string }> {
+  const c = enMemoire.find((x) => x.id === attendu.id && x.perso !== undefined)!;
+  let spec: SpecPerso;
+  try {
+    spec = specPerso(c);
+  } catch (err) {
+    return { ok: false, message: err instanceof Error ? err.message : String(err) };
+  }
+  // L'autorisation vaut pour l'adresse enregistrée, celle-là seule.
+  if (spec.mode !== "adresse" || spec.url !== attendu.url) return { ok: false, message: t("Connecteur inconnu.") };
+  const fournisseur = new FournisseurAutorisation(attendu.id, spec.url, attendu.retour);
+  try {
+    const resultat = await auth(fournisseur as never, { serverUrl: spec.url, authorizationCode: code });
+    if (resultat !== "AUTHORIZED") return { ok: false, message: tf("{0} n'a pas accordé l'autorisation.", t(c.label)) };
+  } catch (err) {
+    return { ok: false, message: tf("Échange refusé par {0} : {1}", t(c.label), err instanceof Error ? err.message : String(err)) };
+  }
+  memoriserRetour(attendu.id, attendu.retour);
+  await stopServer(attendu.id);
+  declarer(configPerso(c));
+  const demarrage = await startServer(attendu.id);
+  if (!demarrage.ok) return { ok: false, message: tf("{0} a autorisé l'accès, mais son serveur n'a pas répondu : {1}.", t(c.label), demarrage.error ?? t("cause inconnue")), label: t(c.label) };
+  journaliser("connecteur.ajoute", attendu.pour ?? "systeme", { connecteur: attendu.id, personnalise: "adresse", etape: "autorisé" });
+  return { ok: true, message: phraseOutils(t(c.label), mcpStatus().find((s) => s.id === attendu.id)?.toolCount ?? 0), label: t(c.label) };
 }
 
 /* ------------------------------------------------------------------ */

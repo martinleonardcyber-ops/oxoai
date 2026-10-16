@@ -1128,7 +1128,41 @@ function guideBlender(): GuideAppli {
     aEviter: [
       t("N'allumez les bibliothèques en ligne (Poly Haven, Sketchfab, Poly Pizza) et les générateurs (Hyper3D, Hunyuan3D, Tripo) du module que si vous voulez que les demandes partent chez eux : ils sont éteints par défaut."),
       t("Ne fermez pas Blender pendant qu'un agent travaille : rouvert, « Réessayer » le rebranche."),
+      // 16/10/2026 : un module muet (port ouvert, fil principal de Blender occupé) est maintenant dit en quelques secondes.
+      t("Blender ouvert mais dit « ne répond pas » : fermez la fenêtre ou la boîte de dialogue ouverte dans Blender, ou attendez la fin d'un rendu. Sinon, dans la vue 3D, touche N, onglet « MCP for Blender », cliquez « Disconnect » puis « Connect to MCP server »."),
       t("Si vous retirez Blender des connecteurs, décochez aussi le module « MCP for Blender » dans Blender : tant qu'il est coché, il garde un port ouvert sur cette machine, sans mot de passe, chaque fois que Blender tourne."),
+    ],
+  };
+}
+
+/**
+ * Unreal Engine (16/10/2026) : le serveur MCP officiel d'Epic, dans l'éditeur.
+ * Lu le 16/10/2026 sur
+ * https://dev.epicgames.com/documentation/unreal-engine/unreal-mcp-in-unreal-editor :
+ * plugins « Unreal MCP » et « All Toolsets », redémarrage, « Auto Start
+ * Server » (Editor Preferences, General, Model Context Protocol) ou
+ * `ModelContextProtocol.StartServer`, port 8000 et chemin /mcp par défaut.
+ * L'éditeur lui-même n'a pas été ouvert.
+ */
+function guideUnreal(): GuideAppli {
+  return {
+    nom: "Unreal Engine",
+    sansConsole: true,
+    introduction: tf("Unreal Engine est le moteur de jeu d'Epic Games, d'un autre éditeur que {0}. Depuis la version 5.8, Unreal Editor sert lui-même un serveur MCP, par son plugin « Unreal MCP » (expérimental) : {0} parle à l'éditeur ouvert sur la machine de cette instance, sans rien installer à votre place.", branding.name),
+    consoles: [
+      { libelle: t("la page de téléchargement d'Unreal Engine"), url: "https://www.unrealengine.com/download" },
+      { libelle: t("la documentation du serveur MCP d'Unreal Editor"), url: "https://dev.epicgames.com/documentation/unreal-engine/unreal-mcp-in-unreal-editor" },
+    ],
+    etapes: [
+      { texte: t("Pas encore installé : installez Unreal Engine 5.8 ou plus récent depuis sa page officielle, puis ouvrez votre projet dans Unreal Editor.") },
+      { texte: t("Dans Unreal Editor : Edit, Plugins, cherchez et activez « Unreal MCP » et « All Toolsets » (c'est lui qui apporte les outils), puis redémarrez l'éditeur quand il le demande.") },
+      { texte: t("Démarrez le serveur : Edit, Editor Preferences, General, Model Context Protocol, cochez « Auto Start Server ». Ou tapez ModelContextProtocol.StartServer dans la console de l'éditeur. Gardez le port 8000 et le chemin /mcp proposés.") },
+      { texte: tf("Revenez ici et cliquez « Brancher ». {0} vérifie que c'est bien Unreal Editor qui répond sur ce port avant de lui envoyer quoi que ce soit. Lister les jeux d'outils est libre ; chaque action de l'éditeur demande votre accord, une à la fois.", branding.name) },
+    ],
+    aEviter: [
+      t("Le port 8000 sert aussi à bien des serveurs de développement : si un autre programme le tient, l'éditeur ne peut pas l'ouvrir. Fermez ce programme avant d'ouvrir Unreal Editor."),
+      t("Le serveur de l'éditeur n'a pas de mot de passe : ne l'ouvrez pas au réseau, laissez-le sur cette machine."),
+      t("Travaillez sur une copie d'un projet important : le plugin est encore expérimental chez Epic."),
     ],
   };
 }
@@ -1138,6 +1172,7 @@ export function guideApplicationLocale(id: string): GuideAppli | null {
   if (id === "palmier") return guidePalmier();
   if (id === "roblox") return guideRoblox();
   if (id === "blender") return guideBlender();
+  if (id === "unreal") return guideUnreal();
   return null;
 }
 

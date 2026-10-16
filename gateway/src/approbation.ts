@@ -13,9 +13,11 @@ import { estEcriturePalmier, estLecturePalmier, horsMachinePalmier, resumePalmie
 // Roblox Studio et Blender (12/10/2026) : de même, leurs lectures par leur nom exact, tout le reste sur carte à chaque appel.
 import { estEcritureRoblox, estLectureRoblox, horsMachineRoblox, resumeRoblox } from "./robloxRegles.ts";
 import { estEcritureBlender, estLectureBlender, horsMachineBlender, lookHorsScene, resumeBlender } from "./blenderRegles.ts";
+// Unreal Editor (16/10/2026) : ses deux lectures par leur nom exact ; `call_tool` et tout le reste sur carte à chaque appel.
+import { estEcritureUnreal, estLectureUnreal, resumeUnreal } from "./unrealRegles.ts";
 
-/** Une écriture d'une application de création ouverte sur la machine (Palmier Pro, Roblox Studio, Blender). */
-const estEcritureApplication = (outil: string): boolean => estEcriturePalmier(outil) || estEcritureRoblox(outil) || estEcritureBlender(outil);
+/** Une écriture d'une application de création ouverte sur la machine (Palmier Pro, Roblox Studio, Blender, Unreal Editor). */
+const estEcritureApplication = (outil: string): boolean => estEcriturePalmier(outil) || estEcritureRoblox(outil) || estEcritureBlender(outil) || estEcritureUnreal(outil);
 
 /**
  * Approbation des actions de l'agent.
@@ -380,6 +382,23 @@ export function definirNomsConnecteurs(fn: NomConnecteur): void {
   registreNoms().fn = fn;
 }
 
+/*
+ * Les outils qu'un administrateur a marqués « lecture seule » sur un serveur
+ * MCP qu'il a ajouté lui-même (16/10/2026, connecteurs.ts,
+ * `definirLecturesPersonnalisees`). Par défaut, tout outil d'un tel serveur
+ * modifie (carte d'accord). Le registre ne répond que pour les serveurs
+ * ajoutés ainsi, dont l'identifiant ne peut être ni un préfixe réservé ni une
+ * entrée du catalogue ; barrière chargée seule : aucun outil n'y est lecture.
+ */
+type LecturePerso = (outil: string) => boolean;
+function registreLecturesPerso(): { fn: LecturePerso | null } {
+  const porteur = registreLecturesPerso as unknown as { valeur?: { fn: LecturePerso | null } };
+  return (porteur.valeur ??= { fn: null });
+}
+export function definirLecturesPerso(fn: LecturePerso): void {
+  registreLecturesPerso().fn = fn;
+}
+
 /**
  * Outils livrés d'OpenCode qui ne font que lire le dossier du projet
  * (permissionsCode.ts : `code__<permission>`). Tout le reste modifie ou sort :
@@ -414,9 +433,11 @@ export function modifie(outil: string): boolean {
   // Lectures pures de Palmier Pro, par leur nom exact (palmierRegles.ts).
   if (estLecturePalmier(outil)) return false;
   // Et celles de Roblox Studio et de Blender (robloxRegles.ts, blenderRegles.ts).
-  if (estLectureRoblox(outil) || estLectureBlender(outil)) return false;
+  if (estLectureRoblox(outil) || estLectureBlender(outil) || estLectureUnreal(outil)) return false;
   if (DRIVE_LECTURE.has(outil) || SLACK_LECTURE.has(outil) || BIBLIOTHEQUE_LECTURE.has(outil) || CONNAISSANCES_LECTURE.has(outil) || CONTROLE_LECTURE.has(outil) || WEB_LECTURE.has(outil)) return false;
   if (outil.startsWith("bureau__")) return !BUREAU_LECTURE.has(outil.slice("bureau__".length));
+  // Un serveur ajouté par l'administrateur : lecture seulement pour l'outil qu'il a marqué ainsi (16/10/2026).
+  if (registreLecturesPerso().fn?.(outil) === true) return false;
 
   const separateur = outil.indexOf("__");
   // Un nom sans préfixe vient de la boucle d'outils d'origine, avant que les
@@ -602,7 +623,7 @@ export function resumerOutil(outil: string, args: Record<string, unknown>): stri
   if (natif) return natif;
   const palmier = resumePalmier(outil, args);
   if (palmier) return palmier;
-  const creation = resumeRoblox(outil, args) ?? resumeBlender(outil, args);
+  const creation = resumeRoblox(outil, args) ?? resumeBlender(outil, args) ?? resumeUnreal(outil, args);
   if (creation) return creation;
 
   /*

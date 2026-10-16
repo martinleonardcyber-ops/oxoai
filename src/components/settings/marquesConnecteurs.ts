@@ -5,6 +5,7 @@ import {
   Compass,
   FileText,
   Folder,
+  Gamepad2,
   Globe,
   Laptop,
   Mail,
@@ -105,6 +106,13 @@ export const ICONE_DU_CONNECTEUR: Record<string, LucideIcon> = {
   tavily: Search,
   courrierIMAP: Mail,
   autre: Compass,
+  /*
+   * Unreal Engine (16/10/2026) : pas le logo. C'est une marque d'Epic Games,
+   * dont l'usage passe par ses règles de marque et, hors des productions
+   * faites avec le moteur, par un accord qu'Helix n'a pas : une icône neutre,
+   * et le nom écrit en toutes lettres.
+   */
+  unreal: Gamepad2,
 };
 
 /** Le carré générique, quand ni marque ni icône ne sont connues. */

@@ -9762,7 +9762,8 @@ console.log("\n46. Roblox Studio et Blender : commande tirée de l'application, 
   const src = (...p) => readFileSync(join(RACINE, ...p), "utf8");
   const mcpSrc = src("gateway", "src", "mcp.ts");
   const robloxSrc = src("gateway", "src", "roblox.ts");
-  const blenderSrc = src("gateway", "src", "blender.ts");
+  // La lecture des écouteurs (lsof, /proc, PowerShell) est sortie de blender.ts le 16/10/2026 (ecouteurs.ts, partagée avec Unreal Editor).
+  const blenderSrc = src("gateway", "src", "blender.ts") + src("gateway", "src", "ecouteurs.ts");
   const connSrc = src("gateway", "src", "connecteurs.ts");
   const outilsSrc = src("gateway", "src", "outils.ts");
   const approSrc = src("gateway", "src", "approbation.ts");
@@ -9819,7 +9820,7 @@ console.log("\n46. Roblox Studio et Blender : commande tirée de l'application, 
   );
   verifier(
     "employés : les écritures de Roblox Studio et de Blender ne sont listées que si la propriétaire administre l'instance ; un employé autonome demande quand même pour look hors de la scène",
-    /const ecritures = await ecrituresApplicationsPourEmploye\(e\.ownerId\);\s*const familles = ecritures \? toutes : toutes\.filter\(\(o\) => !estEcritureRoblox\(o\.function\.name\) && !estEcritureBlender\(o\.function\.name\)\);/.test(serveurOutilsSrc) &&
+    /const ecritures = await ecrituresApplicationsPourEmploye\(e\.ownerId\);\s*const familles = ecritures \? toutes : toutes\.filter\(\(o\) => !estEcritureRoblox\(o\.function\.name\) && !estEcritureBlender\(o\.function\.name\) && !estEcritureUnreal\(o\.function\.name\)\);/.test(serveurOutilsSrc) &&
       /executerOutil\(nom, args, \{ userId: qui, groupes: \[\], proprietaire: courant\.ownerId \}\)/.test(serveurOutilsSrc) && /!demandeToujours\(nom, args\)/.test(serveurOutilsSrc),
     "serveurOutils.ts",
   );
@@ -9849,6 +9850,118 @@ console.log("\n46. Roblox Studio et Blender : commande tirée de l'application, 
       /horsMachine === "roblox-generation"/.test(carte) && /horsMachine === "blender-generation"/.test(carte) && /id: "roblox",/.test(aide) && /id: "blender",/.test(aide) &&
       /"roblox": \{/.test(src("scripts", "marques", "sources.json")) && /"blender": \{/.test(src("scripts", "marques", "sources.json")) && /roblox: "roblox",/.test(src("src", "components", "settings", "marquesConnecteurs.ts")) && /blender: "blender",/.test(src("src", "components", "settings", "marquesConnecteurs.ts")),
     "Connecteurs.tsx, guidesApplications.ts, ToolApproval.tsx, aide.ts, marques",
+  );
+}
+
+/*
+ * 47. Blender muet, Unreal Editor, serveurs MCP ajoutés par l'administrateur
+ * (16/10/2026, SECURITE.md § 65, 66 et 67). Le bogue vu par Medhi (« bouge le
+ * cube sur blender », trois appels d'une minute) : un module muet est dit en
+ * quelques secondes, « il a pu être exécuté » n'est dit que d'une écriture, un
+ * service injoignable ou un appel raté deux fois à l'identique n'est plus
+ * relancé dans la réponse. Unreal Editor : reconnu avant chaque requête,
+ * lectures libres, `call_tool` sur carte, appels en série. Serveur ajouté :
+ * administrateur seul, depuis la machine d'une instance fermée, sans
+ * interpréteur de commandes ni code en ligne, écriture par défaut, sans les
+ * variables de la passerelle, enregistrement scellé. scripts/essai-unreal-perso.mjs,
+ * repris sous « unreal-perso : », puis le code.
+ */
+console.log("\n47. Blender muet, Unreal Editor, serveurs MCP ajoutés par l'administrateur (16/10/2026)");
+{
+  const essai = await new Promise((fin) => {
+    const e = spawn(process.execPath, [join(RACINE, "scripts", "essai-unreal-perso.mjs")], { stdio: ["ignore", "pipe", "pipe"] });
+    let sortie = "";
+    e.stdout.on("data", (b) => (sortie += b));
+    e.stderr.on("data", (b) => (sortie += b));
+    const minuterie = setTimeout(() => e.kill(), 5 * 60_000);
+    e.on("close", (status) => {
+      clearTimeout(minuterie);
+      fin({ status, sortie });
+    });
+  });
+  const lignes = essai.sortie.split("\n");
+  for (const ligne of lignes) {
+    const ok = /^\s+✓ (.*)$/.exec(ligne);
+    const ko = /^\s+✗ (.*?)(?:  —  obtenu : .*)?$/.exec(ligne);
+    if (ok) verifier(`unreal-perso : ${ok[1]}`, true, "");
+    else if (ko) verifier(`unreal-perso : ${ko[1]}`, false, ligne.split("  —  obtenu : ")[1] ?? "");
+    else if (/^[A-B]\. /.test(ligne)) console.log(`  ${ligne}`);
+  }
+  verifier("unreal-perso : l'essai s'est déroulé jusqu'au bout", essai.status === 0, `${essai.status} ${lignes.slice(-6).join(" ")}`);
+
+  const src = (...p) => readFileSync(join(RACINE, ...p), "utf8");
+  const mcpSrc = src("gateway", "src", "mcp.ts");
+  const blenderSrc = src("gateway", "src", "blender.ts");
+  const chatSrc = src("gateway", "src", "chat.ts");
+  const outilsSrc = src("gateway", "src", "outils.ts");
+  const connSrc = src("gateway", "src", "connecteurs.ts");
+  const indexSrc = src("gateway", "src", "index.ts");
+  const reglesSrc = src("gateway", "src", "mcpPersoRegles.ts");
+  const unrealSrc = src("gateway", "src", "unreal.ts");
+  const approSrc = src("gateway", "src", "approbation.ts");
+  verifier(
+    "Blender : avant le lancement et avant chaque appel, l'écouteur reconnu puis la sonde (ping, sans donnée de la scène) ; un module muet est refusé sans rien envoyer au serveur",
+    /export async function blenderJoignable[\s\S]{0,200}const v = await ecouteurBlender\(port\);\s*if \(!v\.ok\) return v;\s*if \(await sondeBlender\(port\)\) return v;/.test(blenderSrc) && /const v = await blenderJoignable\(\);/.test(blenderSrc) && /JSON\.stringify\(\{ type: "ping", params: \{\} \}\)/.test(blenderSrc) && /host: "127\.0\.0\.1"/.test(blenderSrc),
+    "blender.ts",
+  );
+  verifier(
+    "mcp.ts : sur un délai dépassé, « il a pu être exécuté » seulement si l'appelant ne dit pas que c'est une lecture ; outils.ts le dit d'après la barrière (`modifie`)",
+    /options\.ecriture === false\s*\?\s*"C'était une lecture : rien n'a été modifié\."\s*:\s*"Il a pu être exécuté quand même/.test(mcpSrc) && /return appelerMcp\(nom, adapterFichiers\(nom, args\), \{ ecriture: modifie\(nom\) \}\);/.test(outilsSrc),
+    "mcp.ts, outils.ts",
+  );
+  verifier(
+    "mcp.ts : un appel à la fois pour un serveur `serie` (vérification comprise), et relance après un délai dépassé pour `relancerApresDelai` ; Blender et Unreal Editor déclarés ainsi",
+    /if \(!entry\.config\.serie\) return appelerOutil\(tool, entry, args, options\);/.test(mcpSrc) && /entry\.file = precedent\.then\(\(\) => tour\);\s*await precedent;/.test(mcpSrc) && /if \(entry\.config\.relancerApresDelai && entry\.client === client\)/.test(mcpSrc) &&
+      /\.\.\.\(stdio\.serie \? \{ serie: true, relancerApresDelai: true \} : \{\}\),/.test(connSrc) && /\.\.\.\(appli\.serie \? \{ serie: true \} : \{\}\),/.test(connSrc) && /unreal: \{\s*proposable: unrealProposable,\s*port: portUnreal,\s*reconnaitre: ecouteurUnreal,\s*serie: true,/.test(connSrc),
+    "mcp.ts, connecteurs.ts",
+  );
+  verifier(
+    "chat.ts : un service injoignable (refus avant l'appel, délai dépassé) n'est plus appelé dans la réponse, ni un appel raté deux fois à l'identique ; ni carte ni appel, le refus redit quoi faire",
+    /const injoignables = new Map<string, string>\(\);/.test(chatSrc) && /const echecsIdentiques = new Map<string, \{ fois: number; message: string \}>\(\);/.test(chatSrc) && /const verdict = dejaRate\s*\? \(\{ autorise: false, message: dejaRate \} as approbation\.Verdict\)/.test(chatSrc) && /rateAvant && rateAvant\.fois >= 2/.test(chatSrc) && /\.injoignable && serveurAppel\) injoignables\.set\(serveurAppel/.test(chatSrc) && /injoignable: true \};/.test(mcpSrc),
+    "chat.ts, mcp.ts",
+  );
+  verifier(
+    "Unreal Editor : écouteur lu au système, exécutable de l'éditeur seulement, signature valide si signé (codesign du processus, Authenticode d'Epic Games ou absente) ; rien de téléchargé, rien venu d'une requête",
+    /await ecouteurs\(port\)/.test(unrealSrc) && /"\/usr\/bin\/codesign", \["--verify", String\(e\.pid\)\]/.test(unrealSrc) && /not signed at all/.test(unrealSrc) && /signature\.statut === "NotSigned"/.test(unrealSrc) && /signature\.statut === "Valid" && \/Epic Games\/i/.test(unrealSrc) && !/fetch\(|req\.|body\./.test(unrealSrc),
+    "unreal.ts",
+  );
+  verifier(
+    "Unreal Editor : `call_tool` et tout outil non reconnu sur carte à chaque appel, administrateur (ou employé d'une administratrice) au moment d'agir, retiré de la liste des autres employés",
+    /\|\| estEcritureUnreal\(outil\);/.test(approSrc) && /estLectureUnreal\(outil\)\) return false;/.test(approSrc) && /if \(estEcritureUnreal\(nom\) && !\(\(await administre\(pour\?\.userId\)\) \|\| \(await administre\(pour\?\.proprietaire\)\)\)\)/.test(outilsSrc),
+    "approbation.ts, outils.ts",
+  );
+  verifier(
+    "serveur ajouté : la route exige l'administrateur, refuse un jeton dans l'adresse, et transmet si la demande vient de cette machine ; retrait et relance réservés à l'administrateur ; routes au tableau des séances",
+    /async function handleConnecteurPersonnalise[\s\S]{0,400}\["token", "session", "flux"\]\.some\(\(p\) => url\.searchParams\.has\(p\)\)[\s\S]{0,300}reserveeALAdministration\(res, qui,[\s\S]{0,400}depuisCePoste: depuisCePoste\(req\)/.test(indexSrc) &&
+      /\{ methode: "POST", chemin: "\/helix\/connecteurs\/personnalise" \}/.test(indexSrc) && /\{ methode: "POST", chemin: "\/helix\/connecteurs\/personnalise\/lectures" \}/.test(indexSrc) && (indexSrc.match(/\(await estPersonnalise\(body\.id\)\) && \(await reserveeALAdministration\(/g) ?? []).length === 2,
+    "index.ts",
+  );
+  verifier(
+    "serveur ajouté : programme seulement depuis le poste d'une instance fermée (ou connecteursLibres), rejugé à chaque démarrage ; enregistrement scellé par la clé (estChiffreLie), refusé sans chiffrement ; environnement minimal plus les variables chiffrées",
+    /export const programmePermis = \(depuisCePoste: boolean\): boolean => commandeLibreAutorisee\(\) \|\| \(depuisCePoste && !instanceOuverte\(\)\);/.test(connSrc) && /if \(!estChiffreLie\(c\.perso\)\) throw new Error/.test(connSrc) && /const juge = jugerCommande\(spec\.command, spec\.args\);/.test(connSrc) &&
+      /if \(!chiffrementActif\(\)\) \{\s*return \{ ok: false, message: tf\("Le chiffrement des données n'est pas actif sur cette machine : \{0\} refuse d'enregistrer un serveur ajouté/.test(connSrc) && /env: environnement\(c\), cwd: homedir\(\), libre: true/.test(connSrc) && /if \(brut\.perso !== undefined\) return configPerso\(brut\);/.test(connSrc) &&
+      /env: \{\s*\.\.\.defaut,/.test(mcpSrc) && !/env: \{\s*\.\.\.process\.env/.test(mcpSrc),
+    "connecteurs.ts, mcp.ts",
+  );
+  verifier(
+    "serveur ajouté : interpréteurs de commandes, scripts de shell et code en ligne refusés ; https ou boucle locale hors des ports de l'instance ; jamais une variable HELIX_",
+    ["\"sh\"", "\"bash\"", "\"zsh\"", "\"cmd\"", "\"powershell\"", "\"pwsh\""].every((n) => reglesSrc.includes(n)) && /"\.bat", "\.cmd", "\.ps1"/.test(reglesSrc) && /nom: \/\^node\$\/, options: new Set\(\["-e", "--eval"/.test(reglesSrc) && /if \(\/\^HELIX_\/i\.test\(nom\)\)/.test(reglesSrc) && /return new Set\(\[portPasserelle, 1234, 18789, 18800/.test(reglesSrc),
+    "mcpPersoRegles.ts",
+  );
+  verifier(
+    "serveur ajouté : tout outil est une écriture, sauf ceux que l'administrateur marque (registre qui ne répond que pour ces serveurs) ; journal à l'ajout, au réglage et au retrait",
+    /if \(registreLecturesPerso\(\)\.fn\?\.\(outil\) === true\) return false;/.test(approSrc) && /return Boolean\(o && lecturesPerso\.get\(o\.serverId\)\?\.lectures\.has\(o\.toolName\)\);/.test(connSrc) &&
+      /journaliser\("connecteur\.ajoute", qui, \{ connecteur: id, personnalise: spec\.mode, \.\.\.cible, outils \}\);/.test(connSrc) && /etape: "lectures"/.test(connSrc) && /journaliser\("connecteur\.retire", qui, \{ connecteur: id, \.\.\.\(connecteur\.perso !== undefined \? \{ personnalise: true \} : \{\}\) \}\);/.test(connSrc),
+    "approbation.ts, connecteurs.ts",
+  );
+  const ecran = src("src", "components", "settings", "Connecteurs.tsx");
+  const guides = src("src", "lib", "guidesApplications.ts");
+  const aide = src("src", "lib", "aide.ts");
+  verifier(
+    "écran : « Vos propres serveurs MCP » (formulaire en deux modes, cases « lecture seule »), pas à pas d'Unreal Engine (pages officielles d'Epic), articles d'aide, icône neutre pour Unreal",
+    /<ServeursPersonnalises etat=\{etat\} surEtat=\{setEtat\} surChangement=\{signalerAuxServeurs\} \/>/.test(ecran) && /if \(id === "unreal"\) return guideUnreal\(\);/.test(guides) && /url: "https:\/\/dev\.epicgames\.com\/documentation\/unreal-engine\/unreal-mcp-in-unreal-editor"/.test(guides) &&
+      /id: "unreal",/.test(aide) && /id: "mcp-personnalise",/.test(aide) && /unreal: Gamepad2,/.test(src("src", "components", "settings", "marquesConnecteurs.ts")),
+    "Connecteurs.tsx, guidesApplications.ts, aide.ts, marquesConnecteurs.ts",
   );
 }
 

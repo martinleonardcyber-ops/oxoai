@@ -180,7 +180,10 @@ at the "Free" level go through PowerShell.
   Palmier Pro, a video editor for Apple silicon Macs, lets agents edit on its timeline while it
   is open on the instance's Mac. Roblox Studio (macOS, Windows) and Blender (macOS, Windows,
   Linux) let agents read and build a place or a 3D scene open on the instance's machine; running
-  code, editing and generating always ask for your approval.
+  code, editing and generating always ask for your approval. Unreal Engine (5.8 or later) connects
+  through the MCP server Epic ships in the editor, one action at a time, each one approved. An
+  administrator can also add their own MCP server, a program on the machine or an address: each
+  of its tools asks for approval, except those marked read-only.
 - **Scheduled tasks**: an instruction and a rhythm (every day, Monday to Friday, a day of the week
   or of the month), run with your tools, even with the window closed, by the agent you choose.
 - **Always-on agents**: scheduled missions, replies to incoming mail and messaging apps, with

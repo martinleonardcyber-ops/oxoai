@@ -2006,6 +2006,9 @@ const EXECUTION: { methode: string; chemin: string }[] = [
   { methode: "POST", chemin: "/helix/connecteurs/ajouter" },
   { methode: "POST", chemin: "/helix/connecteurs/connecter" },
   { methode: "POST", chemin: "/helix/connecteurs/retirer" },
+  // Un serveur MCP ajouté par l'administrateur (16/10/2026) : le journal nomme qui l'a ajouté ou réglé.
+  { methode: "POST", chemin: "/helix/connecteurs/personnalise" },
+  { methode: "POST", chemin: "/helix/connecteurs/personnalise/lectures" },
   /*
    * La consommation d'une personne dit quand elle travaille et combien : elle
    * ne se lit qu'avec une séance, et la route ne rend que celle du demandeur.
@@ -3823,9 +3826,61 @@ async function handleMcpToggle(
 /* --------------------------- routes connecteurs ------------------------------- */
 
 /** Catalogue, connecteurs branchés, et régime de l'instance. Aucun secret. */
-async function handleConnecteursEtat(req: http.IncomingMessage, res: http.ServerResponse): Promise<void> {
+async function handleConnecteursEtat(req: http.IncomingMessage, res: http.ServerResponse, url: URL): Promise<void> {
   // L'adresse de retour, telle que « Se connecter » l'enverra au service : l'écran la montre avant le premier essai (28/09/2026).
-  send(res, 200, await connecteurs.etat(adresseVue(req) ?? undefined));
+  send(res, 200, await etatConnecteursPour(req, url));
+}
+
+/**
+ * L'état des connecteurs pour ce demandeur (16/10/2026) : ce qu'il peut
+ * ajouter lui-même (un serveur MCP à lui, administrateur ; un programme de
+ * cette machine, administrateur depuis cette machine), et la commande ou
+ * l'adresse des serveurs ajoutés, montrées à l'administrateur seulement.
+ */
+async function etatConnecteursPour(req: http.IncomingMessage, url: URL): Promise<connecteurs.EtatConnecteurs> {
+  const qui = await demandeur(req, url).catch(() => null);
+  const administrateur = Boolean(qui && (await estAdministrateur(qui.userId)));
+  return connecteurs.etat(adresseVue(req) ?? undefined, { administrateur, depuisCePoste: depuisCePoste(req) });
+}
+
+/** Un serveur ajouté par l'administrateur (connecteurs.ts) ? Son retrait et ses réglages lui sont réservés. */
+const estPersonnalise = (id: string): Promise<boolean> => connecteurs.estConnecteurPersonnalise(id);
+
+/**
+ * Ajoute un serveur MCP à la demande de l'administrateur (16/10/2026, demande
+ * de Medhi : « créer son propre MCP »). Trois barrières, en plus de la séance :
+ *  1. l'administrateur seul (roles.ts) ;
+ *  2. jetons en en-têtes seulement, jamais dans l'adresse : l'écran les pose
+ *     ainsi, un lien ou un script bricolé non (même règle que l'import depuis
+ *     les logiciels du poste, `handleImportLogiciels`) ;
+ *  3. un programme de la machine ou un serveur sur sa boucle : depuis cette
+ *     machine, instance fermée aux collègues, ou instance réglée par
+ *     l'intégrateur (`connecteursLibres`) ; jugé par connecteurs.ts.
+ * Sans shell ni code en ligne (mcpPersoRegles.ts). Journal à l'ajout.
+ */
+async function handleConnecteurPersonnalise(req: http.IncomingMessage, res: http.ServerResponse, url: URL): Promise<void> {
+  if (["token", "session", "flux"].some((p) => url.searchParams.has(p))) {
+    return send(res, 400, { error: { message: t("Jetons en en-têtes seulement pour cette route, jamais dans l'adresse.") } });
+  }
+  const qui = await demandeur(req, url);
+  if (!qui) return send(res, 401, sansSeance());
+  if (await reserveeALAdministration(res, qui, t("Seul l'administrateur de l'instance peut ajouter un serveur MCP : ses outils servent à toute l'instance."))) return;
+  const base = adresseVue(req);
+  if (!base) return send(res, 400, { error: { message: t("Adresse d'instance illisible.") } });
+  const body = await readJson(req).catch(() => null);
+  const resultat = await connecteurs.ajouterPersonnalise(body, qui.userId, { depuisCePoste: depuisCePoste(req), base });
+  send(res, resultat.ok ? 200 : 400, { ...resultat, etat: await etatConnecteursPour(req, url) });
+}
+
+/** L'administrateur marque des outils d'un serveur ajouté « lecture seule » ; les autres demandent l'accord. */
+async function handleConnecteurLectures(req: http.IncomingMessage, res: http.ServerResponse, url: URL): Promise<void> {
+  const qui = await demandeur(req, url);
+  if (!qui) return send(res, 401, sansSeance());
+  if (await reserveeALAdministration(res, qui, t("Seul l'administrateur de l'instance peut régler les outils d'un serveur ajouté."))) return;
+  const body = (await readJson(req).catch(() => ({}))) as { id?: unknown; lectures?: unknown };
+  if (typeof body.id !== "string" || !body.id) return send(res, 400, { error: { message: t("`id` est requis.") } });
+  const resultat = await connecteurs.definirLecturesPersonnalisees(body.id, body.lectures, qui.userId);
+  send(res, resultat.ok ? 200 : 400, { ...resultat, etat: await etatConnecteursPour(req, url) });
 }
 
 /** Groupes d'outils réellement proposés au modèle : ce que le composeur affiche. */
@@ -3851,7 +3906,7 @@ async function handleConnecteurAjouter(
 
   const body = await readJson(req).catch(() => null);
   const resultat = await connecteurs.ajouter(body, qui.userId);
-  send(res, resultat.ok ? 200 : 400, { ...resultat, etat: await connecteurs.etat(adresseVue(req) ?? undefined) });
+  send(res, resultat.ok ? 200 : 400, { ...resultat, etat: await etatConnecteursPour(req, url) });
 }
 
 /**
@@ -4130,6 +4185,7 @@ async function handleConnecteurConnecter(
   }
   // Trello, Monday, ClickUp, Todoist, Calendly, Zoom : un compte branché parle au nom de toute l'organisation (SECURITE.md § 48).
   if (estMcpProjet(body.id) && (await reserveeALAdministration(res, qui, t("Seul l'administrateur de l'instance peut brancher, débrancher ou configurer ces services : ils agissent au nom de toute l'organisation.")))) return;
+  if ((await estPersonnalise(body.id)) && (await reserveeALAdministration(res, qui, t("Seul l'administrateur de l'instance peut retirer ou relancer un serveur MCP ajouté.")))) return;
   const base = adresseVue(req);
   if (!base) return send(res, 400, { error: { message: t("Adresse d'instance illisible.") } });
 
@@ -4143,7 +4199,7 @@ async function handleConnecteurConnecter(
     },
     body.ecriture,
   );
-  send(res, resultat.ok ? 200 : 400, { ...resultat, etat: await connecteurs.etat(adresseVue(req) ?? undefined) });
+  send(res, resultat.ok ? 200 : 400, { ...resultat, etat: await etatConnecteursPour(req, url) });
 }
 
 /** Page rendue au navigateur au retour d'une autorisation. */
@@ -4285,8 +4341,10 @@ async function handleConnecteurRetirer(
   if (!body.id) return send(res, 400, { error: { message: t("`id` est requis.") } });
 
   if (estMcpProjet(body.id) && (await reserveeALAdministration(res, qui, t("Seul l'administrateur de l'instance peut brancher, débrancher ou configurer ces services : ils agissent au nom de toute l'organisation.")))) return;
+  // Un serveur ajouté par l'administrateur : lui seul le retire (16/10/2026).
+  if ((await estPersonnalise(body.id)) && (await reserveeALAdministration(res, qui, t("Seul l'administrateur de l'instance peut retirer ou relancer un serveur MCP ajouté.")))) return;
   const resultat = await connecteurs.retirer(body.id, qui.userId);
-  send(res, resultat.ok ? 200 : 400, { ...resultat, etat: await connecteurs.etat(adresseVue(req) ?? undefined) });
+  send(res, resultat.ok ? 200 : 400, { ...resultat, etat: await etatConnecteursPour(req, url) });
 }
 
 /* ------------------------------ routes usage ---------------------------------- */
@@ -6102,7 +6160,11 @@ const traiter = (
       return handleWorkspace(req, res, url);
 
     if (req.method === "GET" && path === "/helix/connecteurs")
-      return handleConnecteursEtat(req, res);
+      return handleConnecteursEtat(req, res, url);
+    if (req.method === "POST" && path === "/helix/connecteurs/personnalise")
+      return handleConnecteurPersonnalise(req, res, url);
+    if (req.method === "POST" && path === "/helix/connecteurs/personnalise/lectures")
+      return handleConnecteurLectures(req, res, url);
     if (req.method === "POST" && path === "/helix/connecteurs/ajouter")
       return handleConnecteurAjouter(req, res, url);
     if (req.method === "GET" && path === "/helix/reseau")

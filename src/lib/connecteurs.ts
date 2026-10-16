@@ -4,11 +4,15 @@ import { t, tf } from "@/lib/i18n";
 /**
  * Connecteurs, côté interface.
  *
- * Un guichet, et rien de plus. Ce module n'a jamais connaissance d'une
- * commande à exécuter : il envoie un identifiant du catalogue et les secrets
- * saisis, l'instance retrouve la commande dans le sien. C'est ce qui fait que
- * l'interface ne peut pas choisir ce qui tourne sur la machine de l'entreprise,
- * même modifiée par quelqu'un qui la contrôlerait.
+ * Un guichet, et rien de plus. Pour un service du catalogue, ce module n'a
+ * jamais connaissance d'une commande à exécuter : il envoie un identifiant et
+ * les secrets saisis, l'instance retrouve la commande dans le sien. C'est ce
+ * qui fait que l'interface ne peut pas choisir ce qui tourne sur la machine de
+ * l'entreprise, même modifiée par quelqu'un qui la contrôlerait. Seule
+ * exception (16/10/2026, `ajouterPersonnalise`) : un serveur ajouté par
+ * l'administrateur, que l'instance juge elle-même (administrateur, depuis sa
+ * propre machine, instance fermée aux collègues, sans interpréteur de
+ * commandes).
  *
  * Règle miroir de celle du courrier : le secret part vers l'instance et n'en
  * revient jamais. L'état renvoyé ne porte que le **nom** des variables
@@ -76,6 +80,8 @@ export interface ConnecteurInstalle {
   autoriseDepuis?: string;
   /** Application ouverte sur la machine de l'instance : « Réessayer » la rebranche après qu'elle a été fermée. */
   local?: true;
+  /** Serveur ajouté par l'administrateur (16/10/2026). `cible` : la commande ou l'adresse, montrée à l'administrateur seulement. */
+  personnalise?: { mode: "programme" | "adresse"; cible?: string; lectures: string[]; outils: { nom: string; description: string }[] };
 }
 
 export interface EtatConnecteurs {
@@ -84,6 +90,8 @@ export interface EtatConnecteurs {
   installes: ConnecteurInstalle[];
   chiffrementDonnees: boolean;
   commandeLibre: boolean;
+  /** Ce que la personne peut ajouter elle-même (16/10/2026). Absent d'une instance plus ancienne. */
+  personnalise?: { ajouter: boolean; programme: boolean };
   /**
    * Issue du dernier retour d'autorisation, par connecteur (28/09/2026) : un
    * refus dans la page du service se lit ici, au lieu d'attendre en vain.
@@ -225,6 +233,29 @@ export async function connecter(
 /** Retire un connecteur : ses outils disparaissent, son secret est effacé. */
 export async function retirer(id: string): Promise<Resultat> {
   const resultat = await poster("/helix/connecteurs/retirer", { id });
+  if (resultat.ok) signalerChangement();
+  return resultat;
+}
+
+/**
+ * Un serveur MCP ajouté par l'administrateur (16/10/2026, « Ajouter un serveur
+ * MCP »). L'écran envoie ce que l'administrateur a saisi ; c'est l'instance
+ * qui juge (administrateur, cette machine, pas d'interpréteur de commandes ni
+ * de code en ligne, adresse en https ou sur la boucle locale), et qui refuse.
+ */
+export type DemandePersonnalise =
+  | { mode: "programme"; id: string; label: string; description?: string; command: string; args: string[]; variables: Record<string, string> }
+  | { mode: "adresse"; id: string; label: string; description?: string; url: string };
+
+export async function ajouterPersonnalise(demande: DemandePersonnalise): Promise<Resultat & { adresse?: string }> {
+  const resultat = (await poster("/helix/connecteurs/personnalise", demande)) as Resultat & { adresse?: string };
+  if (resultat.ok && !resultat.adresse) signalerChangement();
+  return resultat;
+}
+
+/** Les outils d'un serveur ajouté que l'administrateur marque « lecture seule » (les autres demandent l'accord). */
+export async function definirLectures(id: string, lectures: string[]): Promise<Resultat> {
+  const resultat = await poster("/helix/connecteurs/personnalise/lectures", { id, lectures });
   if (resultat.ok) signalerChangement();
   return resultat;
 }

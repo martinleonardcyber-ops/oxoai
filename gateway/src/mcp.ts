@@ -68,6 +68,22 @@ export interface McpServerConfig {
   avantLancement?: () => Promise<string | null>;
   avantAppel?: () => Promise<string | null>;
   /**
+   * Un appel à la fois vers ce serveur (16/10/2026) : Unreal Editor exécute
+   * ses outils un par un sur le fil du jeu et demande qu'on ne les superpose
+   * pas ; le serveur de Blender bloque sa boucle sur chaque commande. La
+   * vérification `avantAppel` fait partie du tour : elle ne croise jamais un
+   * appel en cours.
+   */
+  serie?: boolean;
+  /**
+   * Après un délai dépassé, le processus est arrêté et relancé à l'appel
+   * suivant (Blender, 16/10/2026 : son serveur reste bloqué jusqu'à 180 s sur
+   * la commande sans réponse, et chaque appel suivant attendait derrière).
+   */
+  relancerApresDelai?: boolean;
+  /** Dossier de lancement d'un serveur local (un serveur ajouté par l'administrateur : son dossier personnel). */
+  cwd?: string;
+  /**
    * Variables d'environnement du processus serveur.
    *
    * C'est par ici, et uniquement par ici, que passe un jeton d'accès. Le mettre
@@ -230,6 +246,8 @@ interface Live {
   error?: string;
   /** Processus du serveur local, pour arrêter aussi ce qu'il a lancé (`npx` lance `node`). */
   pid?: number;
+  /** Le dernier appel en file, pour un serveur `serie` : le suivant attend sa fin. */
+  file?: Promise<void>;
   /** Démarrage en cours : un second appel l'attend au lieu de lancer un second processus. */
   demarrage?: Promise<{ ok: boolean; error?: string }>;
   /** Arrêté par la passerelle (retrait, bascule, dossier changé) : on ne le relance pas de soi-même. */
@@ -641,6 +659,7 @@ async function demarrer(id: string, entry: Live): Promise<{ ok: boolean; error?:
     const transport = new StdioClientTransport({
       command: npx ? npx.command : entry.config.command!,
       args: [...(npx?.prefixe ?? []), ...(entry.config.args ?? [])],
+      ...(entry.config.cwd ? { cwd: entry.config.cwd } : {}),
       /*
        * `getDefaultEnvironment()` d'abord : sans PATH ni HOME, `npx` ne trouve
        * ni Node ni son cache et le serveur ne démarre jamais. Les secrets du
@@ -949,24 +968,76 @@ export function hasTools(): boolean {
   return [...servers.values()].some((s) => s.tools.length > 0);
 }
 
-/** Exécute un outil qualifié et renvoie son résultat en texte. */
+/** Le serveur et le nom d'origine d'un outil, d'après le nom donné au modèle ; `null` s'il n'est pas proposé. */
+export function outilDuModele(qualifie: string): { serverId: string; toolName: string } | null {
+  const tool = [...servers.values()].flatMap((s) => s.tools).find((t) => t.name === qualifie);
+  return tool ? { serverId: tool.serverId, toolName: tool.toolName } : null;
+}
+
+/**
+ * Le résultat d'un appel. `injoignable` : l'application ou le serveur n'a pas
+ * pu être atteint (refus avant l'appel, ou délai dépassé) ; la boucle du Chat
+ * s'en sert pour ne pas relancer ses outils dans la même réponse (chat.ts).
+ */
+export type ResultatAppel = { ok: boolean; content: string; injoignable?: true };
+
+/**
+ * Exécute un outil qualifié et renvoie son résultat en texte.
+ *
+ * `ecriture` (16/10/2026) : l'appelant dit si l'outil modifie (la barrière
+ * d'approbation, `modifie`). Sur un délai dépassé, « il a pu être exécuté
+ * quand même » n'est dit que d'une écriture : une lecture, comme
+ * `get_addon_status` de Blender, n'a rien pu changer. Absent : on le dit,
+ * par prudence.
+ */
 export async function callTool(
   qualifiedName: string,
   args: Record<string, unknown>,
-): Promise<{ ok: boolean; content: string }> {
+  options: { ecriture?: boolean } = {},
+): Promise<ResultatAppel> {
   const tool = [...servers.values()].flatMap((s) => s.tools).find((t) => t.name === qualifiedName);
   if (!tool) return { ok: false, content: `Outil inconnu : ${qualifiedName}` };
 
   const entry = servers.get(tool.serverId);
   if (!entry) return { ok: false, content: `Serveur ${tool.serverId} arrêté.` };
+  if (!entry.config.serie) return appelerOutil(tool, entry, args, options);
+  /*
+   * Un appel à la fois (Unreal Editor, Blender, 16/10/2026) : le suivant
+   * attend la fin du précédent, vérification comprise.
+   */
+  const precedent = entry.file ?? Promise.resolve();
+  let liberer: () => void = () => undefined;
+  const tour = new Promise<void>((r) => (liberer = r));
+  entry.file = precedent.then(() => tour);
+  await precedent;
+  try {
+    return await appelerOutil(tool, entry, args, options);
+  } finally {
+    liberer();
+  }
+}
+
+async function appelerOutil(tool: McpTool, entry: Live, args: Record<string, unknown>, options: { ecriture?: boolean }): Promise<ResultatAppel> {
   /*
    * Blender (12/10/2026) : le programme qui tient le port de son module est
    * relu avant chaque appel, comme Palmier Pro avant chaque requête. Fermé, ou
-   * remplacé par un autre programme, rien n'est envoyé.
+   * remplacé par un autre programme, rien n'est envoyé. Depuis le 16/10/2026,
+   * son module doit aussi répondre (blender.ts, `sondeBlender`), et le refus
+   * est marqué `injoignable`.
    */
   if (entry.config.avantAppel) {
     const refus = await entry.config.avantAppel().catch((err: unknown) => (err instanceof Error ? err.message : String(err)));
-    if (refus) return { ok: false, content: `${refus} Rien n'a été envoyé. Dis-le à l'utilisateur.` };
+    if (refus) return { ok: false, content: `${refus} Rien n'a été envoyé. Ne relance pas cet outil ni un autre de ${entry.config.label} dans cette réponse : dis à l'utilisateur ce qu'il doit faire, avec ce message.`, injoignable: true };
+  }
+  /*
+   * Une application en HTTP sur la boucle (Palmier Pro, Unreal Editor) : sa
+   * reconnaissance est refaite avant chaque requête (`fetchLocal`) ; faite ici
+   * d'abord, son refus se dit en clair, sans le détour d'une erreur de
+   * transport (16/10/2026).
+   */
+  if (entry.config.local) {
+    const refus = await entry.config.local.reconnaitre().catch((err: unknown) => (err instanceof Error ? err.message : String(err)));
+    if (refus) return { ok: false, content: `${refus} Rien n'a été envoyé. Ne relance pas cet outil ni un autre de ${entry.config.label} dans cette réponse : dis à l'utilisateur ce qu'il doit faire, avec ce message.`, injoignable: true };
   }
   /*
    * Arrêté de lui-même (plantage, serveur distant qui a redémarré) : on le
@@ -977,7 +1048,7 @@ export async function callTool(
     if (entry.arrete) return { ok: false, content: `Serveur ${tool.serverId} arrêté.` };
     const relance = await startServer(tool.serverId);
     if (!relance.ok || !entry.client) {
-      return { ok: false, content: `Le serveur ${entry.config.label} ne répond pas et n'a pas pu être relancé : ${relance.error ?? "cause inconnue"}. Dis-le à l'utilisateur.` };
+      return { ok: false, content: `Le serveur ${entry.config.label} ne répond pas et n'a pas pu être relancé : ${relance.error ?? "cause inconnue"}. Dis-le à l'utilisateur.`, injoignable: true };
     }
   }
 
@@ -1031,7 +1102,23 @@ export async function callTool(
         return { ok: false, content: `L'autorisation donnée à ${entry.config.label} n'est plus valable (${message}). Dis à l'utilisateur de le reconnecter depuis l'écran des connecteurs.` };
       }
       if (err instanceof McpError && err.code === ErrorCode.RequestTimeout) {
-        return { ok: false, content: `${entry.config.label} n'a pas répondu à temps (${message}) : l'appel est abandonné. Il a pu être exécuté quand même : vérifie avant de le refaire.` };
+        /*
+         * Blender (16/10/2026) : son serveur reste bloqué sur la commande sans
+         * réponse ; il est arrêté, et l'appel suivant en relance un neuf au
+         * lieu d'attendre derrière celui-ci.
+         */
+        if (entry.config.relancerApresDelai && entry.client === client) {
+          entry.client = undefined;
+          const pid = entry.pid;
+          entry.pid = undefined;
+          await fermer(client, pid);
+        }
+        // Une lecture n'a rien pu changer : seule une écriture « a pu être exécutée quand même » (16/10/2026).
+        const suite =
+          options.ecriture === false
+            ? "C'était une lecture : rien n'a été modifié."
+            : "Il a pu être exécuté quand même : vérifie avant de le refaire.";
+        return { ok: false, content: `${entry.config.label} n'a pas répondu à temps (${message}) : l'appel est abandonné. ${suite} Ne relance pas le même appel dans cette réponse : dis à l'utilisateur ce qui bloque.`, injoignable: true };
       }
       /*
        * Un 401 reçu pendant qu'un autre appel venait de renouveler le jeton

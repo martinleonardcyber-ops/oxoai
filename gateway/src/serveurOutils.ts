@@ -18,6 +18,7 @@ import {
 import { outilsDeFamille, executerOutil, cibleDe, ecrituresApplicationsPourEmploye, refusApplication, type DefinitionOutil } from "./outils.ts";
 import { estEcritureRoblox } from "./robloxRegles.ts";
 import { estEcritureBlender } from "./blenderRegles.ts";
+import { estEcritureUnreal } from "./unrealRegles.ts";
 import { demandeToujours, modifie, verifierOutil } from "./approbation.ts";
 import { journaliser } from "./audit.ts";
 import { OUTIL_EMPLOYE, chercherPourEmploye, outilEmploye } from "./connaissances.ts";
@@ -54,7 +55,7 @@ async function outilsDe(e: Employe): Promise<DefinitionOutil[]> {
    * montre pas : chaque appel serait refusé (relecture du 12/10/2026).
    */
   const ecritures = await ecrituresApplicationsPourEmploye(e.ownerId);
-  const familles = ecritures ? toutes : toutes.filter((o) => !estEcritureRoblox(o.function.name) && !estEcritureBlender(o.function.name));
+  const familles = ecritures ? toutes : toutes.filter((o) => !estEcritureRoblox(o.function.name) && !estEcritureBlender(o.function.name) && !estEcritureUnreal(o.function.name));
   const avecBases = (e.connaissances?.length ?? 0) > 0 ? [...familles, outilEmploye()] : familles;
   /*
    * Le web gardé (webGarde.ts), pour les paliers qui ont le web : c'est lui

@@ -11,12 +11,13 @@ import * as natifs from "./outilsNatifs.ts";
 import * as messageries from "./natifs/messageries.ts";
 import * as bibliotheque from "./bibliotheque.ts";
 import * as controleWeb from "./controleWeb.ts";
-import { definirEspaceDeTravail } from "./approbation.ts";
+import { definirEspaceDeTravail, modifie } from "./approbation.ts";
 import { estAdministrateur } from "./roles.ts";
 import { estEcritureMcpProjet } from "./natifs/projetsRegles.ts";
 import { estEcriturePalmier } from "./palmierRegles.ts";
 import { estEcritureRoblox } from "./robloxRegles.ts";
 import { accordRequisBlender } from "./blenderRegles.ts";
+import { estEcritureUnreal } from "./unrealRegles.ts";
 
 // La barrière juge un déplacement « vers un dossier » comme `adapterFichiers` l'exécute, depuis le même dossier de travail.
 definirEspaceDeTravail(workspace);
@@ -125,6 +126,10 @@ export async function refusApplication(nom: string, args: Record<string, unknown
   if ((estEcritureRoblox(nom) || accordRequisBlender(nom, args)) && !((await administre(pour?.userId)) || (await administre(pour?.proprietaire)))) {
     return "Refusé : modifier, exécuter du code, générer ou lire un fichier de la machine par Roblox Studio ou Blender, ouverts sur la machine de l'instance avec le compte de la personne qui les a lancés, est réservé à l'administrateur de l'instance et à ses employés. Dis-le à l'utilisateur ; rien n'a été fait.";
   }
+  // Unreal Editor (16/10/2026) : même règle que Roblox Studio et Blender ; ses outils agissent sur le projet ouvert, sur la machine de l'instance.
+  if (estEcritureUnreal(nom) && !((await administre(pour?.userId)) || (await administre(pour?.proprietaire)))) {
+    return "Refusé : faire agir Unreal Editor (créer, modifier, exécuter, lancer des tests), ouvert sur la machine de l'instance avec le compte de la personne qui l'a lancé, est réservé à l'administrateur de l'instance et à ses employés. Dis-le à l'utilisateur ; rien n'a été fait.";
+  }
   return null;
 }
 
@@ -146,7 +151,7 @@ export async function executerOutil(
    * bibliothèque). Absent : il ne voit que ce qui est ouvert à toute l'équipe.
    */
   pour?: PourQui,
-): Promise<{ ok: boolean; content: string }> {
+): Promise<{ ok: boolean; content: string; injoignable?: true }> {
   // Les tâches programmées (tachesProgrammees.ts) : au nom de la personne, hors des familles des employés.
   if (nom.startsWith("taches__")) return tachesProgrammees.callTool(nom, args, pour?.userId);
   /*
@@ -187,7 +192,7 @@ export async function executerOutil(
         const refus = await refusApplication(nom, args, pour);
         if (refus) return { ok: false, content: refus };
       }
-      return appelerMcp(nom, adapterFichiers(nom, args));
+      return appelerMcp(nom, adapterFichiers(nom, args), { ecriture: modifie(nom) }); // lecture ou écriture : ce qu'un délai dépassé permet de dire (mcp.ts, 16/10/2026)
   }
 }
 

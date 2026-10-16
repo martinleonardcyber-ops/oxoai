@@ -198,7 +198,11 @@ dauerhaft aktiven Agenten auf der Stufe „Frei“ über PowerShell.
   seiner Timeline schneiden, solange er auf dem Mac der Instanz geöffnet ist. Roblox Studio
   (macOS, Windows) und Blender (macOS, Windows, Linux) lassen Agenten einen Place oder eine
   3D-Szene lesen und aufbauen, die auf dem Rechner der Instanz geöffnet ist; Code ausführen,
-  ändern und erzeugen braucht immer Ihre Freigabe.
+  ändern und erzeugen braucht immer Ihre Freigabe. Unreal Engine (5.8 oder neuer) wird über den
+  MCP-Server angebunden, den Epic im Editor mitliefert, eine Aktion nach der anderen, jede
+  freigegeben. Die Administration kann auch einen eigenen MCP-Server hinzufügen, ein Programm auf
+  dem Rechner oder eine Adresse: Jedes seiner Werkzeuge fragt um Freigabe, außer den als „nur
+  lesen“ markierten.
 - **Geplante Aufgaben**: eine Anweisung und ein Rhythmus (jeden Tag, Montag bis Freitag, ein
   Wochentag oder ein Tag im Monat), ausgeführt mit Ihren Werkzeugen, auch bei geschlossenem
   Fenster, von dem Agenten, den Sie wählen.

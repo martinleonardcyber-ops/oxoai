@@ -191,7 +191,10 @@ siempre activo en el nivel «Libre» pasan por PowerShell.
   los agentes editar en su línea de tiempo mientras está abierto en el Mac de la instancia.
   Roblox Studio (macOS, Windows) y Blender (macOS, Windows, Linux) permiten a los agentes leer y
   construir una place o una escena 3D abierta en la máquina de la instancia; ejecutar código,
-  modificar y generar siempre piden tu aprobación.
+  modificar y generar siempre piden tu aprobación. Unreal Engine (5.8 o posterior) se conecta
+  mediante el servidor MCP que Epic incluye en el editor, una acción a la vez, cada una aprobada. El
+  administrador también puede añadir su propio servidor MCP, un programa de la máquina o una
+  dirección: cada una de sus herramientas pide aprobación, salvo las marcadas como solo lectura.
 - **Tareas programadas**: una instrucción y un ritmo (cada día, de lunes a viernes, un día de la
   semana o del mes), ejecutadas con tus herramientas, incluso con la ventana cerrada, por el
   agente que elijas.

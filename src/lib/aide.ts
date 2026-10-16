@@ -358,6 +358,24 @@ const ARTICLES: Article[] = [
       t("Si cette machine n'a pas Python 3.10 à 3.14, l'instance pose d'abord son propre Python, téléchargé depuis github.com et vérifié par son empreinte (de 25 à 110 Mo environ selon le système), avant le serveur.\n\nRetirer Blender des connecteurs efface le serveur posé par l'instance. Décochez aussi le module « MCP for Blender » dans Blender (Édition, Préférences, Modules complémentaires) : tant qu'il est coché, il garde un port ouvert sur cette machine, sans mot de passe, chaque fois que Blender tourne."),
   },
   {
+    // Unreal Engine, 16/10/2026 : gateway/src/unreal.ts, unrealRegles.ts, SECURITE.md § 66.
+    id: "unreal",
+    titre: t("Créer dans Unreal Engine avec vos agents"),
+    resume: t("Brancher Unreal Editor, ouvert sur cette machine, par le serveur MCP officiel d'Epic."),
+    motsCles: ["unreal", "unreal engine", "unreal editor", "epic", "jeu", "niveau", "acteur", "blueprint", "mcp"],
+    lien: "/parametres/mcp",
+    corps: t("Unreal Engine se branche dans Réglages, Connecteurs, rubrique « Développement », sur la machine de l'instance. L'instance parle au serveur MCP qu'Epic livre dans l'éditeur depuis Unreal Engine 5.8 (plugin « Unreal MCP », encore expérimental) : rien n'est téléchargé.\n\n- Dans Unreal Editor : Edit, Plugins, activez « Unreal MCP » et « All Toolsets », puis redémarrez l'éditeur.\n- Démarrez son serveur : Edit, Editor Preferences, General, Model Context Protocol, « Auto Start Server » ; ou la commande de console ModelContextProtocol.StartServer. Gardez le port 8000.\n- Cliquez « Brancher ». Avant chaque demande, l'instance vérifie que c'est bien Unreal Editor qui tient ce port ; sinon, rien ne lui est envoyé.\n\nCe que vos agents peuvent faire :\n- lister les jeux d'outils de l'éditeur et lire leur description, sans rien demander (au niveau « Demander pour tout », avec votre accord) ;\n- tout ce que fait un outil de l'éditeur (créer des acteurs, régler la lumière, modifier des matériaux, lancer des tests), seulement après votre accord, à chaque fois, quel que soit le niveau d'approbation, une action à la fois. Seul l'administrateur de l'instance peut l'accepter.\n\nLe serveur de l'éditeur n'a pas de mot de passe : il reste sur cette machine. Travaillez sur une copie d'un projet important, le plugin étant expérimental."),
+  },
+  {
+    // Serveurs MCP ajoutés par l'administrateur, 16/10/2026 : gateway/src/mcpPersoRegles.ts, connecteurs.ts, SECURITE.md § 67.
+    id: "mcp-personnalise",
+    titre: t("Brancher votre propre serveur MCP"),
+    resume: t("Ajouter un serveur MCP écrit par vous ou par votre équipe, pour que vos agents utilisent ses outils."),
+    motsCles: ["mcp", "serveur", "personnalise", "propre", "interne", "programme", "adresse", "outil", "developpeur", "api"],
+    lien: "/parametres/mcp",
+    corps: t("Un serveur MCP donne des outils à vos agents : interroger une base interne, piloter un logiciel maison, appeler une API. Si le vôtre n'est pas dans le catalogue, l'administrateur l'ajoute dans Réglages, Connecteurs, carte « Vos propres serveurs MCP », bouton « Ajouter un serveur MCP ».\n\nDeux façons :\n- Programme de cette machine : le programme et ses arguments, un par ligne, par exemple « node » puis le chemin de votre fichier index.js, ou « python3 », « -m », puis le nom de votre module. Il est lancé sans interpréteur de commandes : sh, bash, cmd, PowerShell, les scripts .sh ou .bat, et le code passé en ligne (node -e, python -c) sont refusés. Mettez une clé ou un jeton dans les variables d'environnement, chiffrées, plutôt que dans les arguments. Le programme ne reçoit aucune autre variable de l'instance. Possible seulement depuis la machine de l'instance, quand elle n'est pas ouverte aux collègues.\n- Adresse : un serveur en https, ou sur cette machine en http://127.0.0.1:port/… S'il demande une autorisation, sa page s'ouvre dans votre navigateur.\n\nUne fois ajouté, chaque outil du serveur demande votre accord avant d'agir. Cochez ceux qui ne font que lire : ils passent alors sans carte au niveau « Demander avant de modifier ». L'ajout, le réglage et le retrait sont inscrits au journal de l'instance.\n\nLes risques : un programme de cette machine agit avec les droits de votre compte, il peut lire et écrire tout ce que vous pouvez toucher ; un serveur à une adresse reçoit ce que vos agents lui envoient. N'ajoutez que du code que vous connaissez, et retirez le serveur quand il ne sert plus : « Retirer » l'arrête, efface ses variables et oublie son autorisation."),
+  },
+  {
     // Brevo et Mailchimp, 28/09/2026 : gateway/src/natifs/projets.ts, SECURITE.md § 48.
     id: "campagnes",
     titre: t("Connecter Brevo ou Mailchimp"),

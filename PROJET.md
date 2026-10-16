@@ -1406,6 +1406,70 @@ qui échoue fermé), son signataire Authenticode exact, l'installation du module
 lui-même au démarrage de Blender (lecture de GitHub, sans la scène), que Helix ne peut pas couper.
 SECURITE.md § 65.
 
+**Blender muet, Unreal Engine, serveurs MCP ajoutés par l'administrateur (16/10/2026).** Trois
+demandes de Medhi du même jour.
+
+*1. Bogue Blender* (capture du Chat de Medhi, système non précisé : « bouge le cube sur blender »,
+plan « Lancer Blender (redemandée) », « Charger le fichier contenant le cube », puis trois
+`get_addon_status` d'1 min 02 chacun, « Il a pu être exécuté quand même », et le modèle concluait
+que le module n'était pas installé). **Cause, mesurée** : Helix vérifiait que le port du module
+était tenu par Blender (signé), pas que le module répondait. Un module dont le port est ouvert mais
+dont le fil principal de Blender ne traite plus rien (fenêtre ou boîte de dialogue ouverte, rendu,
+script, module d'une autre version) accepte la connexion et se tait ; le serveur « MCP for
+Blender » attend jusqu'à 180 s (`server.py` 2.1.9), et ses outils bloquants gèlent sa boucle pour
+les appels suivants : chaque appel tombait sur le délai MCP de Helix, 60 s. Mesuré sur ce Mac contre
+un faux module muet : **60,8 s par appel avant** ; 1 min 02 sous Windows s'explique par PowerShell
+en plus (non vu). Ce qui rendait Blender muet chez Medhi n'est pas connu (pas de Blender ici).
+**Corrigé** : une sonde (`ping`, la commande de vie du module, sans donnée de la scène) après la
+reconnaissance, avant le lancement et chaque appel (`blender.ts`, `sondeBlender`) : **4,0 s
+après**, avec un message traduit qui dit quoi faire (touche N, onglet « MCP for Blender »,
+« Disconnect » puis « Connect to MCP server », libellés réels d'`addon.py` 2.1.9 ; la demande parlait
+de « Start MCP Server », qui n'est pas le libellé de cette version). Le message « il a pu être
+exécuté quand même » n'est plus dit que d'une écriture (`callTool(…, { ecriture })`, d'après
+`modifie`). Le serveur de Blender bloqué est relancé après un délai dépassé, ses appels passent un
+par un. Dans le Chat (`chat.ts`), un service injoignable n'est plus appelé dans la même réponse et
+un appel raté deux fois à l'identique ne part plus (il n'y avait aucune garde pour cela :
+`gardeBoucle.ts` ne surveille que le texte, `repetitionsOutil` que les appels réussis d'un client
+comme OpenCode). Rejoué : trois appels contre un module muet en 1,6 s (sonde à 1,5 s pour
+l'essai). SECURITE.md § 65.7.
+
+*2. Unreal Engine* (`gateway/src/unreal.ts`, `unrealRegles.ts`, rubrique « Développement »). La
+doc d'Epic (« Unreal MCP in Unreal Editor », lue le 16/10/2026) : plugin `ModelContextProtocol`
+(« Unreal MCP », expérimental, UE 5.8), outils fournis par « All Toolsets », serveur dans l'éditeur
+sur `http://127.0.0.1:8000/mcp` (« Server Port Number », « Server URL Path »), Streamable HTTP,
+démarré par « Auto Start Server » (éteint par défaut) ou `ModelContextProtocol.StartServer`, sans
+authentification, outils exécutés un par un sur le fil du jeu ; avec « Enable Tool Search »
+(allumé par défaut), trois méta-outils : `list_toolsets`, `describe_toolset`, `call_tool`. La doc
+ne donne **pas** les noms des outils de chaque jeu ni lesquels modifient. Branché comme Palmier
+Pro (entrée `local`, rien de téléchargé) : écouteur reconnu avant chaque requête (exécutable de
+l'éditeur ; signature valide s'il est signé ; non signé accepté, un éditeur compilé depuis les
+sources ne l'étant pas), `list_toolsets` et `describe_toolset` sans carte, `call_tool` et tout
+autre outil sur carte à chaque appel, administrateur seul (et employés d'une administratrice,
+comme Roblox et Blender), appels en série. États dits : éditeur fermé, ouvert sans serveur, autre
+programme sur le port, aucun jeu d'outils. Icône neutre, pas le logo d'Epic (marque, sans
+accord). Pas à pas et article d'aide. SECURITE.md § 66.
+
+*3. Serveurs MCP ajoutés par l'administrateur.* **Existait** : Helix savait brancher un serveur
+quelconque en stdio (commande libre) ou par adresse (OAuth, faux Linear de `essai-mcp.mjs`),
+mais la commande libre seulement si l'intégrateur règle `connecteursLibres`, et l'écran n'avait
+aucun champ pour cela. **Ajouté** : carte « Vos propres serveurs MCP » (`ServeursPersonnalises.tsx`,
+administrateur seulement), deux modes : « Programme de cette machine » (commande, arguments un par
+ligne, variables chiffrées ; sans interpréteur de commandes ni code en ligne, `mcpPersoRegles.ts` ;
+seulement depuis la machine même d'une instance fermée aux collègues, ou avec `connecteursLibres`)
+et « Adresse » (https avec OAuth si demandé, ou `http://127.0.0.1:port`). Tous les outils sur
+carte, cases « lecture seule » par outil, retrait (processus arrêté, variables et autorisation
+effacées), journal. L'enregistrement est scellé par la clé de l'instance. La règle d'origine
+(« la commande vient du catalogue, jamais de l'écran », § 4) garde sa raison : c'est la personne
+devant sa propre machine qui ajoute, pas un compte à distance. Aide « Brancher votre propre
+serveur MCP ». SECURITE.md § 67.
+
+*Vérifié* : `npm run typecheck` ; `npm run essai:unreal-perso` (42 vérifications, faux Blender,
+faux Unreal Editor en HTTP, faux serveur ajouté) ; `essai:roblox-blender` (50) ; `essai-mcp.mjs`
+(85 avec le réseau, dont l'ajout par adresse avec OAuth) ; sections 46 et 47 de `securite.mjs`
+lancées seules (117) ; six catalogues à 100 %. *Pas vérifié* : aucun Blender, aucun Unreal Engine
+sur la machine de travail, aucun Windows ; la batterie `npm run securite` entière n'a pas tourné
+(mémoire du Mac) ; l'écran n'a pas été regardé dans l'application Electron.
+
 ### 3.6 Découpage des tâches lourdes
 
 Ajouté en septembre 2026, après mesure. Un modèle de 8 milliards de paramètres perd le
@@ -2677,7 +2741,10 @@ réussis le 26/09/2026**.
   cette commande reviendrait à offrir l'exécution de code à distance à quiconque
   atteint la passerelle. Le catalogue est figé dans `gateway/src/connecteurs.ts` ; la
   requête n'apporte que des secrets. Une commande libre n'existe que si le profil de
-  déploiement l'autorise (`connecteursLibres`), et c'est refusé par défaut.
+  déploiement l'autorise (`connecteursLibres`), et c'est refusé par défaut. Exception
+  demandée par Medhi le 16/10/2026 (§ 3.5, SECURITE.md § 67) : l'administrateur, depuis la
+  machine même d'une instance fermée aux collègues, ajoute son propre serveur, sans
+  interpréteur de commandes ni code en ligne ; sur une instance partagée, la règle reste.
 
 ### Ce qui reste ouvert
 
@@ -4214,7 +4281,21 @@ donne le fichier du module ; l'installer dans Blender, « Réessayer ». À voir
 la signature réelle (identifiant `org.blenderfoundation.blender`, équipe `68UA947AUU` sur macOS ;
 « Blender Foundation » en Authenticode sous Windows ; à corriger dans `blender.ts` s'ils diffèrent),
 `get_scene_info` et `look` sans carte, `execute_blender_code` avec carte, Blender fermé puis
-rouvert.
+rouvert. Depuis le 16/10 : ouvrir une fenêtre de dialogue dans Blender (ou lancer un rendu) puis
+demander une lecture dans le Chat : refus en quelques secondes, avec « Disconnect » / « Connect to
+MCP server » ; vérifier que ces libellés sont bien ceux du panneau.
+
+**Unreal Engine (16/10/2026, § 3.5)** : installer Unreal Engine 5.8, ouvrir un projet, activer
+« Unreal MCP » et « All Toolsets », redémarrer, « Auto Start Server », cliquer « Brancher ». À voir :
+la reconnaissance de `UnrealEditor` (signé ou non, sur macOS et Windows), la réponse réelle de
+`list_toolsets` (le conseil « All Toolsets » se fonde sur une liste vide), le schéma de `call_tool`
+(les champs lus pour la carte : `toolset`, `tool`), un `call_tool` qui crée un acteur avec carte,
+deux appels qui ne se chevauchent pas, l'éditeur fermé puis rouvert.
+
+**Serveurs MCP ajoutés (16/10/2026, § 3.5)** : dans l'application, Connecteurs, « Ajouter un
+serveur MCP », un programme (par exemple un serveur MCP écrit en Node) puis une adresse en https
+avec OAuth ; cocher un outil « lecture seule », retirer. Sous Windows : `npx` et un `.exe`
+(un `.cmd` est refusé).
 
 **Parcours à l'écran du 28/09/2026 (2026.928.6)**, interface en serveur de développement
 contre une instance jetable et un faux modèle compatible OpenAI (flux, réflexion, appels

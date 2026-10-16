@@ -907,7 +907,9 @@ fournit que ses identifiants. Vérifié :
 | Ajout sans séance | 401 |
 
 Une commande libre n'est possible que si le profil de déploiement l'autorise
-explicitement (`connecteursLibres`). Par défaut, c'est interdit.
+explicitement (`connecteursLibres`). Par défaut, c'est interdit. Une exception depuis le
+16/10/2026 (§ 67) : l'administrateur, depuis la machine même d'une instance fermée aux collègues,
+ajoute son propre serveur, sans interpréteur de commandes ni code en ligne.
 
 Les secrets d'un connecteur sont chiffrés au repos et passés au processus par
 son **environnement**, jamais en argument : un argument est visible dans la
@@ -6677,3 +6679,120 @@ Windows, l'heure de départ lue par PowerShell, la détection des archives Linux
 machine. Vu tenir : le vrai serveur de Blender 2.1.9 posé par le code de Helix (pip avec
 empreintes, Python 3.14 de ce Mac), sa liste d'outils (9, tous classés), un appel jusqu'à un faux
 module, et l'absence de sortie réseau avec les variables de Helix.
+
+### 65.7 Un module muet (16 octobre 2026)
+
+Bogue vu par Medhi dans le Chat (« bouge le cube sur blender ») : trois `get_addon_status` d'une
+minute chacun, puis « Blender n'a pas répondu à temps (MCP error -32001) … Il a pu être exécuté
+quand même ». **Cause, mesurée** (`essai-unreal-perso.mjs`, et un faux module muet contre
+`mcp.ts`) : Helix ne vérifiait que l'écouteur (le port tenu par Blender, signé), pas que le module
+traite. Un module dont le port est ouvert mais dont le fil principal ne tourne plus (fenêtre ou
+boîte de dialogue ouverte, rendu, script, module d'une autre version) accepte la connexion et ne
+répond jamais ; le serveur « MCP for Blender » attend sa réponse jusqu'à 180 s (`sock.settimeout`
+de `server.py` 2.1.9), et ses outils, asynchrones mais bloquants, gèlent sa boucle : chaque appel
+suivant attend derrière. Le délai MCP de Helix (60 s) coupait donc chaque appel : 60,8 s mesurées
+sur ce Mac par appel, 1 min 02 sous Windows (PowerShell en plus). Le modèle, sans autre consigne,
+recommençait.
+
+**Corrigé** :
+- **Sonde** (`sondeBlender`, `blenderJoignable`) : après la reconnaissance de l'écouteur, avant le
+  lancement et avant chaque appel, `{"type": "ping"}` directement au port (la commande de vie du
+  module, qui ne lit ni ne change la scène), réponse JSON exigée en 4 s. Rien n'est envoyé à un
+  programme non reconnu ; un module plus ancien qui ne connaît pas `ping` répond une erreur, ce qui
+  suffit. Mesuré : refus en 4,0 s au lieu de 60,8 s, avec la marche à suivre (touche N, onglet
+  « MCP for Blender », « Disconnect » puis « Connect to MCP server » : libellés réels de
+  `addon.py` 2.1.9). Reste : un module qui répond au `ping` puis se tait sur une commande.
+- **Délai dépassé** : « il a pu être exécuté quand même » n'est plus dit que d'une écriture
+  (`callTool(…, { ecriture: modifie(nom) })`) ; une lecture dit « rien n'a été modifié ». Le serveur
+  de Blender, bloqué, est arrêté (`relancerApresDelai`) et un neuf part à l'appel suivant ; les
+  appels vers Blender passent un par un (`serie`).
+- **Pas de troisième essai** (`chat.ts`) : un service injoignable (refus avant l'appel, délai
+  dépassé : `injoignable`) n'est plus appelé dans la même réponse ; un appel raté deux fois à
+  l'identique (même outil, mêmes arguments, même erreur) ne part plus. Ni carte, ni appel : le
+  refus redit quoi faire à la personne.
+
+Rejoué par l'essai : trois appels contre un module muet en 1,6 s (sonde réglée à 1,5 s pour
+l'essai), aucune commande arrivée au module.
+
+## 66. Unreal Editor : le serveur MCP officiel d'Epic, en HTTP sur la boucle (16 octobre 2026)
+
+Demande de Medhi. Le plugin `ModelContextProtocol` (« Unreal MCP », expérimental, Unreal Engine
+5.8) d'après https://dev.epicgames.com/documentation/unreal-engine/unreal-mcp-in-unreal-editor (lu
+le 16/10/2026) : serveur MCP dans le processus de l'éditeur, `http://127.0.0.1:8000/mcp` par défaut,
+transport « Streamable HTTP », **sans authentification**, boucle locale seulement, en-tête `Origin`
+non local refusé, outils exécutés un par un sur le fil du jeu. Helix ne télécharge ni ne distribue
+rien ; entrée `local` du catalogue, comme Palmier Pro (§ 63), port 8000 et chemin `/mcp` fixés par
+Helix, jamais reçus d'une requête.
+
+- **Reconnaissance** (`unreal.ts`, avant chaque requête par `fetchLocal`, et avant chaque appel) :
+  le processus qui tient le port (`ecouteurs.ts` : lsof, /proc, PowerShell) doit avoir l'exécutable
+  de l'éditeur (`UnrealEditor.app/Contents/MacOS/UnrealEditor`, `UnrealEditor.exe`,
+  `UnrealEditor`). **Signé, sa signature doit être valide** (`codesign --verify` du processus en
+  cours sur macOS ; Authenticode « Valid » au nom d'Epic Games sous Windows) ; signature invalide ou
+  d'un autre éditeur : refus. **Non signé, accepté sur son nom** : un éditeur compilé depuis les
+  sources d'Epic ne l'est pas. C'est plus faible que pour Blender : un programme local non signé
+  nommé `UnrealEditor`, qui prendrait le port 8000 avant l'éditeur, recevrait les demandes de
+  l'agent (le contenu des appels, pas de secret de Helix) et pourrait renvoyer des résultats
+  piégés. L'équipe Apple d'Epic n'est pas épinglée : jamais relue sur un binaire ici.
+- **Cartes** (`unrealRegles.ts`) : `list_toolsets` et `describe_toolset` (les méta-outils de
+  « Enable Tool Search ») sont des lectures ; `call_tool` exécute n'importe quel outil d'un jeu
+  (acteurs, lumière, matériaux, tests d'automatisation) et la page d'Epic ne donne ni leurs noms ni
+  lesquels modifient : **carte à chaque appel, à tout niveau**, outil et jeu nommés, arguments en
+  entier. Réglage « Tool Search » éteint, chaque outil arrive sous son nom : aucun n'est une lecture
+  reconnue, tous sur carte. Agir : administrateur, ou employé d'une administratrice, vérifié avant la
+  carte et au moment d'agir (`refusApplication`).
+- **Un appel à la fois** (`serie`, mcp.ts) : demandé par Epic ; mesuré par l'essai, deux Chats qui
+  font agir l'éditeur en même temps ne se chevauchent pas.
+- **États dits** : éditeur fermé, ouvert sans serveur (plugin inactif ou serveur non démarré),
+  autre programme sur le port, aucun jeu d'outils (« All Toolsets » manquant).
+- **Pas essayé** : aucun Unreal Engine sur la machine de travail. Pas vus : le vrai plugin, la forme
+  de ses réponses (`list_toolsets` vide ou non, schéma de `call_tool`), sa gestion de session
+  (`Mcp-Session-Id`), la signature réelle de `UnrealEditor` sur macOS et Windows, son comportement
+  quand le fil du jeu est occupé.
+- Variables d'essai : `HELIX_ESSAI_UNREAL_PORT`, `HELIX_ESSAI_UNREAL_EXECUTABLE` (chemin absolu ;
+  jamais en production).
+
+## 67. Serveurs MCP ajoutés par l'administrateur (16 octobre 2026)
+
+Demande de Medhi (« créer son propre MCP »). Existait : la commande libre, seulement si
+l'intégrateur règle `connecteursLibres` (§ 6.1), sans aucun champ à l'écran. Ajouté : la carte
+« Vos propres serveurs MCP » (`ServeursPersonnalises.tsx`), les routes
+`/helix/connecteurs/personnalise` et `…/lectures`, `ajouterPersonnalise` (`connecteurs.ts`) et les
+règles de `mcpPersoRegles.ts`. La règle du § 6.1 tient ; la porte ouverte est étroite :
+
+- **Qui** : l'administrateur seul (403 sinon), jetons en en-têtes seulement (400 si dans
+  l'adresse), journal à l'ajout, au réglage des lectures et au retrait. Retirer ou relancer un
+  serveur ajouté : l'administrateur seul.
+- **Programme de cette machine, ou serveur sur sa boucle** : seulement si la demande vient de la
+  machine même (`depuisCePoste`) **et** que l'instance est fermée aux collègues (ni `share`, ni
+  écoute sur le réseau), ou si l'intégrateur a réglé `connecteursLibres`. C'est la personne assise
+  devant son poste, qui pourrait lancer ce programme elle-même ; sur une instance partagée, un
+  administrateur distant ne fait pas tourner de code sur le serveur par l'écran. Rejugé à chaque
+  démarrage : une instance ouverte depuis ne lance plus ces serveurs (l'écran le dit).
+- **Pas d'interpréteur de commandes** : la commande est lancée sans shell (pas d'expansion, pas de
+  `&&`) ; refusés : sh, bash, zsh, cmd, PowerShell, `env`, `sudo` et semblables, les scripts .sh,
+  .bat, .cmd, .ps1…, le code en ligne (`node -e`, `python -c`, `npx -c`, `npm run`…), un chemin
+  relatif, un programme introuvable. Un nom est cherché dans le PATH et c'est le chemin trouvé qui
+  est enregistré. Un fichier de script ordinaire (`node serveur.js`) est accepté : c'est le code de
+  l'administrateur.
+- **Environnement** : celui, minimal, du SDK (`getDefaultEnvironment` : PATH, HOME, USER…), plus
+  les variables données par l'administrateur, chiffrées au repos et passées par l'environnement,
+  jamais une variable `HELIX_…` ; vérifié par l'essai (le programme ne voit aucune variable de la
+  passerelle). Lancé depuis le dossier personnel.
+- **Adresse** : https (jamais une adresse interne, `adresseServeurPermise`), avec l'autorisation
+  OAuth si le serveur en demande une (même chemin que « Se connecter » : découverte, inscription
+  automatique, PKCE ; essayé contre le faux Linear de `essai-mcp.mjs`) ; ou `http://127.0.0.1:port`
+  sur la machine, avec la même règle que les programmes, et jamais un port de l'instance
+  (passerelle, LM Studio, OpenClaw, Vite, débogueur). Ni identifiant ni mot de passe dans l'adresse.
+- **Écriture par défaut** : tout outil d'un tel serveur est un outil qui modifie (`modifie`) : carte
+  au niveau par défaut. L'administrateur coche ceux qui ne font que lire (registre
+  `definirLecturesPerso`, qui ne répond que pour ces serveurs ; un nom que le serveur n'annonce pas
+  est ignoré).
+- **Enregistrement scellé** : commande, arguments, adresse et lectures sont chiffrés par la clé de
+  l'instance, à la place du connecteur (`chiffrer`, place `connecteurs#<id>#personnalise`, forme
+  liée exigée par `estChiffreLie`). Une ligne glissée dans le magasin par qui n'a pas la clé (l'hôte
+  PostgreSQL, § 3) ne se déchiffre pas : jamais lancée. Sans chiffrement actif, l'ajout est refusé.
+- **Reste** : l'administrateur peut lancer le programme qu'il veut, avec les droits du compte qui
+  fait tourner Helix ; c'est l'objet même de la fonction, dit à l'écran et dans l'aide. Les
+  arguments sont écrits au journal (une clé y serait lisible : l'aide dit de la mettre dans une
+  variable).

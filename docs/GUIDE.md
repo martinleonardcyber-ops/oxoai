@@ -571,6 +571,32 @@ d'une requête). Lignes « Roblox Studio » (rubrique « Développement », macO
 
 Essai : `npm run essai:roblox-blender` (repris par `npm run securite`, section 46).
 
+Depuis le 16/10/2026, Blender doit aussi **répondre** : avant le lancement et avant chaque appel,
+l'instance envoie au module son signal de vie (`ping`, qui ne touche pas à la scène). Un module
+muet (port ouvert, Blender occupé par une fenêtre, un rendu, un script) est dit en quelques
+secondes, avec la marche à suivre (touche N, onglet « MCP for Blender », « Disconnect » puis
+« Connect to MCP server »), au lieu d'attendre la minute du délai MCP. Un appel abandonné pour
+délai ne dit « il a pu être exécuté » que d'une écriture ; un service injoignable n'est plus appelé
+dans la même réponse, ni un appel raté deux fois à l'identique.
+
+**Unreal Engine** (16/10/2026, `gateway/src/unreal.ts`, `unrealRegles.ts`) : le serveur MCP
+officiel d'Epic, dans l'éditeur (plugin « Unreal MCP », Unreal Engine 5.8, expérimental), en HTTP
+sur `http://127.0.0.1:8000/mcp`. Ligne « Unreal Engine » (rubrique « Développement »), bouton
+« Brancher ». Dans l'éditeur : plugins « Unreal MCP » et « All Toolsets », redémarrage, puis
+« Auto Start Server » (Editor Preferences, General, Model Context Protocol) ou
+`ModelContextProtocol.StartServer`. Le programme qui tient le port doit être l'exécutable de
+l'éditeur (signature valide s'il est signé) ; `list_toolsets` et `describe_toolset` sans carte,
+`call_tool` sur carte à chaque appel, administrateur seul, un appel à la fois. SECURITE.md § 66.
+
+**Vos propres serveurs MCP** (16/10/2026, `gateway/src/mcpPersoRegles.ts`, `connecteurs.ts`,
+`ServeursPersonnalises.tsx`) : carte « Vos propres serveurs MCP » de l'écran des connecteurs,
+administrateur seulement. « Programme de cette machine » (commande et arguments, lancés sans
+interpréteur de commandes, variables chiffrées ; seulement depuis la machine d'une instance fermée
+aux collègues, ou avec `connecteursLibres`) ou « Adresse » (https, avec l'autorisation OAuth si le
+serveur en demande une, ou `http://127.0.0.1:port/…`). Tous ses outils sur carte, sauf ceux que
+l'administrateur coche « lecture seule ». Aide : « Brancher votre propre serveur MCP ».
+SECURITE.md § 67. Essai : `npm run essai:unreal-perso` (section 47 de `npm run securite`).
+
 Pour Gmail et Google Agenda, il faut un **mot de passe d'application** Google,
 pas le mot de passe habituel : le formulaire l'indique et pré-remplit le serveur
 d'après le domaine de l'adresse. Une boîte Workspace ou Microsoft 365 se branche aussi
@@ -1004,6 +1030,7 @@ npm run essai:cli         # la ligne de commande (-- --modele : avec LM Studio)
 npm run essai:vscode      # l'extension VS Code, avec un faux module vscode (-- --modele : avec LM Studio)
 npm run essai:palmier     # le connecteur Palmier Pro, contre un faux Palmier Pro
 npm run essai:roblox-blender  # Roblox Studio et Blender, contre des faux serveurs stdio et un faux module de Blender
+npm run essai:unreal-perso    # Blender muet, Unreal Editor (faux éditeur) et serveurs MCP ajoutés par l'administrateur
 ```
 
 ## Rebrander pour un nouveau client
@@ -1121,6 +1148,9 @@ Modules ajoutés ou changés le 29/09/2026 (`gateway/src/`) :
 | `palmierRegles.ts` | Palmier Pro : lectures sans carte, écritures et générations sur carte, ce qui sort de la machine |
 | `roblox.ts`, `robloxRegles.ts` | Roblox Studio : commande du serveur MCP de Studio, signature vérifiée sur macOS ; lectures sans carte, le reste sur carte |
 | `blender.ts`, `blenderRegles.ts`, `blender-paquets.json` | Blender : serveur « MCP for Blender » posé avec ses empreintes, télémétrie coupée, reconnaissance de Blender sur le port du module ; lectures sans carte, le reste sur carte |
+| `ecouteurs.ts` | Qui écoute sur un port de la boucle (lsof, /proc, PowerShell et Authenticode), pour Blender et Unreal Editor |
+| `unreal.ts`, `unrealRegles.ts` | Unreal Editor : reconnaissance de l'éditeur sur le port de son serveur MCP ; listes de jeux d'outils sans carte, `call_tool` sur carte |
+| `mcpPersoRegles.ts` | Serveur MCP ajouté par l'administrateur : commande sans interpréteur de commandes ni code en ligne, adresse en https ou sur la boucle, variables |
 | `oauthNatif.ts`, `outilsNatifs.ts` | Seconde application LinkedIn (`linkedinPage`) et outils de page aiguillés vers ses jetons |
 | `mcp.ts` | `adresseServeurPermise` : aucune adresse locale hors d'une entrée `local` du catalogue |
 | `modelesCloud.ts` | `abreger` : refus d'un fournisseur abrégé pour l'écran, clé masquée comprise |

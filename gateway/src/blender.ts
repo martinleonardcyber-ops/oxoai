@@ -1,12 +1,14 @@
 import { createHash } from "node:crypto";
 import { execFile } from "node:child_process";
-import { copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, readlinkSync, realpathSync, rmSync, writeFileSync } from "node:fs";
+import { copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { connect } from "node:net";
 import { homedir } from "node:os";
 import { basename, delimiter, isAbsolute, join } from "node:path";
 import { promisify } from "node:util";
 import paquets from "./blender-paquets.json" with { type: "json" };
 import { t, tf } from "./langue.ts";
 import { assurerPythonPrive, pythonPrive, taillePythonPriveMo } from "./pythonPrive.ts";
+import { ecouteurs, executableParLsof, identite, reel, type Ecouteur } from "./ecouteurs.ts";
 
 /**
  * Blender, par le serveur MCP « MCP for Blender » (12/10/2026, demande de
@@ -153,151 +155,17 @@ export function blenderInstalle(): string | null {
 /* L'écouteur du module complémentaire                                  */
 /* ------------------------------------------------------------------ */
 
-export type VerdictBlender = { ok: true; pid: number } | { ok: false; raison: "absent" | "autre" | "illisible"; message: string };
+export type VerdictBlender = { ok: true; pid: number } | { ok: false; raison: "absent" | "autre" | "illisible" | "muet"; message: string };
 
 /**
  * Les processus déjà reconnus, par numéro, avec leur identité (numéro,
  * exécutable, heure de départ) : un numéro réattribué à un autre programme
  * après la fermeture de Blender n'hérite pas de la reconnaissance (relecture
  * du 12/10/2026). Sans identité lisible, rien n'est gardé : la signature est
- * relue à chaque fois.
+ * relue à chaque fois. La lecture des écouteurs est dans ecouteurs.ts (sortie
+ * d'ici le 16/10/2026 pour Unreal Editor).
  */
 const reconnus = new Map<number, string>();
-
-interface Ecouteur {
-  pid: number;
-  /** Chemin de l'exécutable, quand le système le donne. */
-  exe: string | null;
-  /** Windows : la signature Authenticode, lue par PowerShell. */
-  signature?: { statut: string; sujet: string };
-  /** Windows : l'heure de départ du processus, lue par PowerShell. */
-  debut?: string;
-}
-
-/** Numéro, exécutable et heure de départ du processus ; `null` si le système ne les donne pas. */
-async function identite(e: Ecouteur): Promise<string | null> {
-  try {
-    if (process.platform === "win32") return e.exe && e.debut ? `${e.pid}|${e.exe}|${e.debut}` : null;
-    if (process.platform === "linux") {
-      const stat = readFileSync(`/proc/${e.pid}/stat`, "utf8");
-      const champs = stat.slice(stat.lastIndexOf(")") + 2).split(" ");
-      const exe = e.exe ?? readlinkSync(`/proc/${e.pid}/exe`);
-      return champs[19] ? `${e.pid}|${exe}|${champs[19]}` : null;
-    }
-    const { stdout } = await executer("/bin/ps", ["-o", "lstart=", "-o", "comm=", "-p", String(e.pid)], { timeout: 15_000 });
-    const ligne = stdout.trim();
-    return ligne ? `${e.pid}|${ligne}` : null;
-  } catch {
-    return null;
-  }
-}
-
-/** macOS : `lsof`, comme palmier.ts. */
-async function ecouteursMac(port: number): Promise<Ecouteur[]> {
-  let stdout = "";
-  try {
-    ({ stdout } = await executer("/usr/sbin/lsof", ["-nP", "-a", `-iTCP:${port}`, "-sTCP:LISTEN", "-t"], { timeout: 15_000 }));
-  } catch (err) {
-    const e = err as { code?: unknown; stdout?: string };
-    if (e.code === 1 && !String(e.stdout ?? "").trim()) return [];
-    throw err;
-  }
-  return stdout.split("\n").map(Number).filter((n) => Number.isInteger(n) && n > 0).map((pid) => ({ pid, exe: null }));
-}
-
-/**
- * Linux : sans `lsof` (absent des installations minimales), par /proc : les
- * sockets à l'écoute sur le port (`/proc/net/tcp`, état 0A), puis le processus
- * qui tient chacune (`/proc/<pid>/fd`). Une socket dont on ne trouve pas le
- * processus (un autre compte) rend la réponse illisible : refus.
- */
-async function ecouteursLinux(port: number): Promise<Ecouteur[]> {
-  const inodes = new Set<string>();
-  const portHex = port.toString(16).toUpperCase().padStart(4, "0");
-  for (const f of ["/proc/net/tcp", "/proc/net/tcp6"]) {
-    let texte = "";
-    try {
-      texte = readFileSync(f, "utf8");
-    } catch {
-      continue;
-    }
-    for (const ligne of texte.split("\n").slice(1)) {
-      const champs = ligne.trim().split(/\s+/);
-      if (champs.length < 10) continue;
-      if (champs[1]!.split(":")[1] === portHex && champs[3] === "0A") inodes.add(champs[9]!);
-    }
-  }
-  if (inodes.size === 0) return [];
-  const trouves: Ecouteur[] = [];
-  const restants = new Set(inodes);
-  for (const d of readdirSync("/proc")) {
-    if (!/^\d+$/.test(d)) continue;
-    let fds: string[] = [];
-    try {
-      fds = readdirSync(`/proc/${d}/fd`);
-    } catch {
-      continue;
-    }
-    for (const fd of fds) {
-      let lien = "";
-      try {
-        lien = readlinkSync(`/proc/${d}/fd/${fd}`);
-      } catch {
-        continue;
-      }
-      const m = /^socket:\[(\d+)\]$/.exec(lien);
-      if (m && restants.has(m[1]!)) {
-        restants.delete(m[1]!);
-        let exe: string | null = null;
-        try {
-          exe = readlinkSync(`/proc/${d}/exe`);
-        } catch {
-          exe = null;
-        }
-        if (!trouves.some((e) => e.pid === Number(d))) trouves.push({ pid: Number(d), exe });
-      }
-    }
-  }
-  if (restants.size > 0) throw new Error("socket sans processus lisible");
-  return trouves;
-}
-
-/** Windows : PowerShell, le processus à l'écoute, son chemin et sa signature Authenticode. */
-async function ecouteursWindows(port: number): Promise<Ecouteur[]> {
-  const script =
-    `$r = @(Get-NetTCPConnection -LocalPort ${port} -State Listen -ErrorAction SilentlyContinue | ForEach-Object { ` +
-    `$p = Get-Process -Id $_.OwningProcess -ErrorAction SilentlyContinue; $s = $null; ` +
-    `if ($p -and $p.Path) { $s = Get-AuthenticodeSignature -LiteralPath $p.Path }; ` +
-    `$d = $null; if ($p) { try { $d = [string]$p.StartTime.ToFileTimeUtc() } catch { } }; ` +
-    `[pscustomobject]@{ pid = [int]$_.OwningProcess; exe = [string]$p.Path; statut = [string]$s.Status; sujet = [string]$s.SignerCertificate.Subject; debut = [string]$d } }); ` +
-    `ConvertTo-Json -InputObject $r -Compress`;
-  const powershell = join(process.env.SystemRoot ?? "C:\\Windows", "System32", "WindowsPowerShell", "v1.0", "powershell.exe");
-  const { stdout } = await executer(powershell, ["-NoProfile", "-NonInteractive", "-Command", script], { timeout: 30_000, windowsHide: true });
-  type Brut = { pid: number; exe: string; statut: string; sujet: string; debut?: string };
-  const brut = JSON.parse(stdout.trim() || "[]") as Brut[] | Brut;
-  return (Array.isArray(brut) ? brut : [brut]).map((e) => ({ pid: e.pid, exe: e.exe || null, signature: { statut: e.statut, sujet: e.sujet }, ...(e.debut ? { debut: e.debut } : {}) }));
-}
-
-async function ecouteurs(port: number): Promise<Ecouteur[]> {
-  if (process.platform === "darwin") return ecouteursMac(port);
-  if (process.platform === "win32") return ecouteursWindows(port);
-  return ecouteursLinux(port);
-}
-
-const reel = (chemin: string): string => {
-  try {
-    return realpathSync(chemin);
-  } catch {
-    return chemin;
-  }
-};
-
-/** L'exécutable d'un processus, lu par `lsof` (essais sur macOS). */
-async function executableParLsof(pid: number): Promise<string | null> {
-  const { stdout } = await executer("/usr/sbin/lsof", ["-nP", "-a", "-p", String(pid), "-d", "txt", "-Fn"], { timeout: 15_000 });
-  const ligne = stdout.split("\n").find((l) => l.startsWith("n"));
-  return ligne ? ligne.slice(1) : null;
-}
 
 /** Ce processus est-il Blender ? Son exécutable si oui, `null` sinon. */
 async function estBlender(e: Ecouteur): Promise<string | null> {
@@ -339,7 +207,8 @@ export async function ecouteurBlender(port = portBlender()): Promise<VerdictBlen
     if (!blenderInstalle() && !executableEssai()) {
       return { ok: false, raison: "absent", message: tf("Blender ne répond pas sur le port de son module MCP ({0}), et il n'a pas été trouvé à ses emplacements habituels. S'il n'est pas installé, installez-le depuis {1} ; sinon, ouvrez-le et vérifiez que le module « MCP for Blender » est installé et coché (Édition, Préférences, Modules complémentaires). Puis réessayez.", port, TELECHARGEMENT_BLENDER) };
     }
-    return { ok: false, raison: "absent", message: tf("Blender ne répond pas sur le port de son module MCP ({0}). Ouvrez Blender et vérifiez que le module « MCP for Blender » est installé et coché (Édition, Préférences, Modules complémentaires) : il démarre son serveur avec Blender. Puis réessayez.", port) };
+    // 16/10/2026 : le bouton du panneau, dit par son nom réel (« Connect to MCP server », addon.py 2.1.9), quand le démarrage automatique a été coupé.
+    return { ok: false, raison: "absent", message: tf("Blender ne répond pas sur le port de son module MCP ({0}). Ouvrez Blender et vérifiez que le module « MCP for Blender » est installé et coché (Édition, Préférences, Modules complémentaires). Il démarre son serveur avec Blender ; sinon, dans la vue 3D, touche N, onglet « MCP for Blender », cliquez « Connect to MCP server ». Puis réessayez.", port) };
   }
   for (const e of liste) {
     const qui = await identite(e);
@@ -352,6 +221,75 @@ export async function ecouteurBlender(port = portBlender()): Promise<VerdictBlen
     if (qui) reconnus.set(e.pid, qui);
   }
   return { ok: true, pid: liste[0]!.pid };
+}
+
+/**
+ * Délai de la sonde (16/10/2026). Le module traite chaque commande sur le fil
+ * principal de Blender, par une minuterie de 50 ms (`_drain_command_queue`,
+ * addon.py 2.1.9) : un module qui marche répond à `ping` en quelques
+ * dizaines de millisecondes. Réglable pour les essais.
+ */
+const DELAI_SONDE_MS = Number(process.env.HELIX_ESSAI_BLENDER_SONDE_MS) > 0 ? Number(process.env.HELIX_ESSAI_BLENDER_SONDE_MS) : 4_000;
+
+/**
+ * Le module répond-il ? (16/10/2026, bogue signalé par Medhi : « bouge le
+ * cube sur blender », trois `get_addon_status` d'une minute chacun.)
+ *
+ * Mesuré le 16/10/2026 (faux module muet, port ouvert sans réponse) : Helix
+ * reconnaissait Blender sur le port, lançait l'appel, et le serveur « MCP for
+ * Blender » attendait la réponse du module jusqu'à 180 s (`sock.settimeout`
+ * de server.py), bien après les 60 s du délai MCP de Helix. D'où 60,8 s par
+ * appel sur ce Mac, et 1 min 02 sous Windows, où PowerShell s'ajoute. Un
+ * module muet, c'est un port ouvert par Blender dont le fil principal ne
+ * traite plus rien : une boîte de dialogue ou une fenêtre de fichier ouverte,
+ * un rendu, un script en cours, ou un module d'une autre version.
+ *
+ * La sonde envoie `ping` (la commande de vie du module, qui ne touche à aucune
+ * donnée de la scène) directement au port, **après** la reconnaissance de
+ * Blender, et attend une réponse JSON quelconque : un module plus ancien qui
+ * ne connaît pas `ping` répond une erreur, ce qui prouve aussi qu'il traite.
+ */
+export function sondeBlender(port = portBlender(), delai = DELAI_SONDE_MS): Promise<boolean> {
+  return new Promise((fin) => {
+    let recu = "";
+    let fini = false;
+    const finir = (ok: boolean) => {
+      if (fini) return;
+      fini = true;
+      clearTimeout(minuterie);
+      socket.destroy();
+      fin(ok);
+    };
+    const socket = connect({ host: "127.0.0.1", port }, () => socket.write(JSON.stringify({ type: "ping", params: {} })));
+    const minuterie = setTimeout(() => finir(false), delai);
+    socket.on("data", (morceau) => {
+      recu += morceau.toString("utf8");
+      try {
+        JSON.parse(recu);
+        finir(true);
+      } catch {
+        /* réponse incomplète */
+      }
+    });
+    socket.on("error", () => finir(false));
+    socket.on("close", () => finir(false));
+  });
+}
+
+/** Le message d'un module muet, dans la langue de qui lit. */
+export const messageBlenderMuet = (port = portBlender()): string =>
+  tf(
+    "Blender a ouvert le port de son module MCP ({0}), mais le module ne répond pas, pas même au simple signal de vie : la demande ne lui a pas été envoyée. Blender est sans doute occupé : fermez la fenêtre ou la boîte de dialogue ouverte dans Blender, ou attendez la fin d'un rendu ou d'un script. Si cela continue, dans la vue 3D, touche N, onglet « MCP for Blender », cliquez « Disconnect » puis « Connect to MCP server ». En dernier recours, décochez puis recochez le module (Édition, Préférences, Modules complémentaires), en installant le fichier {1}. Puis réessayez.",
+    port,
+    fichierModuleBlender(),
+  );
+
+/** L'écouteur est-il Blender, et son module répond-il ? Une seule question pour le lancement et pour chaque appel. */
+export async function blenderJoignable(port = portBlender()): Promise<VerdictBlender> {
+  const v = await ecouteurBlender(port);
+  if (!v.ok) return v;
+  if (await sondeBlender(port)) return v;
+  return { ok: false, raison: "muet", message: messageBlenderMuet(port) };
 }
 
 /* ------------------------------------------------------------------ */
@@ -513,14 +451,20 @@ export function envBlender(): Record<string, string> {
   };
 }
 
-/** Avant de lancer le serveur, et avant chaque appel : `null` si tout va, sinon la raison, dans la langue de qui lit. */
 /** Le dernier verdict, ou celui qui se calcule, pour que l'écran ne relance pas PowerShell à chaque rafraîchissement. */
 let dernierVerdict: { quand: number; verdict: Promise<string | null> } | null = null;
 
+/**
+ * Avant de lancer le serveur, et avant chaque appel : `null` si tout va, sinon
+ * la raison, dans la langue de qui lit. Depuis le 16/10/2026, le module doit
+ * aussi **répondre** (`sondeBlender`) : un module muet faisait attendre chaque
+ * appel une minute (mesuré : 60,8 s ; avec la sonde, le refus arrive en
+ * quelques secondes, et rien n'est envoyé au serveur de Blender).
+ */
 export function refusBlender(): Promise<string | null> {
   const verdict = (async () => {
     if (!serveurBlenderInstalle()) return t("Le serveur MCP de Blender n'est pas installé sur cette machine : cliquez « Brancher » dans Connecteurs.");
-    const v = await ecouteurBlender();
+    const v = await blenderJoignable();
     return v.ok ? null : v.message;
   })();
   dernierVerdict = { quand: Date.now(), verdict };

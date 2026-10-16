@@ -192,7 +192,10 @@ toujours actif au palier « Libre » passent par PowerShell.
   monter sur sa timeline tant qu'il est ouvert sur le Mac de l'instance. Roblox Studio (macOS,
   Windows) et Blender (macOS, Windows, Linux) laissent les agents lire et construire une place ou
   une scène 3D ouverte sur la machine de l'instance ; exécuter du code, modifier et générer
-  demandent toujours votre accord.
+  demandent toujours votre accord. Unreal Engine (5.8 ou plus récent) se branche par le serveur MCP
+  qu'Epic livre dans l'éditeur, une action à la fois, chacune sur accord. L'administrateur peut aussi
+  ajouter son propre serveur MCP, programme de la machine ou adresse : chacun de ses outils demande
+  l'accord, sauf ceux qu'il marque en lecture seule.
 - **Tâches programmées** : une consigne et un rythme (chaque jour, du lundi au vendredi, un jour
   de la semaine ou du mois), exécutée avec vos outils, même fenêtre fermée, par l'agent de votre
   choix.

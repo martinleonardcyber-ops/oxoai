@@ -892,6 +892,25 @@ try {
   const ret = await api(passerelle, "/helix/connecteurs/retirer", { id: "linear" });
   const apres = await api(passerelle, "/helix/connecteurs");
   verifier("retiré : plus dans la liste, plus d'outil proposé", ret.ok && !(apres.installes ?? []).some((c) => c.id === "linear"), ret);
+
+  /*
+   * Le même serveur, ajouté par l'administratrice à son adresse (16/10/2026,
+   * « Ajouter un serveur MCP », mode « Adresse ») : l'autorisation passe par le
+   * même chemin que « Se connecter », puis ses outils demandent l'accord.
+   */
+  const perso = await api(passerelle, "/helix/connecteurs/personnalise", { mode: "adresse", id: "suivi-maison", label: "Suivi maison", url: RESSOURCE });
+  const adressePerso = perso.adresse ? new URL(perso.adresse) : null;
+  verifier("serveur ajouté par adresse, qui demande une autorisation : la page d'autorisation est rendue, PKCE S256", perso.statut === 200 && adressePerso?.origin === EMETTEUR && adressePerso.searchParams.get("code_challenge_method") === "S256", JSON.stringify(perso).slice(0, 400));
+  if (adressePerso) {
+    const accordPerso = await fetch(`http://127.0.0.1:${PORT_FAUX}${adressePerso.pathname}${adressePerso.search}`, { headers: { "x-hote": "auth.essai.example" }, redirect: "manual" });
+    const pagePerso = await fetch(accordPerso.headers.get("location"));
+    const instPerso = ((await api(passerelle, "/helix/connecteurs")).installes ?? []).find((c) => c.id === "suivi-maison");
+    verifier("après l'accord : en marche, son outil listé, rangé parmi les serveurs ajoutés, l'adresse montrée à l'administratrice", pagePerso.status === 200 && instPerso?.running && instPerso.toolCount === 1 && instPerso.personnalise?.mode === "adresse" && instPerso.personnalise.cible === RESSOURCE, instPerso);
+    const cPerso = await chat(passerelle, [["suivi-maison__get_issue", { id: "LIN-P" }]]);
+    verifier("dans un Chat : son outil demande l'accord (écriture par défaut), accepté, il répond par le jeton", cPerso.cartes.some((c) => c.detail?.outil === "suivi-maison__get_issue") && cPerso.fins[0]?.ok && /REPERE-LINEAR/.test(cPerso.texte), `${JSON.stringify(cPerso.fins)} ${cPerso.texte.slice(0, 200)}`);
+    const retPerso = await api(passerelle, "/helix/connecteurs/retirer", { id: "suivi-maison" });
+    verifier("retiré : plus dans la liste", retPerso.ok && !((await api(passerelle, "/helix/connecteurs")).installes ?? []).some((c) => c.id === "suivi-maison"), retPerso);
+  }
 } catch (err) {
   verifier("partie C sans exception", false, err?.stack ?? String(err));
 }

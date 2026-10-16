@@ -1621,6 +1621,20 @@ export async function handleChatRequest(
   let documentEnregistre = false;
   /** Fichiers lus, écrits, et écrits avec une erreur de syntaxe pendant cette demande (petitsModeles.ts). */
   const fichiersSuivis = petits.nouveauSuivi();
+  /*
+   * Ce qui a déjà échoué dans cette demande (16/10/2026, bogue signalé par
+   * Medhi : « bouge le cube sur blender », trois `get_addon_status` d'une
+   * minute chacun, à l'étape, à sa reprise puis à son contrôle). Deux
+   * mémoires, refermées avec la demande :
+   *  - les serveurs injoignables (application fermée, module muet, délai
+   *    dépassé : `injoignable`, mcp.ts) : plus aucun de leurs outils ne part
+   *    dans cette réponse, avec un refus qui redit quoi faire ;
+   *  - les appels ratés à l'identique (même outil, mêmes arguments, même
+   *    erreur) : au deuxième échec, le résultat le dit, et l'appel n'est plus
+   *    relancé dans cette réponse.
+   */
+  const injoignables = new Map<string, string>();
+  const echecsIdentiques = new Map<string, { fois: number; message: string }>();
   let relancesSyntaxe = 0;
   let erreursDites = false;
   /** La demande veut qu'on produise ou change quelque chose : sert à relancer un petit modèle qui montre le code au lieu de l'écrire. */
@@ -1935,7 +1949,21 @@ export async function handleChatRequest(
         const recopie =
           recherche && call.lisible && propose && petits.appelsLus(fil, nomsProposes).has(petits.empreinteAppel({ name: call.name, args: call.canonique }));
         if (recopie) console.log(`[chat] appel de ${model.id} recopié d'un contenu lu (${call.name}) : non lancé.`);
-        const verdict = recopie
+        // Déjà vu échouer dans cette demande (voir `injoignables`) : ni carte, ni appel.
+        const serveurAppel = call.name.includes("__") ? call.name.slice(0, call.name.indexOf("__")) : "";
+        const signatureAppel = `${call.name}:${call.canonique}`;
+        const injoignableAvant = serveurAppel ? injoignables.get(serveurAppel) : undefined;
+        const rateAvant = echecsIdentiques.get(signatureAppel);
+        const dejaRate =
+          propose && injoignableAvant !== undefined
+            ? `Refusé sans rien envoyer : ce service n'est pas joignable, c'est déjà constaté plus tôt dans cette réponse. ${injoignableAvant}`
+            : propose && rateAvant && rateAvant.fois >= 2
+              ? `Refusé : cet appel a déjà échoué deux fois à l'identique dans cette réponse (« ${rateAvant.message} »). Il n'est pas relancé. Explique à l'utilisateur ce qui bloque, ou fais autrement.`
+              : null;
+        if (dejaRate) console.log(`[chat] ${call.name} non relancé : déjà en échec dans cette demande.`);
+        const verdict = dejaRate
+          ? ({ autorise: false, message: dejaRate } as approbation.Verdict)
+          : recopie
           ? ({
               autorise: false,
               message:
@@ -1992,6 +2020,18 @@ export async function handleChatRequest(
                   ...(await executerOutil(call.name, args, qui ? { userId: qui, groupes: await groupesDe(qui) } : undefined)),
                   capture: undefined,
                 };
+
+        // Les échecs de cette demande, pour ne pas les relancer (voir `injoignables`, 16/10/2026).
+        if (propose && call.lisible && verdict.autorise) {
+          if (outcome.ok) echecsIdentiques.delete(signatureAppel);
+          else {
+            const message = outcome.content.slice(0, 300);
+            const fois = (rateAvant && rateAvant.message === message ? rateAvant.fois : 0) + 1;
+            echecsIdentiques.set(signatureAppel, { fois, message });
+            if (fois >= 2) outcome.content += "\n[Note de l'instance : cet appel vient d'échouer deux fois de suite à l'identique. Il ne sera plus lancé dans cette réponse : explique à l'utilisateur ce qui bloque.]";
+          }
+          if ((outcome as { injoignable?: true }).injoignable && serveurAppel) injoignables.set(serveurAppel, outcome.content.slice(0, 900));
+        }
 
         /*
          * Contrôle de ce qui vient d'être écrit, pour tout modèle (petitsModeles.ts,

@@ -41,6 +41,7 @@ import {
 import type { CleMarquePetite } from "@/components/ui/marques";
 import { AideMcpProjet } from "@/components/settings/ConnecteurProjets";
 import { GuideApplication } from "@/components/settings/GuideApplication";
+import { ServeursPersonnalises } from "@/components/settings/ServeursPersonnalises";
 import { guideApplication, guideApplicationLocale } from "@/lib/guidesApplications";
 import { branding } from "@/config/branding";
 import { cn } from "@/lib/cn";
@@ -64,12 +65,15 @@ import { t, tf } from "@/lib/i18n";
  *    sans navigateur ni jeton ; l'instance reconnaît l'application avant de
  *    lui parler, et l'écran dit quoi faire quand elle est fermée.
  *
- * Ce que l'écran ne propose pas compte autant : il n'y a **aucun champ de
- * commande**. Un serveur MCP local est un programme exécuté sur la machine de
- * l'entreprise ; laisser l'interface le choisir reviendrait à offrir
- * l'exécution de code à distance à quiconque atteint la passerelle. La
- * commande vient du catalogue de l'instance, la personne n'apporte que ses
- * identifiants.
+ * Ce que l'écran ne propose pas compte autant : pour un service du
+ * catalogue, il n'y a **aucun champ de commande**. Un serveur MCP local est un
+ * programme exécuté sur la machine de l'entreprise ; laisser l'interface le
+ * choisir reviendrait à offrir l'exécution de code à distance à quiconque
+ * atteint la passerelle. La commande vient du catalogue de l'instance, la
+ * personne n'apporte que ses identifiants. Depuis le 16/10/2026, une seule
+ * exception, plus bas (ServeursPersonnalises.tsx) : l'administrateur, depuis
+ * la machine même d'une instance fermée aux collègues, ajoute son propre
+ * serveur ; c'est l'instance qui juge et qui refuse.
  */
 
 /** Date d'ajout, dite comme on la dirait à l'oral. */
@@ -795,7 +799,8 @@ export function Connecteurs({ maison = [] }: { maison?: ServiceMaison[] } = {}) 
           facilement pour autant.
         */}
         {etat.installes
-          .filter((c) => !etat.catalogue.some((e) => e.id === c.id))
+          // Les serveurs ajoutés par l'administrateur ont leur propre carte, plus bas (16/10/2026).
+          .filter((c) => !etat.catalogue.some((e) => e.id === c.id) && !c.personnalise)
           .map((c) => (
             <div key={c.id} className="mt-2 rounded-xl border border-border">
               <div className="flex flex-wrap items-center gap-3 p-3.5">
@@ -826,12 +831,14 @@ export function Connecteurs({ maison = [] }: { maison?: ServiceMaison[] } = {}) 
           ))}
       </Card>
 
+      <ServeursPersonnalises etat={etat} surEtat={setEtat} surChangement={signalerAuxServeurs} />
+
       <InfoBox className="mt-4" leading={<Lock size={15} strokeWidth={1.75} />}>
         {/* Une troisième façon depuis le 29/09/2026 (Palmier Pro), dite seulement là où elle est proposée. */}
         {etat.catalogue.some((e) => e.local || e.lanceur)
           ? t("Trois façons de brancher, et aucune ne passe par un tiers.")
           : t("Deux façons de brancher, et aucune ne passe par un tiers.")}{" "}
-        <strong className="font-medium">{t("Se connecter")}</strong>{" "}{t("vous envoie chez le service, qui vous demande votre accord ; le jeton revient chiffré dans l'instance et n'en sort plus.")}{" "}<strong className="font-medium">{t("Par jeton")}</strong>{" "}{tf("lance un serveur sur la machine de l'instance : {0} ne lance que les commandes de son catalogue, jamais une commande venue de cet écran, et le jeton est transmis par l'environnement, sans jamais apparaître dans la liste des processus.", branding.name)}
+        <strong className="font-medium">{t("Se connecter")}</strong>{" "}{t("vous envoie chez le service, qui vous demande votre accord ; le jeton revient chiffré dans l'instance et n'en sort plus.")}{" "}<strong className="font-medium">{t("Par jeton")}</strong>{" "}{tf("lance un serveur sur la machine de l'instance : {0} ne lance que la commande de son catalogue, jamais une commande venue de ce formulaire, et le jeton est transmis par l'environnement, sans jamais apparaître dans la liste des processus.", branding.name)}
         {etat.catalogue.some((e) => e.local || e.lanceur) && (
           <>
             {" "}
