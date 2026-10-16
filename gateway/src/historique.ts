@@ -44,6 +44,13 @@ export interface Ajustement {
   question: number;
   /** Le dernier résultat d'outil, trop grand à lui seul, a été coupé (16/10/2026). */
   dernierCoupe: boolean;
+  /**
+   * Ce qui est sorti de la place, tel quel, pour la mémoire de la conversation
+   * (memoireConversation.ts, 16/10/2026) : les messages retirés du début, et
+   * les résultats d'outils avant qu'ils ne soient abrégés.
+   */
+  partis: unknown[];
+  resultatsAbreges: { outil: string; contenu: string }[];
 }
 
 /** Ce que la conversation peut occuper : la taille chargée moins la réponse, la marge et les outils. */
@@ -67,9 +74,17 @@ const NOTE_RESULTAT = "[Résultat plus ancien retiré faute de place dans la con
  *   sont elles aussi des messages `user`, qui feraient passer la vraie
  *   question pour ancienne. Seuls les résultats d'outils y sont alors abrégés.
  */
-export function tenirDansLaPlace(messages: unknown[], budget: number, question = indexDeLaQuestion(messages)): Ajustement {
+export function tenirDansLaPlace(
+  messages: unknown[],
+  budget: number,
+  question = indexDeLaQuestion(messages),
+  /** La conversation a une mémoire (memoireConversation.ts) : la note au modèle dit que des extraits lui en sont rendus. */
+  options: { memoire?: boolean } = {},
+): Ajustement {
   const avant = jetonsDesMessages(messages);
-  if (avant <= budget || question < 0) return { messages, retires: 0, abreges: 0, avant, apres: avant, budget, question, dernierCoupe: false };
+  if (avant <= budget || question < 0) {
+    return { messages, retires: 0, abreges: 0, avant, apres: avant, budget, question, dernierCoupe: false, partis: [], resultatsAbreges: [] };
+  }
   const copie = [...messages] as Message[];
   /*
    * Le total est tenu au fil des retraits, jamais recalculé sur toute la
@@ -83,6 +98,7 @@ export function tenirDansLaPlace(messages: unknown[], budget: number, question =
   const debut = copie[0]?.role === "system" ? 1 : 0;
   let q = question;
   let retires = 0;
+  const tousPartis: Message[] = [];
 
   // 1. Les plus anciens tours, entiers : jusqu'au message de la personne suivant.
   while (total > budget && debut < q) {
@@ -90,18 +106,29 @@ export function tenirDansLaPlace(messages: unknown[], budget: number, question =
     while (fin < q && copie[fin]?.role !== "user") fin++;
     const partis = copie.splice(debut, fin - debut);
     for (const m of partis) total -= jetonsDunMessage(m);
+    tousPartis.push(...partis);
     retires += partis.length;
     q -= partis.length;
   }
 
   // 2. Les résultats d'outils de la demande en cours, du plus ancien au plus récent, sauf le dernier.
   let abreges = 0;
+  const resultatsAbreges: { outil: string; contenu: string }[] = [];
+  /** Le nom de l'outil d'un résultat, lu dans l'appel qui le précède. */
+  const nomOutil = (id: unknown): string => {
+    for (const m of copie) {
+      const appel = Array.isArray(m?.tool_calls) ? (m.tool_calls as { id?: unknown; function?: { name?: unknown } }[]).find((c) => c?.id === id) : undefined;
+      if (appel) return String(appel.function?.name ?? "");
+    }
+    return "";
+  };
   if (total > budget) {
     const coutNote = jetonsDunMessage({ role: "tool", content: NOTE_RESULTAT });
     const resultats = copie.map((m, i) => ({ m, i })).filter(({ m, i }) => i > q && m.role === "tool" && typeof m.content === "string" && m.content !== NOTE_RESULTAT);
     for (const { i } of resultats.slice(0, -1)) {
       if (total <= budget) break;
       total -= jetonsDunMessage(copie[i]) - coutNote;
+      resultatsAbreges.push({ outil: nomOutil(copie[i]!.tool_call_id), contenu: copie[i]!.content as string });
       copie[i] = { ...copie[i]!, content: NOTE_RESULTAT };
       abreges++;
     }
@@ -139,9 +166,12 @@ export function tenirDansLaPlace(messages: unknown[], budget: number, question =
 
   // 3. Dit au modèle, pour qu'il ne fasse pas semblant de se souvenir.
   if (retires > 0) {
-    const note =
-      `Les ${retires} premiers messages de cette conversation ne te sont plus donnés, faute de place. ` +
-      "Si la personne y fait référence, dis-lui que tu ne les vois plus et demande-lui de rappeler ce qu'il faut.";
+    const note = options.memoire
+      ? `Les ${retires} premiers messages de cette conversation ne te sont plus donnés en entier, faute de place. ` +
+        "Ceux qui se rapportent à la dernière question te sont rendus plus bas, en « extraits plus anciens de cette conversation », quand il y en a. " +
+        "Si la personne fait référence à autre chose, dis-lui que tu ne le vois plus et demande-lui de le rappeler."
+      : `Les ${retires} premiers messages de cette conversation ne te sont plus donnés, faute de place. ` +
+        "Si la personne y fait référence, dis-lui que tu ne les vois plus et demande-lui de rappeler ce qu'il faut.";
     const systeme = copie[0];
     if (systeme?.role === "system" && typeof systeme.content === "string") copie[0] = { ...systeme, content: `${systeme.content}\n\n${note}` };
     else if (systeme?.role !== "system") {
@@ -150,7 +180,7 @@ export function tenirDansLaPlace(messages: unknown[], budget: number, question =
     }
     total = jetonsDesMessages(copie);
   }
-  return { messages: copie, retires, abreges, avant, apres: total, budget, question: q, dernierCoupe };
+  return { messages: copie, retires, abreges, avant, apres: total, budget, question: q, dernierCoupe, partis: tousPartis, resultatsAbreges };
 }
 
 /**

@@ -305,6 +305,7 @@
   "Ce bot a fini.": "このボットは終了しました。",
   "Ce bot envoie déjà ses messages à un webhook, posé par un autre logiciel : Telegram ne les donne qu'à un seul lecteur. Créez un bot à part pour ce connecteur. Rien n'a été enregistré.": "このボットは、他のソフトウェアが設定した Webhook にすでにメッセージを送っています。Telegram はメッセージを 1 つの読み取り先にしか渡しません。このコネクター専用のボットを作成してください。何も保存されていません。",
   "Ce Chat est long : les {0} premiers messages n'ont pas été relus par {1}, faute de place (conversation de {2} jetons).": "このチャットは長いため、最初の {0} 件のメッセージは容量不足で {1} に読み直されていません（会話は {2} トークン）。",
+  "Ce Chat n'existe pas.": "この Chat は存在しません。",
   "Ce chemin mène à un fichier, pas à un dossier.": "このパスはフォルダーではなくファイルを指しています。",
   "Ce chemin n'est pas un dossier.": "このパスはフォルダーではありません。",
   "Ce chemin n'est pas valable.": "このパスは無効です。",

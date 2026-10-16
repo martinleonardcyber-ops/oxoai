@@ -5,7 +5,7 @@ import { contexteTexte, documentsDe, images, type Attachment, type DocumentEnvoy
 import { currentUser } from "@/lib/store/identity";
 import { t, tf } from "@/lib/i18n";
 import { creerImage as creerSurLaMachine, creerVideo as creerVideoSurLaMachine, type Format, type ImageCreee } from "@/lib/images";
-import type { NiveauRaisonnement } from "@/lib/store/profile";
+import { loadProfile, type NiveauRaisonnement } from "@/lib/store/profile";
 import type { Citation } from "@/lib/connaissances";
 import type { SourceWeb } from "@/lib/rechercheWeb";
 import {
@@ -134,6 +134,8 @@ export interface Message {
   sources?: { citations: Citation[]; ignorees?: number; aReindexer?: number; erreur?: string };
   /** Sources de la recherche sur le web pour cette réponse (numéro cité « [n] », titre, adresse, page ouverte ou non). */
   sourcesWeb?: SourceWeb[];
+  /** Extraits plus anciens de la conversation rendus au modèle pour cette réponse (gateway/src/memoireConversation.ts). */
+  memoire?: { extraits: number; autresChats?: number };
   /** Durées mesurées de la réponse (réflexion, premier mot, réponse entière). */
   durees?: DureesReponse;
   error?: string;
@@ -315,6 +317,7 @@ function persisterDans(session: Session, history: Message[], model: string | und
       // Les citations restent avec la réponse : rouvert, le Chat dit encore d'où elle venait.
       ...(m.sources && m.sources.citations.length > 0 ? { sources: m.sources.citations } : {}),
       ...(m.sourcesWeb && m.sourcesWeb.length > 0 ? { sourcesWeb: m.sourcesWeb } : {}),
+      ...(m.memoire && m.memoire.extraits > 0 ? { memoire: m.memoire } : {}),
       /*
        * Les durées et les étapes restent avec la réponse (27/09/2026) : rouvert,
        * ou relu sur un autre poste après synchronisation, le Chat dit encore
@@ -489,6 +492,11 @@ async function repondre(
         connaissances: options.connaissances,
         agent: options.agent,
         web: options.web,
+        /*
+         * La mémoire de ce Chat (16/10/2026) : ce qui sort de la place du
+         * modèle y est rangé par l'instance, au nom de la personne de la séance.
+         */
+        memoire: { chat: session.id, autresChats: loadProfile(currentUser().id).memoireAutresChats === true },
         signal: controller.signal,
       },
       {
@@ -568,6 +576,8 @@ async function repondre(
               if (last.debut !== undefined) last.duree = Date.now() - last.debut;
             }
             patch(replyId, { tools: traces.map((trace) => ({ ...trace })) });
+          } else if (event.type === "memoire") {
+            patch(replyId, { memoire: { extraits: event.extraits, ...(event.autresChats ? { autresChats: event.autresChats } : {}) } });
           } else if (event.type === "sources_web") {
             patch(replyId, { sourcesWeb: event.sources ?? [] });
           } else if (event.type === "sources") {
@@ -873,6 +883,7 @@ export function useChat(options: Options) {
           ...(Array.isArray(m.pieces) && m.pieces.length > 0 ? { pieces: m.pieces } : {}),
           ...(m.sources && m.sources.length > 0 ? { sources: { citations: m.sources } } : {}),
           ...(Array.isArray(m.sourcesWeb) && m.sourcesWeb.length > 0 ? { sourcesWeb: m.sourcesWeb } : {}),
+          ...(m.memoire && m.memoire.extraits > 0 ? { memoire: { ...m.memoire } } : {}),
           ...(m.durees ? { durees: { ...m.durees } } : {}),
           ...(m.outils && m.outils.length > 0
             ? {

@@ -305,6 +305,7 @@
   "Ce bot a fini.": "该机器人已完成。",
   "Ce bot envoie déjà ses messages à un webhook, posé par un autre logiciel : Telegram ne les donne qu'à un seul lecteur. Créez un bot à part pour ce connecteur. Rien n'a été enregistré.": "此机器人已把消息发送到由其他软件设置的 webhook：Telegram 只把消息交给一个读取方。请为此连接器创建单独的机器人。未保存任何内容。",
   "Ce Chat est long : les {0} premiers messages n'ont pas été relus par {1}, faute de place (conversation de {2} jetons).": "此 Chat 较长：由于空间不足，{1} 未重新读取前 {0} 条消息（对话容量 {2} 个词元）。",
+  "Ce Chat n'existe pas.": "此 Chat 不存在。",
   "Ce chemin mène à un fichier, pas à un dossier.": "此路径指向文件，而不是文件夹。",
   "Ce chemin n'est pas un dossier.": "此路径不是文件夹。",
   "Ce chemin n'est pas valable.": "此路径无效。",

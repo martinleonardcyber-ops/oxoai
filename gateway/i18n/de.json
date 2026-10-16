@@ -305,6 +305,7 @@
   "Ce bot a fini.": "Dieser Bot ist fertig.",
   "Ce bot envoie déjà ses messages à un webhook, posé par un autre logiciel : Telegram ne les donne qu'à un seul lecteur. Créez un bot à part pour ce connecteur. Rien n'a été enregistré.": "Dieser Bot sendet seine Nachrichten bereits an einen Webhook, den eine andere Software eingerichtet hat: Telegram gibt sie nur an einen einzigen Leser. Erstellen Sie für diesen Konnektor einen eigenen Bot. Es wurde nichts gespeichert.",
   "Ce Chat est long : les {0} premiers messages n'ont pas été relus par {1}, faute de place (conversation de {2} jetons).": "Dieser Chat ist lang: Die ersten {0} Nachrichten wurden von {1} aus Platzmangel nicht erneut gelesen (Unterhaltung mit {2} Tokens).",
+  "Ce Chat n'existe pas.": "Dieser Chat existiert nicht.",
   "Ce chemin mène à un fichier, pas à un dossier.": "Dieser Pfad führt zu einer Datei, nicht zu einem Ordner.",
   "Ce chemin n'est pas un dossier.": "Dieser Pfad ist kein Ordner.",
   "Ce chemin n'est pas valable.": "Dieser Pfad ist nicht gültig.",

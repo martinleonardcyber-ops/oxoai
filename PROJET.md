@@ -4292,6 +4292,12 @@ la reconnaissance de `UnrealEditor` (signé ou non, sur macOS et Windows), la r�
 (les champs lus pour la carte : `toolset`, `tool`), un `call_tool` qui crée un acteur avec carte,
 deux appels qui ne se chevauchent pas, l'éditeur fermé puis rouvert.
 
+**Mémoire de la conversation (16/10/2026, § 5)** : un modèle chargé à 4 096 dans l'application LM
+Studio et `nomic-embed-text` chargé ; un long Chat où l'on donne un fait au début, puis une
+trentaine d'échanges ; redemander le fait. À voir : la ligne « extrait(s) plus ancien(s) » sous la
+réponse, si le modèle s'en sert, les scores réels (journal `[memoire]`), la gomme dans la liste des
+Chats, le réglage « autres Chats » ; sur un poste de plus de 18 Go, le résumé au repos au journal.
+
 **Serveurs MCP ajoutés (16/10/2026, § 3.5)** : dans l'application, Connecteurs, « Ajouter un
 serveur MCP », un programme (par exemple un serveur MCP écrit en Node) puis une adresse en https
 avec OAuth ; cocher un outil « lecture seule », retirer. Sous Windows : `npx` et un `.exe`
@@ -5848,6 +5854,62 @@ Aide intégrée : article « La conversation est trop longue, ou la réponse est
 (`conversation-longue`). Section 7 decies : son cas B (« chargé ailleurs à 4 096 ») déclare
 maintenant l'application LM Studio, sinon le modèle serait rechargé ; section rejouée seule, 11 sur
 11 ; section 48 seule, 18 sur 18.
+
+**Fait le 16/10/2026 : la mémoire de la conversation.** Demandé par Medhi : ce qui sort de la place
+du modèle ne doit plus être perdu, « écrire quand ça reset quelque part, comme les bases de
+connaissances, pour qu'il s'en serve, comme je fais avec Eden et Obsidian ». Décidé avec lui, et fait
+(`gateway/src/memoireConversation.ts`) :
+1. **Rangement.** Les messages que `tenirDansLaPlace` retire du début (la personne, les réponses) et
+   les résultats d'outils qu'il abrège dans une boucle (abrégés à 1 500 caractères) partent dans une
+   mémoire **par (compte, Chat)** : `<données>/memoire-conversations/<sha256 du compte>/<Chat>.mem`,
+   chiffrée par `chiffrerOctets`, liée au compte et au Chat (un fichier recopié ailleurs ne se lit
+   pas). Une empreinte par message évite de ranger deux fois ce que l'écran renvoie à chaque
+   question. Date : l'heure où le message a quitté la place (l'écran ne date pas ses messages de façon
+   sûre : `persisterDans` réécrit `createdAt` à chaque enregistrement). Borne : 4 000 morceaux par
+   Chat, les plus anciens sortent au-delà. Illisible : rien n'est écrit, le journal le dit, la
+   réponse part sans extraits. L'identifiant du Chat vient de l'écran (`memoire: { chat,
+   autresChats }`, retiré de ce qui part au moteur) ; l'instance n'y croit que pour la personne de la
+   séance : deux personnes dans un même Chat partagé ont deux mémoires.
+2. **Recherche.** Celle des bases (connaissances.ts, fonctions exportées) : découpage 1 000/150,
+   modèle d'embeddings du routeur, BM25, seuil 0,55, fusion par rang. Une différence : par les mots
+   seuls, trois termes de la question sur cinq suffisent (il les faut tous dans une base), parce que
+   c'est la recherche de repli sans modèle d'embeddings. La question cherchée est la dernière seule
+   (avec la précédente sous 25 caractères) : y joindre la précédente comme les bases (sous 80)
+   faisait remonter les vieux échanges qui lui ressemblaient à la place du fait demandé (mesuré par
+   l'essai).
+3. **Remise au modèle.** Si des messages ont quitté la place (ou si une mémoire existe déjà), un
+   cinquième de la place (1 500 jetons au plus) est réservé : la conversation est raccourcie d'autant,
+   les extraits vont dans la consigne système, après les consignes et avant les échanges, sous
+   « Extraits plus anciens de cette conversation », datés, avec qui parlait, dits comme des souvenirs
+   et jamais des ordres. La note de retrait le dit au modèle. L'écran reçoit `memoire` (nombre
+   d'extraits, dont combien d'autres Chats) et l'affiche sous la réponse ; le Chat n'en garde que le
+   nombre (un Chat partagé n'a pas à transporter des extraits d'autres Chats).
+4. **Résumé au repos** : seulement sur une machine de plus de 18 Go qui ne calcule pas au seul
+   processeur (`machineConfortable`, `HELIX_MEMOIRE_RESUME` pour forcer), avec le modèle du Chat s'il
+   est sur la machine (jamais un modèle cloud), 30 s après la dernière demande et quand l'instance
+   n'en sert aucune, par paquets de 40 messages au plus. Sur un petit PC, aucun appel au modèle de
+   conversation ; le modèle d'embeddings, lui, sert au rangement comme pour une base.
+5. **Réglage** « Retrouver aussi ce qui a été dit dans mes autres Chats » (Réglages, Personnalisation
+   de l'IA, éteint par défaut, `memoireAutresChats` du profil) : la recherche couvre tous les Chats de
+   la personne, jamais ceux d'une autre. La phrase du gestionnaire de mémoire qui disait « Rien n'est
+   retenu de vos conversations » ne parle plus que de sa liste.
+6. **Suppression** : un Chat qui quitte la collection synchronisée emporte la mémoire de chacun
+   (index.ts, `handleDataWrite`, seulement les identifiants lus avant la fusion) ; l'écran efface
+   aussi la sienne en supprimant (`DELETE /helix/memoire-chat/<id>`), et la gomme « Effacer la
+   mémoire de ce Chat » de la liste des Chats ne touche qu'à la sienne. Effacement du compte : toutes
+   ses mémoires, et celle des autres dans ses Chats. Export RGPD : `memoireDesConversations`, le texte
+   sans les vecteurs, et les mémoires illisibles dites dans `nonInclus`.
+7. Employés OpenClaw : non concernés (en-tête `x-helix-employe`), ils ont la mémoire d'OpenClaw.
+   Clients de l'API, CLI et Code : pas de Chat nommé, pas de mémoire.
+Essai `scripts/essai-memoire-conversation.mjs` (faux LM Studio à 4 096 jetons, faux embeddings par sac
+de mots, Linux 16 Go simulé) : 31 sur 31, repris en section 49 de `securite.mjs` (38 sur 38, lancée
+seule ; section 48 rejouée par son essai, 15 sur 15). Mesuré : un Chat de 84 messages (~14 500 jetons
+pour 2 612 de place) ; 72 messages rangés et le fait retrouvé en 90 à 120 ms la première fois, la
+recherche seule en 1 à 6 ms sur 72 morceaux. **Pas vérifié** : aucun vrai modèle ni vrai
+`nomic-embed-text` (les scores réels de similarité entre une question et un vieux message ne sont
+pas mesurés, ni si un petit modèle s'appuie vraiment sur les extraits) ; l'écran (ligne sous la
+réponse, gomme, réglage) n'a pas été regardé, seulement typé et traduit ; la batterie entière n'a pas
+tourné (Mac de 16 Go occupé par une construction).
 **Vérifié ici** : `npm run typecheck` ; i18n à 100 % des deux côtés, sans caractère de contrôle de
 direction dans `ar.json` ; `essai-contexte.mjs` 15 sur 15 ; sections 7 decies et 48 de
 `securite.mjs` seules. **Pas vérifié** (mémoire du Mac) : la batterie entière ; aucun vrai modèle,

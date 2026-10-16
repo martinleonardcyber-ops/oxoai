@@ -8,6 +8,7 @@ import { listerGroupes } from "./groupes.ts";
 import { elementsDe } from "./bibliotheque.ts";
 import { reunionsDe } from "./reunions.ts";
 import { connaissancesPourExport } from "./connaissances.ts";
+import { pourExport as memoiresPourExport } from "./memoireConversation.ts";
 import { imagesDe } from "./images.ts";
 import { projetsPourExport } from "./entrainement.ts";
 import { clesDe as clesApiDe } from "./clesApi.ts";
@@ -73,6 +74,11 @@ export interface ExportDonnees {
   reunions: unknown[];
   /** Ses bases de connaissances, et ses documents ajoutés aux bases des autres (sans vecteurs). */
   basesDeConnaissances: unknown;
+  /**
+   * Mémoire de ses longues conversations (memoireConversation.ts, 16/10/2026) :
+   * ce qui est sorti de la place du modèle, Chat par Chat, tel que rangé (sans vecteurs).
+   */
+  memoireDesConversations: unknown[];
   /** Les images qu'elle a créées, avec leur demande (le fichier se télécharge depuis le Chat). */
   imagesCreees: unknown[];
   /** Ses projets d'entraînement : les exemples, et le modèle installé s'il l'a été. */
@@ -138,6 +144,7 @@ export async function exporterDonnees(qui: Demandeur): Promise<ExportDonnees> {
   }
 
   const images = imagesDe(qui.userId);
+  const memoires = memoiresPourExport(qui.userId);
 
   const resultat: ExportDonnees = {
     format: FORMAT,
@@ -159,6 +166,7 @@ export async function exporterDonnees(qui: Demandeur): Promise<ExportDonnees> {
     bibliotheque,
     reunions: (await reunionsDe(qui.userId)).map(({ reunion, segments }) => ({ ...reunion, transcription: segments })),
     basesDeConnaissances: await connaissancesPourExport({ userId: qui.userId, groupes: qui.groupes ?? [] }),
+    memoireDesConversations: memoires.chats,
     imagesCreees: images.images,
     modelesEntraines: projetsPourExport(qui.userId),
     consommation: await consommationDe(qui.userId),
@@ -175,6 +183,8 @@ export async function exporterDonnees(qui: Demandeur): Promise<ExportDonnees> {
       "Index des bases de connaissances (passages et vecteurs) : des calculs tirés de vos documents, qui figurent déjà ici.",
       "Fichiers des images créées et poids des modèles entraînés : les images se téléchargent depuis leur Chat, les modèles se retrouvent dans LM Studio.",
       ...(images.lisible ? [] : ["Images créées : leur registre est illisible sur l'instance, leur liste n'a pas pu être lue."]),
+      "Vecteurs de la mémoire des conversations : des calculs tirés du texte rangé, qui figure déjà ici.",
+      ...(memoires.illisibles > 0 ? [`Mémoire des conversations : ${memoires.illisibles} mémoire(s) illisible(s) sur l'instance, leur contenu n'a pas pu être lu.`] : []),
     ],
   };
 

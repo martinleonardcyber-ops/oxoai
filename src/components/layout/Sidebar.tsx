@@ -19,7 +19,10 @@ import {
   ChevronRight,
   Pencil,
   Loader2,
+  Eraser,
+  Check,
 } from "lucide-react";
+import { effacerMemoireDuChat } from "@/lib/memoireConversation";
 import { CHATS_EN_COURS, chatEnCours } from "@/hooks/useChat";
 import { useSessions, notifySessionsChanged } from "@/hooks/useSessions";
 import type { Session } from "@/lib/store/sessions";
@@ -65,6 +68,19 @@ function LigneSession({
   // Renommer se fait sur place : le nom devient un champ, Entrée valide,
   // Échap annule, cliquer ailleurs valide aussi (comme dans le Finder).
   const [edition, setEdition] = useState<string | null>(null);
+  /*
+   * « Effacer la mémoire de ce Chat » (16/10/2026, gateway/src/memoireConversation.ts) :
+   * ce que l'instance a rangé des messages sortis de la place du modèle, pour
+   * cette personne. Les messages du Chat restent. Le crochet dit que c'est fait.
+   */
+  const [memoire, setMemoire] = useState<"" | "fait" | "erreur">("");
+  const effacerMemoire = () => {
+    if (!window.confirm(tf("Effacer la mémoire de « {0} » ? Les messages restent ; ce que l'assistant avait rangé des passages trop anciens pour ce qu'il voit est oublié.", session.title))) return;
+    effacerMemoireDuChat(session.id)
+      .then(() => setMemoire("fait"))
+      .catch(() => setMemoire("erreur"))
+      .finally(() => setTimeout(() => setMemoire(""), 2500));
+  };
   // Une réponse qui s'écrit encore dans ce Chat, même quand on regarde ailleurs.
   const [enCours, setEnCours] = useState(() => chatEnCours(session.id));
   useEffect(() => {
@@ -169,6 +185,15 @@ function LigneSession({
           ) : (
             <Archive size={13} strokeWidth={1.75} />
           )}
+        </button>
+        <button
+          type="button"
+          aria-label={tf("Effacer la mémoire de {0}", session.title)}
+          title={memoire === "fait" ? t("Mémoire effacée") : memoire === "erreur" ? t("La mémoire n'a pas pu être effacée.") : t("Effacer la mémoire de ce Chat")}
+          onClick={effacerMemoire}
+          className="rounded p-1 text-muted-foreground transition-colors hover:text-foreground"
+        >
+          {memoire === "fait" ? <Check size={13} strokeWidth={2} className="text-success" /> : <Eraser size={13} strokeWidth={1.75} />}
         </button>
         <button
           type="button"

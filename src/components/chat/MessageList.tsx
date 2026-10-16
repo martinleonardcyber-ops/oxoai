@@ -15,6 +15,7 @@ import {
   Globe,
   ExternalLink,
   Scissors,
+  History,
 } from "lucide-react";
 import { dureeCourte, dureeMesuree, useMaintenant } from "@/lib/durees";
 import type { Citation } from "@/lib/connaissances";
@@ -380,6 +381,25 @@ function Sources({ message }: { message: Message }) {
 }
 
 /**
+ * Mémoire de la conversation, sous la réponse (16/10/2026,
+ * gateway/src/memoireConversation.ts) : une ligne discrète, comme les
+ * sources, qui dit combien d'extraits plus anciens de ce Chat ont été rendus
+ * au modèle. Elle ne dit pas qu'il s'en est servi : seulement qu'il les avait.
+ */
+function MemoireUtilisee({ message }: { message: Message }) {
+  const m = message.memoire;
+  if (!m || m.extraits <= 0) return null;
+  return (
+    <p className="mt-3 flex items-center gap-1.5 text-xs text-muted-foreground">
+      <History size={13} strokeWidth={1.75} className="shrink-0" />
+      {m.autresChats
+        ? tf("{0} extrait(s) plus ancien(s) de vos Chats rendu(s) à l'assistant, dont {1} d'un autre Chat", m.extraits, m.autresChats)
+        : tf("{0} extrait(s) plus ancien(s) de ce Chat rendu(s) à l'assistant", m.extraits)}
+    </p>
+  );
+}
+
+/**
  * Sources de la recherche sur le web, sous la réponse (28/09/2026), sur le
  * modèle des citations des bases de connaissances : en avant, celles que la
  * réponse cite par leur numéro ([3]) ; les autres, repliées et dites pour ce
@@ -529,6 +549,7 @@ function Bubble({ message, onContinuer }: { message: Message; onContinuer?: () =
         )}
         <Sources message={message} />
         <SourcesWeb message={message} />
+        <MemoireUtilisee message={message} />
         {message.error && (
           <p
             role="alert"

@@ -14,6 +14,7 @@ import * as computer from "./computer.ts";
 import * as bureau from "./bureau.ts";
 import * as bibliotheque from "./bibliotheque.ts";
 import * as connaissances from "./connaissances.ts";
+import * as memoire from "./memoireConversation.ts";
 import * as reunions from "./reunions.ts";
 import { groupesDe } from "./groupes.ts";
 import * as courrier from "./courrier.ts";
@@ -528,7 +529,8 @@ function basePayload(
    * un Chat ouvert sur un agent ne répondait plus avec une clé OpenAI.
    */
   // `web` de même (28/09/2026) : la recherche sur le web est faite par l'instance (rechercheWeb.ts), le moteur n'en sait rien.
-  const { role: _role, effort, messages: _m, tools: _t, connaissances: _k, agent: _a, web: _w, ...rest } = body as Record<string, unknown> & {
+  // `memoire` aussi (16/10/2026) : le Chat dont la mémoire est consultée (memoireConversation.ts), affaire de l'instance.
+  const { role: _role, effort, messages: _m, tools: _t, connaissances: _k, agent: _a, web: _w, memoire: _mem, ...rest } = body as Record<string, unknown> & {
     effort?: string;
   };
   const payload: Record<string, unknown> = { ...rest, model: model.id, messages, stream: true };
@@ -1006,6 +1008,8 @@ export async function handleChatRequest(
   } = {},
 ): Promise<void> {
   const nonFlux = options.parCleApi === true && options.nonFlux === true;
+  // Une demande de plus en cours : le résumé de mémoire au repos attend qu'il n'y en ait plus (memoireConversation.ts).
+  res.on("close", memoire.debutDemande());
   /*
    * Sans personne identifiée **et** depuis une autre machine : aucun modèle
    * payé par clé.
@@ -1660,15 +1664,99 @@ export async function handleChatRequest(
   const budgetConversation = contexteConversation
     ? placeDeLaConversation(contexteConversation, reflechit, tools && tools.length > 0 ? jetonsEstimes(JSON.stringify(tools)) : 0)
     : Number.POSITIVE_INFINITY;
+  /*
+   * Mémoire de la conversation (memoireConversation.ts, 16/10/2026) : ce qui
+   * sort de la place y est rangé, et les passages en rapport avec la question
+   * reviennent au modèle. Seulement pour l'écran de Helix, une personne
+   * identifiée et un Chat nommé : un client de l'API n'a pas de Chat, et un
+   * employé toujours actif a déjà la mémoire d'OpenClaw.
+   */
+  const memoireDemandee = (body as { memoire?: { chat?: unknown; autresChats?: unknown } }).memoire;
+  const memoireChat =
+    qui && !req.headers["x-helix-employe"] && memoireDemandee && memoire.chatValide(memoireDemandee.chat)
+      ? { chat: memoireDemandee.chat, autresChats: memoireDemandee.autresChats === true }
+      : null;
   {
-    const ajuste = tenirDansLaPlace(messages, budgetConversation);
+    let ajuste = tenirDansLaPlace(messages, budgetConversation);
+    let avecExtraits = false;
+    if (memoireChat && qui && (ajuste.retires > 0 || memoire.existe(qui, memoireChat.chat, memoireChat.autresChats))) {
+      /*
+       * Une place réservée aux extraits : un cinquième de la place, 1 500
+       * jetons au plus (cinq passages d'environ 300). La conversation est
+       * raccourcie d'autant, puisque les extraits passent avant elle.
+       */
+      const reserve = Number.isFinite(budgetConversation) ? Math.max(0, Math.min(1_500, Math.floor(budgetConversation * 0.2))) : 1_500;
+      if (Number.isFinite(budgetConversation)) ajuste = tenirDansLaPlace(messages, budgetConversation - reserve, undefined, { memoire: true });
+      const userId = qui;
+      // Rangé avant de chercher, trois secondes au plus : au-delà (premier rangement d'un long Chat), la suite se fait sans attendre la réponse.
+      if (ajuste.partis.length > 0) {
+        const rangement = memoire.ranger(userId, memoireChat.chat, memoire.aRanger(ajuste.partis)).catch((err) => {
+          console.log(`[memoire] rien rangé pour le Chat ${memoireChat.chat} : ${err instanceof Error ? err.message : String(err)}`);
+          return 0;
+        });
+        await Promise.race([rangement, new Promise((ok) => setTimeout(ok, 3_000))]);
+      }
+      const vus = new Set(
+        memoire.aRanger(ajuste.messages).map((m) => memoire.empreinteMessage(m.role, m.texte)),
+      );
+      const personnes = ajuste.messages.filter((m) => (m as { role?: string })?.role === "user");
+      const derniere = memoire.texteDuMessage(personnes[personnes.length - 1]).trim().slice(-2_000);
+      const precedente = memoire.texteDuMessage(personnes[personnes.length - 2]).trim().slice(-500);
+      /*
+       * La question seule, sauf si elle ne dit presque rien (« et lui ? ») :
+       * mesuré le 16/10/2026 (essai-memoire-conversation.mjs), y joindre la
+       * question précédente, comme pour les bases (moins de 80 caractères),
+       * faisait remonter les vieux échanges qui lui ressemblaient à la place
+       * du fait demandé. La précédente est déjà sous les yeux du modèle.
+       */
+      const question = derniere.length < 25 && precedente ? `${precedente}\n${derniere}` : derniere;
+      const trouve = await memoire
+        .retrouver(userId, memoireChat.chat, question, { autresChats: memoireChat.autresChats, exclure: vus, maxJetons: reserve })
+        .catch(() => null);
+      if (trouve && trouve.extraits.length > 0) {
+        ajuste = { ...ajuste, messages: avecConsigne(ajuste.messages, memoire.consigneDesExtraits(trouve.extraits)) };
+        avecExtraits = true;
+        signaler({ type: "memoire", extraits: trouve.extraits.length, autresChats: trouve.extraits.filter((e) => e.autreChat).length });
+      }
+      if (trouve) {
+        console.log(
+          `[memoire] Chat ${memoireChat.chat} : ${trouve.extraits.length} extrait(s) sur ${trouve.parcourus} morceaux, ${trouve.dureeMs} ms (${trouve.modele ?? "mots seuls"})${trouve.illisibles ? `, ${trouve.illisibles} mémoire(s) illisible(s)` : ""}`,
+        );
+      }
+      /*
+       * Résumé au repos, sur une machine confortable et avec le moteur de la
+       * machine seulement : un modèle cloud coûterait à quelqu'un, et le texte
+       * partirait chez lui. Sur un petit PC, `planifierResume` ne fait rien.
+       */
+      if (moteurDeLaMachine(model.backendKind)) {
+        const corpsResume = { model: body.model, messages: [], effort: "aucun" } as ChatRequest;
+        memoire.planifierResume(userId, memoireChat.chat, async (texte) => {
+          const fil = [
+            { role: "system", content: memoire.CONSIGNE_RESUME },
+            { role: "user", content: texte },
+          ];
+          const brut = await callUpstream(
+            backend,
+            { ...basePayload(corpsResume, model, fil), tools: undefined, tool_choice: undefined, stream: false, max_tokens: 600 },
+            AbortSignal.timeout(180_000),
+          );
+          if (!brut.ok) {
+            await brut.body?.cancel().catch(() => {});
+            return null;
+          }
+          const rep = (await brut.json().catch(() => ({}))) as { choices?: { message?: { content?: string } }[] };
+          usage.releverReponse(userId, model, { messages: fil }, rep);
+          return (rep.choices?.[0]?.message?.content ?? "").replace(/<think>[\s\S]*?(<\/think>|$)/g, "").trim() || null;
+        });
+      }
+    }
     if (ajuste.retires > 0 || ajuste.apres > budgetConversation) {
       console.log(
         `[chat] conversation de ~${ajuste.avant} jetons pour ${budgetConversation} de place (${model.id}, contexte ${contexteConversation}) : ${ajuste.retires} message(s) ancien(s) retiré(s), ~${ajuste.apres} jetons envoyés`,
       );
     }
+    if (ajuste.retires > 0 || avecExtraits) messages = ajuste.messages;
     if (ajuste.retires > 0) {
-      messages = ajuste.messages;
       annoncesDocuments = [
         ...annoncesDocuments,
         tf("Ce Chat est long : les {0} premiers messages n'ont pas été relus par {1}, faute de place (conversation de {2} jetons).", ajuste.retires, model.id, contexteConversation) +
@@ -1794,6 +1882,12 @@ export async function handleChatRequest(
       const ajuste = tenirDansLaPlace(fil, budgetFil, (fil[0] as { role?: string } | undefined)?.role === "system" ? 1 : 0);
       if (ajuste.abreges > 0 || ajuste.dernierCoupe) {
         fil.splice(0, fil.length, ...ajuste.messages);
+        // Les résultats abrégés vont à la mémoire du Chat, abrégés eux aussi : la question suivante pourra les retrouver.
+        if (memoireChat && qui && ajuste.resultatsAbreges.length > 0) {
+          void memoire
+            .ranger(qui, memoireChat.chat, memoire.aRanger(ajuste.resultatsAbreges.map((x) => ({ role: "tool", content: x.outil ? `${x.outil} : ${x.contenu}` : x.contenu }))))
+            .catch(() => 0);
+        }
         console.log(
           `[chat] ${ajuste.abreges} résultat(s) d'outil ancien(s) abrégé(s)${ajuste.dernierCoupe ? ", le dernier coupé" : ""} : ~${ajuste.apres} jetons pour ${budgetFil} de place (${model.id})`,
         );

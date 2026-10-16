@@ -305,6 +305,7 @@
   "Ce bot a fini.": "هذا البوت انتهى.",
   "Ce bot envoie déjà ses messages à un webhook, posé par un autre logiciel : Telegram ne les donne qu'à un seul lecteur. Créez un bot à part pour ce connecteur. Rien n'a été enregistré.": "هذا البوت يرسل رسائله بالفعل إلى webhook وضعه برنامج آخر: Telegram لا يسلّمها إلا لقارئ واحد. أنشئ بوتًا مستقلًا لهذا الموصّل. لم يُحفظ شيء.",
   "Ce Chat est long : les {0} premiers messages n'ont pas été relus par {1}, faute de place (conversation de {2} jetons).": "هذا الـ Chat طويل: أول {0} رسالة لم يُعِد {1} قراءتها لضيق المساحة (محادثة من {2} رمز).",
+  "Ce Chat n'existe pas.": "هذا Chat غير موجود.",
   "Ce chemin mène à un fichier, pas à un dossier.": "هذا المسار يؤدي إلى ملف، لا إلى مجلد.",
   "Ce chemin n'est pas un dossier.": "هذا المسار ليس مجلدًا.",
   "Ce chemin n'est pas valable.": "هذا المسار غير صالح.",

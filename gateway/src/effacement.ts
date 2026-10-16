@@ -8,6 +8,7 @@ import { elementsDe, oublierPersonneBibliotheque } from "./bibliotheque.ts";
 import { reunionsDe, oublierPersonneReunions } from "./reunions.ts";
 import { oublierChatsDesImages, oublierImagesDe } from "./images.ts";
 import { oublierPersonneConnaissances } from "./connaissances.ts";
+import { oublierChatsPartout, oublierPersonne as oublierMemoiresConversations } from "./memoireConversation.ts";
 import { oublierPersonneEntrainement } from "./entrainement.ts";
 import { oublierSessionsCode } from "./sessionsCode.ts";
 import { oublierClesDe } from "./clesApi.ts";
@@ -188,7 +189,12 @@ export async function effacerCompte(
     email,
   );
   await db().write("projects", projetsApres);
+  // Ses Chats partent : la mémoire qu'en gardaient les personnes avec qui il les partageait part avec eux.
+  const chatsPartis = tableau(await db().read("sessions"))
+    .map((s) => String(s.id))
+    .filter((id) => !sessionsApres.some((s) => String(s.id) === id));
   await db().write("sessions", sessionsApres);
+  await oublierChatsPartout(chatsPartis).catch(() => 0);
   await db().write("tasks", tachesApres);
   await db().write("agents", agentsApres);
   await db().write("employes", employesApres);
@@ -248,6 +254,8 @@ export async function effacerCompte(
   // Ses images créées : fichiers et registre (images.ts).
   const imagesEffacees = oublierImagesDe(userId);
   oublierChatsDesImages();
+  // La mémoire de ses longues conversations, Chat par Chat (memoireConversation.ts, 16/10/2026).
+  const memoiresDeChats = oublierMemoiresConversations(userId);
   await retirerCompte(userId);
 
   // Des nombres, jamais de contenu, et pas l'adresse une fois de plus.
@@ -271,6 +279,7 @@ export async function effacerCompte(
     sessionsCodeEffacees,
     lignesDeConsommation,
     imagesEffacees,
+    memoiresDeChats,
     clesApi,
   });
   return apercu;

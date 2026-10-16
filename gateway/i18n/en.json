@@ -305,6 +305,7 @@
   "Ce bot a fini.": "This bot has finished.",
   "Ce bot envoie déjà ses messages à un webhook, posé par un autre logiciel : Telegram ne les donne qu'à un seul lecteur. Créez un bot à part pour ce connecteur. Rien n'a été enregistré.": "This bot already sends its messages to a webhook set by other software: Telegram gives them to only one reader. Create a separate bot for this connector. Nothing was saved.",
   "Ce Chat est long : les {0} premiers messages n'ont pas été relus par {1}, faute de place (conversation de {2} jetons).": "This Chat is long: the first {0} messages were not reread by {1}, for lack of room (conversation of {2} tokens).",
+  "Ce Chat n'existe pas.": "This Chat does not exist.",
   "Ce chemin mène à un fichier, pas à un dossier.": "This path leads to a file, not a folder.",
   "Ce chemin n'est pas un dossier.": "This path is not a folder.",
   "Ce chemin n'est pas valable.": "This path is not valid.",

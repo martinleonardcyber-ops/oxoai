@@ -9,6 +9,7 @@ import {
   visibleTo,
   type Session,
 } from "@/lib/store/sessions";
+import { effacerMemoireDuChat } from "@/lib/memoireConversation";
 
 /** Événement interne émis quand une session est créée ou mise à jour. */
 export const SESSIONS_CHANGED = "helix:sessions-changed";
@@ -54,6 +55,12 @@ export function useSessions(surface: "chat" | "cowork" = "chat") {
   const remove = useCallback(
     (id: string) => {
       deleteSession(id);
+      /*
+       * Sa mémoire sur l'instance part avec lui (16/10/2026). L'instance
+       * efface aussi celle de chacun quand le Chat quitte la collection
+       * synchronisée ; ceci couvre un Chat qui n'y était pas encore arrivé.
+       */
+      void effacerMemoireDuChat(id).catch(() => {});
       refresh();
     },
     [refresh],

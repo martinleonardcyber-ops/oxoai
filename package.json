@@ -35,6 +35,7 @@
     "essai:roblox-blender": "node scripts/essai-roblox-blender.mjs",
     "essai:unreal-perso": "node scripts/essai-unreal-perso.mjs",
     "essai:contexte": "node scripts/essai-contexte.mjs",
+    "essai:memoire": "node scripts/essai-memoire-conversation.mjs",
     "essai:design": "node --experimental-strip-types scripts/essai-design.mjs",
     "motdepasse": "node --experimental-strip-types gateway/tools/motdepasse.ts",
     "typecheck:gateway": "tsc --noEmit -p tsconfig.gateway.json",

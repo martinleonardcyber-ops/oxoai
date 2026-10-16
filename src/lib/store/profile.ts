@@ -54,6 +54,13 @@ export interface UserProfile {
    * « jamais ». Envoyé avec chaque demande, décidé par la passerelle.
    */
   rtkCode?: ReglageRtk;
+  /**
+   * « Retrouver aussi ce qui a été dit dans mes autres Chats » (16/10/2026,
+   * gateway/src/memoireConversation.ts). Éteint par défaut : chaque Chat ne
+   * retrouve que sa propre mémoire. Allumé, la recherche couvre tous les Chats
+   * de cette personne, jamais ceux d'une autre.
+   */
+  memoireAutresChats?: boolean;
 }
 
 export type ReglageRtk = "cloud" | "toujours" | "jamais";

@@ -125,6 +125,12 @@ export type HelixEvent =
   /* Sources de la recherche sur le web, au fil des recherches et des pages lues (gateway/src/rechercheWeb.ts). */
   | { type: "sources_web"; sources: SourceWeb[]; moteur?: string }
   /*
+   * Des extraits plus anciens de ce Chat, sortis de la place du modèle, lui ont
+   * été rendus (gateway/src/memoireConversation.ts, 16/10/2026) : combien, et
+   * combien venaient d'autres Chats de la personne.
+   */
+  | { type: "memoire"; extraits: number; autresChats?: number }
+  /*
    * La réponse s'est arrêtée par sa longueur, sans place pour la suite
    * (gateway/src/chat.ts, 16/10/2026) : ce qui est écrit reste une réponse,
    * l'écran le dit et propose « Continuer ».
@@ -317,6 +323,12 @@ export async function streamChat(
     agent?: string;
     /** La bascule « Rechercher sur le web » du menu « + » : sans elle, rien ne part vers un moteur de recherche. */
     web?: boolean;
+    /**
+     * La mémoire de ce Chat (gateway/src/memoireConversation.ts, 16/10/2026) :
+     * ce qui sort de la place du modèle y est rangé, et retrouvé. `autresChats` :
+     * le réglage « Retrouver aussi ce qui a été dit dans mes autres Chats ».
+     */
+    memoire?: { chat: string; autresChats: boolean };
     signal?: AbortSignal;
   },
   handlers: StreamHandlers,
@@ -334,6 +346,7 @@ export async function streamChat(
       ...(opts.connaissances && opts.connaissances.length > 0 ? { connaissances: opts.connaissances } : {}),
       ...(opts.agent ? { agent: opts.agent } : {}),
       ...(opts.web ? { web: true } : {}),
+      ...(opts.memoire ? { memoire: opts.memoire } : {}),
       stream: true,
     }),
   });

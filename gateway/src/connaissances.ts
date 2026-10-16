@@ -108,8 +108,8 @@ const DOCUMENTS_PAR_BASE_MAX = 5_000;
  * à la frontière de deux morceaux n'est entière dans aucun ; avec 150, une
  * phrase ordinaire (une vingtaine de mots) l'est dans l'un des deux.
  */
-const TAILLE_MORCEAU = 1_000;
-const RECOUVREMENT = 150;
+export const TAILLE_MORCEAU = 1_000;
+export const RECOUVREMENT = 150;
 /*
  * Morceaux par appel au modèle d'embeddings. AnythingLLM les envoie un par
  * un à LM Studio (« LMStudio will drop all queued requests »), ce qui vaut
@@ -133,9 +133,9 @@ const PASSAGES_MAX = 12;
  * à qui la consigne demande de dire quand les passages ne répondent pas ; et
  * l'écran ne met en avant que les passages que la réponse cite.
  */
-const SEUIL_SIMILARITE = 0.55;
+export const SEUIL_SIMILARITE = 0.55;
 /** Constante de la fusion par rang (Cormack et al., 2009 : 60). */
-const RRF_K = 60;
+export const RRF_K = 60;
 const BASES_PAR_QUESTION_MAX = 10;
 
 const dossierIndex = () =>
@@ -449,13 +449,13 @@ export async function documentsDisponibles(qui: Qui) {
  * AnythingLLM prévoit ce mécanisme (`embeddingPrefix`) mais ne le renseigne
  * pas pour LM Studio.
  */
-function prefixes(modele: string): { document: string; question: string } {
+export function prefixes(modele: string): { document: string; question: string } {
   if (/nomic/i.test(modele)) return { document: "search_document: ", question: "search_query: " };
   if (/\be5-/i.test(modele)) return { document: "passage: ", question: "query: " };
   return { document: "", question: "" };
 }
 
-interface ModeleEmbed {
+export interface ModeleEmbed {
   id: string;
   appeler: (textes: string[]) => Promise<Float32Array[]>;
 }
@@ -465,7 +465,7 @@ interface ModeleEmbed {
  * jamais un modèle branché par une clé personnelle d'office (il coûte à
  * quelqu'un, et le texte des documents partirait chez lui).
  */
-async function modeleEmbed(acces: string): Promise<ModeleEmbed | { erreur: string }> {
+export async function modeleEmbed(acces: string): Promise<ModeleEmbed | { erreur: string }> {
   const r = await resolve({ role: "embed", acces });
   if ("error" in r) {
     /*
@@ -569,7 +569,7 @@ interface IndexCharge extends Index {
   longueurs: Uint32Array;
 }
 
-function indexInverse(morceaux: { texte: string }[]): { inverse: Map<string, number>; postes: Uint32Array; longueurs: Uint32Array } {
+export function indexInverse(morceaux: { texte: string }[]): { inverse: Map<string, number>; postes: Uint32Array; longueurs: Uint32Array } {
   const listes = new Map<string, number[]>();
   const longueurs = new Uint32Array(morceaux.length);
   morceaux.forEach((m, i) => {
@@ -665,7 +665,7 @@ const MOTS_VIDES = new Set(
   ).split(" "),
 );
 
-function termesDe(texte: string): string[] {
+export function termesDe(texte: string): string[] {
   return texte
     .toLocaleLowerCase("fr")
     .normalize("NFD")

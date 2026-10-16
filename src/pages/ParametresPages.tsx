@@ -718,10 +718,41 @@ export function PersonnalisationSettings() {
               * Ce que fait vraiment l'interrupteur (29/09/2026) : les éléments ajoutés
               * ci-dessous accompagnent chaque demande (store/profile.ts). Rien ne les
               * tire tout seul des conversations ; l'écran disait « se souvenir de vos
-              * conversations précédentes ».
+              * conversations précédentes ». Depuis le 16/10/2026, un long Chat garde
+              * aussi sa propre mémoire (bloc suivant) : la phrase ne parle plus que
+              * de cette liste.
               */}
-            {t("Les éléments ajoutés ci-dessous accompagnent chacune de vos demandes à l'IA. Rien n'est retenu de vos conversations sans que vous l'ajoutiez.")}
+            {t("Les éléments ajoutés ci-dessous accompagnent chacune de vos demandes à l'IA. Rien n'est ajouté à cette liste sans vous.")}
           </p>
+
+          {/*
+            * Mémoire des longues conversations (16/10/2026,
+            * gateway/src/memoireConversation.ts) : ce qui sort de la place du
+            * modèle est rangé sur l'instance, Chat par Chat, et retrouvé quand
+            * la question s'y rapporte. Le réglage élargit la recherche aux autres
+            * Chats de la personne, jamais à ceux d'une autre.
+            */}
+          <div className="mt-4 rounded-xl border border-border p-4">
+            <div className="flex items-start justify-between gap-4">
+              <div className="min-w-0">
+                <p className="font-semibold text-foreground">{t("Mémoire des longues conversations")}</p>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  {t("Quand un Chat devient trop long pour ce que le modèle peut lire, ses plus anciens messages sont rangés sur l'instance, chiffrés, dans une mémoire propre à ce Chat et à vous. À chaque question, les passages qui s'y rapportent sont rendus au modèle. Supprimer le Chat supprime sa mémoire ; « Effacer la mémoire de ce Chat » est dans la liste des Chats.")}
+                </p>
+              </div>
+            </div>
+            <div className="mt-3 flex items-center justify-between gap-4">
+              <p className="text-sm text-foreground">{t("Retrouver aussi ce qui a été dit dans mes autres Chats")}</p>
+              <Switch
+                checked={profile.memoireAutresChats === true}
+                onChange={(v) => update({ memoireAutresChats: v })}
+                label={t("Retrouver aussi ce qui a été dit dans mes autres Chats")}
+              />
+            </div>
+            <p className="mt-1 text-xs text-muted-foreground">
+              {t("Éteint, chaque Chat ne retrouve que sa propre mémoire. Allumé, la recherche couvre tous vos Chats, jamais ceux des autres.")}
+            </p>
+          </div>
 
           <div className="mt-4 rounded-xl border border-border p-4">
             <p className="font-semibold text-foreground">{t("Gestionnaire de mémoire")}</p>

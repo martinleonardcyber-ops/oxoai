@@ -46,6 +46,13 @@ export interface StoredMessage {
    */
   sourcesWeb?: { n: number; titre: string; adresse: string; lue: boolean }[];
   /**
+   * Combien d'extraits plus anciens de la conversation ont servi à la réponse
+   * (16/10/2026, gateway/src/memoireConversation.ts). Le nombre seulement :
+   * les extraits d'autres Chats de la personne n'ont pas à suivre ce Chat
+   * quand il est partagé.
+   */
+  memoire?: { extraits: number; autresChats?: number };
+  /**
    * Ce que la réponse a pris de temps, en millisecondes, mesuré à l'écran qui
    * l'a reçue (hooks/useChat.ts, `DureesReponse`), depuis le 27/09/2026.
    * Absent sur une réponse plus ancienne, ou qui n'a pas été mesurée : rien

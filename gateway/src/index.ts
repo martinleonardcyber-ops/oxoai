@@ -73,6 +73,7 @@ import { deployment, autoProvisionEnabled } from "./deployment.ts";
 import { etat as etatRechercheWeb } from "./rechercheWeb.ts";
 import { db, isCollection, COLLECTIONS, migrerChiffrement, type Collection } from "./db.ts";
 import { exporterDonnees } from "./export.ts";
+import * as memoireConversation from "./memoireConversation.ts";
 import { chargerReglagesEcran, configEcran, definirModeEcran, modeModifiable } from "./reglagesEcran.ts";
 import { chmodSync, readFileSync, writeFileSync } from "node:fs";
 import { join as joindre } from "node:path";
@@ -2227,9 +2228,24 @@ async function handleDataWrite(
      * Chat ne s'enregistrait plus (revue du 27/09/2026).
      */
     if (base !== undefined && base !== (await revisionVue(name))) return null;
-    const f = fusionner(name, await db().read(name), body.value ?? null, qui);
+    const existant = await db().read(name);
+    const f = fusionner(name, existant, body.value ?? null, qui);
     // Un collègue peut renvoyer une copie où figure encore un compte supprimé.
     await db().write(name, await sansComptesDisparus(name, f.valeur));
+    /*
+     * Un Chat supprimé emporte sa mémoire (memoireConversation.ts,
+     * 16/10/2026), celle de chaque personne qui y a parlé. Seulement les
+     * identifiants qui étaient dans la collection lue, et n'y sont plus après
+     * la fusion : jamais sur une lecture ratée (elle lève avant d'arriver ici).
+     */
+    if (name === "sessions") {
+      const apres = new Set((Array.isArray(f.valeur) ? f.valeur : []).map((c) => String((c as { id?: unknown })?.id)));
+      const partis = (Array.isArray(existant) ? existant : []).map((c) => String((c as { id?: unknown })?.id)).filter((id) => !apres.has(id));
+      if (partis.length > 0) {
+        const n = await memoireConversation.oublierChatsPartout(partis).catch(() => 0);
+        if (n > 0) console.log(`[memoire] ${n} mémoire(s) de Chat supprimé effacée(s)`);
+      }
+    }
     return f;
   });
   if (!fusion) {
@@ -2632,6 +2648,19 @@ async function handleExport(
   const qui = await demandeur(req, url);
   if (!qui) return send(res, 401, sansSeance());
   send(res, 200, await exporterDonnees(qui));
+}
+
+/**
+ * « Effacer la mémoire de ce Chat » (memoireConversation.ts, 16/10/2026) : la
+ * mémoire de la personne de la séance, et seulement la sienne. Le Chat reste.
+ */
+async function handleOublierMemoireChat(req: http.IncomingMessage, res: http.ServerResponse, url: URL, chat: string): Promise<void> {
+  const qui = await demandeur(req, url);
+  if (!qui) return send(res, 401, sansSeance());
+  if (!memoireConversation.chatValide(chat)) return send(res, 400, { error: { message: t("Ce Chat n'existe pas.") } });
+  const effacee = await memoireConversation.oublierChat(qui.userId, chat);
+  journaliser("memoire.chat_effacee", qui.userId, { effacee });
+  send(res, 200, { effacee });
 }
 
 /**
@@ -5838,6 +5867,8 @@ const traiter = (
     if (req.method === "POST" && path === "/helix/auth/verify")
       return handleAuthVerify(req, res);
     if (req.method === "GET" && path === "/helix/export") return handleExport(req, res, url);
+    if (req.method === "DELETE" && path.startsWith("/helix/memoire-chat/"))
+      return handleOublierMemoireChat(req, res, url, path.slice("/helix/memoire-chat/".length));
     if (req.method === "GET" && path === "/helix/compte/effacement")
       return handleEffacement(req, res, url, "apercu");
     if (req.method === "POST" && path === "/helix/compte/effacer")
