@@ -10075,6 +10075,168 @@ console.log("\n49. Mémoire de la conversation : par personne, chiffrée, effac�
   );
 }
 
+/* ------------------------------------------------------------------------- */
+/*
+ * Deux captures du 23/10/2026. Medhi : Roblox Studio branché (28 outils),
+ * modèle à 32 768 jetons, « crée un sol en bois dans Roblox Studio » : tous
+ * les outils retirés, et un conseil de recharger à 32 768 un modèle déjà à
+ * 32 768. Un utilisateur sous Windows, dans Code : « /app/metier.js » refusé,
+ * et le JSON des règles d'OpenCode à l'écran. Les essais de bout en bout sont
+ * dans essai-roblox-blender.mjs (section 46), essai-contexte.mjs (section 48)
+ * et essai-code-ci.mjs (vrai OpenCode, étape 7) ; ici, les fonctions et le
+ * code.
+ */
+console.log("\n50. Outils choisis quand la place manque ; chemins hors du dossier du projet dans Code (23/10/2026)");
+{
+  const { spawnSync } = await import("node:child_process");
+  const { writeFileSync: ecrire } = await import("node:fs");
+  const ici = mkdtempSync(join(tmpdir(), "helix-securite-50-"));
+  const projet = join(ici, "projet");
+  mkdirSync(join(projet, "app"), { recursive: true });
+  ecrire(join(projet, "app", "PLAN.md"), "# Plan\n");
+  ecrire(join(ici, "chemin-win32.mjs"), 'import p from "node:path";\nexport const { isAbsolute, relative, resolve } = p.win32;\n');
+  const u = spawnSync(
+    process.execPath,
+    [
+      "--experimental-strip-types",
+      "--no-warnings",
+      "--input-type=module",
+      "-e",
+      `
+      import { writeFileSync } from "node:fs";
+      import { join } from "node:path";
+      const c = await import("./gateway/src/choixOutils.ts");
+      const h = await import("./gateway/src/historique.ts");
+      const o = await import("./gateway/src/opencode.ts");
+      const f = await import("./gateway/src/fluxCode.ts");
+      const outil = (nom, taille = 0) => ({ type: "function", function: { name: nom, description: "x".repeat(taille), parameters: { type: "object" } } });
+      const outils = [
+        outil("fichiers__read_file", 300), outil("fichiers__write_file", 300), outil("bureau__creer_docx", 300),
+        ...Array.from({ length: 5 }, (_, i) => outil("roblox__outil_" + i, 900)), outil("blender__look", 900), outil("courrier__envoyer", 300),
+      ];
+      const q = (texte, avant = []) => [...avant, { role: "user", content: texte }];
+      const noms = (r) => r.gardes.map((x) => x.function.name);
+      const roblox = c.choisirOutils(outils, { messages: q("Crée un sol en bois dans Roblox Studio"), place: 1700 });
+      const neutre = c.choisirOutils(outils, { messages: q("Bonjour"), place: 1700 });
+      const deja = c.choisirOutils(outils, { messages: q("et maintenant ?", [{ role: "user", content: "Regarde la scène" }, { role: "assistant", content: "", tool_calls: [{ id: "1", function: { name: "blender__look", arguments: "{}" } }] }, { role: "tool", tool_call_id: "1", content: "ok" }]), place: 1700 });
+      const petit = c.choisirOutils(outils, { messages: q("Crée un sol dans Roblox"), place: 300 });
+      const nommes = [
+        [...c.servicesNommes("Crée un sol en bois dans Roblox Studio", ["roblox", "blender", "drive"])],
+        [...c.servicesNommes("mets à jour les drivers", ["drive"])],
+        [...c.servicesNommes("Ouvre Trello", ["trello", "fichiers"], { trello: "Trello" })],
+        [...c.servicesNommes("Dans Unreal Engine, ajoute un cube", ["unreal"])],
+      ];
+      const place32 = c.placeDesOutils(h.placeDeLaConversation(32768, true, 0), 0);
+      // Le greffon de Code, tel qu'il est écrit pour OpenCode, essayé ici et avec les chemins de Windows.
+      const lignes = o.codeCheminHorsProjet();
+      writeFileSync(join(${JSON.stringify(ici)}, "greffon.mjs"), lignes.join("\\n") + "\\nexport { helixHorsProjet };\\n");
+      writeFileSync(join(${JSON.stringify(ici)}, "greffon-win32.mjs"), lignes.join("\\n").replace('from "node:path"', 'from "./chemin-win32.mjs"') + "\\nexport { helixHorsProjet };\\n");
+      const g = (await import(join(${JSON.stringify(ici)}, "greffon.mjs"))).helixHorsProjet;
+      const w = (await import(join(${JSON.stringify(ici)}, "greffon-win32.mjs"))).helixHorsProjet;
+      const P = ${JSON.stringify(projet)};
+      const greffon = {
+        app: g("read", { filePath: "/app/PLAN.md" }, P, "/"),
+        dedans: g("write", { filePath: join(P, "app", "metier.js") }, P, "/"),
+        relatif: g("read", { filePath: "app/PLAN.md" }, P, "/"),
+        etc: g("read", { filePath: "/etc/hosts" }, P, "/"),
+        glob: g("glob", { path: "/home" }, P, "/"),
+        sortie: g("read", { filePath: "/Users/x/.local/share/opencode/tool-output/tool_1" }, P, "/"),
+        temp: g("read", { filePath: "/var/folders/ab/T/opencode/x.txt" }, P, "/"),
+        connecteur: g("helix_roblox__store_image", { path: "/Users/x/photo.png" }, P, "/"),
+        arbre: g("read", { filePath: "/depot/autre/a.js" }, "/depot/sous", "/depot"),
+        winApp: w("write", { filePath: "/app/metier.js" }, "C:\\\\Users\\\\Amine\\\\projet", "/"),
+        winDedans: w("write", { filePath: "C:\\\\Users\\\\Amine\\\\projet\\\\app\\\\metier.js" }, "C:\\\\Users\\\\Amine\\\\projet", "/"),
+        winCasse: w("read", { filePath: "c:\\\\users\\\\amine\\\\PROJET\\\\app\\\\PLAN.md" }, "C:\\\\Users\\\\Amine\\\\projet", "/"),
+        winSortie: w("read", { filePath: "C:\\\\Users\\\\Amine\\\\.local\\\\share\\\\opencode\\\\tool-output\\\\t1" }, "C:\\\\Users\\\\Amine\\\\projet", "/"),
+      };
+      const regle = 'The user has specified a rule which prevents you from using this specific tool call. Here are some of the relevant rules [{"permission":"*","action":"allow","pattern":"*"},{"permission":"external_directory","action":"deny","pattern":"*"}]';
+      const erreurs = {
+        regle: f.erreurOutil(regle, { filePath: "/app/metier.js" }),
+        sansChemin: f.erreurOutil(regle, {}),
+        greffon: f.erreurOutil("Error: This path is outside the project folder: /app/PLAN.md. The project folder is P.", { filePath: "/app/PLAN.md" }),
+        autre: f.erreurOutil("File not found: a.js", { filePath: "a.js" }),
+      };
+      console.log(JSON.stringify({ roblox: noms(roblox), robloxUtiles: roblox.utilesRetires, neutre: noms(neutre), deja: noms(deja), petit: { gardes: noms(petit), utiles: petit.utilesRetires }, nommes, place32, greffon, erreurs }));
+      `,
+    ],
+    { cwd: RACINE, encoding: "utf8", timeout: 60_000, env: { ...process.env, HELIX_DATA_DIR: join(ici, "donnees"), HELIX_CONFIG: join(ici, "absent.json") } },
+  );
+  let v = {};
+  try {
+    v = JSON.parse(u.stdout.trim().split("\n").pop());
+  } catch {
+    v = { erreur: `${u.stdout ?? ""}${u.stderr ?? ""}`.slice(-600) };
+  }
+  const R = (n) => Array.from({ length: n }, (_, i) => `roblox__outil_${i}`);
+  verifier(
+    "choix des outils : Roblox nommé, ses outils passent avant les fichiers, la bureautique et le reste ; gardés dans l'ordre d'origine",
+    JSON.stringify(v.roblox) === JSON.stringify(R(5)) && (v.robloxUtiles ?? []).length === 0,
+    JSON.stringify({ roblox: v.roblox, utiles: v.robloxUtiles, erreur: v.erreur }),
+  );
+  verifier(
+    "sans service nommé : les courants d'abord (fichiers, bureautique), puis le reste dans l'ordre",
+    JSON.stringify(v.neutre?.slice(0, 3)) === JSON.stringify(["fichiers__read_file", "fichiers__write_file", "bureau__creer_docx"]),
+    JSON.stringify(v.neutre),
+  );
+  verifier("un outil déjà appelé dans la conversation passe en premier (blender__look)", (v.deja ?? []).includes("blender__look"), JSON.stringify(v.deja));
+  verifier(
+    "place trop petite pour le service nommé : ceux qui tiennent, et les autres comptés comme utiles retirés (l'écran prévient)",
+    (v.petit?.gardes ?? []).filter((n) => n.startsWith("roblox__")).length === 0 && (v.petit?.utiles ?? []).length === 5,
+    JSON.stringify(v.petit),
+  );
+  verifier(
+    "services nommés : « Roblox Studio » → roblox ; « drivers » n'est pas Drive ; le libellé d'un connecteur (Trello) ; « Unreal Engine »",
+    JSON.stringify(v.nommes) === JSON.stringify([["roblox"], [], ["trello"], ["unreal"]]),
+    JSON.stringify(v.nommes),
+  );
+  verifier("place réservée aux outils, modèle qui réfléchit à 32 768 jetons : 18 241 jetons", v.place32 === 18241, String(v.place32));
+  const G = v.greffon ?? {};
+  verifier(
+    "greffon de Code : /app/PLAN.md refusé avec le dossier du projet et le bon chemin (le fichier y existe) ; /etc/hosts et /home refusés sans proposition",
+    /outside the project folder: \/app\/PLAN\.md/.test(G.app ?? "") && (G.app ?? "").includes(`Did you mean ${join(projet, "app", "PLAN.md")}?`) && /outside the project folder/.test(G.etc ?? "") && !/Did you mean/.test(G.etc ?? "") && /outside the project folder/.test(G.glob ?? ""),
+    JSON.stringify({ app: G.app, etc: G.etc, glob: G.glob, erreur: v.erreur }),
+  );
+  verifier(
+    "greffon de Code : rien de plus n'est refusé (dans le projet, chemin relatif, dossiers d'OpenCode, outil de connecteur, arbre du dépôt)",
+    G.dedans === null && G.relatif === null && G.sortie === null && G.temp === null && G.connecteur === null && G.arbre === null,
+    JSON.stringify(G),
+  );
+  verifier(
+    "greffon de Code, chemins de Windows : /app/metier.js (C:\\app) refusé ; le projet accepté, même écrit en minuscules ; tool-output d'OpenCode laissé",
+    /outside the project folder: \/app\/metier\.js\. The project folder is C:\\Users\\Amine\\projet\./.test(G.winApp ?? "") && G.winDedans === null && G.winCasse === null && G.winSortie === null,
+    JSON.stringify({ winApp: G.winApp, winDedans: G.winDedans, winCasse: G.winCasse, winSortie: G.winSortie }),
+  );
+  const E = v.erreurs ?? {};
+  verifier(
+    "écran de Code : le refus d'OpenCode perd le JSON des règles et porte `horsProjet` avec le chemin ; sans chemin, la phrase seule ; une autre erreur ne change pas",
+    E.regle?.horsProjet?.chemin === "/app/metier.js" && !/permission/.test(E.regle?.message ?? "x") && E.sansChemin?.horsProjet === undefined && !/\[/.test(E.sansChemin?.message ?? "[") &&
+      E.greffon?.horsProjet?.chemin === "/app/PLAN.md" && /^This path is outside/.test(E.greffon?.message ?? "") && E.autre?.message === "File not found: a.js" && E.autre?.horsProjet === undefined,
+    JSON.stringify(E),
+  );
+  const src = (...p) => readFileSync(join(RACINE, ...p), "utf8");
+  const codeEcran = src("src", "lib", "code.ts");
+  verifier(
+    "écran de Code : `horsProjet` (ou le texte d'OpenCode) se dit en une phrase traduite, jamais le message brut",
+    /tf\("Ce chemin est hors du dossier du projet : \{0\}\./.test(codeEcran) && /e\?\.horsProjet \|\| regle/.test(codeEcran),
+    "src/lib/code.ts",
+  );
+  const consignes = src("gateway", "src", "allegementCode.ts");
+  const appli = src("gateway", "src", "application.ts");
+  verifier(
+    "consignes de Code : les chemins sont dans le dossier du projet, jamais /app, /home ou C:\\ ; la consigne d'application nomme le dossier et le chemin entier de app/PLAN.md et app/metier.js",
+    /An absolute path from another system \(\/app, \/home, C:\\\\\) is not the project/.test(consignes) && /`filePath` is absolute, inside the project folder/.test(consignes) &&
+      /Le dossier du projet est \$\{dossier\}/.test(appli) && /consigneApplication\(plan, reglageEnvoi\.dossier\)/.test(src("gateway", "src", "index.ts")),
+    "allegementCode.ts, application.ts, index.ts",
+  );
+  const chatSrc = src("gateway", "src", "chat.ts");
+  verifier(
+    "Chat : la taille de 32 768 n'est conseillée qu'à un modèle chargé plus petit ; les outils sont choisis (choisirOutils), plus jamais tous retirés d'un coup",
+    /contexteConversation > 0 && contexteConversation < 32_768 && tailleVisee\(\) >= 32_768/.test(chatSrc) && /const choix = choisirOutils\(tools, \{ messages, place: placeOutils, libelles \}\);/.test(chatSrc),
+    "chat.ts",
+  );
+  rmSync(ici, { recursive: true, force: true });
+}
+
 console.log(`\n${reussis} vérification(s) réussie(s), ${echecs.length} échec(s).`);
 if (echecs.length) {
   console.log("Échecs :");

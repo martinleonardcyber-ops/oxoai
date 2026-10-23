@@ -523,7 +523,16 @@ export function applicationPreparee(dossier: string): boolean {
 /* Étape 4 : la consigne de l'agent                                    */
 /* ------------------------------------------------------------------ */
 
-export function consigneApplication(plan: PlanApplication | null): string {
+/**
+ * `dossier` (23/10/2026) : capture d'un utilisateur sous Windows, l'agent
+ * lisait « /app/PLAN.md » et écrivait « /app/metier.js » : les chemins
+ * relatifs de cette consigne (« app/PLAN.md »), avec la description de `read`
+ * qui veut un chemin absolu, devenaient un chemin absolu à la racine du disque
+ * (C:\app\…), hors du dossier du projet, refusé par OpenCode
+ * (`external_directory: deny`, opencode.ts). La consigne nomme désormais le
+ * dossier du projet et le chemin entier des deux fichiers.
+ */
+export function consigneApplication(plan: PlanApplication | null, dossier: string): string {
   return [
     "",
     "",
@@ -531,6 +540,7 @@ export function consigneApplication(plan: PlanApplication | null): string {
     plan
       ? `Helix a déjà construit l'application « ${plan.nom} » pour cette demande, en plusieurs étapes : le plan (${plan.modules.map((p) => p.nom).join(", ")}), des fiches d'exemple, puis l'interface complète (tableau de bord, menu, filtres, recherche, tri, pages, fiche détaillée avec les éléments liés, ajout, modification, suppression, export, enregistrement sur le poste). Un programme l'a vérifiée.`
       : "Helix a déjà construit l'application de ce dossier (voir app/PLAN.md).",
+    `Le dossier du projet est ${dossier}. Les chemins ci-dessous (app/PLAN.md, app/metier.js…) sont relatifs à ce dossier : app/PLAN.md est ${join(dossier, "app", "PLAN.md")} et app/metier.js est ${join(dossier, "app", "metier.js")}. Jamais /app/… : ce serait un autre dossier, hors du projet.`,
     "Ton travail, dans cet ordre, une étape après l'autre :",
     "1. Lis app/PLAN.md, puis app/metier.js.",
     "2. Ne modifie pas index.html, app/app.js, app/app.css, app/theme.css ni app/plan.js : ils marchent.",

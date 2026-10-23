@@ -344,6 +344,29 @@ function messageDe(erreur: unknown): string {
   return typeof e?.name === "string" ? e.name : "";
 }
 
+/**
+ * L'échec d'un outil, pour l'écran (23/10/2026). Capture d'un utilisateur
+ * sous Windows : un chemin hors du dossier du projet affichait le message de
+ * règle d'OpenCode suivi du JSON de toutes ses règles. Ce refus-là (ou celui
+ * du greffon de Helix, opencode.ts, `codeCheminHorsProjet`) porte désormais
+ * `horsProjet`, avec le chemin quand l'appel en donne un : l'écran le dit en
+ * une phrase traduite (src/lib/code.ts). Le message garde sa première phrase
+ * seulement, sans le JSON, pour l'extension et la ligne de commande.
+ */
+export function erreurOutil(message: string, entree: unknown): { message: string; horsProjet?: { chemin?: string } } {
+  const regle = /The user has specified a rule which prevents you from using this specific tool call/.test(message);
+  const greffon = /This path is outside the project folder/.test(message);
+  if (!regle && !greffon) return { message };
+  const args = (entree ?? {}) as { filePath?: unknown; path?: unknown };
+  const chemin = typeof args.filePath === "string" ? args.filePath : typeof args.path === "string" ? args.path : undefined;
+  // Une règle refusée sans chemin (une question, une compétence) n'est pas une sortie du dossier : seulement la phrase, sans le JSON.
+  if (regle && !chemin) return { message: "The user has specified a rule which prevents you from using this specific tool call." };
+  return {
+    message: greffon ? message.replace(/^Error:\s*/, "").split("\n")[0]! : "The user has specified a rule which prevents you from using this specific tool call.",
+    horsProjet: chemin ? { chemin } : {},
+  };
+}
+
 interface PartV1 {
   id?: string;
   messageID?: string;
@@ -490,7 +513,7 @@ export function traduire(brut: { type?: string; properties?: Record<string, unkn
               publier(sessionID, suivi, "session.next.tool.failed", {
                 assistantMessageID: part.messageID,
                 callID: appel,
-                error: { message: typeof etat.error === "string" ? etat.error : messageDe(etat.error) },
+                error: erreurOutil(typeof etat.error === "string" ? etat.error : messageDe(etat.error), etat.input),
               });
             }
           }
