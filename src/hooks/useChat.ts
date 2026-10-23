@@ -136,6 +136,8 @@ export interface Message {
   sourcesWeb?: SourceWeb[];
   /** Extraits plus anciens de la conversation rendus au modèle pour cette réponse (gateway/src/memoireConversation.ts). */
   memoire?: { extraits: number; autresChats?: number };
+  /** Compétences données en entier au modèle pour cette réponse (gateway/src/competences.ts, 23/10/2026). */
+  competences?: string[];
   /** Durées mesurées de la réponse (réflexion, premier mot, réponse entière). */
   durees?: DureesReponse;
   error?: string;
@@ -300,6 +302,8 @@ interface Options {
   surface?: Session["surface"];
   /** Session de Cowork : le dossier de travail du moment, retenu à chaque demande (store/sessions.ts, `dossier`). */
   dossier?: string;
+  /** Demander à l'instance d'ajouter les compétences de la personne (23/10/2026). */
+  competences?: boolean;
 }
 
 /** Enregistre l'historique d'un Chat : celui de l'écran, ou celui d'une réponse qui a continué sans lui. */
@@ -318,6 +322,7 @@ function persisterDans(session: Session, history: Message[], model: string | und
       ...(m.sources && m.sources.citations.length > 0 ? { sources: m.sources.citations } : {}),
       ...(m.sourcesWeb && m.sourcesWeb.length > 0 ? { sourcesWeb: m.sourcesWeb } : {}),
       ...(m.memoire && m.memoire.extraits > 0 ? { memoire: m.memoire } : {}),
+      ...(m.competences && m.competences.length > 0 ? { competences: m.competences } : {}),
       /*
        * Les durées et les étapes restent avec la réponse (27/09/2026) : rouvert,
        * ou relu sur un autre poste après synchronisation, le Chat dit encore
@@ -497,6 +502,7 @@ async function repondre(
          * modèle y est rangé par l'instance, au nom de la personne de la séance.
          */
         memoire: { chat: session.id, autresChats: loadProfile(currentUser().id).memoireAutresChats === true },
+        competences: options.competences === true,
         signal: controller.signal,
       },
       {
@@ -576,6 +582,8 @@ async function repondre(
               if (last.debut !== undefined) last.duree = Date.now() - last.debut;
             }
             patch(replyId, { tools: traces.map((trace) => ({ ...trace })) });
+          } else if (event.type === "competences") {
+            patch(replyId, { competences: event.noms.slice(0, 5) });
           } else if (event.type === "memoire") {
             patch(replyId, { memoire: { extraits: event.extraits, ...(event.autresChats ? { autresChats: event.autresChats } : {}) } });
           } else if (event.type === "sources_web") {
@@ -884,6 +892,7 @@ export function useChat(options: Options) {
           ...(m.sources && m.sources.length > 0 ? { sources: { citations: m.sources } } : {}),
           ...(Array.isArray(m.sourcesWeb) && m.sourcesWeb.length > 0 ? { sourcesWeb: m.sourcesWeb } : {}),
           ...(m.memoire && m.memoire.extraits > 0 ? { memoire: { ...m.memoire } } : {}),
+          ...(Array.isArray(m.competences) && m.competences.length > 0 ? { competences: [...m.competences] } : {}),
           ...(m.durees ? { durees: { ...m.durees } } : {}),
           ...(m.outils && m.outils.length > 0
             ? {

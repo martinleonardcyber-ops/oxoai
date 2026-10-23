@@ -26,7 +26,6 @@ import { estCowork, getSession, memoriserAgent, memoriserConnaissances, rattache
 import { currentUser } from "@/lib/store/identity";
 import { useSessions, notifySessionsChanged } from "@/hooks/useSessions";
 import { useAgents } from "@/hooks/useAgents";
-import { useCompetences } from "@/hooks/useCompetences";
 import { DEFAULT_AGENT, instructionsPourLeChat } from "@/lib/store/agents";
 import { instance } from "@/lib/instance";
 import { branding, features } from "@/config/branding";
@@ -83,12 +82,9 @@ export function HomePage() {
   const [agentId, setAgentId] = useState(DEFAULT_AGENT.id);
   const agent = selectable.find((a) => a.id === agentId) ?? DEFAULT_AGENT;
 
-  // Les procédures de l'entreprise valent aussi dans le Chat : c'est là que la
-  // plupart des demandes arrivent.
-  const { consignes: consignesCompetences } = useCompetences();
   const systemPrompt = useMemo(
-    () => buildSystemPrompt(profile, branding.name, instructionsPourLeChat(agent), consignesCompetences),
-    [profile, agent, consignesCompetences],
+    () => buildSystemPrompt(profile, branding.name, instructionsPourLeChat(agent)),
+    [profile, agent],
   );
 
   // Une session menée sur un modèle local reste liée à cette machine.
@@ -131,6 +127,8 @@ export function HomePage() {
     tools: toolsOn && toolsAllowed,
     connaissances,
     web: webActif,
+    // Les compétences valent aussi dans le Chat : l'instance les ajoute, selon la place du modèle (gateway/src/competences.ts).
+    competences: true,
     ...(agent.id !== DEFAULT_AGENT.id ? { agent: agent.id } : {}),
   });
 

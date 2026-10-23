@@ -27,6 +27,7 @@ import { ReunionsPage } from "@/pages/ReunionsPage";
 import { TachesPage } from "@/pages/TachesPage";
 import { ModelesPage } from "@/pages/ModelesPage";
 import { SettingsLayout } from "@/components/settings/SettingsShell";
+import { CompetencesSettings } from "@/components/settings/CompetencesReglages";
 import {
   ProfilSettings,
   PreferencesSettings,
@@ -103,6 +104,7 @@ const router = creerRouteur([
           { path: "preferences", element: <PreferencesSettings /> },
           { path: "securite", element: <SecuriteSettings /> },
           { path: "personnalisation", element: <PersonnalisationSettings /> },
+          { path: "competences", element: <CompetencesSettings /> },
           { path: "bot-recorder", element: <BotRecorderSettings /> },
           { path: "mcp", element: <McpSettings /> },
           { path: "ecran", element: <EcranSettings /> },

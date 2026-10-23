@@ -74,6 +74,7 @@ import { etat as etatRechercheWeb } from "./rechercheWeb.ts";
 import { db, isCollection, COLLECTIONS, migrerChiffrement, type Collection } from "./db.ts";
 import { exporterDonnees } from "./export.ts";
 import * as memoireConversation from "./memoireConversation.ts";
+import * as competences from "./competences.ts";
 import { chargerReglagesEcran, configEcran, definirModeEcran, modeModifiable } from "./reglagesEcran.ts";
 import { chmodSync, readFileSync, writeFileSync } from "node:fs";
 import { join as joindre } from "node:path";
@@ -3456,6 +3457,8 @@ async function traiterCodePrompt(
   const auteur = await demandeur(req, new URL(req.url ?? "/", "http://localhost"));
   const dossierDemande = reglageEnvoi.dossier;
   if (auteur) noterDemandeCode(body.sessionID, auteur.userId, dossierDemande);
+  // Les compétences de la personne, après la méthode de travail (competences.ts, 23/10/2026) : du texte, rien qui s'exécute.
+  if (auteur) texteEnvoye += await competences.consignePourCode(auteur.userId, body.text);
   // Les accords donnés aux outils d'OpenCode valent pour un tour (permissionsCode.ts).
   nouveauTourCode(body.sessionID);
   /*
@@ -6614,6 +6617,8 @@ function demarrerTachesProgrammees(url: string): void {
         stream: true,
         ...(options.modele ? { model: options.modele } : {}),
         ...(options.connaissances ? { connaissances: options.connaissances } : {}),
+        // Les compétences de la propriétaire valent aussi pour ses tâches programmées (competences.ts, 23/10/2026).
+        competences: true,
       }),
       signal: AbortSignal.timeout(30 * 60_000),
     });

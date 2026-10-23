@@ -1,4 +1,5 @@
 import type { Collection } from "./db.ts";
+import { competenceAcceptable, voitCompetence } from "./competencesRegles.ts";
 
 /**
  * Cloisonnement des données, côté instance.
@@ -229,6 +230,12 @@ interface Regle {
    * reste au propriétaire.
    */
   supprime: (item: Record<string, unknown>, qui: Demandeur) => boolean;
+  /**
+   * Forme et bornes d'un enregistrement envoyé (23/10/2026, les compétences) :
+   * hors bornes, il est refusé comme un enregistrement d'autrui, et l'ancien
+   * reste. Jamais tronqué.
+   */
+  valide?: (item: Record<string, unknown>) => boolean;
 }
 
 const REGLES: Partial<Record<Collection, Regle>> = {
@@ -239,9 +246,17 @@ const REGLES: Partial<Record<Collection, Regle>> = {
   /*
    * Même règle qu'un agent : lisible par toute l'organisation si son auteur l'a
    * voulu, modifiable par lui seul. Une procédure que chacun pourrait réécrire
-   * ne serait plus une procédure.
+   * ne serait plus une procédure. Lue sur son propre champ (`visibilite`,
+   * competencesRegles.ts) depuis le 23/10/2026 : celui des agents
+   * (`visibility`) n'y est pas, et une compétence partagée ne partait chez
+   * personne.
    */
-  competences: { voit: voitAgent, modifie: estProprietaire, supprime: estProprietaire },
+  competences: {
+    voit: (item, qui) => voitCompetence(item, qui.userId),
+    modifie: estProprietaire,
+    supprime: estProprietaire,
+    valide: competenceAcceptable,
+  },
 };
 
 /** Clé du profil d'une personne, tel que les postes l'envoient. */
@@ -341,7 +356,7 @@ export function fusionner(
       continue;
     }
 
-    if (!regle.modifie(item, qui)) {
+    if (!regle.modifie(item, qui) || (regle.valide && !regle.valide(envoye))) {
       resultat.push(item);
       if (JSON.stringify(envoye) !== JSON.stringify(item)) refuses += 1;
       continue;
@@ -374,7 +389,7 @@ export function fusionner(
    */
   for (const item of apres) {
     if (avantParId.has(String(item.id))) continue;
-    if (item.ownerId === qui.userId && regle.modifie(item, qui)) resultat.push(collection === "agents" ? groupesDeLAgent(undefined, item, qui) : item);
+    if (item.ownerId === qui.userId && regle.modifie(item, qui) && (!regle.valide || regle.valide(item))) resultat.push(collection === "agents" ? groupesDeLAgent(undefined, item, qui) : item);
     else refuses += 1;
   }
 
