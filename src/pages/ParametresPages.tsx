@@ -38,6 +38,7 @@ import { useMcp } from "@/hooks/useMcp";
 import { SettingsPage, SettingsRow, Card } from "@/components/settings/SettingsShell";
 import { SeancesEtJournal } from "@/components/settings/SeancesEtJournal";
 import { EmplacementModeles } from "@/components/onboarding/EmplacementModeles";
+import { MoteurLmStudio } from "@/components/settings/MoteurLmStudio";
 import { DeuxFacteurs } from "@/components/settings/DeuxFacteurs";
 import { SupprimerCompte } from "@/components/settings/SupprimerCompte";
 import { SignalerProbleme } from "@/components/settings/SignalerProbleme";
@@ -1354,7 +1355,18 @@ export function ModelesLocauxSettings() {
       <Card>
         <EmplacementModeles reglages />
       </Card>
+      {/* L'application LM Studio, ou Bionic, qui s'ouvrait toute seule (23/10/2026) : rien ne s'affiche sans application LM Studio sur la machine. */}
+      <MoteurLmStudioCarte />
     </SettingsPage>
+  );
+}
+
+/** La carte n'apparaît que si le composant a quelque chose à dire (il rend null sinon). */
+function MoteurLmStudioCarte() {
+  return (
+    <Card className="mt-4 empty:hidden">
+      <MoteurLmStudio />
+    </Card>
   );
 }
 

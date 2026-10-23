@@ -130,7 +130,7 @@ export async function appInstallee(): Promise<string | null> {
   // Mac Intel : l'application, seule possible (pas de llmster pour eux).
   if (process.arch !== "arm64") return application;
   // Mac à puce Apple : l'application si elle a déjà servi, sinon le moteur sans interface.
-  if (application && installationDeclaree("app-install-location.json")) return application;
+  if (application && installationDeclaree("app-install-location.json") && choixMoteur !== "sansFenetre") return application;
   return moteurSansInterface() && existsSync(lmsDeLlmster()) ? lmsDeLlmster() : null;
 }
 
@@ -170,8 +170,62 @@ export function moteurAPoser(): boolean {
    */
   if (process.platform === "darwin" && process.arch !== "arm64") return false;
   if (!["darwin", "win32", "linux"].includes(process.platform)) return false;
+  // Le moteur sans fenêtre demandé à côté de l'application LM Studio (23/10/2026, plus bas) : à poser tant qu'il n'est pas déclaré.
+  if (choixMoteur === "sansFenetre" && !installationDeclaree("llmster-install-location.json")) return true;
   return !installationDeclaree("app-install-location.json") && !installationDeclaree("llmster-install-location.json");
 }
+
+/* ------- L'application LM Studio de la personne, et Bionic (23/10/2026) ------- */
+
+/*
+ * Signalé le 23/10/2026 par une utilisatrice : « à chaque fois que je
+ * l'utilise, il ouvre automatiquement Bionic », qui lui réclame ensuite un
+ * abonnement. Bionic est l'application d'agent d'Element Labs, séparée de
+ * LM Studio (lmstudio.ai/docs/bionic, lu le 23/10/2026). Helix n'ouvre ni
+ * l'une ni l'autre ; c'est `lms` qui démarre un moteur quand aucun ne tourne.
+ * D'après son code ouvert (lmstudio-js, `findOrStartLlmster.ts`, lu le
+ * 23/10/2026) : il cherche d'abord un service à l'écoute (`/lms-status` sur les
+ * ports de `apiServerPorts`), et sinon lance celui que déclare
+ * `.internal/llmster-install-location.json` (« Always prefer llmster »), à
+ * défaut celui de `app-install-location.json`, c'est-à-dire l'application de
+ * bureau, avec `--run-as-service`. Chez elle, l'application (ou Bionic, si
+ * c'est lui qui s'est déclaré là) démarre donc à chaque commande `lms` que
+ * Helix lance quand rien ne tourne, et s'affiche : hypothèse, ni Bionic ni son
+ * poste n'ont été vus.
+ *
+ * D'où le choix de la personne (Réglages, Modèles locaux, et la mise en
+ * route), retenu par l'instance (reglagesMoteur.ts) :
+ *  - aucun choix : Helix se branche sur LM Studio s'il tourne déjà, et ne
+ *    lance aucune commande qui le réveillerait sinon (backends.ts,
+ *    `reveilPermis`) ; l'écran demande ;
+ *  - « application » : comme avant le 23/10/2026, Helix démarre le service de
+ *    l'application quand il en a besoin ;
+ *  - « sansFenetre » : Helix pose llmster à côté (même dossier de LM Studio,
+ *    donc mêmes modèles, rien de retéléchargé), et `lms` le préfère alors.
+ */
+export type ChoixMoteurLmStudio = "application" | "sansFenetre";
+let choixMoteur: ChoixMoteurLmStudio | null = null;
+
+/** Retient le choix (appelé par reglagesMoteur.ts, au démarrage et à chaque changement). */
+export function retenirChoixMoteur(choix: ChoixMoteurLmStudio | null): void {
+  choixMoteur = choix;
+}
+
+export const choixMoteurLmStudio = (): ChoixMoteurLmStudio | null => choixMoteur;
+
+/**
+ * Seule l'application de bureau est déclarée (pas llmster) : c'est elle que
+ * `lms` lancerait si aucun service ne tourne.
+ */
+export function seuleApplicationDeclaree(): boolean {
+  return installationDeclaree("app-install-location.json") && !installationDeclaree("llmster-install-location.json");
+}
+
+/** Le moteur sans fenêtre est-il déclaré (posé par Helix ou par l'installateur de l'éditeur) ? */
+export const llmsterDeclare = (): boolean => installationDeclaree("llmster-install-location.json");
+
+/** L'application de bureau est-elle déclarée (seule ou à côté de llmster) ? */
+export const applicationDeclaree = (): boolean => installationDeclaree("app-install-location.json");
 
 /**
  * Ce que contient le dossier interne de LM Studio, pour le journal quand le
@@ -215,6 +269,8 @@ export function applicationLmStudio(): string | null {
  */
 export function moteurSansInterface(): boolean {
   if (process.platform !== "darwin") return true;
+  // Choisi par la personne à côté de l'application (23/10/2026) : c'est lui que `lms` lance, il faut donc le lever (`daemon up`).
+  if (choixMoteur === "sansFenetre" && installationDeclaree("llmster-install-location.json")) return true;
   return installationDeclaree("llmster-install-location.json") && !(applicationLmStudio() && installationDeclaree("app-install-location.json"));
 }
 

@@ -76,6 +76,7 @@ import { exporterDonnees } from "./export.ts";
 import * as memoireConversation from "./memoireConversation.ts";
 import * as competences from "./competences.ts";
 import { chargerReglagesEcran, configEcran, definirModeEcran, modeModifiable } from "./reglagesEcran.ts";
+import { applicationEnAttenteDeChoix, chargerChoixMoteur, definirChoixMoteur, etatChoixMoteur } from "./reglagesMoteur.ts";
 import { chmodSync, readFileSync, writeFileSync } from "node:fs";
 import { join as joindre } from "node:path";
 import { homedir as dossierPersonnel } from "node:os";
@@ -637,7 +638,13 @@ async function handleProvisionStatus(res: http.ServerResponse): Promise<void> {
   const ouvert = moteurOuvert();
   const moteurInstalle = ouvert
     ? llamaCppInstalle()
-    : lmStudioActif && (await findLms()) !== null && !moteurAPoser() && !llmsterPoseAilleurs();
+    : lmStudioActif && ((await applicationEnAttenteDeChoix()) || (await findLms()) !== null) && !moteurAPoser() && !llmsterPoseAilleurs();
+  /*
+   * L'application LM Studio de la personne est là mais fermée, et Helix ne la
+   * démarre pas sans son accord (23/10/2026, engine.ts) : l'écran de mise en
+   * route demande, une fois, plutôt que de proposer un modèle à installer.
+   */
+  const lmStudioFerme = !ouvert && lmStudioActif && autoProvisionEnabled() && (await applicationEnAttenteDeChoix());
   /*
    * L'échec d'installation du moteur ne vaut plus une fois le moteur là
    * (tournée à l'écran du 28/09/2026) : LM Studio posé à la main depuis
@@ -670,6 +677,7 @@ async function handleProvisionStatus(res: http.ServerResponse): Promise<void> {
      * le problème avant de rien télécharger (engine.ts).
      */
     moteurInstalle,
+    lmStudioFerme,
     // Installation pilotée par l'intégrateur : l'écran de mise en route ne
     // propose rien, les modèles sont ceux du profil client.
     managed: !autoProvisionEnabled() || (!lmStudioActif && !ouvert),
@@ -725,7 +733,13 @@ async function handleEngineInstall(
   if (moteurEnInstallation) return send(res, 409, { error: { message: t("Le moteur est déjà en cours d'installation.") } });
   // Déploiement piloté par l'intégrateur : les modèles sont ceux du profil client, l'écran ne propose rien (revue du 27/09/2026).
   if (!autoProvisionEnabled()) return send(res, 403, { error: { message: t("Sur ce poste, les modèles sont préparés par l'intégrateur.") } });
-  const body = (await readJson(req).catch(() => ({}))) as { conditionsAcceptees?: unknown; model?: unknown };
+  const body = (await readJson(req).catch(() => ({}))) as { conditionsAcceptees?: unknown; model?: unknown; sansModele?: unknown };
+  /*
+   * Le moteur sans fenêtre posé depuis les réglages, à côté de l'application
+   * LM Studio (23/10/2026) : la personne a déjà ses modèles, on n'enchaîne pas
+   * sur un téléchargement.
+   */
+  const sansModele = body.sansModele === true;
   /*
    * Le modèle qui suit le moteur (28/09/2026) : le conseillé par défaut, ou
    * un autre, pourvu qu'il tienne sur la machine (les mêmes que l'écran de
@@ -798,6 +812,10 @@ async function handleEngineInstall(
           error: tf("Quittez {0} puis rouvrez-le : il réessaiera au démarrage. Si cela se répète, redémarrez la machine.", nomProduit()),
           percent: undefined,
         });
+        return;
+      }
+      if (sansModele) {
+        setProvisionState({ phase: "ready", message: t("Moteur installé et démarré."), percent: undefined, model: undefined });
         return;
       }
 
@@ -915,6 +933,40 @@ async function handleEmplacementVerifier(req: http.IncomingMessage, res: http.Se
   const body = (await readJson(req).catch(() => ({}))) as { dossier?: unknown };
   const issue = verifierEmplacement(moteurDeLEmplacement(), body.dossier);
   send(res, issue.statut, issue.corps);
+}
+
+/* --------------- le moteur de LM Studio que Helix démarre (23/10/2026) --------------- */
+
+/**
+ * L'application LM Studio (ou Bionic) qui s'ouvrait toute seule (engine.ts) :
+ * ce qui est déclaré sur la machine, le choix retenu, et si un service tourne.
+ * Une séance suffit à lire ; seul l'administrateur choisit (route suivante).
+ * Rien n'est proposé sur un Mac Intel (llama.cpp) ni quand LM Studio est coupé.
+ */
+async function handleMoteurLmStudioEtat(req: http.IncomingMessage, res: http.ServerResponse, url: URL): Promise<void> {
+  const qui = await demandeur(req, url);
+  if (!qui) return send(res, 401, sansSeance());
+  const concerne = moteurDeLEmplacement() === "lmstudio";
+  send(res, 200, { concerne, ...(concerne ? await etatChoixMoteur() : {}), admin: await estAdministrateur(qui.userId) });
+}
+
+/**
+ * `{ choix: "application" | "sansFenetre" }`. « sansFenetre » ne fait que
+ * retenir le choix : la pose du moteur passe ensuite par la route
+ * d'installation, conditions de LM Studio acceptées (`/helix/provision/moteur`).
+ */
+async function handleMoteurLmStudioChoix(req: http.IncomingMessage, res: http.ServerResponse, url: URL): Promise<void> {
+  const qui = await demandeur(req, url);
+  if (!qui) return send(res, 401, sansSeance());
+  if (await reserveeALAdministration(res, qui, t("Seul l'administrateur de l'instance choisit le moteur des modèles locaux."))) return;
+  if (moteurDeLEmplacement() !== "lmstudio") return send(res, 409, { error: { message: t("Cette instance n'utilise pas LM Studio pour ses modèles locaux.") } });
+  const body = (await readJson(req).catch(() => ({}))) as { choix?: unknown };
+  if (body.choix !== "application" && body.choix !== "sansFenetre") return send(res, 400, { error: { message: t("Choix inconnu.") } });
+  await definirChoixMoteur(body.choix, qui.userId);
+  // Le `lms` mémorisé et la liste des modèles peuvent changer avec le moteur.
+  oublierLms();
+  invalidate();
+  send(res, 200, await etatChoixMoteur());
 }
 
 /**
@@ -1843,6 +1895,9 @@ const EXECUTION: { methode: string; chemin: string }[] = [
   { methode: "GET", chemin: "/helix/emplacement-modeles" },
   { methode: "POST", chemin: "/helix/emplacement-modeles" },
   { methode: "POST", chemin: "/helix/emplacement-modeles/verifier" },
+  // Le moteur de LM Studio que Helix peut démarrer (23/10/2026) : l'état de la machine, et le choix de l'administrateur.
+  { methode: "GET", chemin: "/helix/moteur-lmstudio" },
+  { methode: "POST", chemin: "/helix/moteur-lmstudio" },
   { methode: "POST", chemin: "/helix/mcp/toggle" },
   { methode: "POST", chemin: "/helix/mcp/workspace" },
   { methode: "POST", chemin: "/helix/code/session" },
@@ -5861,6 +5916,8 @@ const traiter = (
     if (req.method === "GET" && path === "/helix/emplacement-modeles") return handleEmplacementEtat(req, res, url);
     if (req.method === "POST" && path === "/helix/emplacement-modeles") return handleEmplacementChoix(req, res, url);
     if (req.method === "POST" && path === "/helix/emplacement-modeles/verifier") return handleEmplacementVerifier(req, res, url);
+    if (req.method === "GET" && path === "/helix/moteur-lmstudio") return handleMoteurLmStudioEtat(req, res, url);
+    if (req.method === "POST" && path === "/helix/moteur-lmstudio") return handleMoteurLmStudioChoix(req, res, url);
     if (req.method === "POST" && path === "/helix/auth/create")
       return handleAuthCreate(req, res, url);
     if (req.method === "POST" && path === "/helix/auth/premier-mot-de-passe")
@@ -6448,6 +6505,8 @@ async function preparerMagasin(): Promise<void> {
   // Le mode d'écran choisi dans l'interface doit être connu avant la première
   // requête, même si la migration a échoué : il ne lève jamais d'erreur.
   await chargerReglagesEcran();
+  // Le moteur de LM Studio que Helix peut démarrer (23/10/2026) : connu avant la première découverte, qui lancerait `lms`.
+  await chargerChoixMoteur();
   // Mode « machine de l'agent » choisi : elle démarre avec l'instance, sans attendre la première demande.
   if (configEcran().mode === "sandbox") void demarrerMachine().catch(() => undefined);
   // Les clés de modèles cloud doivent être des backends dès la première requête.

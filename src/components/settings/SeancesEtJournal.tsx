@@ -76,6 +76,7 @@ const LIBELLES: Record<string, string> = {
   "moteur.conditions_acceptees": t("Conditions de LM Studio acceptées"),
   "moteur.llamacpp_installation": t("Installation du moteur llama.cpp"),
   "moteur.emplacement": t("Emplacement des modèles changé"),
+  "moteur.choix_lmstudio": t("Moteur des modèles locaux choisi"),
   "code.opencode_installe": t("OpenCode installé (écran Code)"),
   "donnees.exportees": t("Données exportées"),
   "ecran.mode_modifie": t("Contrôle de l'écran activé ou désactivé"),

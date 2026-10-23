@@ -53,6 +53,8 @@ interface Status {
   hasChatModel: boolean;
   /** Le moteur d'exécution des modèles est-il présent sur la machine ? */
   moteurInstalle: boolean;
+  /** L'application LM Studio de la machine est fermée, et l'instance ne la démarre pas sans choix (23/10/2026). */
+  lmStudioFerme?: boolean;
   /** Lequel : LM Studio (conditions à accepter), ou llama.cpp sur un Mac Intel (MIT). Absent d'une passerelle plus ancienne : LM Studio. */
   moteur?: "lmstudio" | "llamacpp";
   /** Déploiement piloté par l'intégrateur : les modèles sont ceux du profil client, rien à installer ici. */

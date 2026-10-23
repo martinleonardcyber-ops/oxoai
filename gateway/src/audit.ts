@@ -135,6 +135,7 @@ export type AuditAction =
   | "moteur.llamacpp_installation"
   /** Emplacement du moteur et des modèles choisi par l'administrateur (emplacementModeles.ts, 28/09/2026) : le dossier, l'ancien, un déplacement. */
   | "moteur.emplacement"
+  | "moteur.choix_lmstudio"
   | "code.opencode_installe"
   /*
    * Codex avec le compte ChatGPT du propriétaire (codex.ts, 27/09/2026) : qui

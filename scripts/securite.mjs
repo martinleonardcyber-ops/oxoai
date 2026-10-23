@@ -10403,6 +10403,63 @@ console.log("\n52. Compétences : personnelles isolées, import sans exécution,
   );
 }
 
+/*
+ * 53. L'application LM Studio, ou Bionic, qui s'ouvrait toute seule (signalé
+ * le 23/10/2026) : `lms` démarre l'application déclarée quand aucun service ne
+ * tourne (lmstudio-js, findOrStartLlmster.ts). Helix ne lance plus aucune
+ * commande `lms` dans ce cas sans le choix de l'administrateur. De bout en bout
+ * par `scripts/essai-moteur-lmstudio.mjs` (faux `lms` qui note, faux service,
+ * aucun vrai LM Studio), puis le code.
+ */
+console.log("\n53. LM Studio ou Bionic qui s'ouvrait seul : aucune commande `lms` qui réveille l'application sans choix (23/10/2026)");
+{
+  const essai = await new Promise((fin) => {
+    const e = spawn(process.execPath, [join(RACINE, "scripts", "essai-moteur-lmstudio.mjs")], { stdio: ["ignore", "pipe", "pipe"] });
+    let sortie = "";
+    e.stdout.on("data", (b) => (sortie += b));
+    e.stderr.on("data", (b) => (sortie += b));
+    const minuterie = setTimeout(() => e.kill(), 5 * 60_000);
+    e.on("close", (status) => {
+      clearTimeout(minuterie);
+      fin({ status, sortie });
+    });
+  });
+  const lignes = essai.sortie.split("\n");
+  for (const ligne of lignes) {
+    const ok = /^\s+✓ (.*)$/.exec(ligne);
+    const ko = /^\s+✗ (.*?)(?:  —  obtenu : .*)?$/.exec(ligne);
+    if (ok) verifier(`moteur LM Studio : ${ok[1]}`, true, "");
+    else if (ko) verifier(`moteur LM Studio : ${ko[1]}`, false, ligne.split("  —  obtenu : ")[1] ?? "");
+  }
+  verifier("moteur LM Studio : l'essai s'est déroulé jusqu'au bout", essai.status === 0, `${essai.status} ${lignes.slice(-6).join(" ")}`);
+
+  const lire = (...p) => readFileSync(join(RACINE, ...p), "utf8");
+  const back = lire("gateway", "src", "backends.ts");
+  const regles = lire("gateway", "src", "reglagesMoteur.ts");
+  verifier(
+    "moteur LM Studio : la garde est la première chose de `findLms` (avant même `lms version`), et toutes les commandes de la passerelle passent par `findLms`",
+    /export async function findLms\(\): Promise<string \| null> \{\n\s*if \(!\(await reveilPermis\(\)\)\) \{/.test(back) && !/execFile(Sync)?\(\s*["'`]lms/.test(back),
+    "backends.ts",
+  );
+  verifier(
+    "moteur LM Studio : la sonde reprend les ports et le chemin de `lms` (41343, 52993, 16141, 39414, 22931 ; `/lms-status`), sans mémoire d'un résultat",
+    /const PORTS_SERVICE = \[41343, 52993, 16141, 39414, 22931\];/.test(regles) && /\/lms-status/.test(regles) && !/vuEnMarche/.test(regles),
+    "reglagesMoteur.ts",
+  );
+  verifier(
+    "moteur LM Studio : le choix est réservé à l'administrateur et journalisé",
+    /reserveeALAdministration\(res, qui, t\("Seul l'administrateur de l'instance choisit le moteur des modèles locaux\."\)\)/.test(lire("gateway", "src", "index.ts")) && /journaliser\("moteur\.choix_lmstudio"/.test(regles),
+    "index.ts, reglagesMoteur.ts",
+  );
+  const aide = lire("src", "lib", "aide.ts");
+  const article = aide.slice(aide.indexOf('id: "bionic-lm-studio",'), aide.indexOf('id: "usage",'));
+  verifier(
+    "moteur LM Studio : un article d'aide « Bionic ou LM Studio s'ouvre tout seul », qui mène aux Réglages, sans nom de produit en dur ni « pas encore essayé »",
+    article.length > 500 && /titre: t\("Bionic ou LM Studio s'ouvre tout seul"\)/.test(article) && /lien: "\/parametres\/modeles-locaux"/.test(article) && /Run LLM server on login/.test(article) && !/Helix|pas encore essay|pas été essay/i.test(article),
+    article.slice(0, 200),
+  );
+}
+
 console.log(`\n${reussis} vérification(s) réussie(s), ${echecs.length} échec(s).`);
 if (echecs.length) {
   console.log("Échecs :");

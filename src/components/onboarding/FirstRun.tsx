@@ -15,6 +15,7 @@ import { InfoBox } from "@/components/ui/InfoBox";
 import { branding } from "@/config/branding";
 import { useProvision } from "@/hooks/useProvision";
 import { EmplacementModeles } from "@/components/onboarding/EmplacementModeles";
+import { MoteurLmStudio } from "@/components/settings/MoteurLmStudio";
 import { isDesktopApp } from "@/lib/instance";
 import { cn } from "@/lib/cn";
 import { t, tf, locale } from "@/lib/i18n";
@@ -89,6 +90,27 @@ export function FirstRun({ onReady }: { onReady: () => void }) {
         <p className="max-w-md text-sm leading-relaxed text-muted-foreground">
           {t("Sur ce poste, les modèles sont préparés par l'intégrateur, et aucun n'est encore disponible. Contactez la personne qui a installé ce poste.")}
         </p>
+        <Button icon={RefreshCw} variant="ghost" onClick={refresh}>
+          {t("Vérifier à nouveau")}
+        </Button>
+      </Shell>
+    );
+  }
+
+  /*
+   * L'application LM Studio de la personne est là, mais fermée (23/10/2026,
+   * signalement « il ouvre automatiquement Bionic ») : l'instance ne la
+   * démarre plus d'elle-même. L'écran le dit une fois, et laisse choisir.
+   */
+  if (status.lmStudioFerme && !busy) {
+    return (
+      <Shell>
+        <LogoMark size={52} animated />
+        <h1 className="text-2xl font-semibold tracking-tight text-foreground">{t("L'application LM Studio est fermée")}</h1>
+        <p className="max-w-md text-sm leading-relaxed text-muted-foreground">
+          {tf("Ouvrez LM Studio, puis « Vérifier à nouveau » : {0} s'y branche. Ou choisissez ci-dessous le moteur que {0} peut démarrer lui-même.", branding.name)}
+        </p>
+        <MoteurLmStudio miseEnRoute onChange={refresh} />
         <Button icon={RefreshCw} variant="ghost" onClick={refresh}>
           {t("Vérifier à nouveau")}
         </Button>

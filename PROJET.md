@@ -2582,6 +2582,76 @@ administrateur, disque lent), l'installateur NSIS lui-même (l'essai lance le do
 `win-unpacked`), l'écran (l'essai passe par l'API, comme lui), la vraie fermeture par l'icône de la
 zone de notification (l'essai arrête l'arbre de processus), un modèle plus gros que Qwen3 1.7B.
 
+### 3.23 L'application LM Studio, ou Bionic, qui s'ouvrait toute seule (23/10/2026)
+
+**Signalé le 23/10/2026 par une utilisatrice** : « à chaque fois que je l'utilise, il ouvre
+automatiquement Bionic », qui lui réclame ensuite un abonnement payant (quota cloud épuisé). Bionic
+est l'application d'agent d'Element Labs, « a new, separate app from LM Studio »
+(lmstudio.ai/docs/bionic, lu le 23/10/2026) ; sa documentation dit que les modèles téléchargés
+tournent « without using cloud inference credits » (docs/bionic/models/download-local-models).
+
+**Ce que dit le code de LM Studio** (lmstudio-js, `packages/lms-common-server/src/findOrStartLlmster.ts`
+et `packages/lms-common/src/apiServerPorts.ts`, lus le 23/10/2026) : avant toute commande qui a
+besoin du service, `lms` cherche un service à l'écoute (`/lms-status` sur 41343, 52993, 16141,
+39414, 22931) ; sinon il lance celui que déclare `.internal/llmster-install-location.json`
+(commentaire du code : « Always prefer llmster for now »), à défaut celui de
+`app-install-location.json`, l'application de bureau, avec `--run-as-service` (« headless flag »
+d'après le code). Aucune option ni variable pour choisir. La documentation « headless »
+(lmstudio.ai/docs/advanced/headless) propose llmster (« recommended ») ou l'application avec le
+réglage « Run the LLM service on machine login » (Cmd ou Ctrl + virgule ; « exiting the app will
+minimize it to the system tray, and the LLM server will continue to run in the background »).
+`lms daemon up` « starts llmster » (docs/cli/daemon/daemon-up), sans autre option que `--json`.
+
+**Cause la plus probable (hypothèse, ni son poste ni Bionic n'ont été vus)** : chez elle, seule
+l'application LM Studio est déclarée (pas de llmster). Quand elle est fermée, chaque commande `lms`
+que lance Helix (`server status`, `server start`, `daemon up` sous Windows, `ls`, `ps`, `get`,
+`load`) démarre l'application, et c'est elle (version récente, liée à Bionic) ou Bionic lui-même qui
+s'affiche malgré `--run-as-service`. Autre possibilité, pas vérifiée : Bionic, qui fait tourner les
+modèles locaux par « the LM Studio runtime », se déclarerait lui-même dans `app-install-location.json`.
+Helix, lui, n'ouvre aucune application (le seul `open -a` de `backends.ts` ne sert qu'à une
+application jamais déclarée, donc plus jamais sur un Mac à puce Apple).
+
+**Corrigé :**
+- **Aucune commande `lms` qui réveillerait l'application sans accord** (`findLms`, backends.ts,
+  garde `reveilPermis`, reglagesMoteur.ts) : seule l'application déclarée, aucun service à
+  l'écoute (même sonde que `lms`, sans mémoire d'un résultat), et pas de choix : `findLms` rend
+  `null`, et rien n'est lancé, pas même `lms version`. Quand le service tourne (LM Studio ouvert par
+  la personne), Helix s'y branche comme avant, sans rien démarrer.
+- **Le choix, une fois** : la mise en route (FirstRun.tsx) dit « L'application LM Studio est
+  fermée » au lieu de proposer un modèle, et Réglages, Modèles locaux, montre la carte
+  `MoteurLmStudio.tsx` (administrateur seul, au journal `moteur.choix_lmstudio`, rangé dans
+  `reglages.moteurLmStudio`, route `/helix/moteur-lmstudio`) :
+  - **« Moteur sans fenêtre de Helix »** : llmster posé à côté (même route d'installation,
+    conditions de LM Studio acceptées, `sansModele` : pas de téléchargement de modèle derrière). Même
+    dossier `~/.lmstudio` (ou celui du pointeur), donc les mêmes modèles. `moteurAPoser` vaut vrai
+    tant qu'il n'est pas déclaré ; ensuite `moteurSansInterface` aussi sur un Mac, et Helix le lève
+    par `lms daemon up`. L'écran dit que l'outil `lms` de la personne démarrera lui aussi ce moteur.
+  - **« Application LM Studio »** : comme avant le 23/10/2026 ; l'écran dit que LM Studio ou Bionic
+    peut s'ouvrir, et le réglage « Run LLM server on login » pour l'éviter.
+  - L'écran dit que les modèles locaux utilisés par Helix ne consomment aucun crédit.
+- **Aide** : article « Bionic ou LM Studio s'ouvre tout seul » (`bionic-lm-studio`, aide.ts).
+- **Changement de comportement assumé** : qui laissait Helix démarrer son LM Studio fermé doit
+  désormais cliquer une fois « Laisser Helix démarrer LM Studio » (ou ouvrir LM Studio). Les postes
+  où llmster est déclaré (posé par Helix) ne voient aucun changement.
+
+**Vérifié ici** (Mac à puce Apple, dossier personnel jetable, faux `lms` qui note, faux service sur
+un port d'essai par `HELIX_PORTS_SERVICE_LMSTUDIO`, jamais le LM Studio de ce Mac) :
+`scripts/essai-moteur-lmstudio.mjs`, 15 contrôles, et la section 53 de `npm run securite` lancée
+seule (20 contrôles) : application fermée sans choix, aucune commande `lms` et l'écran le dit ;
+service à l'écoute, seulement des lectures (`ls`, `ps`), ni `server start`, ni `daemon up`, ni
+`open` ; choix « application », `server start` comme avant ; choix « sans fenêtre », moteur à
+poser sans rien lancer, puis, llmster déclaré, `daemon up`. `essai-page-modeles`,
+`essai-emplacement-modeles` et `essai-contexte` repassent.
+
+**Pas vérifié** : la cause elle-même (ni Bionic, ni l'application LM Studio de l'utilisatrice, ni
+son système) ; que `lms version` ne réveille rien (lu nulle part ; il n'est de toute façon plus
+lancé quand la garde refuse) ; la vraie pose de llmster à côté d'une application LM Studio qui sert
+(remplacement de `~/.lmstudio/bin/lms` par celui de llmster 0.0.25, application LM Studio rouverte
+pendant que llmster tourne sur les mêmes ports, réglage « My Models › Change » de l'application
+suivi ou non par llmster) ; que « Run LLM server on login » n'affiche ni LM Studio ni Bionic à
+l'ouverture de session ; l'écran lui-même (ni capture ni navigateur dans cette session) ; Windows et
+Linux.
+
 ## 4. Sécurité
 
 Le détail est dans [SECURITE.md](SECURITE.md). Voici ce qu'il faut avoir en tête.

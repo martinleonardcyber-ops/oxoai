@@ -16,6 +16,7 @@ import { fournisseurDuBackend } from "./prixPublies.ts";
 import { calculSurProcesseur, detectHardware, relaisApresDefaillance } from "./provision.ts";
 import { aEssayer, essayerModele, noterEssai } from "./santeModeles.ts";
 import { canalOuvert, ecouterLApplication, envoyerALApplication } from "./canalApplication.ts";
+import { reveilPermis } from "./reglagesMoteur.ts";
 
 const exec = promisify(execFile);
 
@@ -49,8 +50,31 @@ export function oublierLms(): void {
   dernierEssai = 0;
 }
 
-/** Localise le binaire `lms`, ou `null` s'il est absent. */
+/**
+ * Localise le binaire `lms`, ou `null` s'il est absent, ou si Helix ne doit
+ * pas s'en servir maintenant : seule l'application LM Studio de la personne
+ * est déclarée, son service ne tourne pas, et elle n'a pas choisi que Helix la
+ * démarre (23/10/2026, signalement « il ouvre automatiquement Bionic ») :
+ * n'importe quelle commande (`ls`, `ps`, `server status`, `get`, `load`)
+ * lancerait alors l'application (engine.ts, reglagesMoteur.ts). La garde vaut
+ * pour tous les appels de la passerelle, qui passent tous par ici ; `lms
+ * version` lui-même n'est pas lancé tant qu'elle refuse.
+ */
 export async function findLms(): Promise<string | null> {
+  if (!(await reveilPermis())) {
+    if (!attenteDite) console.log("[helix] application LM Studio fermée, et pas de choix de moteur : aucune commande `lms` lancée (Réglages, Modèles locaux).");
+    attenteDite = true;
+    return null;
+  }
+  attenteDite = false;
+  return lmsInstalle();
+}
+
+/** Dit une fois au journal, pas à chaque découverte. */
+let attenteDite = false;
+
+/** Le binaire `lms`, sans la garde de `findLms` (seulement pour savoir s'il est là). */
+async function lmsInstalle(): Promise<string | null> {
   if (lmsPathCache !== undefined) return lmsPathCache;
   for (const candidate of LMS_CANDIDATES()) {
     try {

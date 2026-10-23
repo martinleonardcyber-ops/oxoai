@@ -7,6 +7,7 @@ import { nomProduit } from "./marque.ts";
 import { locale, t, tf } from "./langue.ts";
 import { noteDuModele } from "./notesModeles.ts";
 import { diagnosticInstallation, dossierLmStudio, dossierModelesLmStudio, moteurAPoser, preparerDossiersLlmster } from "./engine.ts";
+import { applicationEnAttenteDeChoix } from "./reglagesMoteur.ts";
 import { aEssayer, essayerModele, estDefaillant, nomDuModele, noterCoupure, noterEssai, type Verdict } from "./santeModeles.ts";
 import { autoProvisionEnabled } from "./deployment.ts";
 import { cleLlamaCpp, moteurOuvert, urlLlamaCpp } from "./llamaCppBase.ts";
@@ -1032,6 +1033,15 @@ async function provision(
     return state;
   }
   const lms = await findLms();
+  // L'application LM Studio de la personne, fermée, que Helix ne démarre pas sans son accord (23/10/2026, engine.ts).
+  if (!lms && (await applicationEnAttenteDeChoix())) {
+    setState({
+      phase: "error",
+      message: t("L'application LM Studio est fermée."),
+      error: tf("Ouvrez LM Studio, ou choisissez dans les réglages, Modèles locaux, le moteur que {0} peut démarrer lui-même.", nomProduit()),
+    });
+    return state;
+  }
   // `lms` sans moteur qu'il sache démarrer (Mac à puce Apple, engine.ts) : le moteur est à installer.
   if (!lms || moteurAPoser()) {
     setState({

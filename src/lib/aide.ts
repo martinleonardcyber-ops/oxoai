@@ -115,6 +115,15 @@ const ARTICLES: Article[] = [
     corps: tf("Un modèle pèse de 2 à 18 Go. Si le disque principal n'a pas la place, choisissez-en un autre, par exemple D: sous Windows ou un disque externe sur Mac.\n\n- Avant l'installation : l'écran de mise en route montre où iront le moteur et les modèles, la place libre sur ce disque et la place nécessaire. « Changer » ouvre le choix d'un dossier. Les modèles iront alors sur ce disque, et le moteur aussi avec LM Studio, dans un sous-dossier « LM Studio » (« modeles-llamacpp » sur un Mac Intel).\n- Après l'installation : Réglages, Modèles locaux. Sur un Mac Intel, {0} déplace lui-même les modèles, et n'efface les originaux qu'une fois la copie vérifiée. Avec LM Studio déjà installé, {0} ne déplace pas son dossier pendant qu'il tourne : la page donne la marche à suivre.\n\nLe dossier choisi doit être sur un disque de cette machine (pas un partage réseau), hors de votre dossier personnel et de l'espace de travail des agents. Seul l'administrateur de l'instance le change.", branding.name),
   },
   {
+    // Signalé le 23/10/2026 : « il ouvre automatiquement Bionic » (gateway/src/engine.ts, reglagesMoteur.ts).
+    id: "bionic-lm-studio",
+    titre: t("Bionic ou LM Studio s'ouvre tout seul"),
+    resume: t("Pourquoi, comment l'éviter, et pourquoi aucun abonnement n'est nécessaire."),
+    motsCles: ["bionic", "lm studio", "ouvre", "fenetre", "abonnement", "credits", "payant", "llmster", "moteur", "sans fenetre"],
+    lien: "/parametres/modeles-locaux",
+    corps: tf("Pourquoi : quand l'application LM Studio est installée sur la machine et fermée, la démarrer pour faire tourner les modèles peut afficher LM Studio, ou Bionic, l'application d'agent du même éditeur. Ce n'est pas {0} qui ouvre ces fenêtres : c'est le démarrage du moteur de LM Studio.\n\nCe que fait {0} : si LM Studio tourne déjà, il s'y branche sans rien démarrer. S'il est fermé, {0} ne le démarre plus sans votre accord, et vous demande une fois.\n\nVos choix, dans Réglages, Modèles locaux :\n- Moteur sans fenêtre de {0} : {0} pose à côté le moteur sans interface de LM Studio (llmster) et le démarre sans rien ouvrir. Il utilise le même dossier que LM Studio.\n- Application LM Studio : {0} démarre l'application quand il en a besoin. Pour qu'elle ne s'affiche pas, dans LM Studio, Réglages (Cmd ou Ctrl et la virgule), cochez « Run LLM server on login » : le service tourne en arrière-plan dès l'ouverture de votre session.\n- Ou ouvrez LM Studio vous-même avant d'utiliser {0}.\n\nAucun abonnement n'est nécessaire : {0} utilise les modèles installés sur votre machine, qui ne consomment aucun crédit. Si Bionic vous propose un abonnement, il concerne ses modèles cloud, pas {0}. Vous pouvez fermer Bionic.", branding.name),
+  },
+  {
     id: "usage",
     titre: t("Mon usage : ce que coûtent vos modèles"),
     resume: t("Jetons consommés, prix publié et coût estimé."),
