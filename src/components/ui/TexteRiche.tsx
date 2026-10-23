@@ -13,6 +13,12 @@ import { cn } from "@/lib/cn";
  * peut donc rien injecter dans la page. Les liens restent du texte : un lien
  * cliquable écrit par un modèle est une invitation à l'hameçonnage.
  *
+ * Sauf `liens` (23/10/2026, nouveautés d'une version) : le texte vient alors
+ * des notes de publication de l'éditeur, et `[texte](https://…)` devient un
+ * lien, en https seulement, ouvert hors de l'application (`target="_blank"`,
+ * que la fenêtre principale remet au navigateur du système, main.cjs). Tout
+ * autre schéma (`javascript:`, `file:`, `data:`…) reste du texte.
+ *
  * Sens d'écriture (30/09/2026) : chaque bloc porte `dir="auto"`. Une réponse en
  * arabe dans une interface française s'aligne à droite, une réponse en français
  * dans une interface arabe à gauche, paragraphe par paragraphe. Le code, lui,
@@ -74,13 +80,52 @@ function decouper(texte: string): Bloc[] {
   return blocs;
 }
 
-/** Gras, italique et code en ligne. */
-function enLigne(texte: string): ReactNode[] {
+/** Un lien `[texte](https://…)` ; l'adresse s'arrête au premier blanc, et admet un niveau de parenthèses (une page de Wikipédia). */
+const LIEN = /\[([^\]\n]+)\]\((https:\/\/(?:[^()\s]|\([^()\s]*\))+)\)/g;
+
+/** Gras, italique, code en ligne, et liens https quand `liens` est demandé. */
+function enLigne(texte: string, liens = false): ReactNode[] {
+  if (!liens) return formater(texte, 0);
+  const morceaux: ReactNode[] = [];
+  let dernier = 0;
+  let n = 1;
+  let m: RegExpExecArray | null;
+  LIEN.lastIndex = 0;
+  while ((m = LIEN.exec(texte))) {
+    if (m.index > dernier) morceaux.push(...formater(texte.slice(dernier, m.index), n++ * 1000));
+    let adresse: URL | null = null;
+    try {
+      adresse = new URL(m[2] ?? "");
+    } catch {
+      adresse = null;
+    }
+    morceaux.push(
+      adresse && adresse.protocol === "https:" ? (
+        <a
+          key={`l${n++}`}
+          href={adresse.href}
+          target="_blank"
+          rel="noreferrer noopener"
+          className="text-foreground underline underline-offset-4 hover:no-underline"
+        >
+          {m[1]}
+        </a>
+      ) : (
+        m[1]
+      ),
+    );
+    dernier = m.index + m[0].length;
+  }
+  if (dernier < texte.length) morceaux.push(...formater(texte.slice(dernier), n * 1000));
+  return morceaux;
+}
+
+function formater(texte: string, base: number): ReactNode[] {
   const morceaux: ReactNode[] = [];
   const motif = /(`[^`\n]+`)|(\*\*[^*\n]+\*\*)|(__[^_\n]+__)|(\*[^*\s][^*\n]*\*)/g;
   let dernier = 0;
   let m: RegExpExecArray | null;
-  let n = 0;
+  let n = base;
   while ((m = motif.exec(texte))) {
     if (m.index > dernier) morceaux.push(texte.slice(dernier, m.index));
     const brut = m[0];
@@ -93,7 +138,7 @@ function enLigne(texte: string): ReactNode[] {
   return morceaux;
 }
 
-export function TexteRiche({ texte, className }: { texte: string; className?: string }) {
+export function TexteRiche({ texte, className, liens = false }: { texte: string; className?: string; liens?: boolean }) {
   return (
     <div className={cn("space-y-2 break-words", className)}>
       {decouper(texte).map((b, i) => {
@@ -101,7 +146,7 @@ export function TexteRiche({ texte, className }: { texte: string; className?: st
           case "titre":
             return (
               <p key={i} dir="auto" className="font-semibold text-foreground">
-                {enLigne(b.texte)}
+                {enLigne(b.texte, liens)}
               </p>
             );
           case "liste": {
@@ -109,7 +154,7 @@ export function TexteRiche({ texte, className }: { texte: string; className?: st
             return (
               <Liste key={i} dir="auto" className={cn("space-y-0.5 ps-5", b.ordonnee ? "list-decimal" : "list-disc")}>
                 {b.elements.map((e, j) => (
-                  <li key={j}>{enLigne(e)}</li>
+                  <li key={j}>{enLigne(e, liens)}</li>
                 ))}
               </Liste>
             );
@@ -120,7 +165,7 @@ export function TexteRiche({ texte, className }: { texte: string; className?: st
                 {b.lignes.map((l, j) => (
                   <Fragment key={j}>
                     {j > 0 && <br />}
-                    {enLigne(l)}
+                    {enLigne(l, liens)}
                   </Fragment>
                 ))}
               </blockquote>
@@ -137,7 +182,7 @@ export function TexteRiche({ texte, className }: { texte: string; className?: st
                 {b.lignes.map((l, j) => (
                   <Fragment key={j}>
                     {j > 0 && <br />}
-                    {enLigne(l)}
+                    {enLigne(l, liens)}
                   </Fragment>
                 ))}
               </p>

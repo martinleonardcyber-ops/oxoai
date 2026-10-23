@@ -5,6 +5,8 @@ import { Button } from "@/components/ui/Button";
 import { InfoBox } from "@/components/ui/InfoBox";
 import { branding } from "@/config/branding";
 import { t, tf } from "@/lib/i18n";
+import { pontNouveautes } from "@/lib/nouveautes";
+import { NotesDeVersion } from "./NotesDeVersion";
 
 /**
  * La fenêtre « Nouvelle version » : un clic, et l'application se met à jour.
@@ -75,6 +77,8 @@ export function FenetreMiseAJour() {
         ? tf("Vous avez la version {0}. L'installation télécharge la nouvelle depuis les versions publiées, vérifie qu'elle est intacte et signée par l'éditeur, puis ferme et rouvre l'application. Vos Chats et vos réglages restent en place.", etat.versionInstallee)
         : tf("Vous avez la version {0}. L'installation télécharge la nouvelle depuis votre instance, vérifie qu'elle est intacte, puis ferme et rouvre l'application. Vos Chats et vos réglages restent en place.", etat.versionInstallee);
   const enCours = installation && (etat.phase === "telechargement" || etat.phase === "prete");
+  // Les notes ne se lisent que là où GitHub annonce les versions (pas sur un poste rattaché, ni depuis le serveur de l'agence).
+  const notes = etat.source === "github" && Boolean(pontNouveautes());
   const echec = installation && etat.phase === "erreur";
   if (!enCours && !echec && (!aProposer || fermee || repoussee(version))) return null;
 
@@ -93,12 +97,25 @@ export function FenetreMiseAJour() {
      * tard » la tait pour cette version : un clic par mégarde la faisait
      * disparaître jusqu'à la suivante (essai du 27/09/2026).
      */
-    <Modal open onClose={enCours ? () => undefined : () => setFermee(true)} size="sm">
+    <Modal open onClose={enCours ? () => undefined : () => setFermee(true)} size={notes ? "lg" : "sm"}>
       <div className="space-y-4 p-6">
         <div>
           <h2 className="text-lg font-semibold text-foreground">{tf("{0} {1} est disponible", branding.name, version)}</h2>
           <p className="mt-1 text-sm text-muted-foreground">{texte}</p>
         </div>
+        {/*
+         * Ce qu'apporte la version proposée, et celles qu'on saute (23/10/2026),
+         * lu dans les notes des publications GitHub. Le cadre défile : les
+         * boutons restent en vue.
+         */}
+        {notes && !enCours && (
+          <div className="space-y-2">
+            <p className="text-sm font-medium text-foreground">{t("Nouveautés")}</p>
+            <div className="max-h-72 overflow-y-auto rounded-xl bg-muted/40 px-4 py-3">
+              <NotesDeVersion depuis={etat.versionInstallee} jusqua={version} />
+            </div>
+          </div>
+        )}
         {enCours && (
           <div className="space-y-1.5">
             <p className="flex items-center gap-2 text-sm text-foreground">

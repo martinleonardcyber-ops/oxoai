@@ -32,6 +32,7 @@ const { app, BrowserWindow, ipcMain, shell, net } = require("electron");
 const coffre = require("./coffre.cjs");
 const signatureEditeur = require("./signatureEditeur.cjs");
 const sourceGithub = require("./sourceGithub.cjs");
+const notesVersion = require("./notesVersion.cjs");
 const { changerLangue, tx, raison } = require("./textesMiseAJour.cjs");
 
 /** Toutes les six heures, et une première fois peu après le lancement. */
@@ -261,6 +262,170 @@ function messageErreur(err) {
 }
 
 /*
+ * Nouveautés de la version (demandé par Medhi le 23/10/2026 : « les gens
+ * peuvent voir les nouveautés »). Les notes des publications GitHub, lues à la
+ * demande de l'écran : dans la fenêtre qui propose une version (celle-ci et
+ * les versions sautées), au premier lancement d'une nouvelle version, et dans
+ * Réglages › Préférences › À propos. Le tri et le nettoyage sont dans
+ * notesVersion.cjs, vérifiés sans Electron (scripts/essai-notes-version.mjs).
+ */
+
+/** La liste des publications (avec leurs notes et leurs fichiers) ne se lit pas au-delà : 30 publications pèsent quelques centaines de Ko (23/10/2026). */
+const LISTE_MAX_OCTETS = 4 * 1024 * 1024;
+/** La liste lue est gardée une demi-heure : rouvrir la fenêtre ne redemande rien à GitHub (60 appels par heure sans compte). */
+const CACHE_NOTES_MS = 30 * 60 * 1000;
+let cacheListe = null;
+
+/** Le corps d'une réponse en texte, sans jamais dépasser `max` octets (au-delà, refusé, rien n'est gardé en mémoire). */
+async function lireBorne(reponse, max) {
+  if (!reponse.body) return "";
+  const lecteur = reponse.body.getReader();
+  const morceaux = [];
+  let recu = 0;
+  for (;;) {
+    const { done, value } = await lecteur.read();
+    if (done) break;
+    recu += value.length;
+    if (recu > max) {
+      void lecteur.cancel().catch(() => {});
+      throw new Error("réponse trop longue");
+    }
+    morceaux.push(Buffer.from(value));
+  }
+  return Buffer.concat(morceaux).toString("utf8");
+}
+
+/**
+ * Les notes ne se lisent que là où GitHub est déjà la source des versions :
+ * un poste rattaché suit son instance et ne contacte pas GitHub (décision du
+ * 26/09/2026), un paquet qui porte le serveur de l'agence suit sa propre
+ * numérotation, et `HELIX_SANS_MISE_A_JOUR=1` coupe tout.
+ */
+function notesPermises() {
+  if (!DEPOT || process.env.HELIX_SANS_MISE_A_JOUR === "1") return false;
+  if (sourceInstance()) return false;
+  if (lireAdresseFlux()) return false;
+  return true;
+}
+
+async function listePublications() {
+  if (cacheListe && Date.now() - cacheListe.quand < CACHE_NOTES_MS) return cacheListe.liste;
+  const reponse = await net.fetch(`https://api.github.com/repos/${DEPOT}/releases?per_page=30`, {
+    headers: { Accept: "application/vnd.github+json", "User-Agent": "Helix" },
+  });
+  if (!reponse.ok) throw new Error(`GitHub a répondu ${reponse.status}`);
+  const liste = notesVersion.lireListe(await lireBorne(reponse, LISTE_MAX_OCTETS));
+  if (!liste) throw new Error("liste illisible");
+  cacheListe = { quand: Date.now(), liste };
+  return liste;
+}
+
+/**
+ * Les nouveautés de `jusqua`, et des versions d'après `depuis` s'il est donné,
+ * les plus récentes d'abord. Dans la langue de l'écran si la publication porte
+ * `notes.<langue>.md`, sinon en anglais (l'écran le dit). Rien de lisible :
+ * `ok: false`, avec la page des publications quand GitHub est la source, ou
+ * sans lien (poste rattaché, serveur de l'agence).
+ */
+async function nouveautes(demande) {
+  const d = demande && typeof demande === "object" ? demande : {};
+  const propre = (v) => (notesVersion.versionValide(v) ? String(v).replace(/^v/, "") : null);
+  const jusqua = propre(d.jusqua);
+  const depuis = propre(d.depuis);
+  const langue = notesVersion.LANGUES.includes(d.langue) ? d.langue : "en";
+  if (!jusqua || !notesPermises()) return { ok: false, lien: null };
+  const toutes = `https://github.com/${DEPOT}/releases`;
+  try {
+    const { retenues, autres } = notesVersion.choisirPublications(await listePublications(), { depuis, jusqua });
+    if (!retenues.length) return { ok: false, lien: toutes };
+    const versions = [];
+    for (const p of retenues) {
+      let texte = "";
+      let langueTexte = "en";
+      const traduite = notesVersion.noteTraduiteDe(p.assets, langue);
+      if (traduite) {
+        try {
+          const r = await net.fetch(traduite.browser_download_url, { headers: { "User-Agent": "Helix" } });
+          if (r.ok) texte = notesVersion.extraireNoteTraduite(await lireBorne(r, notesVersion.TAILLE_BRUTE_MAX));
+          if (texte) langueTexte = langue;
+        } catch {
+          texte = "";
+        }
+      }
+      if (!texte) texte = notesVersion.extraireNouveautes(p.body);
+      versions.push({
+        version: String(p.tag_name).replace(/^v/, ""),
+        date: notesVersion.datePublication(p),
+        texte,
+        langue: langueTexte,
+        lien: notesVersion.lienPublication(p),
+      });
+    }
+    return { ok: true, versions, autres, lien: toutes };
+  } catch {
+    return { ok: false, lien: toutes };
+  }
+}
+
+/*
+ * Premier lancement d'une nouvelle version : la version dont l'écran a déjà
+ * montré les nouveautés est notée dans `<profil>/nouveautes.json`. Relevé au
+ * démarrage (main.cjs, avant la fenêtre), parce qu'un profil sans ce fichier
+ * se reconnaît à son stockage local (`Local Storage`), que la page crée dès
+ * son premier script : une installation neuve ne montre rien, un profil déjà
+ * servi par une version d'avant ce fichier montre les nouveautés de la
+ * version installée. Le fichier n'est qu'un repère : illisible, il est
+ * réécrit, rien d'autre n'y est rangé.
+ */
+let lancement = null;
+const fichierNouveautes = () => path.join(app.getPath("userData"), "nouveautes.json");
+
+function ecrireNouveautes(contenu) {
+  try {
+    const f = fichierNouveautes();
+    fs.mkdirSync(path.dirname(f), { recursive: true });
+    const provisoire = `${f}.${process.pid}.tmp`;
+    fs.writeFileSync(provisoire, JSON.stringify(contenu), { mode: 0o600 });
+    fs.renameSync(provisoire, f);
+  } catch {
+    /* profil en lecture seule : les nouveautés reviendront au prochain lancement */
+  }
+}
+
+function releverLancement() {
+  if (lancement) return lancement;
+  const version = app.getVersion();
+  let lu = null;
+  let present = false;
+  try {
+    present = fs.existsSync(fichierNouveautes());
+    if (present) lu = JSON.parse(fs.readFileSync(fichierNouveautes(), "utf8"));
+  } catch {
+    lu = null;
+  }
+  let depuis = null;
+  let inconnue = false;
+  if (lu && notesVersion.versionValide(lu.vue)) {
+    if (notesVersion.comparer(version, lu.vue) === 1) depuis = lu.vue;
+  } else if (present || fs.existsSync(path.join(app.getPath("userData"), "Local Storage"))) {
+    inconnue = true;
+  } else {
+    ecrireNouveautes({ vue: version, nePlusAfficher: false });
+  }
+  lancement = { version, depuis, inconnue, nePlusAfficher: Boolean(lu && lu.nePlusAfficher === true) };
+  return lancement;
+}
+
+/** Les nouveautés de cette version ont été montrées (ou la personne a changé « Ne plus afficher ») : plus rien jusqu'à la suivante. */
+function nouveautesVues(reglage) {
+  const actuel = releverLancement();
+  const nePlusAfficher = reglage && typeof reglage.nePlusAfficher === "boolean" ? reglage.nePlusAfficher : actuel.nePlusAfficher;
+  lancement = { ...actuel, depuis: null, inconnue: false, nePlusAfficher };
+  ecrireNouveautes({ vue: actuel.version, nePlusAfficher });
+  return { ...lancement };
+}
+
+/*
  * Qui a le droit d'appeler ces canaux : la fenêtre principale seule, comme
  * tous les autres (main.cjs, `depuisLaFenetre`). Ils ne vérifiaient rien
  * jusqu'à la revue du 26/09/2026. Tant que main.cjs n'a pas donné sa règle,
@@ -294,6 +459,9 @@ function brancher() {
     }
     return false;
   }));
+  ipcMain.handle("helix:maj-nouveautes", garde((_e, demande) => nouveautes(demande)));
+  ipcMain.handle("helix:maj-lancement", garde(() => ({ ...releverLancement() })));
+  ipcMain.handle("helix:maj-nouveautes-vues", garde((_e, reglage) => nouveautesVues(reglage)));
   ipcMain.handle("helix:maj-ouvrir-paquet", garde(() => {
     // Le lien vient du flux de l'agence ou de GitHub, jamais de la page, et reste du web :
     // un flux altéré ne doit pas pouvoir faire ouvrir un `file:` ou un `smb:`.
@@ -706,4 +874,4 @@ async function telechargerInstallateur(a, cle, description, partiel, final) {
 
 brancher();
 
-module.exports = { demarrerMiseAJour, changerLangue };
+module.exports = { demarrerMiseAJour, changerLangue, releverLancement };

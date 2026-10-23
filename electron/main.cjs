@@ -9,7 +9,7 @@ const { app, BrowserWindow, clipboard, dialog, ipcMain, nativeTheme, net, protoc
  * depuis Helix, démarrerait sinon en mode Node).
  */
 delete process.env.ELECTRON_RUN_AS_NODE;
-const { demarrerMiseAJour, changerLangue: changerLangueMaj } = require("./miseAJour.cjs");
+const { demarrerMiseAJour, changerLangue: changerLangueMaj, releverLancement } = require("./miseAJour.cjs");
 const coffre = require("./coffre.cjs");
 const grandStockage = require("./grandStockage.cjs");
 const ligneDeCommande = require("./ligneDeCommande.cjs");
@@ -1247,6 +1247,8 @@ app.whenReady().then(async () => {
   if (!instanceUnique) return;
   // Avant toute lecture du coffre ou des Chats du poste ; rend true quand l'application se relance.
   if (etapeTrousseau && transfererCle(app, safeStorage, etapeTrousseau, { dossier: DONNEES_POSTE })) return;
+  // Avant la fenêtre : son premier script crée le stockage local qui distingue une installation neuve d'une mise à jour (miseAJour.cjs, 23/10/2026).
+  releverLancement();
   {
     const l = app.getLocale().slice(0, 2);
     if (LANGUES.includes(l) && langueEcran === "en") langueEcran = l;

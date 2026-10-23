@@ -115,6 +115,11 @@ contextBridge.exposeInMainWorld("helix", {
     verifier: () => ipcRenderer.invoke("helix:maj-verifier"),
     installer: () => ipcRenderer.invoke("helix:maj-installer"),
     ouvrirPaquet: () => ipcRenderer.invoke("helix:maj-ouvrir-paquet"),
+    /** Nouveautés des versions (23/10/2026) : `{ depuis?, jusqua, langue }`, lues par le processus principal dans les publications GitHub. */
+    nouveautes: (demande) => ipcRenderer.invoke("helix:maj-nouveautes", demande),
+    /** Version d'avant ce lancement, si l'application vient d'être mise à jour. */
+    lancement: () => ipcRenderer.invoke("helix:maj-lancement"),
+    nouveautesVues: (reglage) => ipcRenderer.invoke("helix:maj-nouveautes-vues", reglage),
     /** Abonnement aux changements ; renvoie la fonction de désabonnement. */
     surChangement: (rappel) => {
       const ecouteur = (_evenement, etat) => rappel(etat);

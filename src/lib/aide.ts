@@ -475,6 +475,15 @@ const ARTICLES: Article[] = [
     corps: t("Réglages, Préférences, carte « À propos » : la version installée et, dans l'application de bureau, la mise à jour. Dans un navigateur, l'interface suit la version de l'instance.\n\n- D'où vient la nouvelle version : du serveur de votre prestataire s'il est inscrit dans l'application ; sinon, pour un poste rattaché, de l'instance ; sinon, pour un poste seul, des versions publiées sur GitHub. L'application vérifie peu après son lancement, puis toutes les six heures ; « Vérifier maintenant » le fait tout de suite.\n- Une version ne s'installe que si son empreinte correspond et qu'elle porte la signature de l'éditeur de votre application, d'où qu'elle vienne.\n- Sur Mac et sous Windows : « Installer maintenant », en un clic. Quand l'application est signée par Apple, la version se télécharge seule, puis « Redémarrer pour installer », ou elle s'installe à la fermeture.\n- Sous Linux, ou quand l'installation en un clic n'est pas possible : « Télécharger », puis installez le paquet.\n\nSi aucune source n'est inscrite, rien n'est contacté : la page le dit, et « Voir les versions publiées » mène aux versions, à installer à la main."),
   },
   {
+    // Nouveautés d'une version (23/10/2026) : NotesDeVersion.tsx, FenetreNouveautes.tsx, electron/notesVersion.cjs.
+    id: "nouveautes",
+    titre: t("Voir les nouveautés d'une version"),
+    resume: t("Ce qu'apporte une nouvelle version, avant et après l'installation."),
+    motsCles: ["nouveautes", "notes de version", "changelog", "quoi de neuf", "version", "mise a jour", "a propos"],
+    lien: "/parametres/preferences",
+    corps: t("Dans l'application de bureau qui cherche ses versions sur GitHub, les nouveautés viennent des notes des versions publiées.\n\n- Avant d'installer : la fenêtre qui propose une version montre ce qu'elle apporte, et ce qu'apportaient les versions que vous sautez, la plus récente d'abord.\n- Après une mise à jour : au premier lancement, une fenêtre « Nouveautés de la version » les montre, une fois. « Ne plus afficher après une mise à jour » la tait pour les suivantes.\n- Ensuite : Réglages, Préférences, carte « À propos », « Voir les nouveautés ».\n\nLes notes sont en anglais, sauf quand une traduction est publiée avec la version. Sans connexion, la fenêtre d'après la mise à jour attend le lancement suivant, et « Voir les nouveautés » propose un lien vers la page des versions publiées. Un poste rattaché à une instance suit les versions de son prestataire : il ne lit pas ces notes."),
+  },
+  {
     // Réglages, Personnalisation de l'IA (29/09/2026) : src/lib/store/profile.ts, buildSystemPrompt (Chat, Cowork, tâches ; pas Code).
     id: "personnalisation",
     titre: t("Personnaliser l'IA : instructions et mémoire"),

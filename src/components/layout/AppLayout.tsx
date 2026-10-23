@@ -5,6 +5,7 @@ import { Sidebar } from "./Sidebar";
 import { MainArea } from "./MainArea";
 import { AvisChatsIllisibles } from "./AvisChatsIllisibles";
 import { FenetreMiseAJour } from "./FenetreMiseAJour";
+import { FenetreNouveautes } from "./FenetreNouveautes";
 import { ScreenApproval } from "@/components/cowork/ScreenApproval";
 import { useBotAutomatique } from "@/hooks/useBotAutomatique";
 import { demarrerNotifications } from "@/lib/notifications";
@@ -77,6 +78,7 @@ export function AppLayout() {
         {/* Par-dessus l'écran, où que l'on soit : la liste des Chats vide ou incomplète doit s'expliquer partout. */}
         <AvisChatsIllisibles />
         <FenetreMiseAJour />
+        <FenetreNouveautes />
       </MainArea>
       {/*
         Hors de la zone principale : l'agent peut demander un accord pendant que

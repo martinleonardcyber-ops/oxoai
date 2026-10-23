@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
-import { RefreshCw, Download, RotateCw, ExternalLink, TriangleAlert, Check } from "lucide-react";
+import { RefreshCw, Download, RotateCw, ExternalLink, TriangleAlert, Check, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/Button";
+import { ModaleNouveautes } from "@/components/layout/FenetreNouveautes";
+import { pontNouveautes } from "@/lib/nouveautes";
 import { InfoBox } from "@/components/ui/InfoBox";
 import { branding } from "@/config/branding";
 import { useFormats } from "@/lib/formats";
@@ -65,11 +67,37 @@ export function MiseAJour() {
     return api.surChangement(setEtat);
   }, [api]);
 
+  /*
+   * « Voir les nouveautés » (23/10/2026) : les notes de la version installée,
+   * ou, quand une version est proposée, les siennes et celles qu'on sauterait.
+   * Seulement dans l'application de bureau qui sait les lire, et quand GitHub
+   * annonce les versions : un poste rattaché ne le contacte pas.
+   */
+  const pontNotes = pontNouveautes();
+  const [notes, setNotes] = useState<{ version: string; depuis: string | null; installee: boolean } | null>(null);
+  const installee = etat?.versionInstallee ?? branding.version;
+
   const version = (
-    <div className="rounded-xl bg-muted/40 px-4 py-3">
-      <p className="text-sm font-medium text-foreground">{t("Version installée")}</p>
-      <p className="text-xs text-muted-foreground">v{etat?.versionInstallee ?? branding.version}</p>
+    <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-muted/40 px-4 py-3">
+      <div>
+        <p className="text-sm font-medium text-foreground">{t("Version installée")}</p>
+        <p className="text-xs text-muted-foreground">v{installee}</p>
+      </div>
+      {pontNotes && etat?.source === "github" && (
+        <Button variant="ghost" size="sm" icon={Sparkles} onClick={() => setNotes({ version: installee, depuis: null, installee: true })}>
+          {t("Voir les nouveautés")}
+        </Button>
+      )}
     </div>
+  );
+  const modaleNotes = notes && (
+    <ModaleNouveautes
+      open
+      onClose={() => setNotes(null)}
+      version={notes.version}
+      depuis={notes.depuis}
+      reglage={notes.installee}
+    />
   );
 
   // Dans un navigateur, il n'y a pas d'application à remplacer.
@@ -84,7 +112,14 @@ export function MiseAJour() {
     );
   }
 
-  if (!etat) return version;
+  if (!etat) {
+    return (
+      <>
+        {version}
+        {modaleNotes}
+      </>
+    );
+  }
 
   const verifier = (
     <Button
@@ -139,6 +174,16 @@ export function MiseAJour() {
       corps = (
         <>
           <p className="text-sm text-foreground">{tf("Version {0} disponible.", etat.versionDisponible ?? "")}</p>
+          {pontNotes && etat.source === "github" && etat.versionDisponible && (
+            <Button
+              variant="ghost"
+              size="sm"
+              icon={Sparkles}
+              onClick={() => setNotes({ version: etat.versionDisponible ?? "", depuis: etat.versionInstallee, installee: false })}
+            >
+              {tf("Nouveautés de la version {0}", etat.versionDisponible)}
+            </Button>
+          )}
           {etat.unClic === false ? (
             <>
               <p className="text-xs text-muted-foreground">
@@ -207,6 +252,7 @@ export function MiseAJour() {
   return (
     <div className="space-y-3">
       {version}
+      {modaleNotes}
       {corps}
       {configuree && (
         <p className="text-xs text-muted-foreground">

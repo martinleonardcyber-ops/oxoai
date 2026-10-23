@@ -4298,6 +4298,13 @@ trentaine d'échanges ; redemander le fait. À voir : la ligne « extrait(s) plu
 réponse, si le modèle s'en sert, les scores réels (journal `[memoire]`), la gomme dans la liste des
 Chats, le réglage « autres Chats » ; sur un poste de plus de 18 Go, le résumé au repos au journal.
 
+**Nouveautés d'une version (23/10/2026, § 5)** : sur un Mac installé depuis GitHub, publier une
+version d'essai (avec, pour voir la traduction, un `notes.fr.md` joint) ; la fenêtre « Nouvelle
+version » doit montrer ses nouveautés ; installer ; au premier lancement, « Nouveautés de la
+version X » une fois, puis plus rien au lancement suivant ; « Voir les nouveautés » dans À propos ;
+un lien d'une note qui s'ouvre dans le navigateur, pas dans l'application ; Wi-Fi coupé au
+lancement (pas de fenêtre, elle revient au suivant) ; un poste rattaché (rien).
+
 **Serveurs MCP ajoutés (16/10/2026, § 3.5)** : dans l'application, Connecteurs, « Ajouter un
 serveur MCP », un programme (par exemple un serveur MCP écrit en Node) puis une adresse en https
 avec OAuth ; cocher un outil « lecture seule », retirer. Sous Windows : `npx` et un `.exe`
@@ -6123,6 +6130,78 @@ Granite 4.1 8B ; trois quarts d'heure plus tard rien n'était prêt. `provision.
 est repris deux fois (5 s puis 10 s d'attente) ; s'il échoue encore, seuls des modèles de taille
 égale ou moindre restent essayés (`plafondGo`). Que LM Studio reprenne un téléchargement là où il
 s'était arrêté n'est pas vérifié (au pire il recommence le fichier).
+
+**Fait le 23/10/2026 : les nouveautés d'une version, avant et après la mise à jour.** Demandé par
+Medhi : « quand il y a une mise à jour, une espèce de patch intégré : les gens peuvent voir les
+nouveautés ». Où elles apparaissent :
+- **Avant d'installer** : la fenêtre « Nouvelle version » (`FenetreMiseAJour.tsx`) montre, dans un
+  cadre qui défile, les nouveautés de la version proposée et des versions sautées entre
+  l'installée et elle, la plus récente d'abord (8 au plus, puis un lien « Et N version(s) plus
+  ancienne(s) »). Réglages › Préférences › À propos, quand une version est proposée : bouton
+  « Nouveautés de la version X ».
+- **Après la mise à jour** : au premier lancement de la nouvelle version, une fenêtre « Nouveautés
+  de la version X » (`FenetreNouveautes.tsx`), une fois ; refermée (bouton, croix, Échap, clic à
+  côté), elle ne revient pas pour cette version ; l'interrupteur « Ne plus afficher après une mise
+  à jour » la tait pour les suivantes (et se rallume depuis la même fenêtre). Elle ne s'ouvre que
+  si des notes ont été lues : hors ligne, elle attend le lancement suivant.
+- **Ensuite** : Réglages › Préférences › À propos, « Voir les nouveautés » (version installée).
+- Article d'aide « Voir les nouveautés d'une version ».
+
+Comment : le processus principal lit `GET /repos/<dépôt>/releases?per_page=30` (`miseAJour.cjs`,
+canal `helix:maj-nouveautes`, gardé comme les autres ; la page ne contacte jamais GitHub), au plus
+4 Mo lus, gardé une demi-heure. Le tri et le nettoyage sont dans `electron/notesVersion.cjs`, sans
+Electron : la note est découpée en sections de titre `#`/`##` ; on garde le chapeau et la section
+dont le titre dit « nouveautés » (« What's new », « Changelog », « Nouveautés »…), quel que soit
+l'ordre des sections ; sans elle, tout sauf « Downloads », « Installation », « Checksums »,
+« Notes ». Règle choisie plutôt que « de What's new jusqu'à Notes » : un ordre changé ou une
+section ajoutée après ne font rien déborder (relevé sur les 26 publications du dépôt : toutes ont
+« ## Downloads », « ## What's new », « ## Notes » depuis la 2026.927.4). Puis : HTML retiré
+(commentaires, contenu de `<script>` et `<style>`, balises, en un passage linéaire), tableaux et
+images retirés, liens hors https réduits à leur texte, caractères de contrôle et de direction
+retirés, 64 Ko lus au plus par note et 12 Ko gardés (coupés en fin de ligne). Le rendu est
+`TexteRiche` (celui du Chat) avec une option `liens` : titres, listes, gras, code, et `[texte](https://…)`
+en lien `target="_blank"`, que la fenêtre principale remet au navigateur du système
+(`setWindowOpenHandler`) ; aucun HTML interprété, le Chat garde ses liens en texte. Premier lancement :
+`<profil>/nouveautes.json` note la version dont les nouveautés ont été vues ; relevé dans `main.cjs`
+avant la fenêtre ; sans ce fichier, un profil qui a déjà un `Local Storage` est une mise à jour
+depuis une version d'avant ce repère (notes de la version installée seule), sinon une installation
+neuve (rien).
+
+**Langue, décidé le 23/10/2026 : pas de traduction automatique.** Les notes GitHub sont en anglais ;
+dans une autre langue, l'écran l'écrit (« Notes de version en anglais. »). **Pour publier des notes
+traduites** : joindre à la publication GitHub un fichier `notes.<langue>.md` par langue (`fr`,
+`zh`, `ja`, `es`, `de`, `ar`), par exemple `gh release upload v2026.1023.1 notes.fr.md notes.de.md`.
+Il ne contient **que les nouveautés** (pas de tableau des paquets) : il est affiché entier, nettoyé
+comme le reste, 64 Ko au plus, lu seulement depuis `https://github.com/`. Absent ou illisible :
+l'anglais.
+
+**Là où rien ne se lit** : poste rattaché à une instance (il ne contacte pas GitHub, décision du
+26/09/2026) et paquet qui porte le serveur de l'agence : aucune note, ni fenêtre d'après mise à
+jour, ni bouton « Voir les nouveautés » ; `HELIX_SANS_MISE_A_JOUR=1` : rien. Hors ligne : un lien
+vers la page des publications. Limite connue : la première mise à jour **vers** la version qui
+porte ceci passe encore par l'ancienne fenêtre (sans notes) ; la fenêtre d'après mise à jour, elle,
+s'ouvre dès cette version-là (profil reconnu à son stockage local).
+
+**Vérifié** : `scripts/essai-notes-version.mjs`, 51 cas sans réseau ni Electron (extraction, ordre
+changé, section absente, `<script>`, `<img onerror>`, `javascript:`, `file:`, `data:`, caractères
+de direction, note de 2 Mo bornée, `<!--` répété 100 000 fois traité en moins d'une seconde ;
+choix des versions, préversions et brouillons écartés, 8 au plus ; note traduite ; rendu réel de
+`TexteRiche` construit par esbuild et rendu en HTML statique : ni `<script>` ni `href="javascript:`,
+un guillemet dans l'adresse ne sort pas de l'attribut, le Chat sans liens ; `miseAJour.cjs` joué
+avec une doublure d'Electron : canal refusé sans la règle de la fenêtre, installation neuve,
+profil d'avant le repère, mise à jour depuis 8.9.0, une seule lecture de la liste, note `fr`
+jointe, « Ne plus afficher » gardé, hors ligne, liste sans fin refusée à 4 Mo,
+`HELIX_SANS_MISE_A_JOUR`, serveur de l'agence). Avec `--reseau`, les 26 vraies publications du
+dépôt : chacune extraite sans tableau ni « Downloads ». `npm run securite` § 50 (58 contrôles,
+lancée seule le 23/10/2026, pas la batterie entière). **Vu à l'écran** (Vite et passerelle
+jetables, pont d'Electron simulé par une doublure, les vraies notes de 2026.1004.2 à 2026.1016.2) :
+la fenêtre « Nouvelle version » avec ses nouveautés qui défilent, « Nouveautés de la version
+2026.1016.2 » et « Voir les nouveautés » dans À propos, le lien de repli quand rien ne se lit, la
+fenêtre d'après mise à jour avec l'interrupteur, en français et en arabe (notes anglaises de
+gauche à droite dans l'écran de droite à gauche). **Pas vérifié** : dans la vraie application
+Electron (préchargement, `nouveautes.json` dans le vrai profil, lien ouvert dans le navigateur du
+système), une vraie mise à jour d'un clic suivie du premier lancement, l'API GitHub appelée depuis
+`net.fetch` d'Electron, un poste rattaché (la doublure ne joue pas le coffre), Windows et Linux.
 
 **Décidé et vérifié le 12/10/2026 : connecteurs Roblox Studio et Blender.** Medhi : « je veux
 juste que ça fonctionne, fais au mieux ». Décisions prises en conséquence :

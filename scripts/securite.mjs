@@ -10075,6 +10075,67 @@ console.log("\n49. Mémoire de la conversation : par personne, chiffrée, effac�
   );
 }
 
+console.log("\n50. Nouveautés d'une version : notes GitHub extraites et rendues sans HTML, liens https hors de l'application, taille bornée, rien hors de GitHub (23/10/2026)");
+{
+  const essai = await new Promise((fin) => {
+    const e = spawn(process.execPath, [join(RACINE, "scripts", "essai-notes-version.mjs")], { stdio: ["ignore", "pipe", "pipe"] });
+    let sortie = "";
+    e.stdout.on("data", (b) => (sortie += b));
+    e.stderr.on("data", (b) => (sortie += b));
+    const minuterie = setTimeout(() => e.kill(), 3 * 60_000);
+    e.on("close", (status) => {
+      clearTimeout(minuterie);
+      fin({ status, sortie });
+    });
+  });
+  const lignes = essai.sortie.split("\n");
+  for (const ligne of lignes) {
+    const ok = /^\s*✓ (.*)$/.exec(ligne);
+    const ko = /^\s*✗ (.*?)(?:  \(obtenu : .*)?$/.exec(ligne);
+    if (ok) verifier(`nouveautes : ${ok[1]}`, true, "");
+    else if (ko) verifier(`nouveautes : ${ko[1]}`, false, ligne.split("  (obtenu : ")[1] ?? "");
+  }
+  verifier("nouveautes : l'essai s'est déroulé jusqu'au bout", essai.status === 0 && /tout est bon/.test(essai.sortie), `${essai.status} ${lignes.slice(-6).join(" ")}`);
+  const src = (...p) => readFileSync(join(RACINE, ...p), "utf8");
+  const maj = src("electron", "miseAJour.cjs");
+  const precharge = src("electron", "preload.cjs");
+  const riche = src("src", "components", "ui", "TexteRiche.tsx");
+  verifier(
+    "nouveautes : les trois canaux passent par la garde de la fenêtre principale, et le préchargement n'expose qu'eux",
+    /ipcMain\.handle\("helix:maj-nouveautes", garde\(/.test(maj) && /ipcMain\.handle\("helix:maj-lancement", garde\(/.test(maj) && /ipcMain\.handle\("helix:maj-nouveautes-vues", garde\(/.test(maj) &&
+      /nouveautes: \(demande\) => ipcRenderer\.invoke\("helix:maj-nouveautes", demande\)/.test(precharge),
+    "miseAJour.cjs, preload.cjs",
+  );
+  verifier(
+    "nouveautes : la page ne contacte pas GitHub elle-même (seul le processus principal lit les notes)",
+    !/api\.github\.com|fetch\(/.test(src("src", "components", "layout", "NotesDeVersion.tsx") + src("src", "components", "layout", "FenetreNouveautes.tsx") + src("src", "lib", "nouveautes.ts")),
+    "NotesDeVersion.tsx, FenetreNouveautes.tsx, nouveautes.ts",
+  );
+  verifier(
+    "nouveautes : TexteRiche ne rend aucun HTML, et ses liens sont à la demande, https seulement, ouverts hors de l'application",
+    !/dangerouslySetInnerHTML|innerHTML/.test(riche) && /liens = false/.test(riche) && /adresse\.protocol === "https:"/.test(riche) && /target="_blank"\s+rel="noreferrer noopener"/.test(riche) &&
+      /<TexteRiche texte=\{v\.texte\} liens /.test(src("src", "components", "layout", "NotesDeVersion.tsx")),
+    "TexteRiche.tsx",
+  );
+  verifier(
+    "nouveautes : un lien ouvert dans une nouvelle fenêtre va au navigateur du système (http, https, mailto), jamais dans l'application",
+    /setWindowOpenHandler\(\(\{ url \}\) => \{[\s\S]{0,400}shell\.openExternal\(url\);[\s\S]{0,200}return \{ action: "deny" \};/.test(src("electron", "main.cjs")),
+    "main.cjs",
+  );
+  verifier(
+    "nouveautes : le repère du premier lancement est relevé avant la fenêtre (son stockage local distingue une installation neuve)",
+    /releverLancement\(\);[\s\S]{0,4000}createWindow\(\);/.test(src("electron", "main.cjs")),
+    "main.cjs",
+  );
+  const aide = src("src", "lib", "aide.ts");
+  const article = aide.slice(aide.indexOf('id: "nouveautes",'), aide.indexOf('id: "personnalisation",'));
+  verifier(
+    "nouveautes : un article d'aide, sans nom de produit en dur ni « pas encore essayé »",
+    article.length > 200 && !/Helix|pas encore essay|pas été essay/i.test(article),
+    article.slice(0, 200),
+  );
+}
+
 console.log(`\n${reussis} vérification(s) réussie(s), ${echecs.length} échec(s).`);
 if (echecs.length) {
   console.log("Échecs :");
