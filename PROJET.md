@@ -6144,8 +6144,9 @@ lourd.** Vu sur la machine Linux de l'essai GitHub (réseau lent vers l'héberge
 Qwen3 1.7B arrêté à 40 %, puis Helix passait au suivant du classement, Qwen3 8B (5 Go), puis
 Granite 4.1 8B ; trois quarts d'heure plus tard rien n'était prêt. `provision.ts` : le même modèle
 est repris deux fois (5 s puis 10 s d'attente) ; s'il échoue encore, seuls des modèles de taille
-égale ou moindre restent essayés (`plafondGo`). Que LM Studio reprenne un téléchargement là où il
-s'était arrêté n'est pas vérifié (au pire il recommence le fichier).
+égale ou moindre restent essayés (`plafondGo`). Vu le 23/10/2026 sur la machine Windows de l'essai GitHub : Qwen3.5 2B
+interrompu deux fois, repris à 20 % (LM Studio reprend bien là où il s'était arrêté), puis
+repli sur Qwen3 1.7B déjà posé, plus léger, au lieu d'un modèle plus lourd.
 
 **Fait le 23/10/2026 : les nouveautés d'une version, avant et après la mise à jour.** Demandé par
 Medhi : « quand il y a une mise à jour, une espèce de patch intégré : les gens peuvent voir les
