@@ -10051,7 +10051,7 @@ console.log("\n49. Mémoire de la conversation : par personne, chiffrée, effac�
   );
   verifier(
     "memoire : seulement pour une personne identifiée, pas pour un employé toujours actif (il a la mémoire d'OpenClaw), et `memoire` ne part jamais chez le moteur",
-    /qui && !req\.headers\["x-helix-employe"\] && memoireDemandee && memoire\.chatValide\(memoireDemandee\.chat\)/.test(chatSrc) && /web: _w, memoire: _mem, \.\.\.rest/.test(chatSrc),
+    /qui && !req\.headers\["x-helix-employe"\] && memoireDemandee && memoire\.chatValide\(memoireDemandee\.chat\)/.test(chatSrc) && /web: _w, memoire: _mem,(?: \w+: _\w+,)* \.\.\.rest/.test(chatSrc),
     "chat.ts",
   );
   verifier(
