@@ -273,15 +273,32 @@ const r1b = await envoyer({ model: QWEN, tools: true, messages: [{ role: "system
 const appels1b = appelsLms();
 const outilsPartis = r1b.flux.map((r) => (Array.isArray(r.tools) ? r.tools.length : 0));
 verifier("application LM Studio de la personne : le modèle n'est jamais déchargé ni rechargé par Helix", !appels1b.some((l) => l.startsWith("unload") || l.startsWith("load")), JSON.stringify(appels1b));
+/*
+ * Depuis le 23/10/2026 (choixOutils.ts) : les outils qui ne tiennent pas tous
+ * ne sont plus retirés ensemble ; ceux du service nommé (« fichiers ») passent
+ * d'abord, autant que la place réservée aux outils en tient.
+ */
 verifier(
-  "ses outils ne tiennent pas dans 4 096 jetons : ils ne partent pas, et le moteur ne refuse rien",
-  r1b.flux.length > 0 && outilsPartis.every((n) => n === 0) && !r1b.evenements.some((e) => e.type === "error"),
+  "ses outils ne tiennent pas tous dans 4 096 jetons : une partie seulement part (ceux de fichiers, nommés dans la demande), et le moteur ne refuse rien",
+  r1b.flux.length > 0 && outilsPartis.every((n) => n > 0 && n < 14) && !r1b.evenements.some((e) => e.type === "error"),
   `outils envoyés ${JSON.stringify(outilsPartis)}, événements ${JSON.stringify(r1b.evenements).slice(0, 400)}, flux ${r1b.texte.slice(0, 400)}`,
 );
 verifier(
-  "la personne lit pourquoi, et comment agrandir la place (Context Length de 32 768 dans LM Studio)",
-  /qwen\/qwen3\.5-4b n'a qu'une conversation de 4096 jetons : trop peu pour ses outils/.test(r1b.reponse) && /Context Length » de 32 768/.test(r1b.reponse),
+  "la personne lit pourquoi, et comment agrandir la place (Context Length de 32 768 dans LM Studio, plus grande que les 4 096 du moment)",
+  /qwen\/qwen3\.5-4b n'a qu'une conversation de 4096 jetons : trop peu pour tous les outils branchés/.test(r1b.reponse) && /Context Length » de 32 768/.test(r1b.reponse),
   r1b.reponse.slice(0, 400),
+);
+// 1 c. Capture de Medhi du 23/10/2026 : déjà à 32 768, l'écran conseillait de recharger… à 32 768. Une longue consigne remplit la place, comme des connecteurs nombreux.
+await changer([{ cle: MINISTRAL, contexte: 32768 }, { cle: QWEN, contexte: 32768 }]);
+const r1c = await envoyer({
+  model: QWEN,
+  tools: true,
+  messages: [{ role: "system", content: `${SYSTEME} ${"Consigne détaillée de l'entreprise, à suivre. ".repeat(1650)}` }, { role: "user", content: "Quels sont les fichiers de mon dossier ?" }],
+});
+verifier(
+  "déjà à 32 768 jetons : jamais « rechargez avec 32 768 » ; l'écran dit que trop d'outils sont branchés pour la place, et quoi faire (retirer des connecteurs, une Context Length plus grande)",
+  /trop peu pour (tous les outils branchés|ses outils)/.test(r1c.reponse) && !/32 768/.test(r1c.reponse) && /Trop d'outils sont branchés pour cette place : retirez dans Connecteurs/.test(r1c.reponse) && /« Context Length » plus grande/.test(r1c.reponse),
+  r1c.reponse.slice(0, 500),
 );
 
 // 3. Le moteur refuse une demande que l'estimation de Helix croyait tenir : raccourcie et renvoyée.

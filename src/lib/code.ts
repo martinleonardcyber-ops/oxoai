@@ -240,8 +240,22 @@ export type CodeEvent =
 /** Message d'erreur d'un événement OpenCode, quelle que soit sa forme. */
 function messageErreur(erreur: unknown): string {
   if (typeof erreur === "string") return erreur;
-  const message = (erreur as { message?: unknown } | undefined)?.message;
-  return typeof message === "string" ? message : "";
+  /*
+   * Un chemin hors du dossier du projet (23/10/2026, capture sous Windows :
+   * le message de règle d'OpenCode et le JSON de ses règles, affichés tels
+   * quels). `horsProjet` vient de la passerelle (fluxCode.ts) ; le texte
+   * d'OpenCode est aussi reconnu, pour une instance plus ancienne.
+   */
+  const e = erreur as { message?: unknown; horsProjet?: { chemin?: unknown } } | undefined;
+  const message = typeof e?.message === "string" ? e.message : "";
+  const regle = /The user has specified a rule which prevents you from using this specific tool call/.test(message);
+  if (e?.horsProjet || regle) {
+    const chemin = typeof e?.horsProjet?.chemin === "string" ? e.horsProjet.chemin : "";
+    return chemin
+      ? tf("Ce chemin est hors du dossier du projet : {0}. L'agent ne lit et n'écrit que dans le dossier du projet.", chemin)
+      : t("Action refusée par les règles de Code : l'agent ne sort pas du dossier du projet.");
+  }
+  return message;
 }
 
 /**

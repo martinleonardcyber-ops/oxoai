@@ -3391,7 +3391,7 @@ async function traiterCodePrompt(
       if (plan && !demandeArretee(body.sessionID)) {
         statut(t("Helix prépare l'application, étape 3 sur 4 : l'interface complète..."));
         const ecrits = ecrireApplication(reglageEnvoi.dossier, plan, design);
-        texteEnvoye = body.text + consigneApplication(plan);
+        texteEnvoye = body.text + consigneApplication(plan, reglageEnvoi.dossier);
         preparee = true;
         statut(t("Helix prépare l'application, étape 4 sur 4 : l'agent de code ajoute les règles du métier..."));
         console.log(`[code] application préparée : ${plan.nom}, ${plan.modules.length} parties, ${ecrits.length} fichiers.`);
@@ -3405,7 +3405,7 @@ async function traiterCodePrompt(
     if (demandeArretee(body.sessionID)) return send(res, 200, { data: {} });
   } else if (estApplication(body.text) && applicationPreparee(reglageEnvoi.dossier)) {
     // La suite d'une application déjà préparée : l'agent garde la même méthode.
-    texteEnvoye = body.text + consigneApplication(null);
+    texteEnvoye = body.text + consigneApplication(null, reglageEnvoi.dossier);
     preparee = true;
   }
   if (!preparee && estDemandeDeSite(body.text)) {

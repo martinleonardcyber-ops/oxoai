@@ -7,7 +7,8 @@ import { entetesFlux } from "./entetes.ts";
 import { niveauEffort } from "./config.ts";
 import { resolve, invalidate, peutVoir } from "./router.ts";
 import { loadModel } from "./backends.ts";
-import { toolsForModel, hasTools, workspace } from "./mcp.ts";
+import { toolsForModel, hasTools, workspace, status as etatMcp } from "./mcp.ts";
+import { choisirOutils, placeDesOutils, serviceDe } from "./choixOutils.ts";
 import { executerOutil, cibleDe, refusApplication } from "./outils.ts";
 import { cheminReel, estProtege } from "./zonesProtegees.ts";
 import * as computer from "./computer.ts";
@@ -1639,26 +1640,68 @@ export async function handleChatRequest(
    * descriptions des outils branchés en prennent souvent plus que la place
    * entière. Partis quand même, la demande était refusée par le moteur ou
    * coupée, et `tenirDansLaPlace` retirait toute la conversation sans que cela
-   * suffise. Ils sont retirés pour cette réponse, et c'est dit, avec la façon
-   * d'agrandir la place.
+   * suffise.
+   *
+   * Depuis le 23/10/2026 (captures de Medhi : Roblox Studio branché, 28
+   * outils, qwen/qwen3.5-9b à 32 768 jetons, « crée un sol en bois dans Roblox
+   * Studio »), ils ne sont plus retirés tous ensemble : `choisirOutils`
+   * (choixOutils.ts) garde ceux déjà appelés, ceux du service nommé dans la
+   * demande, puis les plus courants, jusqu'à remplir la place réservée aux
+   * outils (`placeDesOutils`). L'écran ne prévient que si un outil des deux
+   * premiers rangs n'a pas tenu, ou s'il n'en reste aucun.
+   *
+   * Le conseil d'agrandir disait « rechargez avec 32 768 » à un modèle déjà
+   * chargé à 32 768 (même capture) : il ne donne une taille que si elle est
+   * plus grande que l'actuelle ; sinon il dit que trop d'outils sont branchés
+   * pour la place, et quoi faire.
    */
   const commentAgrandir =
-    model.backendKind === "lmstudio"
+    model.backendKind === "lmstudio" && contexteConversation > 0 && contexteConversation < 32_768 && tailleVisee() >= 32_768
       ? tf("Pour l'agrandir, rechargez {0} dans LM Studio avec une « Context Length » de 32 768 jetons, ou éjectez-le simplement : il sera rechargé avec cette taille à la question suivante.", model.id)
-      : "";
+      : model.backendKind === "lmstudio"
+        ? tf("Trop d'outils sont branchés pour cette place : retirez dans Connecteurs ceux qui ne servent pas, ou rechargez {0} dans LM Studio avec une « Context Length » plus grande si la mémoire de la machine le permet.", model.id)
+        : t("Trop d'outils sont branchés pour cette place : retirez dans Connecteurs ceux qui ne servent pas.");
   let agrandirDit = false;
   if (contexteConversation && tools && tools.length > 0) {
     const iq = indexDeLaQuestion(messages);
     const premier = messages[0] as { role?: string } | undefined;
     const essentiel = (premier?.role === "system" ? jetonsDunMessage(premier) : 0) + (iq > 0 ? jetonsDunMessage(messages[iq]) : 0);
     const jetonsOutils = jetonsEstimes(JSON.stringify(tools));
-    if (placeDeLaConversation(contexteConversation, reflechit, jetonsOutils) < essentiel + 256) {
-      console.log(`[chat] ${tools.length} outils (~${jetonsOutils} jetons) retirés : ${model.id} n'a que ${contexteConversation} jetons de conversation`);
-      tools = undefined;
-      messages = avecConsigne(messages, "Pour cette réponse, tu n'as aucun outil : réponds avec ce que tu sais, sans prétendre avoir agi.");
-      const annonce = tf("{0} n'a qu'une conversation de {1} jetons : trop peu pour ses outils, il répond cette fois sans eux.", model.id, contexteConversation);
-      annoncesDocuments = [...annoncesDocuments, commentAgrandir ? `${annonce} ${commentAgrandir}` : annonce];
-      agrandirDit = true;
+    const placeOutils = placeDesOutils(placeDeLaConversation(contexteConversation, reflechit, 0), essentiel);
+    if (jetonsOutils > placeOutils) {
+      const libelles: Record<string, string> = {};
+      for (const s of etatMcp()) libelles[s.id] = s.label;
+      const choix = choisirOutils(tools, { messages, place: placeOutils, libelles });
+      console.log(
+        `[chat] ${tools.length} outils (~${jetonsOutils} jetons) pour ~${placeOutils} jetons de place aux outils (${model.id}, contexte ${contexteConversation}) : ${choix.gardes.length} gardés (~${choix.jetonsApres} jetons)` +
+          (choix.nommes.length > 0 ? `, services nommés : ${choix.nommes.join(", ")}` : "") +
+          (choix.utilesRetires.length > 0 ? `, utiles retirés : ${choix.utilesRetires.join(", ")}` : ""),
+      );
+      const nomService = (s: string) => libelles[s] ?? s.charAt(0).toUpperCase() + s.slice(1);
+      if (choix.gardes.length === 0) {
+        tools = undefined;
+        messages = avecConsigne(messages, "Pour cette réponse, tu n'as aucun outil : réponds avec ce que tu sais, sans prétendre avoir agi.");
+        const annonce = tf("{0} n'a qu'une conversation de {1} jetons : trop peu pour ses outils, il répond cette fois sans eux.", model.id, contexteConversation);
+        annoncesDocuments = [...annoncesDocuments, `${annonce} ${commentAgrandir}`];
+        agrandirDit = true;
+      } else {
+        tools = choix.gardes;
+        const servicesRetires = [...new Set(choix.retires.map((o) => serviceDe(o.function.name)))];
+        // Le modèle sait ce qui lui manque : sinon il dit volontiers n'avoir « pas accès » à un service pourtant branché, ou prétend avoir agi.
+        messages = avecConsigne(
+          messages,
+          `Faute de place, une partie des outils branchés ne t'est pas proposée pour cette réponse (services : ${servicesRetires.map(nomService).join(", ")}). ` +
+            "Si la demande en a besoin, dis-le simplement, sans prétendre avoir agi : la personne peut nommer le service dans sa demande pour que ses outils passent d'abord.",
+        );
+        if (choix.utilesRetires.length > 0) {
+          const services = [...new Set(choix.utilesRetires.map(serviceDe))].map(nomService).join(", ");
+          annoncesDocuments = [
+            ...annoncesDocuments,
+            `${tf("{0} n'a qu'une conversation de {1} jetons : trop peu pour tous les outils branchés. {2} sur {3} sont gardés pour cette réponse, ceux de la demande d'abord ; certains outils de {4} n'ont pas tenu.", model.id, contexteConversation, choix.gardes.length, choix.gardes.length + choix.retires.length, services)} ${commentAgrandir}`,
+          ];
+          agrandirDit = true;
+        }
+      }
     }
   }
   const budgetConversation = contexteConversation

@@ -868,7 +868,8 @@ export const CONSIGNES_CODE_PETIT = [
   "3. Use only files, functions and names that exist: check with glob, grep or read first.",
   "4. After writing code, check it with bash (for example `node --check app.js`, `python -m py_compile app.py`, or the project's tests) and fix what fails.",
   "5. If a tool returns an error, read the error, fix the call, and try again.",
-  "6. Stay in the project folder. Never commit, push or delete data unless asked. Never print or read secrets, keys or passwords. Never run destructive git commands (push --force, reset --hard, clean -f).",
+  // « <project> » (23/10/2026) : un chemin d'un autre système (/app/metier.js) sortait du dossier du projet et était refusé.
+  "6. Stay in the project folder: every path starts with the project folder (the working directory), shown as <project> below; never /app, /home or C:\\ alone. Never commit, push or delete data unless asked. Never print or read secrets, keys or passwords. Never run destructive git commands (push --force, reset --hard, clean -f).",
   "7. Actions wait for the user's approval. A refusal is a decision: do not retry it another way.",
   "8. Answer in the user's language, in one or two short sentences: what you did, and what you could not check.",
   "",

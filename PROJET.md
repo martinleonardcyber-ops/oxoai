@@ -4305,6 +4305,15 @@ version X » une fois, puis plus rien au lancement suivant ; « Voir les nouveau
 un lien d'une note qui s'ouvre dans le navigateur, pas dans l'application ; Wi-Fi coupé au
 lancement (pas de fenêtre, elle revient au suivant) ; un poste rattaché (rien).
 
+**Outils choisis quand la place manque (23/10/2026)** : Roblox Studio branché, qwen/qwen3.5-9b à
+32 768 jetons, puce « Outils » allumée, « crée un sol en bois dans Roblox Studio ». À voir : la
+ligne `[chat] … outils (~… jetons) pour ~… jetons de place aux outils` au journal (la taille
+réelle des outils de StudioMCP), si le sol est créé, et l'avertissement à l'écran s'il y en a un.
+
+**Code, chemin hors du projet (23/10/2026)** : sur un PC Windows, une application de gestion dans
+Code avec un petit modèle. À voir : que l'agent écrive `<projet>\app\metier.js`, et, s'il écrit
+encore `/app/…`, la phrase « Ce chemin est hors du dossier du projet » à l'écran et sa correction.
+
 **Serveurs MCP ajoutés (16/10/2026, § 3.5)** : dans l'application, Connecteurs, « Ajouter un
 serveur MCP », un programme (par exemple un serveur MCP écrit en Node) puis une adresse en https
 avec OAuth ; cocher un outil « lecture seule », retirer. Sous Windows : `npx` et un `.exe`
@@ -6202,6 +6211,71 @@ gauche à droite dans l'écran de droite à gauche). **Pas vérifié** : dans la
 Electron (préchargement, `nouveautes.json` dans le vrai profil, lien ouvert dans le navigateur du
 système), une vraie mise à jour d'un clic suivie du premier lancement, l'API GitHub appelée depuis
 `net.fetch` d'Electron, un poste rattaché (la doublure ne joue pas le coffre), Windows et Linux.
+
+**Fait le 23/10/2026 : Roblox branché, le Chat répondait sans ses outils.** Captures de Medhi :
+Roblox Studio branché (28 outils), qwen/qwen3.5-9b à 32 768 jetons, « crée un sol en bois dans
+Roblox Studio » ; l'écran disait « trop peu pour ses outils, il répond cette fois sans eux » et
+conseillait de recharger le modèle avec une « Context Length » de 32 768, la taille qu'il avait
+déjà ; le modèle disait ne pas avoir accès à Roblox Studio. Deux causes, dans `chat.ts` (le
+correctif contexte du 16/10) :
+1. **Tout ou rien.** Quand la description de tous les outils branchés ne laissait pas la consigne
+   et la question, *tous* étaient retirés. Désormais `choisirOutils` (`gateway/src/choixOutils.ts`,
+   neuf ; aucune sélection par pertinence n'existait : la puce « Outils » n'est qu'un interrupteur
+   global, et `outilsPourPetit` ne retire que des outils de fichiers) garde, dans cet ordre, ceux
+   déjà appelés dans la conversation, ceux du service nommé dans la demande (identifiant, libellé
+   du connecteur, ou mot connu : « Roblox », « Studio », « Luau », « Blender », « Unreal »,
+   « mail », « agenda »…), puis les courants (fichiers, contrôle du code, bibliothèque,
+   bureautique, réunions, tâches), puis le reste, dans l'ordre du serveur, chacun s'il tient encore
+   dans la place réservée aux outils (`placeDesOutils` : la place sans outils, moins la consigne et
+   la question plus 1 024 jetons, jamais moins du quart ; mesuré : 18 241 jetons à 32 768 pour un
+   modèle qui réfléchit, 20 084 pour un modèle qui ne réfléchit pas). Le modèle reçoit une ligne
+   qui nomme les services qui ne lui sont pas proposés ; l'écran ne prévient que si un outil des
+   deux premiers rangs n'a pas tenu, ou si aucun ne tient.
+2. **Le conseil contradictoire.** La taille de 32 768 n'est conseillée qu'à un modèle chargé plus
+   petit ; sinon : « Trop d'outils sont branchés pour cette place : retirez dans Connecteurs ceux
+   qui ne servent pas, ou rechargez … avec une « Context Length » plus grande si la mémoire de la
+   machine le permet ».
+Mesuré devant un faux moteur à 32 768 et le faux StudioMCP d'`essai-roblox-blender.mjs` (27
+outils), descriptions allongées à 3 000 caractères par outil (taille **choisie** : celles du vrai
+StudioMCP n'ont pas été relevées, faute de Roblox Studio ici) : 58 outils, ~34 278 jetons.
+Avant (copie de 45bc711) : les 58 retirés, « OUTIL-ABSENT roblox__execute_luau ». Après : 21
+gardés (~20 025 jetons, 18 de Roblox, `execute_luau` compris), l'appel part à Studio, l'écran dit
+que certains outils de Roblox Studio n'ont pas tenu, sans « 32 768 ». À 1 800 caractères par
+outil (~23 478 jetons) : les 27 de Roblox gardés, 36 en tout, rien à l'écran. Dans le Chat, les
+outils d'un connecteur branché partent dès que la puce « Outils » est allumée (`outilsChat`, éteinte
+par défaut) ; il n'y a pas de case par connecteur, et la liste de la puce montre Roblox Studio avec
+son nombre d'outils. Aide « conversation-longue » mise à jour. Essais : `essai-roblox-blender.mjs`
+55 sur 55 (4 nouveaux), `essai-contexte.mjs` 16 sur 16 (1 b changé, 1 c nouveau : déjà à 32 768,
+jamais « 32 768 »), section 50 de `securite.mjs` seule, 13 sur 13. **Pas vérifié** : la taille
+réelle des 28 outils du vrai StudioMCP, ni ce qu'un vrai modèle fait avec une partie des outils.
+
+**Fait le 23/10/2026 : Code sous Windows, « /app/metier.js » refusé avec le JSON des règles.**
+Capture d'un utilisateur (Windows, compte « Amine ») : « Lecture /app/PLAN.md », « Écriture
+/app/metier.js », puis à l'écran le message brut d'OpenCode (« The user has specified a rule which
+prevents you from using this specific tool call. Here are some of the relevant rules [...] »).
+Pas encore corrigé avant ce jour (rien dans le code ni ici). Causes : la consigne d'application
+(`consigneApplication`, application.ts) disait « Lis app/PLAN.md, puis app/metier.js » et la
+description courte de `read` (allegementCode.ts) « `filePath` is absolute » : le modèle en faisait
+`/app/PLAN.md`, sous Windows C:\app\PLAN.md, hors du projet, refusé par `external_directory: deny`
+(opencode.ts) ; ce n'est donc pas propre à Windows. OpenCode rendait au modèle comme à l'écran sa
+phrase de règle et le JSON de toutes ses règles. Corrigé :
+- un crochet `tool.execute.before` dans le greffon de Helix (`codeCheminHorsProjet`, opencode.ts) :
+  pour read, write, edit, list, glob et grep seulement, un chemin absolu hors du dossier et de
+  l'arbre du projet (et hors des dossiers `opencode` qu'OpenCode se permet) est refusé avant
+  l'outil avec « This path is outside the project folder: … The project folder is … Did you mean
+  <projet>/app/PLAN.md? » (la proposition seulement si le fichier existe). Il ne permet rien de plus
+  qu'OpenCode ;
+- l'écran : `erreurOutil` (fluxCode.ts) retire le JSON et marque `horsProjet` avec le chemin ;
+  `src/lib/code.ts` affiche « Ce chemin est hors du dossier du projet : … » (traduit) ;
+- les consignes : la consigne d'application nomme le dossier du projet et le chemin entier de
+  app/PLAN.md et app/metier.js ; `CONSIGNES_CODE`, la description de `read` et la règle 6 des
+  petits modèles disent que les chemins sont dans le dossier du projet, jamais /app, /home ou C:\.
+Mesuré avec le vrai OpenCode 1.18.32 (`essai-code-ci.mjs`, étape 7, faux modèle qui lit
+`/app/PLAN.md`) : avant (copie de 45bc711), l'écran et le modèle reçoivent la phrase de règle et
+le JSON ; après, l'écran reçoit `horsProjet` sans JSON, le modèle le dossier du projet et le bon
+chemin, rien n'est lu ; 9 sur 9. Chemins de Windows : la logique du greffon essayée avec
+`path.win32` (section 50). **Pas vérifié** : sous Windows réel, ni qu'un vrai modèle se corrige
+après ce message.
 
 **Décidé et vérifié le 12/10/2026 : connecteurs Roblox Studio et Blender.** Medhi : « je veux
 juste que ça fonctionne, fais au mieux ». Décisions prises en conséquence :

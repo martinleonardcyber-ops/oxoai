@@ -47,6 +47,8 @@ function verifier(nom, ok, obtenu) {
 
 /* ── Le faux moteur : un modèle, une réponse courte en flux ─────────────── */
 const MODELE = "essai-code";
+// Ce que le modèle a reçu en résultat d'outil (étape 7).
+const RECU_PAR_LE_MODELE = [];
 const moteur = createServer((req, res) => {
   let corps = "";
   req.on("data", (b) => (corps += b));
@@ -63,6 +65,26 @@ const moteur = createServer((req, res) => {
       }
       res.writeHead(200, { "Content-Type": "text/event-stream", "Cache-Control": "no-cache" });
       const morceau = (delta, fin) => `data: ${JSON.stringify({ id: "essai", object: "chat.completion.chunk", created: Math.floor(Date.now() / 1000), model: MODELE, choices: [{ index: 0, delta, finish_reason: fin ?? null }] })}\n\n`;
+      /*
+       * Étape 7 (23/10/2026, capture sous Windows) : sur « ESSAI-HORS-PROJET »,
+       * le modèle lit `/app/PLAN.md`, un chemin absolu hors du dossier du
+       * projet ; puis il répond par ce que l'outil lui a rendu.
+       */
+      const messages = Array.isArray(demande.messages) ? demande.messages : [];
+      const texteDe = (m) => (typeof m?.content === "string" ? m.content : Array.isArray(m?.content) ? m.content.map((p) => p?.text ?? "").join(" ") : "");
+      const avecLecture = (demande.tools ?? []).some((o) => o?.function?.name === "read");
+      if (avecLecture && messages.some((m) => m.role === "user" && texteDe(m).includes("ESSAI-HORS-PROJET"))) {
+        const resultat = [...messages].reverse().find((m) => m.role === "tool");
+        if (!resultat) {
+          res.write(morceau({ role: "assistant", content: null, tool_calls: [{ index: 0, id: "appel-hors-projet", type: "function", function: { name: "read", arguments: JSON.stringify({ filePath: "/app/PLAN.md" }) } }] }));
+          res.write(morceau({}, "tool_calls"));
+          return res.end("data: [DONE]\n\n");
+        }
+        RECU_PAR_LE_MODELE.push(texteDe(resultat));
+        res.write(morceau({ role: "assistant", content: "Reçu de l'outil, fin de l'essai." }));
+        res.write(morceau({}, "stop"));
+        return res.end("data: [DONE]\n\n");
+      }
       res.write(morceau({ role: "assistant", content: "" }));
       res.write(morceau({ content: "Bonjour, " }));
       res.write(morceau({ content: "la session répond." }));
@@ -84,6 +106,8 @@ const PROJET = join(TMP, "projet");
 mkdirSync(DONNEES, { recursive: true });
 mkdirSync(PROJET, { recursive: true });
 writeFileSync(join(PROJET, "README.md"), "# Projet d'essai\n");
+mkdirSync(join(PROJET, "app"), { recursive: true });
+writeFileSync(join(PROJET, "app", "PLAN.md"), "# Plan d'essai\n");
 const PORT = 8797;
 const G = `http://127.0.0.1:${PORT}`;
 const journal = createWriteStream(join(SORTIE, "passerelle.log"), { flags: "w" });
@@ -189,6 +213,44 @@ try {
     }
     writeFileSync(join(SORTIE, "flux-session.txt"), vu);
     verifier("la réponse du modèle arrive dans le flux de la session", /la session répond/.test(vu), vu.slice(-800) || String(flux));
+
+    /*
+     * 7. Capture d'un utilisateur sous Windows (23/10/2026) : « Lecture
+     * /app/PLAN.md », puis le message de règle d'OpenCode et le JSON de ses
+     * règles à l'écran. Le modèle lit ici `/app/PLAN.md` (hors du projet) ;
+     * l'écran doit recevoir un refus reconnaissable sans le JSON, le modèle une
+     * phrase qui lui dit le dossier du projet et le bon chemin.
+     */
+    dire("7. Un chemin absolu hors du dossier du projet (/app/PLAN.md)");
+    const flux7 = await fetch(`${G}/helix/code/events?sessionID=${encodeURIComponent(id)}`, { headers: entetes(), signal: AbortSignal.timeout(120_000) }).catch((e) => e);
+    const demande7 = await lireJson(await fetch(`${G}/helix/code/prompt`, { method: "POST", headers: entetes(), body: JSON.stringify({ sessionID: id, text: "ESSAI-HORS-PROJET : lis le plan.", model: modele, effort: "moyen" }) }));
+    dire(`   demande : ${demande7.statut} ${demande7.texte.slice(0, 200)}`);
+    let vu7 = "";
+    if (flux7 instanceof Response && flux7.body) {
+      const lecteur = flux7.body.getReader();
+      const decodeur = new TextDecoder();
+      const fin = Date.now() + 90_000;
+      while (Date.now() < fin && !/fin de l'essai/.test(vu7)) {
+        const { value, done } = await Promise.race([lecteur.read(), attendre(5000).then(() => ({ value: undefined, done: false }))]);
+        if (done) break;
+        if (value) vu7 += decodeur.decode(value, { stream: true });
+      }
+      lecteur.cancel().catch(() => {});
+    }
+    writeFileSync(join(SORTIE, "flux-hors-projet.txt"), vu7);
+    const echec7 = vu7.split("\n").filter((l) => l.includes("session.next.tool.failed")).join("\n");
+    dire(`   échec de l'outil vu par l'écran : ${echec7.slice(0, 400)}`);
+    dire(`   reçu par le modèle : ${(RECU_PAR_LE_MODELE.at(-1) ?? "").slice(0, 400)}`);
+    verifier(
+      "écran : la lecture hors du projet échoue avec `horsProjet` et le chemin, sans le JSON des règles d'OpenCode",
+      /"horsProjet":\{"chemin":"\/app\/PLAN\.md"\}/.test(echec7) && !/"permission":/.test(echec7) && !/relevant rules/.test(echec7),
+      echec7.slice(0, 800) || vu7.slice(-800),
+    );
+    verifier(
+      "modèle : il reçoit le dossier du projet et le bon chemin (app/PLAN.md du projet), rien n'a été lu",
+      RECU_PAR_LE_MODELE.some((r) => /outside the project folder/.test(r) && /Did you mean \S*projet[\\/]app[\\/]PLAN\.md\?/.test(r) && !/Plan d'essai/.test(r)),
+      RECU_PAR_LE_MODELE.at(-1) ?? "(rien reçu)",
+    );
   }
 } catch (err) {
   dire(`arrêt : ${err instanceof Error ? err.message : err}`);

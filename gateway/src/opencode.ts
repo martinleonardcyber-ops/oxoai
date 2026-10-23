@@ -609,10 +609,15 @@ function ecrireGreffonEnvironnement(): void {
       "// Écrit par la passerelle Helix (gateway/src/opencode.ts) : ne pas modifier.",
       "// Les commandes lancées par l'agent ne reçoivent ni le mot de passe du serveur ni les clés de la passerelle.",
       `const VIDES = ${JSON.stringify(vides)};`,
-      "export const HelixEnvironnement = async () => ({",
+      ...codeCheminHorsProjet(),
+      "export const HelixEnvironnement = async (contexte) => ({",
       // `HELIX_RTK_DB` : seulement dans les sessions où RTK sert ; l'enveloppe du shell le lit (rtk.ts).
       '  "shell.env": async (entree, sortie) => {',
       "    sortie.env = { ...(sortie.env ?? {}), ...VIDES, HELIX_RTK_DB: baseRtk(entree?.sessionID) };",
+      "  },",
+      '  "tool.execute.before": async (entree, sortie) => {',
+      "    const refus = helixHorsProjet(entree?.tool, sortie?.args, contexte?.directory, contexte?.worktree);",
+      "    if (refus) throw new Error(refus);",
       "  },",
       "});",
       "",
@@ -624,6 +629,54 @@ function ecrireGreffonEnvironnement(): void {
   } catch {
     /* sans permissions : on continue */
   }
+}
+
+/**
+ * Un chemin hors du dossier du projet, dit au modèle pour qu'il se corrige
+ * (23/10/2026).
+ *
+ * Capture d'un utilisateur sous Windows : l'agent écrivait `/app/metier.js`
+ * (C:\app\metier.js, hors du projet). OpenCode le refusait
+ * (`external_directory: deny`, plus haut) avec son message de règle : « The
+ * user has specified a rule which prevents you from using this specific tool
+ * call », suivi du JSON de toutes les règles, que le modèle lisait sans y
+ * trouver quoi faire, et que l'écran affichait tel quel. Ce crochet passe
+ * **avant** l'outil, pour les seuls outils de fichiers livrés (read, write,
+ * edit, list, glob, grep : jamais un outil de connecteur, dont un argument
+ * `path` peut désigner autre chose), et seulement pour un chemin absolu hors
+ * du dossier et de l'arbre du projet (sauf un chemin qui passe par un dossier
+ * `opencode` : `tool-output` de ses données et `opencode` du dossier
+ * temporaire, qu'il se permet ; relevé dans ses règles le 23/10/2026) : ce
+ * qu'OpenCode aurait refusé de toute façon. Il ne
+ * permet rien de plus ; il refuse avec une phrase qui dit le dossier du projet
+ * et, quand le fichier y existe, le bon chemin.
+ */
+export function codeCheminHorsProjet(): string[] {
+  return [
+    'import { existsSync as helixExiste } from "node:fs";',
+    'import { isAbsolute as helixAbsolu, relative as helixRelatif, resolve as helixResoudre } from "node:path";',
+    'const HELIX_CHEMINS = { read: "filePath", write: "filePath", edit: "filePath", list: "path", glob: "path", grep: "path" };',
+    "const helixDedans = (racine, chemin) => {",
+    '  if (typeof racine !== "string" || !racine || racine === "/") return false;',
+    "  const r = helixRelatif(helixResoudre(racine), chemin);",
+    '  return r === "" || (!/^\\.\\.([\\\\/]|$)/.test(r) && !helixAbsolu(r));',
+    "};",
+    "const helixHorsProjet = (outil, args, dossier, arbre) => {",
+    "  const cle = HELIX_CHEMINS[outil];",
+    '  const brut = cle && args && typeof args[cle] === "string" ? args[cle].trim() : "";',
+    '  if (!brut || typeof dossier !== "string" || !dossier) return null;',
+    "  if (!helixAbsolu(brut) && !/^[A-Za-z]:[\\\\/]/.test(brut)) return null;",
+    "  const chemin = helixResoudre(dossier, brut);",
+    "  if (helixDedans(dossier, chemin) || helixDedans(arbre, chemin)) return null;",
+    // Les dossiers qu'OpenCode se permet (`tool-output` de ses données, `opencode` du dossier temporaire) : laissés à sa propre règle.
+    "  if (/[\\\\/]opencode([\\\\/]|$)/.test(chemin)) return null;",
+    '  const relatif = brut.replace(/^[A-Za-z]:/, "").replace(/^[\\\\/]+/, "");',
+    "  const propose = relatif && helixExiste(helixResoudre(dossier, relatif)) ? helixResoudre(dossier, relatif) : \"\";",
+    "  return \"This path is outside the project folder: \" + brut + \". The project folder is \" + dossier + \". \" +",
+    '    (propose ? "Did you mean " + propose + "? " : "") +',
+    '    "Use paths inside the project folder: an absolute path from another system (/app, /home, C:\\\\) is not the project. Nothing was done.";',
+    "};",
+  ];
 }
 
 /**

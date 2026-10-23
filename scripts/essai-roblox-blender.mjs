@@ -246,12 +246,19 @@ try {
  * télémétrie) dans son journal. Le faux serveur de Blender relaie chaque appel
  * au module, sur BLENDER_HOST:BLENDER_PORT, comme le vrai.
  */
-function fauxServeur(nom, outils, journal, { blender = false, drapeauVide = null } = {}) {
+/*
+ * `drapeauLong` (23/10/2026) : un fichier qui contient un nombre de
+ * caractères ; tant qu'il existe, chaque description d'outil est allongée à
+ * cette taille, pour la place du modèle (partie B, « place limitée »). Les
+ * descriptions du vrai StudioMCP n'ont pas été relevées : c'est une taille
+ * choisie, pas mesurée.
+ */
+function fauxServeur(nom, outils, journal, { blender = false, drapeauVide = null, drapeauLong = null } = {}) {
   const fichier = join(AUX, `faux-${nom}.mjs`);
   writeFileSync(
     fichier,
     `#!${NODE}
-import { appendFileSync, existsSync } from "node:fs";
+import { appendFileSync, existsSync, readFileSync } from "node:fs";
 import { connect } from "node:net";
 import { createInterface } from "node:readline";
 const OUTILS = ${JSON.stringify(outils)};
@@ -268,7 +275,9 @@ createInterface({ input: process.stdin }).on("line", async (ligne) => {
   let m; try { m = JSON.parse(ligne); } catch { return; }
   if (m.id === undefined) return;
   if (m.method === "initialize") return envoyer({ jsonrpc: "2.0", id: m.id, result: { protocolVersion: m.params?.protocolVersion ?? "2025-06-18", capabilities: { tools: {} }, serverInfo: { name: ${JSON.stringify(nom)}, version: "1.0.0" } } });
-  if (m.method === "tools/list") return envoyer({ jsonrpc: "2.0", id: m.id, result: { tools: OUTILS.map((name) => ({ name, description: "Outil " + name + " (faux).", inputSchema: { type: "object", properties: { code: { type: "string" }, prompt: { type: "string" }, image: { type: "string" }, studio_id: { type: "string" } } } })) } });
+  const long = ${drapeauLong ? `existsSync(${JSON.stringify(drapeauLong)}) ? Number(readFileSync(${JSON.stringify(drapeauLong)}, "utf8")) : 0` : "0"};
+  const decrire = (name) => { const d = "Outil " + name + " (faux)."; return long > d.length ? (d + " Détail de l'outil, de ses arguments et de ses limites.".repeat(Math.ceil(long / 50))).slice(0, long) : d; };
+  if (m.method === "tools/list") return envoyer({ jsonrpc: "2.0", id: m.id, result: { tools: OUTILS.map((name) => ({ name, description: decrire(name), inputSchema: { type: "object", properties: { code: { type: "string" }, prompt: { type: "string" }, image: { type: "string" }, studio_id: { type: "string" } } } })) } });
   if (m.method === "tools/call") {
     const n = m.params?.name, a = m.params?.arguments ?? {};
     noter({ appel: n, args: a });
@@ -288,7 +297,8 @@ const lireJournal = (f) => (existsSync(f) ? readFileSync(f, "utf8").trim().split
 const JOURNAL_ROBLOX = join(AUX, "journal-roblox.jsonl");
 const JOURNAL_BLENDER = join(AUX, "journal-blender.jsonl");
 const VIDE_ROBLOX = join(AUX, "roblox-vide");
-const FAUX_ROBLOX = fauxServeur("roblox", [...LECTURES_ROBLOX, ...ECRITURES_ROBLOX], JOURNAL_ROBLOX, { drapeauVide: VIDE_ROBLOX });
+const LONG_ROBLOX = join(AUX, "roblox-long");
+const FAUX_ROBLOX = fauxServeur("roblox", [...LECTURES_ROBLOX, ...ECRITURES_ROBLOX], JOURNAL_ROBLOX, { drapeauVide: VIDE_ROBLOX, drapeauLong: LONG_ROBLOX });
 const FAUX_BLENDER = fauxServeur("blender", [...LECTURES_BLENDER, ...ECRITURES_BLENDER], JOURNAL_BLENDER, { blender: true });
 const appelsDe = (f) => lireJournal(f).filter((e) => e.appel).map((e) => e.appel);
 
@@ -353,6 +363,8 @@ function decision(demande) {
   }
   return { content: `FIN ${resultats.join(" || ")}` };
 }
+// Ce que le faux modèle a reçu, demande par demande : les noms des outils proposés, et sa consigne.
+const DEMANDES_MODELE = [];
 const fauxModele = serveurHttp(async (req, res) => {
   const morceaux = [];
   for await (const m of req) morceaux.push(m);
@@ -360,6 +372,7 @@ const fauxModele = serveurHttp(async (req, res) => {
   if (url.pathname === "/v1/models") return json(res, 200, { object: "list", data: [{ id: "essai-outils", object: "model" }] });
   if (url.pathname !== "/v1/chat/completions") return json(res, 404, {});
   const demande = JSON.parse(Buffer.concat(morceaux).toString("utf8") || "{}");
+  DEMANDES_MODELE.push({ outils: (demande.tools ?? []).map((o) => o.function?.name), systeme: texteDe((demande.messages ?? []).find((m) => m.role === "system")) });
   const delta = { role: "assistant", ...decision(demande) };
   res.writeHead(200, { "Content-Type": "text/event-stream" });
   const morceau = (o) => res.write(`data: ${JSON.stringify({ id: "essai", object: "chat.completion.chunk", created: 1, model: demande.model, ...o })}\n\n`);
@@ -395,7 +408,8 @@ const ESPACE = join(AUX, "espace");
 mkdirSync(ESPACE, { recursive: true });
 const DONNEES = join(AUX, "donnees");
 const PROFIL = join(AUX, "profil.json");
-writeFileSync(PROFIL, JSON.stringify({ chiffrement: "fichier", backends: [{ id: "lmstudio", enabled: false }, { id: "exo", enabled: false }, { id: "essai", label: "Essai", baseUrl: `http://127.0.0.1:${PORT_MODELE}/v1` }] }));
+writeFileSync(PROFIL, JSON.stringify({ chiffrement: "fichier", backends: [{ id: "lmstudio", enabled: false }, { id: "exo", enabled: false }, { id: "essai", label: "Essai", baseUrl: `http://127.0.0.1:${PORT_MODELE}/v1`, contexte: 32768 }] }));
+// La taille de la capture de Medhi du 23/10/2026 (32 768) : sans elle, la place n'est pas mesurée et tous les outils partent.
 
 async function lancerPasserelle() {
   const port = await portLibre();
@@ -434,11 +448,11 @@ const api = async (inst, chemin, corps, entetes = inst.A) => {
   const r = await fetch(`${inst.G}${chemin}`, corps === undefined ? { headers: entetes } : { method: "POST", headers: entetes, body: JSON.stringify(corps) });
   return { statut: r.status, ...(await r.json().catch(() => ({}))) };
 };
-async function chat(inst, plan, accorder = () => true, entetes = inst.A) {
+async function chat(inst, plan, accorder = () => true, entetes = inst.A, demande = "") {
   const enCours = fetch(`${inst.G}/v1/chat/completions`, {
     method: "POST",
     headers: entetes,
-    body: JSON.stringify({ model: "essai-outils", stream: true, tools: true, effort: "aucun", messages: [{ role: "user", content: `PLAN:${JSON.stringify(plan)}` }] }),
+    body: JSON.stringify({ model: "essai-outils", stream: true, tools: true, effort: "aucun", messages: [{ role: "user", content: `${demande}PLAN:${JSON.stringify(plan)}` }] }),
   }).then((r) => r.text());
   let fini = false;
   enCours.finally(() => (fini = true));
@@ -612,6 +626,61 @@ try {
   const etatFerme = await api(passerelle, "/helix/connecteurs");
   const ligneB = (etatFerme.installes ?? []).find((c) => c.id === "blender");
   verifier("l'écran des connecteurs dit l'état du moment : Blender ne répond pas", ligneB && (ligneB.running === false ? /ne répond pas/.test(ligneB.error ?? "") : true), ligneB);
+
+  /*
+   * Place limitée (captures de Medhi du 23/10/2026) : Roblox Studio branché,
+   * modèle à 32 768 jetons, « crée un sol en bois dans Roblox Studio ». Tous
+   * les outils branchés ne tiennent pas : Helix les retirait tous, et le
+   * modèle disait ne pas avoir accès à Roblox Studio. Ici, les descriptions de
+   * Roblox sont allongées (`LONG_ROBLOX`) jusqu'à dépasser la place.
+   */
+  const nbRobloxTous = LECTURES_ROBLOX.length + ECRITURES_ROBLOX.length;
+  const demanderSol = async (caracteres) => {
+    writeFileSync(LONG_ROBLOX, String(caracteres));
+    await api(passerelle, "/helix/connecteurs/connecter", { id: "roblox" });
+    const avant = DEMANDES_MODELE.length;
+    const r = await chat(passerelle, [["roblox__execute_luau", { studio_id: "a1b2", datamodel_type: "Edit", code: "local p = Instance.new('Part') p.Material = Enum.Material.Wood p.Parent = workspace" }]], () => true, passerelle.A, "Crée un sol en bois dans Roblox Studio. ");
+    const recu = DEMANDES_MODELE.slice(avant);
+    const outils = recu[0]?.outils ?? [];
+    const ligne = passerelle.journal.split("\n").filter((l) => /outils \(~\d+ jetons\)/.test(l)).at(-1) ?? "";
+    console.log(`    mesure (${caracteres} caractères par outil de Roblox) : ${ligne.trim().slice(0, 260)}`);
+    return { ...r, outils, roblox: outils.filter((n) => n.startsWith("roblox__")).length, systeme: recu[0]?.systeme ?? "", ligne };
+  };
+  // a. Roblox seul plus grand que la place des outils : avant, tous retirés ; maintenant, les siens d'abord, et c'est dit, sans conseiller 32 768 à un modèle déjà à 32 768.
+  const solA = await demanderSol(3000);
+  verifier(
+    "place limitée, Roblox plus grand que la place des outils : ses outils passent d'abord (execute_luau compris), l'appel part à Studio (pas « OUTIL-ABSENT »)",
+    solA.roblox > solA.outils.length / 2 && solA.outils.includes("roblox__execute_luau") && solA.fins[0]?.ok === true && !/OUTIL-ABSENT/.test(solA.texte),
+    `${solA.outils.length} outils reçus (${solA.roblox} de Roblox) ; ${solA.texte.slice(0, 300)}`,
+  );
+  verifier(
+    "et l'écran le dit juste : outils de Roblox Studio qui n'ont pas tenu, conseil de retirer des connecteurs ; jamais « 32 768 » à un modèle déjà à 32 768",
+    /trop peu pour tous les outils branchés/.test(solA.texte) && /certains outils de Roblox Studio n'ont pas tenu/.test(solA.texte) && /retirez dans Connecteurs/.test(solA.texte) && !/32 768/.test(solA.texte),
+    solA.texte.slice(0, 500),
+  );
+  // b. Roblox tient seul : tous ses outils gardés, d'autres retirés, sans rien dire à l'écran ; le modèle sait ce qui lui manque.
+  const solB = await demanderSol(1800);
+  verifier(
+    "place limitée, Roblox tient : ses outils sont tous gardés, une partie des autres retirée, l'appel part à Studio",
+    solB.roblox === nbRobloxTous && /gardés/.test(solB.ligne) && solB.fins[0]?.ok === true && !/OUTIL-ABSENT/.test(solB.texte),
+    `${solB.outils.length} outils reçus (${solB.roblox} de Roblox) ; ${solB.texte.slice(0, 300)} ; ${solB.ligne}`,
+  );
+  verifier(
+    "aucun outil utile retiré : rien à l'écran ; la consigne du modèle dit quels services ne lui sont pas proposés",
+    !/n'a qu'une conversation de/.test(solB.texte) && /Faute de place, une partie des outils branchés/.test(solB.systeme),
+    `${solB.texte.slice(0, 300)} | ${solB.systeme.slice(-300)}`,
+  );
+  // Sans service nommé : les outils courants passent d'abord, Roblox n'est pas « utile » à cette demande.
+  const avantNeutre = DEMANDES_MODELE.length;
+  const neutre = await chat(passerelle, [], () => true, passerelle.A, "Bonjour, que sais-tu faire ? ");
+  const outilsNeutre = DEMANDES_MODELE[avantNeutre]?.outils ?? [];
+  verifier(
+    "sans service nommé : les outils courants (fichiers) sont gardés, une partie des autres retirée, sans avertissement à l'écran",
+    outilsNeutre.some((n) => n.startsWith("fichiers__")) && outilsNeutre.length < solB.outils.length + 40 && /gardés/.test(passerelle.journal.split("\n").filter((l) => /outils \(~\d+ jetons\)/.test(l)).at(-1) ?? "") && !/n'a qu'une conversation de/.test(neutre.texte),
+    `${outilsNeutre.length} outils : ${outilsNeutre.join(",").slice(0, 300)} | ${neutre.texte.slice(0, 300)}`,
+  );
+  rmSync(LONG_ROBLOX);
+  await api(passerelle, "/helix/connecteurs/connecter", { id: "roblox" });
 
   // Ce que Helix aurait posé pour Blender (ici, un témoin) : effacé au retrait, et l'écran dit de décocher le module.
   mkdirSync(join(DONNEES, "blender-mcp", "venv"), { recursive: true });
