@@ -154,6 +154,17 @@ export type AuditAction =
   | "tarif.modifie"
   | "motdepasse.redefini"
   | "motdepasse.defini"
+  /*
+   * Mot de passe oublié (23/10/2026) : réinitialisé par un administrateur
+   * (écrit au nom du compte réinitialisé, l'administrateur dans le détail),
+   * refusé pour un compte qui administre aussi, et codes de récupération
+   * tirés. La redéfinition par l'application de bureau ou par un code de
+   * récupération reste `motdepasse.redefini`, avec `par`. Jamais un mot de
+   * passe ni un code dans le détail.
+   */
+  | "motdepasse.reinitialise"
+  | "motdepasse.reinitialisation_refusee"
+  | "recuperation.codes_crees"
   | "compte.supprime"
   /*
    * Clés d'API personnelles (clesApi.ts) : créée, renommée, révoquée, par qui,

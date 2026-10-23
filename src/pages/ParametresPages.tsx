@@ -34,6 +34,8 @@ import { InviterCollegue } from "@/components/settings/InviterCollegue";
 import { Abonnement } from "@/components/settings/Abonnement";
 import { OuvrirInstance } from "@/components/settings/OuvrirInstance";
 import { CreerCompte } from "@/components/settings/CreerCompte";
+import { ReinitialiserMotDePasse } from "@/components/settings/ReinitialiserMotDePasse";
+import { CodesRecuperation } from "@/components/settings/CodesRecuperation";
 import { useMcp } from "@/hooks/useMcp";
 import { SettingsPage, SettingsRow, Card } from "@/components/settings/SettingsShell";
 import { SeancesEtJournal } from "@/components/settings/SeancesEtJournal";
@@ -324,6 +326,9 @@ export function ProfilSettings() {
         </div>
         <div className="mt-4">
           <CreerCompte />
+        </div>
+        <div className="mt-4">
+          <ReinitialiserMotDePasse />
         </div>
       </SettingsRow>
 
@@ -620,9 +625,16 @@ export function SecuriteSettings() {
       <SettingsRow
         title={t("Authentification à deux facteurs")}
         desc={t("Après le mot de passe, un code à six chiffres affiché par votre téléphone. Aucun service extérieur n'intervient : le calcul se fait sur votre téléphone et sur l'instance.")}
-        last
       >
         <DeuxFacteurs />
+      </SettingsRow>
+
+      <SettingsRow
+        title={t("Mot de passe oublié")}
+        desc={t("Des codes à garder à l'abri : chacun redéfinit votre mot de passe une fois, depuis l'écran de connexion, sans l'aide de personne.")}
+        last
+      >
+        <CodesRecuperation />
       </SettingsRow>
     </SettingsPage>
   );

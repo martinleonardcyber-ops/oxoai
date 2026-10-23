@@ -2652,6 +2652,70 @@ suivi ou non par llmster) ; que « Run LLM server on login » n'affiche ni LM St
 l'ouverture de session ; l'écran lui-même (ni capture ni navigateur dans cette session) ; Windows et
 Linux.
 
+### 3.24 Mot de passe oublié : trois voies, et repartir de zéro (23/10/2026)
+
+**Demandé par Medhi** : « Que faire quand quelqu'un perd son mot de passe ? Ça arrive souvent. » La
+seule voie était `npm run motdepasse`, inutilisable pour qui a installé l'application. Puis,
+précisé le même jour : un particulier seul et **hors ligne** doit s'en sortir ; il doit pouvoir
+**repartir de zéro** sur son ordinateur sans rien perdre ; voir la désinstallation ; et les comptes
+d'avant la version doivent avoir les mêmes voies. Ni mail (l'instance n'en envoie pas) ni question
+secrète. Détail et pesées : SECURITE.md § 69.
+
+**Décisions** (le pourquoi est dans le code et SECURITE.md) :
+- **Un collègue a oublié le sien** : un administrateur, Réglages, Profil, Collègues, « Réinitialiser
+  le mot de passe » (`ReinitialiserMotDePasse.tsx`, `POST /helix/auth/reinitialiser`). Son mot de
+  passe redemandé à chaque fois (et son code s'il a la double authentification) ; provisoire tiré
+  par l'instance, montré une fois, qui n'ouvre que le choix d'un mot de passe à soi et **expire en
+  72 heures** ; séances et clés d'API du collègue fermées ; trace au nom du collègue ; second facteur
+  gardé sauf case cochée. **Jamais son propre compte, jamais un autre administrateur** : sinon le
+  mot de passe d'un seul administrateur suffirait à prendre tous les comptes qui administrent ; un
+  administrateur passe par la machine de l'instance ou par un code de récupération. Extension du
+  rôle pesée dans `roles.ts`.
+- **L'administrateur, ou une personne seule** : « Mot de passe oublié ? » sur l'écran de connexion
+  de l'**application de bureau qui fait tourner l'instance** (pas un navigateur, pas un poste
+  rattaché). macOS : `promptTouchID` (Touch ID ou mot de passe de la session), **sans repli** (la clé
+  des données y est protégée par le mot de passe de la session). Windows et Linux : Windows Hello
+  n'est pas atteignable sans module natif ; un code à usage unique écrit dans un fichier du dossier
+  de l'application et ouvert dans l'éditeur, à recopier (même autorité que la session, qui lit déjà
+  la clé des données). Puis le canal du `utilityProcess` vers `definirMotDePasse`, la même porte que
+  l'outil local, jamais une route HTTP (`electron/motDePasseOublie.cjs`). Hors ligne de bout en bout.
+- **Codes de récupération** : dix, proposés à la création du premier compte et dans Réglages,
+  Sécurité (`CodesRecuperation.tsx`). Distincts des codes de secours du second facteur : ils
+  remplacent le mot de passe, jamais le téléphone. Un compte qui n'en a jamais créé (tous ceux
+  d'avant cette version) n'en a pas : l'écran le dit et renvoie aux deux autres voies.
+- **Repartir de zéro sur cet ordinateur** (`electron/repartirDeZero.cjs`) : derrière la même
+  reconnaissance et un mot à taper (REPARTIR en français, traduit), **rien n'est supprimé** : au
+  lancement suivant, `~/.helix` devient `~/.helix-ancien-AAAA-MM-JJ-hhmm` et le profil de
+  l'application `<profil>-ancien-…` (noms exacts à l'écran avant de confirmer, et rappelés au
+  premier lancement d'après), puis l'application démarre vierge. Clés : rien d'écrasé ; l'ancien
+  dossier reste lisible s'il est remis en place. Jamais `~/.lmstudio` ni OpenClaw de la personne.
+  Un dossier qui refuse de bouger : tout revient à sa place.
+- **Désinstallation** : pas de case « Supprimer aussi mes données » dans l'installateur Windows
+  (`oneClick`, donc sans page ; possible par une question dans `customUnInstall`, à garder muette
+  pendant une mise à jour). **Pas fait**, à décider : un script qui supprime ne se livre pas sans
+  avoir tourné sur la CI Windows. L'aide « Vos données sur cet ordinateur » dit où elles sont sur
+  les trois systèmes et comment les retirer.
+- L'outil local écrit désormais dans la file des écritures de comptes (il pouvait perdre une
+  course contre un renforcement d'empreinte).
+- Aide : « Mot de passe oublié » et « Vos données sur cet ordinateur : où elles sont, les retirer ».
+
+**Vérifié ici** : `scripts/essai-mot-de-passe-perdu.mjs` (76 contrôles : instance jetable lancée
+avec un canal comme l'application, module d'Electron avec des doublures, dossiers jetables pour
+repartir de zéro, horloge avancée pour l'expiration) et la section 54 de `npm run securite` lancée
+seule (87 contrôles, pas la batterie entière) ; `npm run typecheck` ; i18n 100 % dans les six
+catalogues (interface et passerelle), textes d'Electron en sept langues. Vu à l'écran (Vite et
+passerelle jetables, faux modèle, pont d'Electron simulé par une page de doublure, lu en texte, sans
+capture) : codes proposés au premier compte puis affichés, connexion par un code de récupération,
+création puis réinitialisation d'un collègue (provisoire et date d'expiration affichés), carte des
+codes dans Sécurité, « Mot de passe oublié » dans un navigateur (sans l'ordinateur) et avec le pont
+(fichier), « Repartir de zéro » jusqu'à la confirmation, bilan au premier lancement.
+
+**Pas vérifié** : la vraie fenêtre Touch ID dans l'application construite (et sur un Mac sans Touch
+ID) ; le fichier du code ouvert par le Bloc-notes sous Windows et sous Linux ; la vraie relance et
+le déplacement de `~/.helix` et du profil par l'application (Windows surtout) ; le canal réel du
+`utilityProcess` (essayé avec `process.send`, que la passerelle lit aussi) ; les écrans en arabe et
+dans les autres langues.
+
 ## 4. Sécurité
 
 Le détail est dans [SECURITE.md](SECURITE.md). Voici ce qu'il faut avoir en tête.
@@ -4333,6 +4397,16 @@ valeur, « clair ».
 des 26 et 27/09 plus bas, qui gardent le détail. Tout ce qui suit est écrit et vérifié ici
 contre des doublures (faux moteur, faux fournisseurs, faux `codex`, faux OpenCode, Windows
 simulé) ; rien de cela n'a tourné sur la vraie machine.*
+
+**Mot de passe oublié et repartir de zéro (23/10/2026, § 3.24)** : sur le Mac, dans l'application
+construite, écran de connexion, un compte, « Mot de passe oublié ? », « Me faire reconnaître par cet
+ordinateur » : Touch ID, puis le mot de passe de session (bouton « Utiliser le mot de passe »),
+nouveau mot de passe, connexion ; essayer aussi Wi-Fi coupé. Sous Windows : le fichier
+`%APPDATA%\<nom>\mot-de-passe-oublie.txt` s'ouvre dans le Bloc-notes, code recopié. « Repartir de
+zéro » sur une machine d'essai (jamais celle des vraies données sans copie) : l'application se
+relance vierge, `~/.helix-ancien-…` et le profil `-ancien-…` sont là, LM Studio intact ; puis remettre
+les dossiers en place et retrouver l'ancien compte. Réinitialisation d'un collègue depuis un poste
+rattaché.
 
 **Palmier Pro (29/09/2026, § 3.5)** : sur un Mac à puce Apple en macOS 26, installer Palmier Pro
 dans Applications, l'ouvrir avec un projet, cliquer « Brancher » dans Connecteurs. À voir :

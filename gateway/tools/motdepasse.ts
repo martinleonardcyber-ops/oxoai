@@ -6,6 +6,14 @@
  * disponible est la possession de la machine et de son trousseau. C'est donc
  * l'outil local qui tient lieu de récupération.
  *
+ * Depuis le 23/10/2026, l'application en offre trois autres voies, sans
+ * terminal (« Mot de passe oublié ? » sur l'écran de connexion) : un
+ * administrateur réinitialise le mot de passe d'un collègue, l'application
+ * de bureau de la machine de l'instance fait reconnaître la session de
+ * l'ordinateur et appelle la même fonction que cet outil
+ * (`definirMotDePasse`), ou un code de récupération. Cet outil reste la voie
+ * de dernier recours.
+ *
  * Le mot de passe n'est jamais passé en argument de ligne de commande : il
  * resterait dans l'historique du terminal et dans la liste des processus, où
  * n'importe quel programme du poste peut le lire. Il est saisi sans écho.

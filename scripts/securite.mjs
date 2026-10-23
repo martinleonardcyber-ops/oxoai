@@ -10460,6 +10460,102 @@ console.log("\n53. LM Studio ou Bionic qui s'ouvrait seul : aucune commande `lms
   );
 }
 
+/*
+ * 54. Mot de passe oublié (demandé par Medhi le 23/10/2026 : « ça arrive
+ * souvent »). Trois voies, sans mail ni question secrète : un administrateur
+ * réinitialise un collègue (provisoire tiré par l'instance, 72 heures), la
+ * machine de l'instance fait reconnaître la session de l'ordinateur
+ * (application de bureau, canal vers sa passerelle, jamais une route HTTP),
+ * un code de récupération. De bout en bout par
+ * `scripts/essai-mot-de-passe-perdu.mjs` (instance jetable avec un canal, et
+ * le module d'Electron avec des doublures), puis le code.
+ */
+console.log("\n54. Mot de passe oublié : administrateur, machine de l'instance, codes de récupération (23/10/2026)");
+{
+  const essai = await new Promise((fin) => {
+    const e = spawn(process.execPath, [join(RACINE, "scripts", "essai-mot-de-passe-perdu.mjs")], { stdio: ["ignore", "pipe", "pipe"] });
+    let sortie = "";
+    e.stdout.on("data", (b) => (sortie += b));
+    e.stderr.on("data", (b) => (sortie += b));
+    const minuterie = setTimeout(() => e.kill(), 5 * 60_000);
+    e.on("close", (status) => {
+      clearTimeout(minuterie);
+      fin({ status, sortie });
+    });
+  });
+  const lignes = essai.sortie.split("\n");
+  for (const ligne of lignes) {
+    const ok = /^\s+✓ (.*)$/.exec(ligne);
+    const ko = /^\s+✗ (.*?)(?:  —  obtenu : .*)?$/.exec(ligne);
+    if (ok) verifier(`mot de passe oublié : ${ok[1]}`, true, "");
+    else if (ko) verifier(`mot de passe oublié : ${ko[1]}`, false, ligne.split("  —  obtenu : ")[1] ?? "");
+  }
+  verifier("mot de passe oublié : l'essai s'est déroulé jusqu'au bout", essai.status === 0, `${essai.status} ${lignes.slice(-6).join(" ")}`);
+
+  const lire = (...p) => readFileSync(join(RACINE, ...p), "utf8");
+  const index = lire("gateway", "src", "index.ts");
+  const comptes = lire("gateway", "src", "accounts.ts");
+  verifier(
+    "mot de passe oublié : `definirMotDePasse` n'est appelé dans la passerelle que par le canal de l'application (`mot-de-passe-local`), aucune route",
+    (index.match(/definirMotDePasse\(/g) ?? []).length === 1 && /message\?\.type === "mot-de-passe-local"\) \{[\s\S]{0,900}definirMotDePasse\(m\.accountId, m\.motDePasse, "application de bureau"/.test(index) && !/path === "\/helix\/[^"]*mot-de-passe-local"/.test(index),
+    "index.ts",
+  );
+  verifier(
+    "mot de passe oublié : débit borné sur les trois nouvelles routes (recuperer, codes-recuperation, reinitialiser)",
+    ["/helix/auth/recuperer", "/helix/auth/codes-recuperation", "/helix/auth/reinitialiser"].every((c) => lire("gateway", "src", "debit.ts").includes(`{ methode: "POST", chemin: "${c}", regle: { max: 10, fenetreMs: 60_000 } }`)),
+    "debit.ts",
+  );
+  verifier(
+    "mot de passe oublié : codes de récupération et date du provisoire ne sortent jamais de l'instance (`toPublic`, `PublicAccount`)",
+    /provisoireExpire: _expire,\s*recuperation: _recuperation,/.test(comptes) && /\| "provisoireExpire"\s*\| "recuperation"/.test(comptes),
+    "accounts.ts",
+  );
+  verifier(
+    "mot de passe oublié : la réinitialisation par un administrateur redemande son mot de passe, refuse son propre compte et un autre administrateur",
+    /const refus = controlerMotDePasse\(admin, motDePasseAdministrateur\);/.test(comptes) && /if \(cibleId === administrateurId\)/.test(comptes) && /if \(await cibleAdministre\(cible\.id\)\)/.test(comptes) && /if \(!\(await estAdministrateur\(qui\.userId\)\)\)[\s\S]{0,300}réinitialise le mot de passe d'un collègue/.test(index),
+    "accounts.ts, index.ts",
+  );
+  const module = lire("electron", "motDePasseOublie.cjs");
+  const canauxModule = [...module.matchAll(/ipcMain\.handle\("(helix:[^"]+)",\s*(?:async\s*)?\(([^)]*)\)\s*=>\s*\{([\s\S]{0,90})/g)];
+  verifier(
+    "mot de passe oublié : chaque canal du module vérifie la fenêtre et la disponibilité ; macOS sans repli par fichier",
+    canauxModule.length === 7 && canauxModule.every(([, , , corps]) => /depuisLaFenetre\(event\)/.test(corps)) && /const moyen = plateforme === "darwin" \? "systeme" : "fichier";/.test(module) && /moyen !== "fichier"/.test(module),
+    `${canauxModule.length} canaux`,
+  );
+  verifier(
+    "mot de passe oublié : le processus principal n'ouvre la porte que sur un poste non rattaché, avec la passerelle qu'il a lancée",
+    /disponible: \(\) => !posteRattache\(\) && Boolean\(gateway && !gateway\.helixArretee\)/.test(lire("electron", "main.cjs")),
+    "main.cjs",
+  );
+  const principal = lire("electron", "main.cjs");
+  verifier(
+    "repartir de zéro : les dossiers sont mis de côté au lancement, `~/.helix` avant nomTrousseau et le profil avant le verrou d'instance, jamais supprimés",
+    principal.indexOf('repartirDeZero.appliquer(DONNEES_POSTE, "donnees")') > 0 &&
+      principal.indexOf('repartirDeZero.appliquer(DONNEES_POSTE, "donnees")') < principal.indexOf("const etapeTrousseau = preparerNom(") &&
+      principal.indexOf('repartirDeZero.appliquer(DONNEES_POSTE, "profil"') < principal.indexOf("app.requestSingleInstanceLock()") &&
+      !/rmSync|unlinkSync|rimraf/.test(lire("electron", "repartirDeZero.cjs").replace(/fs\.rmSync\(temoinDe\(donnees\), \{ force: true \}\)/, "")),
+    "main.cjs, repartirDeZero.cjs",
+  );
+  verifier(
+    "mot de passe oublié : l'écran de connexion propose « Mot de passe oublié ? », et le premier compte se voit proposer des codes de récupération",
+    /t\("Mot de passe oublié \?"\)/.test(lire("src", "pages", "LoginPage.tsx")) && /setMode\("recuperation"\)/.test(lire("src", "pages", "LoginPage.tsx")),
+    "LoginPage.tsx",
+  );
+  const aide = lire("src", "lib", "aide.ts");
+  const article = aide.slice(aide.indexOf('id: "mot-de-passe-oublie",'), aide.indexOf('id: "donnees-ordinateur",'));
+  const articleDonnees = aide.slice(aide.indexOf('id: "donnees-ordinateur",'), aide.indexOf("// Réglages, Préférences : apparence et formats"));
+  verifier(
+    "mot de passe oublié : un article d'aide « Mot de passe oublié », sans nom de produit en dur ni « pas encore essayé »",
+    article.length > 500 && /titre: t\("Mot de passe oublié"\)/.test(article) && !/Helix|pas encore essay|pas été essay|non vérifi/i.test(article),
+    article.slice(0, 200),
+  );
+  verifier(
+    "repartir de zéro : un article d'aide sur les données de l'ordinateur (où, comment les retirer, repartir sans rien perdre), sans nom de produit en dur ni « pas encore essayé »",
+    articleDonnees.length > 500 && /~\/\.helix-ancien-/.test(articleDonnees) && /~\/\.lmstudio/.test(articleDonnees) && !/\bHelix\b|pas encore essay|pas été essay|non vérifi/.test(articleDonnees),
+    articleDonnees.slice(0, 200),
+  );
+}
+
 console.log(`\n${reussis} vérification(s) réussie(s), ${echecs.length} échec(s).`);
 if (echecs.length) {
   console.log("Échecs :");

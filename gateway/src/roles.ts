@@ -28,6 +28,21 @@ import { publicAccounts } from "./accounts.ts";
  * documents, ni les mails de qui que ce soit. Il ouvre la vue d'ensemble du
  * journal, c'est-à-dire des traces d'actions, et rien d'autre. Toute extension
  * de ce rôle doit être pesée ici, et écrite.
+ *
+ * ── Extension du 23/10/2026 : réinitialiser le mot de passe d'un collègue ───
+ *
+ * Demandée par Medhi (« quelqu'un perd son mot de passe, ça arrive souvent »).
+ * C'est un pouvoir réel : qui remet un mot de passe provisoire pourrait, en
+ * principe, s'en servir avant le collègue et ouvrir son compte. Pesé ainsi
+ * (accounts.ts, `reinitialiserParAdministrateur`) : le mot de passe de
+ * l'administrateur est redemandé à chaque fois ; le provisoire est tiré par
+ * l'instance et expire en 72 heures ; le second facteur du collègue reste
+ * (il protège alors le compte même contre l'administrateur), sauf retrait
+ * coché ; la trace est écrite au nom du collègue, qui la voit dans son
+ * journal, et son ancien mot de passe cesse de marcher, ce qu'il remarque à
+ * la connexion suivante. Jamais sur son propre compte, jamais sur celui d'un
+ * autre administrateur. La personne qui tient la machine de l'instance
+ * pouvait déjà en faire autant avec `npm run motdepasse`.
  */
 
 const normalise = (adresse: unknown): string =>

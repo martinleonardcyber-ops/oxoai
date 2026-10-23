@@ -10,6 +10,10 @@ import {
   Copy,
   Check,
   Mail,
+  LifeBuoy,
+  Fingerprint,
+  FileText,
+  RotateCcw,
 } from "lucide-react";
 import { LogoMark } from "@/components/ui/Logo";
 import { Button } from "@/components/ui/Button";
@@ -27,6 +31,7 @@ import {
   validerDeuxFacteurs,
   preparerInscription,
   activerInscription,
+  recupererAvecCode,
   toUser,
   type Account,
   type Connexion,
@@ -42,6 +47,18 @@ import { QrCode } from "@/components/ui/QrCode";
 import { adresseOtpauth, secretLisible } from "@/lib/deuxFacteurs";
 import { t, tf } from "@/lib/i18n";
 import { copierTexte } from "@/lib/pressePapiers";
+import {
+  apercuRepartir,
+  bilanRepartir,
+  creerCodesRecuperation,
+  ecrireCodeLocal,
+  ecrireCodeRepartir,
+  oublierBilanRepartir,
+  reconnaissanceLocale,
+  redefinirLocalement,
+  repartirDeZero,
+  type ApercuRepartir,
+} from "@/lib/motDePasseOublie";
 
 /** Même règle que la passerelle (`MOT_DE_PASSE_MIN`), qui reste seule juge. */
 const MOT_DE_PASSE_MIN = 10;
@@ -57,7 +74,17 @@ type Mode =
   | "inscription"
   /** Codes de secours remis à la fin de l'activation, une seule fois. */
   | "codes"
-  | "creation";
+  | "creation"
+  /** « Mot de passe oublié ? » : les trois voies, expliquées (23/10/2026). */
+  | "oubli"
+  /** Sur la machine de l'instance : l'ordinateur reconnaît la session. */
+  | "oubli-local"
+  /** Un code de récupération redéfinit le mot de passe. */
+  | "oubli-code"
+  /** Premier compte de l'instance : proposer des codes de récupération. */
+  | "recuperation"
+  /** Ne plus s'en sortir : repartir de zéro sur cet ordinateur, données mises de côté. */
+  | "repartir";
 
 /**
  * Écran de connexion.
@@ -121,6 +148,34 @@ export function LoginPage({ onSignedIn }: { onSignedIn: () => void }) {
   const [codesSecours, setCodesSecours] = useState<string[]>([]);
   const [compteOuvert, setCompteOuvert] = useState<Account | null>(null);
   const [copie, setCopie] = useState(false);
+  /** Les codes affichés sont-ils ceux du second facteur, ou de récupération du mot de passe ? */
+  const [sorteCodes, setSorteCodes] = useState<"secours" | "recuperation">("secours");
+  /*
+   * Mot de passe oublié (23/10/2026). `moyenLocal` : la reconnaissance par
+   * l'ordinateur est-elle possible ici (application de bureau qui fait
+   * tourner l'instance) ; `fichierCode` : où le code a été écrit (Windows,
+   * Linux) ; `codeOubli` : code du fichier, ou code de récupération.
+   */
+  const [moyenLocal, setMoyenLocal] = useState<"systeme" | "fichier" | null>(null);
+  const [fichierCode, setFichierCode] = useState<string | null>(null);
+  const [codeOubli, setCodeOubli] = useState("");
+  const [retirerDf, setRetirerDf] = useState(false);
+
+  /*
+   * Repartir de zéro (electron/repartirDeZero.cjs) : ce qui sera mis de côté
+   * et le mot à taper ; `depart` quand la demande est partie (l'application
+   * redémarre) ; `bilan` au premier lancement d'après : où sont les anciennes
+   * données, ou pourquoi rien n'a bougé.
+   */
+  const [apercuDepart, setApercuDepart] = useState<ApercuRepartir | null>(null);
+  const [motDepart, setMotDepart] = useState("");
+  const [depart, setDepart] = useState<string[] | null>(null);
+  const [bilan, setBilan] = useState<{ etat: "fait" | "echec"; dossiers: string[] } | null>(null);
+
+  useEffect(() => {
+    void reconnaissanceLocale().then(setMoyenLocal);
+    void bilanRepartir().then(setBilan);
+  }, []);
   /*
    * « Rester connecté sur ce poste ». Ce n'est pas le mot de passe qu'on
    * mémorise — il n'est conservé nulle part — c'est la séance qui dure trente
@@ -300,6 +355,7 @@ export function LoginPage({ onSignedIn }: { onSignedIn: () => void }) {
       const { connexion, codesDeSecours } = await activerInscription(defi, code.trim(), rester);
       if (connexion.ok) {
         setSecretInscription(null);
+        setSorteCodes("secours");
         setCodesSecours(codesDeSecours);
         setCompteOuvert(connexion.account);
         setMode("codes");
@@ -324,6 +380,79 @@ export function LoginPage({ onSignedIn }: { onSignedIn: () => void }) {
     setError(undefined);
   };
 
+  /** Vers une voie de « Mot de passe oublié ? » : les saisies repartent de zéro. */
+  const allerOubli = (vers: "oubli" | "oubli-local" | "oubli-code") => {
+    setNewPassword("");
+    setConfirmation("");
+    setCodeOubli("");
+    setFichierCode(null);
+    setRetirerDf(false);
+    setError(undefined);
+    setMode(vers);
+  };
+
+  const ecrireCode = (account: Account) =>
+    enTravail(async () => {
+      setFichierCode(await ecrireCodeLocal(account.id, account.email));
+      setCodeOubli("");
+    });
+
+  /** L'ordinateur a reconnu la session : nouveau mot de passe enregistré, puis la connexion comme d'habitude. */
+  const redefinirIci = (account: Account) =>
+    enTravail(async () => {
+      if (!nouveauValide) return;
+      if (moyenLocal === "fichier" && !codeOubli.trim()) return;
+      await redefinirLocalement({
+        accountId: account.id,
+        email: account.email,
+        motDePasse: newPassword,
+        retirerDeuxFacteurs: retirerDf,
+        ...(moyenLocal === "fichier" ? { code: codeOubli.trim() } : {}),
+      });
+      setFichierCode(null);
+      suite(await authenticate(account.id, newPassword, rester));
+    });
+
+  const recuperer = (account: Account) =>
+    enTravail(async () => {
+      if (!nouveauValide || !codeOubli.trim()) return;
+      suite(await recupererAvecCode(account.id, codeOubli.trim(), newPassword, rester));
+    });
+
+  const allerRepartir = () =>
+    enTravail(async () => {
+      const a = await apercuRepartir();
+      if (!a) throw new Error(t("Cette voie n'existe que dans l'application, sur l'ordinateur qui fait tourner l'instance."));
+      setApercuDepart(a);
+      setMotDepart("");
+      setCodeOubli("");
+      setFichierCode(null);
+      setMode("repartir");
+    });
+
+  const ecrireCodeDepart = () =>
+    enTravail(async () => {
+      setFichierCode(await ecrireCodeRepartir());
+      setCodeOubli("");
+    });
+
+  const repartir = () =>
+    enTravail(async () => {
+      if (!apercuDepart || !motDepart.trim()) return;
+      if (apercuDepart.moyen === "fichier" && !codeOubli.trim()) return;
+      setDepart(await repartirDeZero(motDepart.trim(), apercuDepart.moyen === "fichier" ? codeOubli.trim() : undefined));
+    });
+
+  /** Premier compte : les codes de récupération, tirés avec le mot de passe qu'on vient de choisir. */
+  const tirerCodesRecuperation = () =>
+    enTravail(async () => {
+      const { codes } = await creerCodesRecuperation(newPassword);
+      setCodesSecours(codes);
+      setSorteCodes("recuperation");
+      setCopie(false);
+      setMode("codes");
+    });
+
   const create = () =>
     enTravail(async () => {
       if (!fullName.trim() || !email.trim() || !nouveauValide) return;
@@ -345,6 +474,16 @@ export function LoginPage({ onSignedIn }: { onSignedIn: () => void }) {
       if (inscription) {
         setSelected(account);
         commencerInscription(inscription);
+        return;
+      }
+      /*
+       * Premier compte de l'instance, celui qui l'administre (23/10/2026) :
+       * personne au-dessus pour réinitialiser son mot de passe. On lui propose
+       * des codes de récupération avant d'ouvrir l'application.
+       */
+      if (accounts.length === 0 && !invitation) {
+        setCompteOuvert(account);
+        setMode("recuperation");
         return;
       }
       ouvrir(account);
@@ -415,15 +554,54 @@ export function LoginPage({ onSignedIn }: { onSignedIn: () => void }) {
               ? t("Créez votre compte pour commencer.")
               : mode === "premier" || mode === "provisoire"
                 ? t("Choisissez votre mot de passe.")
+                : mode === "oubli" || mode === "oubli-local" || mode === "oubli-code"
+                  ? t("Mot de passe oublié")
+                  : mode === "repartir"
+                    ? t("Repartir de zéro")
+                  : mode === "recuperation"
+                    ? t("Une dernière précaution.")
                 : mode === "deuxfacteurs"
                   ? t("Dernière étape : le code de vérification.")
                   : mode === "inscription"
                     ? t("Votre instance demande une double authentification.")
                     : mode === "codes"
-                      ? t("Gardez vos codes de secours.")
+                      ? sorteCodes === "recuperation"
+                        ? t("Gardez vos codes de récupération.")
+                        : t("Gardez vos codes de secours.")
                       : t("Choisissez votre compte pour continuer.")}
           </p>
         </div>
+
+        {/* Premier lancement après « Repartir de zéro » : où sont les anciennes données */}
+        {bilan && (
+          <InfoBox tone={bilan.etat === "fait" ? "info" : "warning"} className="mb-4" leading={<RotateCcw size={15} strokeWidth={1.75} />}>
+            {bilan.etat === "fait"
+              ? t("Nouveau départ. Vos anciennes données sont restées sur cet ordinateur, ici :")
+              : t("Repartir de zéro n'a pas pu se faire : un dossier était encore utilisé par un programme. Rien n'a bougé, vos données sont toujours là. Fermez les autres programmes, puis réessayez.")}
+            {bilan.etat === "fait" && (
+              <>
+                <ul className="mt-2 space-y-1">
+                  {bilan.dossiers.map((d) => (
+                    <li key={d} className="break-all font-mono text-xs">{d}</li>
+                  ))}
+                </ul>
+                <p className="mt-2 text-xs">{t("Pour les effacer pour de bon, mettez ces dossiers à la corbeille et videz-la.")}</p>
+              </>
+            )}
+            <div className="mt-2">
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => {
+                  void oublierBilanRepartir();
+                  setBilan(null);
+                }}
+              >
+                {t("Compris")}
+              </Button>
+            </div>
+          </InfoBox>
+        )}
 
         {/* Choix du compte */}
         {mode === "choix" && (
@@ -497,6 +675,13 @@ export function LoginPage({ onSignedIn }: { onSignedIn: () => void }) {
             <p className="text-xs leading-relaxed text-muted-foreground">
               {t("Votre mot de passe n'est conservé nulle part. Coché, ce poste reste reconnu trente jours au lieu de douze heures, et cette séance se révoque à tout moment dans Réglages, Sécurité.")}
             </p>
+            <button
+              type="button"
+              onClick={() => allerOubli("oubli")}
+              className="flex w-full items-center justify-center gap-1.5 text-sm text-muted-foreground underline-offset-2 transition-colors hover:text-foreground hover:underline"
+            >
+              <LifeBuoy size={14} strokeWidth={1.75} /> {t("Mot de passe oublié ?")}
+            </button>
             {lienRetour(t("Changer de compte"))}
           </div>
         )}
@@ -525,7 +710,7 @@ export function LoginPage({ onSignedIn }: { onSignedIn: () => void }) {
           <div className="space-y-4">
             {carteDuCompte(selected)}
             <InfoBox tone="info" leading={<KeyRound size={15} strokeWidth={1.75} />}>
-              {t("Ce mot de passe a été choisi par la personne qui a créé votre compte. Choisissez le vôtre : elle ne le connaîtra pas, et l'ancien ne servira plus.")}
+              {t("Ce mot de passe vous a été donné par quelqu'un d'autre (la personne qui a créé votre compte, ou l'administrateur qui a réinitialisé le vôtre). Choisissez le vôtre : personne d'autre ne le connaîtra, et l'ancien ne servira plus.")}
             </InfoBox>
             {champsNouveau(() => void provisoire(selected), true)}
             <Button icon={LogIn} block disabled={busy || !nouveauValide} onClick={() => void provisoire(selected)}>
@@ -623,7 +808,9 @@ export function LoginPage({ onSignedIn }: { onSignedIn: () => void }) {
         {mode === "codes" && compteOuvert && (
           <div className="space-y-4">
             <InfoBox tone="info" leading={<KeyRound size={15} strokeWidth={1.75} />}>
-              {t("Chacun de ces codes ouvre votre compte une fois, si vous n'avez plus votre téléphone. Ils ne seront plus jamais affichés : imprimez-les ou rangez-les dans votre gestionnaire de mots de passe.")}
+              {sorteCodes === "recuperation"
+                ? t("Chacun de ces codes redéfinit votre mot de passe une fois, si vous l'oubliez (écran de connexion, « Mot de passe oublié ? »). Ils ne seront plus jamais affichés : imprimez-les ou rangez-les ailleurs que sur cet ordinateur.")
+                : t("Chacun de ces codes ouvre votre compte une fois, si vous n'avez plus votre téléphone. Ils ne seront plus jamais affichés : imprimez-les ou rangez-les dans votre gestionnaire de mots de passe.")}
             </InfoBox>
             <ul className="grid grid-cols-2 gap-2 rounded-xl bg-muted/40 p-4 font-mono text-sm text-foreground">
               {codesSecours.map((c) => (
@@ -636,6 +823,236 @@ export function LoginPage({ onSignedIn }: { onSignedIn: () => void }) {
             <Button icon={LogIn} block onClick={() => ouvrir(compteOuvert)}>
               {t("J'ai mis mes codes à l'abri")}
             </Button>
+          </div>
+        )}
+
+
+        {/* Mot de passe oublié : les trois voies (23/10/2026) */}
+        {mode === "oubli" && selected && (
+          <div className="space-y-4">
+            {carteDuCompte(selected)}
+            <p className="text-sm text-muted-foreground">
+              {t("Personne ne peut relire votre mot de passe, pas même l'instance. Il se remplace, de l'une de ces façons :")}
+            </p>
+            <div className="space-y-1 rounded-xl border border-border bg-card p-4">
+              <p className="text-sm font-medium text-foreground">{t("Demander à un administrateur")}</p>
+              <p className="text-xs leading-relaxed text-muted-foreground">
+                {t("Un administrateur de l'instance réinitialise votre mot de passe (Réglages, Profil, Collègues). Il vous remet un mot de passe provisoire, valable 72 heures : à la connexion, vous en choisissez un à vous.")}
+              </p>
+            </div>
+            {moyenLocal && (
+              <div className="space-y-3 rounded-xl border border-border bg-card p-4">
+                <div className="space-y-1">
+                  <p className="text-sm font-medium text-foreground">{t("Vous faire reconnaître par cet ordinateur")}</p>
+                  <p className="text-xs leading-relaxed text-muted-foreground">
+                    {moyenLocal === "systeme"
+                      ? t("Cet ordinateur fait tourner l'instance. macOS vous demande Touch ID ou le mot de passe de votre session, puis vous choisissez un nouveau mot de passe.")
+                      : t("Cet ordinateur fait tourner l'instance. L'application écrit un code dans un fichier de votre dossier personnel : ouvrez-le, recopiez le code, puis choisissez un nouveau mot de passe.")}
+                  </p>
+                </div>
+                <Button variant="secondary" icon={moyenLocal === "systeme" ? Fingerprint : FileText} block onClick={() => allerOubli("oubli-local")}>
+                  {t("Me faire reconnaître par cet ordinateur")}
+                </Button>
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={() => void allerRepartir()}
+                  className="flex w-full items-center justify-center gap-1.5 text-xs text-muted-foreground underline-offset-2 transition-colors hover:text-foreground hover:underline"
+                >
+                  <RotateCcw size={13} strokeWidth={1.75} /> {t("Je ne m'en sors pas : repartir de zéro sur cet ordinateur")}
+                </button>
+              </div>
+            )}
+            <div className="space-y-3 rounded-xl border border-border bg-card p-4">
+              <div className="space-y-1">
+                <p className="text-sm font-medium text-foreground">{t("Utiliser un code de récupération")}</p>
+                <p className="text-xs leading-relaxed text-muted-foreground">
+                  {t("Si vous en avez créé (Réglages, Sécurité), chacun redéfinit votre mot de passe une fois. Votre téléphone reste demandé si la double authentification est active.")}
+                </p>
+              </div>
+              <Button variant="secondary" icon={KeyRound} block onClick={() => allerOubli("oubli-code")}>
+                {t("J'ai un code de récupération")}
+              </Button>
+              <p className="text-xs leading-relaxed text-muted-foreground">
+                {t("Un compte qui n'en a jamais créé, comme ceux d'avant cette version, n'en a pas : passez alors par un administrateur ou par l'ordinateur qui fait tourner l'instance.")}
+              </p>
+            </div>
+            {!moyenLocal && (
+              <p className="text-xs leading-relaxed text-muted-foreground">
+                {t("Sur l'ordinateur qui fait tourner l'instance, l'application propose aussi de vous faire reconnaître par l'ordinateur lui-même.")}
+              </p>
+            )}
+            {lienRetour(t("Changer de compte"))}
+          </div>
+        )}
+
+        {mode === "oubli-local" && selected && moyenLocal && (
+          <div className="space-y-4">
+            {carteDuCompte(selected)}
+            <InfoBox tone="info" leading={moyenLocal === "systeme" ? <Fingerprint size={15} strokeWidth={1.75} /> : <FileText size={15} strokeWidth={1.75} />}>
+              {moyenLocal === "systeme"
+                ? t("Choisissez votre nouveau mot de passe. En validant, macOS vous demande Touch ID ou le mot de passe de votre session. Toutes vos séances ouvertes sont fermées, et le changement est inscrit au journal.")
+                : t("Choisissez votre nouveau mot de passe, puis recopiez le code que l'application écrit dans un fichier. Toutes vos séances ouvertes sont fermées, et le changement est inscrit au journal.")}
+            </InfoBox>
+            {champsNouveau(() => void redefinirIci(selected), true)}
+            {moyenLocal === "fichier" && (
+              <div className="space-y-3">
+                <Button variant="secondary" icon={FileText} block disabled={busy} onClick={() => void ecrireCode(selected)}>
+                  {fichierCode ? t("Écrire un nouveau code") : t("Écrire le code dans un fichier")}
+                </Button>
+                {fichierCode && (
+                  <>
+                    <p className="break-all text-xs leading-relaxed text-muted-foreground">
+                      {tf("Le code est dans ce fichier, qui vient de s'ouvrir : {0}. Il ne vaut que dix minutes.", fichierCode)}
+                    </p>
+                    <Field label={t("Code du fichier")}>
+                      <Input
+                        value={codeOubli}
+                        autoComplete="off"
+                        spellCheck={false}
+                        placeholder={t("ABCD-EFGH")}
+                        onChange={(e) => setCodeOubli(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") void redefinirIci(selected);
+                        }}
+                      />
+                    </Field>
+                  </>
+                )}
+              </div>
+            )}
+            {selected.deuxFacteursActive && (
+              <label className="flex items-start gap-2.5 text-sm text-muted-foreground">
+                <input type="checkbox" className="mt-1" checked={retirerDf} onChange={() => setRetirerDf((v) => !v)} />
+                <span>{t("J'ai aussi perdu mon téléphone : retirer la double authentification (à réactiver ensuite dans Réglages, Sécurité).")}</span>
+              </label>
+            )}
+            <Button
+              icon={moyenLocal === "systeme" ? Fingerprint : ShieldCheck}
+              block
+              disabled={busy || !nouveauValide || (moyenLocal === "fichier" && (!fichierCode || !codeOubli.trim()))}
+              onClick={() => void redefinirIci(selected)}
+            >
+              {t("Redéfinir mon mot de passe")}
+            </Button>
+            {lienRetour(t("Changer de compte"))}
+          </div>
+        )}
+
+        {mode === "oubli-code" && selected && (
+          <div className="space-y-4">
+            {carteDuCompte(selected)}
+            <Field label={t("Code de récupération")} hint={t("Chaque code ne sert qu'une fois.")}>
+              <Input
+                value={codeOubli}
+                autoFocus
+                autoComplete="off"
+                spellCheck={false}
+                maxLength={32}
+                placeholder={t("abcde-fghij")}
+                onChange={(e) => setCodeOubli(e.target.value)}
+              />
+            </Field>
+            {champsNouveau(() => void recuperer(selected))}
+            <Button icon={KeyRound} block disabled={busy || !nouveauValide || !codeOubli.trim()} onClick={() => void recuperer(selected)}>
+              {t("Redéfinir mon mot de passe")}
+            </Button>
+            {error && (
+              <p className="text-xs leading-relaxed text-muted-foreground">
+                {t("Pas de code de récupération, ou plus aucun ? Ils n'existent que si vous en avez créé dans Réglages, Sécurité. Revenez en arrière : un administrateur, ou l'ordinateur qui fait tourner l'instance, peuvent aussi vous aider.")}
+              </p>
+            )}
+            <p className="text-xs leading-relaxed text-muted-foreground">
+              {t("Toutes vos séances ouvertes sont fermées, et le changement est inscrit au journal. Si la double authentification est active, le code de votre téléphone est demandé juste après.")}
+            </p>
+            {lienRetour(t("Changer de compte"))}
+          </div>
+        )}
+
+
+        {/* Repartir de zéro sur cet ordinateur : rien n'est supprimé, tout est mis de côté */}
+        {mode === "repartir" && apercuDepart && (
+          <div className="space-y-4">
+            {depart ? (
+              <InfoBox tone="info" leading={<RotateCcw size={15} strokeWidth={1.75} />}>
+                {t("C'est noté. L'application se ferme et redémarre comme au premier lancement. Vos anciennes données seront ici :")}
+                <ul className="mt-2 space-y-1">
+                  {depart.map((d) => (
+                    <li key={d} className="break-all font-mono text-xs">{d}</li>
+                  ))}
+                </ul>
+              </InfoBox>
+            ) : (
+              <>
+                <InfoBox tone="warning" leading={<TriangleAlert size={15} strokeWidth={1.75} />}>
+                  {t("Tout ce que l'application garde sur cet ordinateur (comptes, Chats, réglages, outils qu'elle a installés) est mis de côté, puis elle redémarre comme au premier lancement. Rien n'est supprimé. LM Studio et ses modèles, OpenClaw et vos documents ne sont pas touchés.")}
+                </InfoBox>
+                <div className="space-y-1">
+                  <p className="text-sm text-foreground">{t("Vos données actuelles iront dans :")}</p>
+                  <ul className="space-y-1 rounded-xl bg-muted/40 p-3">
+                    {apercuDepart.dossiers.map((d) => (
+                      <li key={d} className="break-all font-mono text-xs text-foreground">{d}</li>
+                    ))}
+                  </ul>
+                  <p className="text-xs leading-relaxed text-muted-foreground">
+                    {t("Elles y restent, lisibles sur cet ordinateur, tant que vous ne les supprimez pas. Pour les effacer pour de bon : mettez ces dossiers à la corbeille et videz-la. Pour revenir en arrière : quittez l'application, supprimez les nouveaux dossiers du même nom sans « -ancien- », et rendez aux anciens leur nom. Les outils que l'application avait installés (moteur de l'écran Code, dictée) seront à reposer, ce qui demande internet ; le reste fonctionne sans.")}
+                  </p>
+                </div>
+                {apercuDepart.moyen === "fichier" && (
+                  <div className="space-y-3">
+                    <Button variant="secondary" icon={FileText} block disabled={busy} onClick={() => void ecrireCodeDepart()}>
+                      {fichierCode ? t("Écrire un nouveau code") : t("Écrire le code dans un fichier")}
+                    </Button>
+                    {fichierCode && (
+                      <>
+                        <p className="break-all text-xs leading-relaxed text-muted-foreground">
+                          {tf("Le code est dans ce fichier, qui vient de s'ouvrir : {0}. Il ne vaut que dix minutes.", fichierCode)}
+                        </p>
+                        <Field label={t("Code du fichier")}>
+                          <Input value={codeOubli} autoComplete="off" spellCheck={false} placeholder={t("ABCD-EFGH")} onChange={(e) => setCodeOubli(e.target.value)} />
+                        </Field>
+                      </>
+                    )}
+                  </div>
+                )}
+                <Field label={tf("Pour confirmer, tapez {0}", apercuDepart.mot)}>
+                  <Input value={motDepart} autoComplete="off" spellCheck={false} onChange={(e) => setMotDepart(e.target.value)} />
+                </Field>
+                <Button
+                  variant="destructive"
+                  icon={RotateCcw}
+                  block
+                  disabled={
+                    busy ||
+                    motDepart.trim().toLocaleUpperCase() !== apercuDepart.mot.toLocaleUpperCase() ||
+                    (apercuDepart.moyen === "fichier" && (!fichierCode || !codeOubli.trim()))
+                  }
+                  onClick={() => void repartir()}
+                >
+                  {apercuDepart.moyen === "systeme" ? t("Me faire reconnaître et repartir de zéro") : t("Repartir de zéro")}
+                </Button>
+                {lienRetour(t("Changer de compte"))}
+              </>
+            )}
+          </div>
+        )}
+
+        {/* Premier compte : des codes de récupération, proposés une fois */}
+        {mode === "recuperation" && compteOuvert && (
+          <div className="space-y-4">
+            {carteDuCompte(compteOuvert)}
+            <InfoBox tone="info" leading={<LifeBuoy size={15} strokeWidth={1.75} />}>
+              {t("Vous administrez cette instance : personne d'autre ne pourra réinitialiser votre mot de passe. Créez des codes de récupération et gardez-les à l'abri : chacun redéfinit votre mot de passe une fois, si vous l'oubliez.")}
+            </InfoBox>
+            <Button icon={KeyRound} block disabled={busy} onClick={() => void tirerCodesRecuperation()}>
+              {t("Créer mes codes de récupération")}
+            </Button>
+            <Button variant="secondary" block disabled={busy} onClick={() => ouvrir(compteOuvert)}>
+              {t("Plus tard")}
+            </Button>
+            <p className="text-xs leading-relaxed text-muted-foreground">
+              {t("Vous pourrez les créer à tout moment dans Réglages, Sécurité.")}
+            </p>
           </div>
         )}
 

@@ -424,6 +424,10 @@ Depuis les sources : `npm run motdepasse`. La saisie ne s'affiche pas et le mot
 de passe n'est jamais passé en argument (il resterait dans l'historique et la
 liste des processus).
 
+Depuis le 23/10/2026, trois autres voies, sans terminal, toujours sans mail ni
+question secrète : réinitialisation par un administrateur, reconnaissance par
+l'ordinateur de l'instance, codes de récupération. Voir § 69.
+
 ### 2.1 Double authentification (TOTP)
 
 `gateway/src/totp.ts`, `gateway/src/accounts.ts`, écran
@@ -621,7 +625,7 @@ vérifié : aucune sans libellé). Par famille :
 
 | Famille | Actions | Émises par |
 |---|---|---|
-| Connexion et séances | `connexion.*`, `seance.*`, `deuxfacteurs.*`, `motdepasse.*` | `accounts.ts`, `usersession.ts` |
+| Connexion et séances | `connexion.*`, `seance.*`, `deuxfacteurs.*`, `motdepasse.*`, `recuperation.*` | `accounts.ts`, `usersession.ts` |
 | Compte | `compte.cree`, `compte.nom_modifie`, `compte.adresse_modifiee`, `compte.photo_modifiee`, `compte.supprime`, `donnees.exportees` | `accounts.ts`, `effacement.ts`, `export.ts` |
 | Données | `donnees.ecrites` : écriture d'une collection, espace de travail, dossier de projet | `index.ts` |
 | Écran | `ecran.demande`, `.approuve`, `.refuse`, `.execute`, `.mode_modifie` | `computer.ts` |
@@ -6822,3 +6826,179 @@ questions suivantes (`gateway/src/memoireConversation.ts`, PROJET.md § 5). Cont
 - **Modèles** : le résumé au repos ne part que vers un modèle de la machine, jamais vers un modèle
   cloud ; les embeddings passent par le routeur comme pour les bases (jamais une clé personnelle
   d'office).
+
+## 69. Mot de passe oublié : trois voies sans terminal (23 octobre 2026)
+
+Demandé par Medhi : « Que faire quand quelqu'un perd son mot de passe ? Ça arrive souvent. » La
+seule voie était `npm run motdepasse` (§ 2), inutilisable pour qui a installé l'application. Trois
+voies s'y ajoutent, sans mail (l'instance n'en envoie pas) ni question secrète. Code :
+`gateway/src/accounts.ts` (`redefinir`, `reinitialiserParAdministrateur`, `creerCodesRecuperation`,
+`recupererParCode`), routes `/helix/auth/reinitialiser`, `/helix/auth/codes-recuperation`,
+`/helix/auth/recuperer` et canal `mot-de-passe-local` (`index.ts`), `electron/motDePasseOublie.cjs`,
+écrans `LoginPage.tsx`, `ReinitialiserMotDePasse.tsx`, `CodesRecuperation.tsx`. Contrôlé par
+`scripts/essai-mot-de-passe-perdu.mjs` et la section 54 de `securite.mjs`.
+
+**Commun aux quatre portes** (outil local compris, désormais dans la file des écritures de comptes :
+avant, l'outil écrivait hors file, et un renforcement d'empreinte simultané pouvait remettre
+l'ancien mot de passe) : nouveau sel, toutes les séances du compte révoquées, ses clés d'API
+révoquées, blocage et défis en cours oubliés, trace au journal au nom du compte avec `par`
+(`outil local`, `application de bureau`, `code de récupération`, `administrateur`). Jamais un mot de
+passe, un provisoire ni un code dans le journal (vérifié par l'essai sur 32 valeurs : ni le journal
+d'audit ni la sortie de la passerelle n'en contiennent aucune).
+
+### 69.1 Un administrateur réinitialise un collègue
+
+`POST /helix/auth/reinitialiser` (séance, administrateur seulement, sinon 403 et `reglage.refuse`),
+borné à 10 par minute et par appelant. Décisions, et leur pourquoi :
+- **mot de passe de l'administrateur redemandé à chaque fois**, et son code s'il a un second facteur
+  (échecs comptés dans son blocage ; 403, jamais 401). Une séance d'administrateur laissée ouverte
+  ou volée ne suffit pas à prendre un compte ;
+- **jamais son propre compte** (400) : connu, il se change dans Réglages ; oublié, on n'a pas de
+  séance pour arriver là ;
+- **jamais un autre administrateur** (403, trace `motdepasse.reinitialisation_refusee`). Avec un
+  profil qui désigne plusieurs administrateurs, ils ont les mêmes pouvoirs : si l'un réinitialisait
+  l'autre, le mot de passe d'un seul suffirait à prendre tous les comptes qui administrent. Un
+  administrateur qui a oublié le sien passe par la machine de l'instance ou par un code de
+  récupération. `GET` rend la liste des comptes administrateurs pour que l'écran ne les propose pas ;
+- **provisoire tiré par l'instance** (16 caractères, alphabet sans ambiguïté, environ 92 bits), pas
+  choisi par l'administrateur, montré une fois (`Cache-Control: no-store`), qui **n'ouvre que le
+  choix d'un mot de passe à soi** (409 `mot-de-passe-a-changer`, comme un compte créé par
+  l'administrateur) et **expire au bout de 72 heures** (`provisoireExpire`, jamais transmis aux
+  postes) : passé ce délai, il n'ouvre plus rien, pas même le choix (410) ;
+- **second facteur du collègue gardé**, sauf case cochée (téléphone et codes de secours perdus) :
+  gardé, il protège le compte même contre l'administrateur qui connaît le provisoire ; retiré,
+  trace `deuxfacteurs.desactive` avec `par: administrateur` ;
+- trace `motdepasse.reinitialise` au nom du collègue (il la voit dans son journal), l'administrateur
+  dans le détail.
+
+Reste, assumé et écrit dans `roles.ts` (extension du rôle) : un administrateur qui se sert du
+provisoire avant le collègue ouvre son compte, si le second facteur n'est pas actif ou s'il l'a
+retiré. C'est tracé, le collègue s'en aperçoit (son ancien mot de passe ne marche plus), et la
+personne qui tient la machine pouvait déjà le faire avec l'outil local.
+
+### 69.2 La machine de l'instance reconnaît la personne
+
+Sur l'écran de connexion de **l'application de bureau qui fait tourner l'instance** seulement : le
+processus principal ouvre la porte si le poste n'est pas rattaché (`posteRattache()`) et s'il a
+lancé lui-même la passerelle (`gateway` non nul : une passerelle de développement réutilisée n'a pas
+de canal). Un navigateur n'a pas le pont ; un poste rattaché parle à la passerelle d'une autre
+machine. Les trois canaux (`helix:mdp-oublie-etat`, `-fichier`, `helix:mdp-oublie`) vérifient
+`depuisLaFenetre`. Après la preuve, le nouveau mot de passe part à **la** passerelle par le canal
+du `utilityProcess` (`mot-de-passe-local`), qui appelle `definirMotDePasse` : la même fonction que
+l'outil local, et **aucune route HTTP** n'y mène (contrôlé : `definirMotDePasse(` n'apparaît qu'une
+fois dans `index.ts`, dans ce gestionnaire ; `/helix/auth/mot-de-passe-local` répond 404).
+- **macOS** : `systemPreferences.promptTouchID`, avec la raison « redéfinir le mot de passe de
+  <adresse> » traduite. Electron y demande la présence de l'utilisateur
+  (`kSecAccessControlUserPresence`) : Touch ID, ou le mot de passe de la session. **Pas de repli
+  par fichier sous macOS** : la clé des données y vit dans le trousseau, qu'un autre programme ne lit
+  pas sans le mot de passe de la session ; reprendre un compte avec moins que ce mot de passe
+  affaiblirait ce qui protège déjà les données.
+- **Windows et Linux** : Windows Hello ne s'atteint pas depuis Electron sans module natif, et Helix
+  n'ajoute pas de dépendance pour cela. Preuve retenue : un code de 8 caractères (environ 40 bits),
+  tiré par le processus principal, écrit dans `mot-de-passe-oublie.txt` du dossier de l'application
+  (`userData`, droits 0600) et ouvert dans l'éditeur du système ; la personne le recopie. Il vaut
+  10 minutes, pour un seul compte, une seule fois, et tombe au cinquième code faux (fichier effacé).
+  Ce qu'il prouve : être devant la session ouverte de la machine de l'instance, et pas seulement
+  être la page affichée (le code ne passe jamais par la page ; une page détournée ne lit pas de
+  fichier). Sur ces systèmes, la clé des données est lisible sans invite par tout programme de la
+  session (`safeStorage` : DPAPI, trousseau de la session) : cette porte n'ouvre rien de plus que
+  ce que la session tient déjà.
+- Le mot de passe traverse le processus principal le temps d'être remis, n'est ni journalisé ni
+  gardé. Case « téléphone perdu aussi » : retire le second facteur (même autorité que l'outil).
+
+### 69.3 Codes de récupération
+
+Dix codes (même générateur que les codes de secours : 10 caractères d'un alphabet de 31, environ
+49 bits ; empreintes PBKDF2 salées), `recuperation` dans le compte, jamais transmis aux postes.
+Proposés à la création du premier compte (l'administrateur n'a personne au-dessus de lui), et dans
+Réglages, Sécurité ; en tirer une série redemande le mot de passe, et le code si le second facteur
+est actif (`POST /helix/auth/codes-recuperation`, séance, 10 par minute). L'ancienne série cesse
+aussitôt de valoir.
+- **Ce ne sont pas les codes de secours du second facteur** : un code de récupération remplace le
+  **mot de passe**, jamais le téléphone. Avec la double authentification, le code du téléphone est
+  demandé juste après (essayé). Réutiliser les codes de secours pour le mot de passe aurait fait
+  d'une seule feuille les deux facteurs à la fois.
+- `POST /helix/auth/recuperer` (jeton seul, comme la connexion) : 10 par minute et par appelant,
+  chaque échec compte dans le blocage du compte, même réponse 401 que le compte ait des codes ou
+  non. Un code sert une fois ; un nouveau mot de passe trop court est refusé avant que le code soit
+  consommé.
+
+### 69.4 Hors ligne, et les comptes d'avant
+
+**Hors ligne** (précision de Medhi : un particulier seul, sans internet) : la reconnaissance par
+l'ordinateur ne passe par aucun réseau. `promptTouchID` est local ; le code de fichier est tiré et
+comparé dans le processus principal ; le mot de passe va à la passerelle par le canal du
+`utilityProcess` ; `definirMotDePasse`, la révocation des séances et des clés et le journal
+n'écrivent que sur le disque ; la connexion qui suit parle à la passerelle sur la boucle locale.
+Contrôlé : ni `motDePasseOublie.cjs` ni `repartirDeZero.cjs` ne chargent `http`, `https`, `net`,
+`dns`, `tls` ni n'appellent `fetch`. Aucun autre compte n'est demandé.
+
+**Comptes d'avant la version** : les trois voies valent pour tout compte existant dès la mise à
+jour (elles agissent sur l'enregistrement du compte, pas sur un champ ajouté à la création), sauf les
+codes de récupération, qu'un compte n'a que s'il en a créé. L'écran le dit sous « J'ai un code de
+récupération », et après un code refusé, et renvoie aux autres voies. La réponse de la route ne dit
+pas qui en a (même 401).
+
+### 69.5 Repartir de zéro sur cet ordinateur
+
+Demandé par Medhi : désinstaller puis réinstaller retrouvait le même compte. Derrière la même
+reconnaissance par l'ordinateur (Touch ID ou mot de passe de session sous macOS, code de fichier à
+clé distincte `repartir-de-zero` ailleurs) **et** un mot à taper (donné et vérifié par le processus
+principal, dans la langue de l'écran ; le mot est vérifié avant d'ouvrir la fenêtre du système),
+`electron/repartirDeZero.cjs` :
+- **ne supprime rien** : il écrit une demande (`~/.helix-repartir.json`, à côté), puis l'application
+  quitte proprement (la passerelle arrête ce qu'elle a lancé) et se relance ;
+- au lancement suivant, **avant tout le reste** (avant `nomTrousseau`, qui lit `~/.helix`, puis
+  avant le verrou d'instance pour le profil), `~/.helix` est renommé en
+  `~/.helix-ancien-AAAA-MM-JJ-hhmm` et le profil de l'application (coffre, Chats gardés sur le
+  poste, stockage local) en `<profil>-ancien-AAAA-MM-JJ-hhmm`, noms montrés à l'écran avant de
+  confirmer ; un nom pris reçoit `-2`, `-3` ;
+- un dossier qui refuse de bouger (Windows, fichier tenu) : dix secondes d'essais, puis ce qui a
+  déjà bougé revient à sa place et l'application démarre comme avant, en le disant. Jamais à moitié
+  (essayé : profil empêché, `~/.helix` revenu) ;
+- **clés** : rien n'est écrasé. Windows et Linux : la clé des données est un fichier du dossier de
+  données, elle part avec lui. macOS : elle reste dans le trousseau ; `secret.ts` n'en écrit une que
+  si aucune n'existe, donc la nouvelle installation réutilise la même et l'ancien dossier reste
+  lisible s'il est remis en place. Le coffre de l'application (`safeStorage`) suit la même règle ;
+- jamais touchés : `~/.lmstudio` (modèles et application), OpenClaw de la personne, ses documents
+  (essayé) ;
+- le premier lancement d'après affiche les dossiers mis de côté, jusqu'à « Compris » (qui efface le
+  témoin, pas les données).
+Ce qu'il en coûte, dit à l'écran : les outils posés par l'application (OpenCode, dictée, Node et
+Python privés, llama.cpp) sont à reposer, ce qui demande internet.
+
+### 69.6 Désinstallation
+
+L'installateur Windows est en `oneClick` (NSIS d'electron-builder) : pas de page, donc pas de case
+à cocher. Une question au moment de désinstaller serait possible par `nsis.include` (macro
+`customUnInstall`, boîte « Supprimer aussi mes données ? », « Non » par défaut), à condition de ne
+**jamais** la poser ni rien supprimer quand le désinstalleur tourne en silence pour une mise à jour
+(`${isUpdated}`, `IfSilent`). **Pas fait** : un script qui supprime des données ne se livre pas sans
+avoir tourné sur la CI Windows, et la construction des paquets n'était pas permise ici. L'aide
+(« Vos données sur cet ordinateur ») dit où sont les données sur les trois systèmes et comment les
+retirer, et que « Repartir de zéro » les met de côté sans rien perdre.
+
+### 69.7 Vérifié, et pas vérifié
+
+Vérifié (instance jetable avec un canal, comme l'application lance sa passerelle ; module d'Electron
+avec des doublures de `ipcMain`, `systemPreferences` et `shell`) : refus du non-administrateur, du
+mot de passe absent ou faux, de son propre compte, d'une autre administratrice ; séances et clé
+d'API tombées ; provisoire à usage unique, puis expiré après 72 heures (horloge avancée) ; second
+facteur gardé ou retiré ; codes de récupération à usage unique et second facteur demandé ensuite ;
+débit 429 ; canal qui redéfinit le mot de passe et ferme la séance ; Touch ID refusé, rien ne part ;
+fichier : faux code, autre compte, usage unique, cinq essais.
+
+Vérifié aussi : « Repartir de zéro » de bout en bout sur des dossiers jetables (mot faux, Touch ID
+refusé, demande, déplacement des deux dossiers à l'identique, LM Studio et OpenClaw intacts, bilan,
+échec remis en place). Vu à l'écran (Vite et passerelle jetables, pont d'Electron simulé) : codes
+proposés au premier compte, connexion par code de récupération, réinitialisation d'un collègue,
+carte des codes, écran « Mot de passe oublié » avec et sans l'ordinateur de l'instance, écran
+« Repartir de zéro », bilan au premier lancement.
+
+**Pas vérifié** : la vraie fenêtre Touch ID de macOS dans l'application construite (dont un Mac sans
+Touch ID, où `kSecAccessControlUserPresence` devrait proposer le mot de passe de la session), la
+vraie relance et le déplacement de `~/.helix` et du profil par l'application construite (Windows
+surtout, où des fichiers peuvent rester tenus),
+l'ouverture du fichier par le Bloc-notes sous Windows et par l'éditeur sous Linux, et le parcours
+complet à l'écran dans Electron (préchargement, canal réel du `utilityProcess`). Ces voies ne se
+vérifient qu'avec la vraie application.

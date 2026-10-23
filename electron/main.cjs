@@ -18,6 +18,8 @@ const { installerBotReunion, arreterTousLesBots, botsActifs } = require("./botRe
 const { installerZoneNotification } = require("./zoneNotification.cjs");
 const { preparerNom, transfererCle } = require("./nomTrousseau.cjs");
 const { installerPressePapiers } = require("./pressePapiers.cjs");
+const { installerMotDePasseOublie } = require("./motDePasseOublie.cjs");
+const repartirDeZero = require("./repartirDeZero.cjs");
 
 /*
  * Profil d'essai : un paquet de test lancé sur la machine d'un intégrateur ne
@@ -93,6 +95,17 @@ protocol.registerSchemesAsPrivileged([
  * d'instance unique : il dépend du dossier du profil, que ceci fixe.
  */
 const DONNEES_POSTE = process.env.HELIX_DATA_DIR ?? path.join(os.homedir(), ".helix");
+/*
+ * « Repartir de zéro sur cet ordinateur », demandé au lancement précédent
+ * (electron/repartirDeZero.cjs) : `~/.helix` est mis de côté ici, avant que
+ * quoi que ce soit ne l'ouvre (nomTrousseau le lit juste après), et le profil
+ * de l'application juste après, quand son chemin est fixé. Rien n'est effacé.
+ */
+try {
+  repartirDeZero.appliquer(DONNEES_POSTE, "donnees");
+} catch (err) {
+  console.error("[helix] repartir de zéro :", err?.message ?? err);
+}
 const etapeTrousseau = preparerNom(app, {
   nomHistorique: "helix-plateforme",
   nom: (() => {
@@ -104,6 +117,12 @@ const etapeTrousseau = preparerNom(app, {
   })(),
   dossier: DONNEES_POSTE,
 });
+
+try {
+  repartirDeZero.appliquer(DONNEES_POSTE, "profil", app.getPath("userData"));
+} catch (err) {
+  console.error("[helix] repartir de zéro :", err?.message ?? err);
+}
 
 const instanceUnique =
   isDev || process.env.HELIX_INSTANCES_MULTIPLES === "1" || app.requestSingleInstanceLock();
@@ -227,6 +246,11 @@ async function startGateway() {
     if (!m || typeof m !== "object" || enfant.helixArretee) return;
     if (m.type === "node-prive") {
       reponsesPasserelle.get(m.id)?.(m);
+      return;
+    }
+    // Mot de passe oublié : la passerelle dit si le nouveau est enregistré (electron/motDePasseOublie.cjs).
+    if (m.type === "mot-de-passe-local") {
+      motDePasseOublie.recevoir(m);
       return;
     }
     // Windows : le service de LM Studio lancé d'ici, comme avant la 2026.928.6 (electron/moteurWindows.cjs).
@@ -448,6 +472,33 @@ function depuisLaFenetre(event) {
  * rien (vu sous Windows le 27/09/2026).
  */
 installerPressePapiers({ ipcMain, clipboard, depuisLaFenetre });
+
+/*
+ * « Mot de passe oublié ? » sur l'écran de connexion (23/10/2026,
+ * electron/motDePasseOublie.cjs) : seulement quand ce poste fait tourner
+ * l'instance, par la passerelle qu'il a lancée lui-même. Une passerelle de
+ * développement réutilisée (lancée à la main) n'a pas de canal : `gateway`
+ * reste nul, la porte reste fermée.
+ */
+const motDePasseOublie = installerMotDePasseOublie({
+  ipcMain,
+  systemPreferences,
+  shell,
+  dossier: () => app.getPath("userData"),
+  depuisLaFenetre,
+  disponible: () => !posteRattache() && Boolean(gateway && !gateway.helixArretee),
+  envoyer: (message) => envoyerALaPasserelle(gateway, message),
+  langue: () => langueEcran,
+  nom: NOM_AFFICHE,
+  // Repartir de zéro : les deux dossiers mis de côté au lancement suivant, puis la relance.
+  donnees: DONNEES_POSTE,
+  profil: () => app.getPath("userData"),
+  relancer: () => {
+    quitterVraiment = true;
+    app.relaunch();
+    app.quit();
+  },
+});
 
 /* ------------------------- invitation par lien ---------------------------- */
 

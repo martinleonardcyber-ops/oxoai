@@ -54,6 +54,22 @@ const grandInitial = (() => {
 contextBridge.exposeInMainWorld("helix", {
   /** La langue de l'écran, pour les textes de l'application elle-même (zone de notification, menu). */
   langue: (code) => ipcRenderer.send("helix:langue", String(code)),
+  /**
+   * « Mot de passe oublié ? » sur la machine de l'instance (electron/motDePasseOublie.cjs) :
+   * l'ordinateur reconnaît la session (macOS), ou un code écrit dans un fichier
+   * (Windows, Linux), puis le processus principal remet le nouveau mot de passe
+   * à sa passerelle. La page ne voit jamais le code du fichier.
+   */
+  motDePasseOublie: {
+    etat: () => ipcRenderer.invoke("helix:mdp-oublie-etat"),
+    ecrireCode: (demande) => ipcRenderer.invoke("helix:mdp-oublie-fichier", demande),
+    redefinir: (demande) => ipcRenderer.invoke("helix:mdp-oublie", demande),
+    /** Repartir de zéro sur cet ordinateur (electron/repartirDeZero.cjs) : rien n'est supprimé, tout est mis de côté. */
+    apercuRepartir: () => ipcRenderer.invoke("helix:repartir-apercu"),
+    repartir: (demande) => ipcRenderer.invoke("helix:repartir", demande),
+    bilanRepartir: () => ipcRenderer.invoke("helix:repartir-bilan"),
+    oublierBilanRepartir: () => ipcRenderer.invoke("helix:repartir-oublier"),
+  },
   /** Le système du poste (`darwin`, `win32`, `linux`) : l'écran dit ce qui vaut ici. */
   plateforme: process.platform,
   /** Le processeur (`arm64`, `x64`) : « Signaler un problème » distingue ainsi un Mac Apple silicon d'un Mac Intel (27/09/2026). */

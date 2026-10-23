@@ -126,6 +126,11 @@ import {
   seanceAdmise,
   confirmerIdentite,
   adresseDePartage,
+  definirMotDePasse,
+  reinitialiserParAdministrateur,
+  etatRecuperation,
+  creerCodesRecuperation,
+  recupererParCode,
 } from "./accounts.ts";
 import {
   openSession,
@@ -2542,6 +2547,64 @@ async function handleChangerProvisoire(req: http.IncomingMessage, res: http.Serv
   const r = await remplacerMotDePasseProvisoire(body.accountId, body.password, body.nouveau);
   if (!r.ok) return send(res, r.statut, { error: { message: r.reason } });
   return repondreConnexion(res, await verifyAccount(body.accountId, String(body.nouveau)), body);
+}
+
+/**
+ * Mot de passe oublié, avec un code de récupération : le code redéfinit le
+ * mot de passe (accounts.ts, `recupererParCode`), puis la connexion suit son
+ * cours, second facteur compris. Au jeton seul, comme la connexion : la
+ * personne n'a pas de séance. Bornée par appelant (debit.ts), et chaque échec
+ * compte dans le blocage du compte.
+ */
+async function handleRecuperer(req: http.IncomingMessage, res: http.ServerResponse): Promise<void> {
+  const body = (await readJson(req).catch(() => ({}))) as Record<string, unknown>;
+  const r = await recupererParCode(body.accountId, body.code, body.nouveau);
+  if (!r.ok) return send(res, r.statut, { error: { message: r.reason } });
+  return repondreConnexion(res, await verifyAccount(String(body.accountId), String(body.nouveau)), body);
+}
+
+/**
+ * Codes de récupération du compte de la séance : combien il en reste (GET), ou
+ * une nouvelle série (POST, mot de passe et code du second facteur s'il est
+ * actif). Jamais ceux d'un autre : le compte est celui de la séance.
+ */
+async function handleCodesRecuperation(req: http.IncomingMessage, res: http.ServerResponse, url: URL): Promise<void> {
+  const qui = await demandeur(req, url);
+  if (!qui) return send(res, 401, sansSeance());
+  if (req.method === "GET") {
+    const etat = await etatRecuperation(qui.userId);
+    return etat ? send(res, 200, etat) : send(res, 404, { error: { message: t("Compte introuvable.") } });
+  }
+  const body = (await readJson(req).catch(() => ({}))) as { password?: unknown; code?: unknown };
+  const r = await creerCodesRecuperation(qui.userId, body.password, body.code);
+  if (!r.ok) return send(res, r.statut, { error: { message: r.reason } });
+  send(res, 200, { codes: r.codes });
+}
+
+/**
+ * Un administrateur réinitialise le mot de passe d'un collègue (accounts.ts,
+ * `reinitialiserParAdministrateur`, pour ce qui est exigé et pourquoi).
+ * GET : les comptes qui administrent aussi, que l'écran ne propose pas.
+ */
+async function handleReinitialiser(req: http.IncomingMessage, res: http.ServerResponse, url: URL): Promise<void> {
+  const qui = await demandeur(req, url);
+  if (!qui) return send(res, 401, sansSeance());
+  if (!(await estAdministrateur(qui.userId))) {
+    journaliser("reglage.refuse", qui.userId, { reglage: "réinitialisation de mot de passe" });
+    return send(res, 403, { error: { message: t("Seul l'administrateur de l'instance réinitialise le mot de passe d'un collègue.") } });
+  }
+  if (req.method === "GET") {
+    const comptes = await publicAccounts();
+    const administrateurs: string[] = [];
+    for (const c of comptes) if (await estAdministrateur(c.id)) administrateurs.push(c.id);
+    return send(res, 200, { administrateurs });
+  }
+  const body = (await readJson(req).catch(() => ({}))) as Record<string, unknown>;
+  const r = await reinitialiserParAdministrateur(qui.userId, body.accountId, body.password, body.code, body.retirerDeuxFacteurs, estAdministrateur);
+  if (!r.ok) return send(res, r.statut, { error: { message: r.reason } });
+  // Montré une fois : ni cache, ni journal. `send` répond en JSON ; l'en-tête dit de ne rien garder.
+  res.setHeader("Cache-Control", "no-store");
+  send(res, 200, { provisoire: r.provisoire, expire: r.expire, deuxFacteursRetire: r.deuxFacteursRetire });
 }
 
 /**
@@ -5926,6 +5989,13 @@ const traiter = (
       return handleChangerProvisoire(req, res);
     if (req.method === "POST" && path === "/helix/auth/verify")
       return handleAuthVerify(req, res);
+    // Mot de passe oublié (23/10/2026) : code de récupération, codes à tirer, réinitialisation par un administrateur.
+    if (req.method === "POST" && path === "/helix/auth/recuperer")
+      return handleRecuperer(req, res);
+    if ((req.method === "GET" || req.method === "POST") && path === "/helix/auth/codes-recuperation")
+      return handleCodesRecuperation(req, res, url);
+    if ((req.method === "GET" || req.method === "POST") && path === "/helix/auth/reinitialiser")
+      return handleReinitialiser(req, res, url);
     if (req.method === "GET" && path === "/helix/export") return handleExport(req, res, url);
     if (req.method === "DELETE" && path.startsWith("/helix/memoire-chat/"))
       return handleOublierMemoireChat(req, res, url, path.slice("/helix/memoire-chat/".length));
@@ -6437,6 +6507,27 @@ if (canalOuvert()) {
     if (message?.type === "arret") {
       arreterProprement();
       process.exit(0);
+    }
+    /*
+     * Mot de passe oublié, sur la machine de l'instance (23/10/2026) :
+     * l'application a fait reconnaître la session de l'ordinateur (Touch ID ou
+     * mot de passe de la session sous macOS, code écrit dans un fichier du
+     * dossier personnel ailleurs : electron/motDePasseOublie.cjs). C'est la
+     * même porte que `npm run motdepasse`, `definirMotDePasse`, et aucune
+     * route HTTP n'y mène : ce canal ne s'ouvre qu'entre l'application et la
+     * passerelle qu'elle a lancée. Le mot de passe n'est écrit nulle part.
+     */
+    if (message?.type === "mot-de-passe-local") {
+      const m = message as { id?: unknown; accountId?: unknown; motDePasse?: unknown; retirerDeuxFacteurs?: unknown };
+      const id = m.id;
+      if (typeof m.accountId !== "string" || typeof m.motDePasse !== "string") {
+        envoyerALApplication({ type: "mot-de-passe-local", id, ok: false, raison: t("Compte introuvable.") });
+        return;
+      }
+      void definirMotDePasse(m.accountId, m.motDePasse, "application de bureau", { retirerDeuxFacteurs: m.retirerDeuxFacteurs === true }).then(
+        (r) => envoyerALApplication({ type: "mot-de-passe-local", id, ok: r.ok, ...(r.raison ? { raison: r.raison } : {}) }),
+        () => envoyerALApplication({ type: "mot-de-passe-local", id, ok: false, raison: t("L'instance n'a pas pu enregistrer ce mot de passe.") }),
+      );
     }
     if (message?.type === "node-prive") {
       const id = message.id;

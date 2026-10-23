@@ -1,5 +1,5 @@
 import { oublierClesDe } from "./clesApi.ts";
-import { pbkdf2Sync, randomBytes, timingSafeEqual } from "node:crypto";
+import { pbkdf2Sync, randomBytes, randomInt, timingSafeEqual } from "node:crypto";
 import { db } from "./db.ts";
 import { journaliser } from "./audit.ts";
 import { deployment } from "./deployment.ts";
@@ -34,6 +34,20 @@ export interface StoredAccount {
    * de séance avant (27/09/2026, revue de sécurité § 28).
    */
   motDePasseProvisoire?: boolean;
+  /**
+   * Mot de passe provisoire remis par un administrateur qui a réinitialisé
+   * celui du compte (23/10/2026) : au-delà de cette date, il n'ouvre plus
+   * rien, pas même le choix d'un mot de passe à soi. Un mot de passe noté sur
+   * un papier ne doit pas rester une porte. Absent pour un compte créé par
+   * l'administrateur, comme avant. Ne sort jamais de l'instance.
+   */
+  provisoireExpire?: string;
+  /**
+   * Codes de récupération du mot de passe (23/10/2026) : chacun redéfinit le
+   * mot de passe une fois, depuis l'écran de connexion. Empreintes seulement,
+   * comme les codes de secours du second facteur. Ne sort jamais de l'instance.
+   */
+  recuperation?: CodesRecuperation;
   handle: string;
   fullName: string;
   email: string;
@@ -74,6 +88,20 @@ export interface StoredAccount {
   deuxFacteursEnAttente?: { secret: string; creeLe: string };
 }
 
+/**
+ * Codes de récupération : ils remplacent le **mot de passe**, jamais le second
+ * facteur. Un compte qui a les deux et récupère son mot de passe par un code
+ * doit encore donner le code de son téléphone : la feuille de codes seule
+ * n'ouvre pas un compte protégé par deux facteurs. C'est pourquoi ce ne sont
+ * pas les codes de secours du second facteur : les réutiliser pour le mot de
+ * passe aurait fait d'une seule feuille les deux facteurs à la fois.
+ */
+export interface CodesRecuperation {
+  empreintes: string[];
+  sel: string;
+  creeLe: string;
+}
+
 export interface DeuxFacteurs {
   /** Secret partagé avec l'application d'authentification, en base 32. */
   secret: string;
@@ -89,7 +117,14 @@ export interface DeuxFacteurs {
 export interface PublicAccount
   extends Omit<
     StoredAccount,
-    "passwordHash" | "salt" | "iterations" | "anciennesAdresses" | "deuxFacteurs" | "deuxFacteursEnAttente"
+    | "passwordHash"
+    | "salt"
+    | "iterations"
+    | "anciennesAdresses"
+    | "deuxFacteurs"
+    | "deuxFacteursEnAttente"
+    | "provisoireExpire"
+    | "recuperation"
   > {
   /** Le poste a seulement besoin de savoir s'il faut demander un mot de passe. */
   hasPassword: boolean;
@@ -249,6 +284,8 @@ export function toPublic(account: StoredAccount): PublicAccount {
     deuxFacteursEnAttente: _attente,
     // Qui a encore un mot de passe provisoire ne regarde personne : la liste des comptes se lit avant toute connexion.
     motDePasseProvisoire: _provisoire,
+    provisoireExpire: _expire,
+    recuperation: _recuperation,
     ...rest
   } = account;
   return { ...rest, hasPassword: Boolean(passwordHash), deuxFacteursActive: Boolean(deuxFacteurs) };
@@ -344,52 +381,315 @@ const BLOCAGE_MAX_MS = 15 * 60_000;
 const echecs = new Map<string, { compte: number; jusqua: number }>();
 
 /**
+ * Qui a redéfini un mot de passe sans connaître l'ancien. Écrit au journal.
+ *
+ *  - « outil local » : `npm run motdepasse`, sur la machine de l'instance ;
+ *  - « application de bureau » : « Mot de passe oublié ? » sur l'écran de
+ *    connexion de l'application qui fait tourner l'instance, après que
+ *    l'ordinateur a reconnu sa session (electron/motDePasseOublie.cjs) ;
+ *  - « code de récupération » : un des codes remis à la personne ;
+ *  - « administrateur » : réinitialisation d'un collègue, mot de passe
+ *    provisoire (`reinitialiserParAdministrateur`).
+ */
+export type PorteDeRecuperation = "outil local" | "application de bureau" | "code de récupération" | "administrateur";
+
+/**
+ * Le cœur commun de toutes les portes de récupération, appelé dans la file des
+ * écritures (avant le 23/10/2026, l'outil local écrivait hors file : une
+ * connexion simultanée qui renforçait l'empreinte pouvait remettre l'ancien
+ * mot de passe par-dessus le nouveau).
+ *
+ * Un nouveau sel est tiré à chaque fois : réutiliser l'ancien laisserait
+ * deviner qu'un mot de passe a changé sans que l'empreinte bouge de forme.
+ * À l'appelant de valider le mot de passe et d'être dans la file.
+ */
+async function redefinir(
+  accounts: StoredAccount[],
+  compte: StoredAccount,
+  motDePasse: string,
+  options: {
+    par: PorteDeRecuperation;
+    /** Mot de passe choisi par quelqu'un d'autre : il ne servira qu'à en choisir un à soi. */
+    provisoire?: { expire: string };
+    retirerDeuxFacteurs?: boolean;
+    action?: "motdepasse.redefini" | "motdepasse.reinitialise";
+    detail?: Record<string, unknown>;
+  },
+): Promise<void> {
+  const salt = randomBytes(16).toString("hex");
+  compte.salt = salt;
+  compte.passwordHash = derive(motDePasse, salt);
+  compte.iterations = ITERATIONS;
+  if (options.provisoire) {
+    compte.motDePasseProvisoire = true;
+    compte.provisoireExpire = options.provisoire.expire;
+  } else {
+    // La personne a choisi ce mot de passe elle-même : il n'a plus rien de provisoire.
+    delete compte.motDePasseProvisoire;
+    delete compte.provisoireExpire;
+  }
+  const retirerDf = options.retirerDeuxFacteurs === true && Boolean(compte.deuxFacteurs || compte.deuxFacteursEnAttente);
+  if (retirerDf) {
+    delete compte.deuxFacteurs;
+    delete compte.deuxFacteursEnAttente;
+  }
+  await save(accounts);
+  // Le blocage tenait au mot de passe d'avant ; les défis en cours aussi.
+  echecs.delete(compte.id);
+  for (const [cle, d] of defis) if (d.accountId === compte.id) defis.delete(cle);
+
+  /*
+   * Et les séances tombent.
+   *
+   * C'est la raison même de ces portes : on redéfinit un mot de passe parce
+   * qu'on l'a oublié, ou parce que quelqu'un d'autre le connaît. Sans cette
+   * ligne, le jeton de séance de cet autre restait valable jusqu'à douze
+   * heures, et jusqu'à trente jours tant qu'il s'en servait : changer le mot
+   * de passe ne fermait rien.
+   */
+  const fermees = await revokeAll(compte.id);
+  /*
+   * Ses clés d'API aussi (revue du 26/09/2026) : sans cela, une séance volée
+   * qui avait eu le temps d'en créer une gardait l'accès après la remise à
+   * zéro du mot de passe, bases de connaissances comprises.
+   */
+  const cles = await oublierClesDe(compte.id);
+
+  // Jamais le mot de passe, provisoire ou non, dans la trace.
+  journaliser(options.action ?? "motdepasse.redefini", compte.id, {
+    par: options.par,
+    seancesFermees: fermees,
+    clesApiRevoquees: cles,
+    ...(retirerDf ? { deuxFacteursRetire: true } : {}),
+    ...(options.detail ?? {}),
+  });
+  if (retirerDf) journaliser("deuxfacteurs.desactive", compte.id, { par: options.par });
+}
+
+/**
  * Redéfinit le mot de passe d'un compte, sans connaître l'ancien.
  *
  * Une empreinte PBKDF2 ne se relit pas : c'est voulu, et cela veut dire qu'un
  * mot de passe oublié verrouille l'instance pour de bon. Sur le poste d'une
  * PME, cela signifie perdre l'accès à ses propres dossiers. Il faut donc une
  * porte de service, et elle n'est ouverte qu'à qui tient déjà la machine :
- * cette fonction n'est appelée par aucune route HTTP, seulement par l'outil en
- * ligne de commande, qui exige un accès au poste et au trousseau. Quelqu'un
- * dans cette position pouvait de toute façon tout lire.
- *
- * Un nouveau sel est tiré à chaque fois : réutiliser l'ancien laisserait
- * deviner qu'un mot de passe a changé sans que l'empreinte bouge de forme.
+ * cette fonction n'est appelée par aucune route HTTP. Deux appelants
+ * seulement : l'outil en ligne de commande (`npm run motdepasse`), et le canal
+ * entre l'application de bureau et sa passerelle (`mot-de-passe-local`,
+ * index.ts), après que macOS a reconnu la session (Touch ID ou mot de passe
+ * de la session), ou, sous Windows et Linux, que la personne a recopié le code
+ * écrit dans un fichier de son dossier (electron/motDePasseOublie.cjs).
+ * Quelqu'un dans cette position pouvait de toute façon tout lire.
  */
-export async function definirMotDePasse(
+export function definirMotDePasse(
   accountId: string,
   motDePasse: string,
+  par: "outil local" | "application de bureau" = "outil local",
+  options: { retirerDeuxFacteurs?: boolean } = {},
 ): Promise<{ ok: boolean; raison?: string }> {
-  const accounts = await load();
-  const compte = accounts.find((a) => a.id === accountId);
-  if (!compte) return { ok: false, raison: t("Compte introuvable.") };
+  return enFile(async () => {
+    const refus = motDePasseRefuse(motDePasse);
+    if (refus) return { ok: false, raison: refus };
+    const accounts = await load();
+    const compte = accounts.find((a) => a.id === accountId);
+    if (!compte) return { ok: false, raison: t("Compte introuvable.") };
+    await redefinir(accounts, compte, motDePasse, { par, retirerDeuxFacteurs: options.retirerDeuxFacteurs });
+    return { ok: true };
+  });
+}
 
-  const salt = randomBytes(16).toString("hex");
-  compte.salt = salt;
-  compte.passwordHash = derive(motDePasse, salt);
-  compte.iterations = ITERATIONS;
-  await save(accounts);
+/* ------------------------------------------------------------------------ */
+/*  Réinitialisation par un administrateur                                   */
+/* ------------------------------------------------------------------------ */
 
-  /*
-   * Et les séances tombent.
-   *
-   * C'est la raison même de cette porte de service : on redéfinit un mot de
-   * passe parce qu'on l'a oublié, ou parce que quelqu'un d'autre le connaît.
-   * Sans cette ligne, le jeton de séance de cet autre restait valable jusqu'à
-   * douze heures, et jusqu'à trente jours tant qu'il s'en servait : changer le
-   * mot de passe ne fermait rien.
-   */
-  const fermees = await revokeAll(accountId);
-  /*
-   * Ses clés d'API aussi (revue du 26/09/2026) : sans cela, une séance volée
-   * qui avait eu le temps d'en créer une gardait l'accès après la remise à
-   * zéro du mot de passe, bases de connaissances comprises.
-   */
-  const cles = await oublierClesDe(accountId);
+/** Durée de vie d'un mot de passe provisoire remis par une réinitialisation. */
+export const DUREE_PROVISOIRE_MS = 72 * 3600_000;
 
-  journaliser("motdepasse.redefini", accountId, { par: "outil local", seancesFermees: fermees, clesApiRevoquees: cles });
-  return { ok: true };
+/** Seize caractères tirés sans caractères qui se confondent (0/O, 1/l/I), par groupes de quatre. */
+function provisoireAuHasard(): string {
+  const alphabet = "abcdefghjkmnpqrstuvwxyzABCDEFGHJKMNPQRSTUVWXYZ23456789";
+  let brut = "";
+  for (let i = 0; i < 16; i++) brut += alphabet[randomInt(alphabet.length)];
+  return `${brut.slice(0, 4)}-${brut.slice(4, 8)}-${brut.slice(8, 12)}-${brut.slice(12)}`;
+}
+
+/**
+ * Un administrateur réinitialise le mot de passe d'un collègue qui l'a oublié.
+ *
+ * Ce que la porte exige, et pourquoi (décisions du 23/10/2026) :
+ *
+ *  - **le mot de passe de l'administrateur**, et son code s'il a un second
+ *    facteur, à chaque fois. Une séance d'administrateur laissée ouverte, ou
+ *    volée, ne doit pas suffire à prendre le compte d'un collègue. Les échecs
+ *    comptent dans le même blocage que la connexion de l'administrateur ;
+ *  - **jamais son propre compte** : qui connaît son mot de passe le change
+ *    dans Réglages ; qui l'a oublié n'a pas de séance pour arriver ici ;
+ *  - **jamais un autre administrateur**. Deux administrateurs (profil de
+ *    déploiement qui en désigne plusieurs) ont les mêmes pouvoirs : si l'un
+ *    pouvait réinitialiser l'autre, le mot de passe d'un seul suffirait à
+ *    prendre tous les comptes qui administrent l'instance, et à faire taire
+ *    celui qui aurait pu s'en apercevoir. Un administrateur qui a oublié le
+ *    sien passe par la machine de l'instance (application de bureau, outil
+ *    local) ou par un code de récupération : des preuves qu'un collègue n'a
+ *    pas ;
+ *  - **un mot de passe tiré par l'instance**, pas choisi par l'administrateur,
+ *    montré une fois, **provisoire** (il n'ouvre que le choix d'un mot de
+ *    passe à soi) et qui expire au bout de 72 heures ;
+ *  - **le second facteur reste**, sauf si l'administrateur coche son retrait
+ *    (téléphone perdu aussi). Resté, il protège le compte même contre
+ *    l'administrateur qui connaît le provisoire ; retiré, c'est écrit au
+ *    journal ;
+ *  - séances et clés d'API du compte tombent, et la trace est écrite au nom
+ *    du compte réinitialisé, qui la voit dans son propre journal.
+ *
+ * `cibleAdministre` vient de roles.ts (qui lit ce module : pas d'import en
+ * boucle).
+ */
+export function reinitialiserParAdministrateur(
+  administrateurId: string,
+  cibleId: unknown,
+  motDePasseAdministrateur: unknown,
+  codeAdministrateur: unknown,
+  retirerDeuxFacteurs: unknown,
+  cibleAdministre: (id: string) => Promise<boolean>,
+): Promise<{ ok: true; provisoire: string; expire: string; deuxFacteursRetire: boolean } | Refus> {
+  return enFile(async () => {
+    if (typeof cibleId !== "string" || !cibleId) return { ok: false, statut: 400, reason: t("`accountId` est requis.") };
+    if (cibleId === administrateurId) {
+      return { ok: false, statut: 400, reason: t("Votre propre mot de passe ne se réinitialise pas ici. Oublié, il se retrouve depuis l'écran de connexion : « Mot de passe oublié ? ».") };
+    }
+    const accounts = await load();
+    const admin = accounts.find((a) => a.id === administrateurId);
+    const cible = accounts.find((a) => a.id === cibleId);
+    if (!admin) return { ok: false, statut: 404, reason: t("Compte introuvable.") };
+    // Le mot de passe de l'administrateur d'abord : sans lui, rien ne se dit, pas même si le compte visé existe.
+    const refus = controlerMotDePasse(admin, motDePasseAdministrateur);
+    if (refus) return refus;
+    if (admin.deuxFacteurs && !consommerCode(admin.deuxFacteurs, codeAdministrateur)) {
+      noterEchec(admin.id);
+      journaliser("connexion.refusee", admin.id, { motif: "code de vérification incorrect", pour: "réinitialisation" });
+      return { ok: false, statut: 403, reason: t("Code de vérification incorrect (celui de l'application, ou un code de secours).") };
+    }
+    echecs.delete(admin.id);
+    // Le code de l'administrateur est consommé : on l'enregistre même si la suite refuse.
+    if (!cible) {
+      if (admin.deuxFacteurs) await save(accounts);
+      return { ok: false, statut: 404, reason: t("Compte introuvable.") };
+    }
+    if (await cibleAdministre(cible.id)) {
+      if (admin.deuxFacteurs) await save(accounts);
+      journaliser("motdepasse.reinitialisation_refusee", admin.id, { cible: cible.id, motif: "compte administrateur" });
+      return {
+        ok: false,
+        statut: 403,
+        reason: t("Ce compte administre aussi l'instance : son mot de passe ne se réinitialise pas depuis un autre compte. Sur la machine de l'instance, l'écran de connexion de l'application propose « Mot de passe oublié ? » ; sinon, un code de récupération."),
+      };
+    }
+    const provisoire = provisoireAuHasard();
+    const expire = new Date(Date.now() + DUREE_PROVISOIRE_MS).toISOString();
+    const avaitDf = Boolean(cible.deuxFacteurs);
+    // Même tableau : `redefinir` enregistre aussi le code de l'administrateur consommé.
+    await redefinir(accounts, cible, provisoire, {
+      par: "administrateur",
+      provisoire: { expire },
+      retirerDeuxFacteurs: retirerDeuxFacteurs === true,
+      action: "motdepasse.reinitialise",
+      detail: { administrateur: admin.id, expire },
+    });
+    return { ok: true, provisoire, expire, deuxFacteursRetire: avaitDf && retirerDeuxFacteurs === true };
+  });
+}
+
+/* ------------------------------------------------------------------------ */
+/*  Codes de récupération                                                    */
+/* ------------------------------------------------------------------------ */
+
+export interface EtatRecuperation {
+  restants: number;
+  creeLe?: string;
+  /** Faut-il un code de vérification pour en tirer de nouveaux ? */
+  deuxFacteursActive: boolean;
+}
+
+export async function etatRecuperation(accountId: string): Promise<EtatRecuperation | null> {
+  const compte = (await load()).find((a) => a.id === accountId);
+  if (!compte) return null;
+  return {
+    restants: compte.recuperation?.empreintes.length ?? 0,
+    ...(compte.recuperation ? { creeLe: compte.recuperation.creeLe } : {}),
+    deuxFacteursActive: Boolean(compte.deuxFacteurs),
+  };
+}
+
+/**
+ * Nouvelle série de dix codes de récupération ; l'ancienne cesse aussitôt de
+ * valoir. Mot de passe exigé, et code si le second facteur est actif : une
+ * séance laissée ouverte ne doit pas suffire à se fabriquer une porte de
+ * retour dans le compte d'un autre.
+ */
+export function creerCodesRecuperation(
+  accountId: string,
+  motDePasse: unknown,
+  code: unknown,
+): Promise<{ ok: true; codes: string[] } | Refus> {
+  return enFile(async () => {
+    const accounts = await load();
+    const compte = accounts.find((a) => a.id === accountId);
+    if (!compte) return { ok: false, statut: 404, reason: t("Compte introuvable.") };
+    const refus = controlerMotDePasse(compte, motDePasse);
+    if (refus) return refus;
+    if (compte.deuxFacteurs && !consommerCode(compte.deuxFacteurs, code)) {
+      noterEchec(accountId);
+      return { ok: false, statut: 403, reason: t("Code de vérification incorrect (celui de l'application, ou un code de secours).") };
+    }
+    const serie = nouveauxCodesDeSecours();
+    const remplace = Boolean(compte.recuperation);
+    compte.recuperation = { empreintes: serie.empreintes, sel: serie.sel, creeLe: new Date().toISOString() };
+    await save(accounts);
+    echecs.delete(accountId);
+    journaliser("recuperation.codes_crees", accountId, { nombre: serie.codes.length, ...(remplace ? { remplacent: true } : {}) });
+    return { ok: true, codes: serie.codes };
+  });
+}
+
+/**
+ * Mot de passe oublié, code de récupération en main : le code (usage unique)
+ * redéfinit le mot de passe. Au jeton seul, comme la connexion. Le second
+ * facteur, s'il est actif, reste exigé à la connexion qui suit.
+ *
+ * Même réponse que le compte ait des codes ou non : la route ne dit pas qui en
+ * a. Chaque échec compte dans le blocage du compte, et la route est bornée par
+ * appelant (debit.ts).
+ */
+export function recupererParCode(
+  accountId: unknown,
+  code: unknown,
+  nouveau: unknown,
+): Promise<{ ok: true } | Refus> {
+  return enFile(async () => {
+    if (typeof accountId !== "string" || !accountId) return { ok: false, statut: 400, reason: t("`accountId` est requis.") };
+    const blocage = refusBlocage(accountId);
+    if (blocage) return blocage;
+    const refus = motDePasseRefuse(nouveau);
+    if (refus) return { ok: false, statut: 400, reason: refus };
+    const accounts = await load();
+    const compte = accounts.find((a) => a.id === accountId);
+    const indice =
+      compte?.recuperation && typeof code === "string" && code.length <= 64
+        ? trouverSecours(code, compte.recuperation.sel, compte.recuperation.empreintes)
+        : -1;
+    if (!compte || !compte.recuperation || indice < 0) {
+      noterEchec(accountId);
+      if (compte) journaliser("connexion.refusee", compte.id, { motif: "code de récupération incorrect" });
+      return { ok: false, statut: 401, reason: t("Code de récupération incorrect.") };
+    }
+    compte.recuperation.empreintes.splice(indice, 1);
+    await redefinir(accounts, compte, nouveau as string, {
+      par: "code de récupération",
+      detail: { codesDeRecuperationRestants: compte.recuperation.empreintes.length },
+    });
+    return { ok: true };
+  });
 }
 
 /**
@@ -447,6 +747,7 @@ export function remplacerMotDePasseProvisoire(
     const compte = accounts.find((a) => a.id === accountId);
     if (!compte || !compte.passwordHash || !compte.salt) return { ok: false, reason: t("Compte introuvable."), statut: 404 };
     if (!compte.motDePasseProvisoire) return { ok: false, reason: t("Ce compte a déjà son propre mot de passe."), statut: 409 };
+    if (provisoireExpire(compte)) return { ok: false, reason: t("Ce mot de passe provisoire a expiré. Demandez-en un nouveau à l'administrateur."), statut: 410 };
     if (typeof provisoire !== "string" || !motDePasseJuste(compte, provisoire)) {
       noterEchec(accountId);
       journaliser("connexion.refusee", accountId, { motif: "mot de passe provisoire incorrect" });
@@ -460,10 +761,19 @@ export function remplacerMotDePasseProvisoire(
     compte.passwordHash = derive(nouveau as string, salt);
     compte.iterations = ITERATIONS;
     delete compte.motDePasseProvisoire;
+    delete compte.provisoireExpire;
     await save(accounts);
     journaliser("motdepasse.defini", accountId, { remplaceLeProvisoire: true });
     return { ok: true };
   });
+}
+
+/** Le mot de passe provisoire d'une réinitialisation a-t-il passé sa date ? */
+function provisoireExpire(compte: StoredAccount): boolean {
+  if (!compte.motDePasseProvisoire || !compte.provisoireExpire) return false;
+  const fin = Date.parse(compte.provisoireExpire);
+  // Une date illisible ne prolonge rien : elle vaut expirée.
+  return !Number.isFinite(fin) || fin <= Date.now();
 }
 
 /** Combien de temps ce compte reste-t-il bloqué ? 0 s'il ne l'est pas. */
@@ -537,7 +847,21 @@ export async function verifyAccount(
    */
   if (account.motDePasseProvisoire) {
     echecs.delete(accountId);
-    return { ok: false, reason: t("Choisissez votre propre mot de passe : celui-ci a été choisi par la personne qui a créé votre compte."), aChanger: true };
+    /*
+     * Réinitialisation par un administrateur (23/10/2026) : le provisoire
+     * expire. Passé ce délai, il n'ouvre plus rien, pas même le choix.
+     */
+    if (provisoireExpire(account)) {
+      journaliser("connexion.refusee", accountId, { motif: "mot de passe provisoire expiré" });
+      return { ok: false, reason: t("Ce mot de passe provisoire a expiré. Demandez-en un nouveau à l'administrateur.") };
+    }
+    return {
+      ok: false,
+      reason: account.provisoireExpire
+        ? t("Choisissez votre propre mot de passe : celui-ci vous a été donné par l'administrateur qui a réinitialisé le vôtre.")
+        : t("Choisissez votre propre mot de passe : celui-ci a été choisi par la personne qui a créé votre compte."),
+      aChanger: true,
+    };
   }
 
   /*

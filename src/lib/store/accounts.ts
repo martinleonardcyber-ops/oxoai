@@ -23,6 +23,8 @@ export interface Account extends User {
   /** Faut-il demander un mot de passe pour ce compte ? */
   hasPassword?: boolean;
   createdAt?: string;
+  /** Second facteur actif : « Mot de passe oublié ? » propose alors de le retirer aussi (téléphone perdu). */
+  deuxFacteursActive?: boolean;
 }
 
 const KEY = "accounts";
@@ -207,6 +209,24 @@ export async function remplacerMotDePasseProvisoire(
     body: JSON.stringify({ accountId, password: provisoire, nouveau, poste: nomDuPoste(), rester }),
   });
   return lireConnexion(res, t("Impossible d'enregistrer ce mot de passe."));
+}
+
+/**
+ * Mot de passe oublié, code de récupération en main : le code redéfinit le
+ * mot de passe, puis la connexion suit son cours (second facteur compris).
+ */
+export async function recupererAvecCode(
+  accountId: string,
+  code: string,
+  nouveau: string,
+  rester = false,
+): Promise<Connexion> {
+  const res = await apiFetch("/helix/auth/recuperer", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ accountId, code, nouveau, poste: nomDuPoste(), rester }),
+  });
+  return lireConnexion(res, t("Code de récupération incorrect."));
 }
 
 /** Second facteur : code à six chiffres, ou code de secours. Ouvre la séance. */

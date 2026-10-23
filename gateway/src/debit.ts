@@ -48,6 +48,15 @@ const REGLES: { methode: string; chemin: string; regle: Regle }[] = [
   { methode: "POST", chemin: "/helix/auth/mot-de-passe-provisoire", regle: { max: 10, fenetreMs: 60_000 } },
   { methode: "POST", chemin: "/helix/auth/create", regle: { max: 10, fenetreMs: 60_000 } },
   /*
+   * Mot de passe oublié (23/10/2026). Un code de récupération fait dix
+   * caractères d'un alphabet de 31 (environ 49 bits) : le deviner est hors de
+   * portée, le blocage par compte s'ajoute. Tirer des codes et réinitialiser
+   * un collègue redemandent un mot de passe : même frein que la connexion.
+   */
+  { methode: "POST", chemin: "/helix/auth/recuperer", regle: { max: 10, fenetreMs: 60_000 } },
+  { methode: "POST", chemin: "/helix/auth/codes-recuperation", regle: { max: 10, fenetreMs: 60_000 } },
+  { methode: "POST", chemin: "/helix/auth/reinitialiser", regle: { max: 10, fenetreMs: 60_000 } },
+  /*
    * Rattachement par code d'invitation : c'est la seule route publique qui
    * remet le jeton d'instance. Un code fait quatre groupes de quatre
    * caractères tirés d'un alphabet de trente, soit environ 82 bits : le
