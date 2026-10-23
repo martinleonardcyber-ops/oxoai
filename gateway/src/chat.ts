@@ -15,6 +15,7 @@ import * as bureau from "./bureau.ts";
 import * as bibliotheque from "./bibliotheque.ts";
 import * as connaissances from "./connaissances.ts";
 import * as memoire from "./memoireConversation.ts";
+import * as competences from "./competences.ts";
 import * as reunions from "./reunions.ts";
 import { groupesDe } from "./groupes.ts";
 import * as courrier from "./courrier.ts";
@@ -530,7 +531,8 @@ function basePayload(
    */
   // `web` de même (28/09/2026) : la recherche sur le web est faite par l'instance (rechercheWeb.ts), le moteur n'en sait rien.
   // `memoire` aussi (16/10/2026) : le Chat dont la mémoire est consultée (memoireConversation.ts), affaire de l'instance.
-  const { role: _role, effort, messages: _m, tools: _t, connaissances: _k, agent: _a, web: _w, memoire: _mem, ...rest } = body as Record<string, unknown> & {
+  // `competences` aussi (23/10/2026) : ajoutées par l'instance (competences.ts).
+  const { role: _role, effort, messages: _m, tools: _t, connaissances: _k, agent: _a, web: _w, memoire: _mem, competences: _comp, ...rest } = body as Record<string, unknown> & {
     effort?: string;
   };
   const payload: Record<string, unknown> = { ...rest, model: model.id, messages, stream: true };
@@ -1396,6 +1398,23 @@ export async function handleChatRequest(
     console.log(
       `[chat] bases de connaissances : ${r.citations.length} passage(s) sur ${r.recherche.morceauxParcourus} morceaux, ${r.recherche.dureeMs} ms`,
     );
+  }
+
+  /*
+   * Compétences (competences.ts, 23/10/2026) : celles de la personne et de
+   * l'organisation pour le Chat, Cowork et les tâches qui les demandent ;
+   * celles de l'organisation seulement pour un employé. Toutes en entier si
+   * elles tiennent, sinon l'index et celles qui correspondent à la demande.
+   */
+  const employeDemandeur = typeof req.headers["x-helix-employe"] === "string";
+  if ((interfaceHelix && qui && (body as { competences?: unknown }).competences === true) || (!interfaceHelix && employeDemandeur)) {
+    const choix = await competences.pourLaDemande(
+      interfaceHelix ? qui! : null,
+      petits.texteDuDernierMessage(body.messages),
+      await contexteDuModele(model, backend).catch(() => 8192),
+    );
+    if (choix.consigne) messages = avecConsigne(messages, choix.consigne);
+    if (choix.appliquees.length > 0) signaler({ type: "competences", noms: choix.appliquees.map((c) => c.nom) });
   }
 
   /*

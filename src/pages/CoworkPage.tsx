@@ -24,7 +24,6 @@ import { estCowork, getSession, memoriserConnaissances } from "@/lib/store/sessi
 import { useProfile } from "@/hooks/useProfile";
 import { useAttachments } from "@/hooks/useAttachments";
 import { buildSystemPrompt, type NiveauRaisonnement } from "@/lib/store/profile";
-import { useCompetences } from "@/hooks/useCompetences";
 import { currentUser, prenom } from "@/lib/store/identity";
 import { Button } from "@/components/ui/Button";
 import { branding } from "@/config/branding";
@@ -308,11 +307,6 @@ export function CoworkPage() {
   );
   const ecranUtilisable = ecranDisponible && modeleVoit;
   const jointes = useAttachments(modelUid);
-  /*
-   * Les procédures de l'entreprise (`competences.ts`). Cowork est la surface qui
-   * agit : c'est là qu'une manière de faire maison compte le plus.
-   */
-  const { consignes: consignesCompetences } = useCompetences();
 
   const systemPrompt = useMemo(
     () =>
@@ -340,9 +334,8 @@ export function CoworkPage() {
               tf("\nTout chemin commence par cette ligne. Exemple : {0}/rapport.txt", workspace)
             : "",
         ].join(""),
-        consignesCompetences,
       ),
-    [profile, ecranUtilisable, capaciteEcran?.mode, bureauPret, atelierConnu, workspace, consignesCompetences],
+    [profile, ecranUtilisable, capaciteEcran?.mode, bureauPret, atelierConnu, workspace],
   );
 
   // Cowork est la surface « qui agit » : les outils y sont toujours actifs.
@@ -353,6 +346,8 @@ export function CoworkPage() {
     origin: "local",
     tools: true,
     connaissances: bases,
+    // Cowork est la surface qui agit : c'est là qu'une manière de faire maison compte le plus (gateway/src/competences.ts).
+    competences: true,
     // Une session de Cowork, rangée à part des Chats, avec son dossier (04/10/2026).
     surface: "cowork",
     dossier: toutLePoste ? "poste" : workspace,

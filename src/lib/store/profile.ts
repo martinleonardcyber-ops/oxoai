@@ -61,6 +61,13 @@ export interface UserProfile {
    * de cette personne, jamais ceux d'une autre.
    */
   memoireAutresChats?: boolean;
+  /**
+   * Compétences partagées par un collègue que cette personne a éteintes pour
+   * elle seule (23/10/2026, store/competences.ts). L'interrupteur `active` de
+   * la compétence est à son autrice ; celui-ci est à chacun. L'instance le lit
+   * aussi (gateway/src/competences.ts).
+   */
+  competencesEteintes?: string[];
 }
 
 export type ReglageRtk = "cloud" | "toujours" | "jamais";
@@ -118,14 +125,12 @@ export function buildSystemPrompt(
   productName: string,
   /** Instructions de l'agent sélectionné : elles définissent son rôle. */
   agentInstructions?: string,
-  /**
-   * Procédures de l'entreprise à suivre quand elles s'appliquent
-   * (`competences.ts`). Placées **après** le rôle et **avant** les préférences
-   * personnelles : une procédure d'entreprise ne redéfinit pas qui parle, mais
-   * elle passe avant le confort de chacun.
-   */
-  competences?: string | null,
 ): string | null {
+  /*
+   * Les compétences n'y sont plus depuis le 23/10/2026 : c'est l'instance qui
+   * les ajoute, demande par demande, selon la place du modèle
+   * (gateway/src/competences.ts), pour le Chat, Cowork, Code et les agents.
+   */
   const parts: string[] = [];
 
   if (agentInstructions?.trim()) {
@@ -158,10 +163,6 @@ export function buildSystemPrompt(
       t("N'utilise les outils que pour ce qui concerne les données de l'entreprise ") +
       t("(documents, mails, agenda, fichiers) ou pour agir, et jamais pour vérifier une connaissance générale."),
   );
-
-  if (competences?.trim()) {
-    parts.push(competences.trim());
-  }
 
   if (profile.customInstructions.trim()) {
     parts.push(tf("Instructions de l'utilisateur :\n{0}", profile.customInstructions.trim()));

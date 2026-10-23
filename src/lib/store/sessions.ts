@@ -53,6 +53,11 @@ export interface StoredMessage {
    */
   memoire?: { extraits: number; autresChats?: number };
   /**
+   * Les compétences données en entier au modèle pour cette réponse
+   * (23/10/2026, gateway/src/competences.ts) : leurs noms seulement.
+   */
+  competences?: string[];
+  /**
    * Ce que la réponse a pris de temps, en millisecondes, mesuré à l'écran qui
    * l'a reçue (hooks/useChat.ts, `DureesReponse`), depuis le 27/09/2026.
    * Absent sur une réponse plus ancienne, ou qui n'a pas été mesurée : rien

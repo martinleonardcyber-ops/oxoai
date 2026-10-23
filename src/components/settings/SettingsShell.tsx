@@ -20,6 +20,7 @@ import {
   CreditCard,
   GraduationCap,
   Bug,
+  Sparkles,
 } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { features } from "@/config/branding";
@@ -64,6 +65,8 @@ export const settingsGroups: NavGroup[] = [
     title: t("IA et modèles"),
     entries: [
       { label: t("Personnalisation de l'IA"), path: "/parametres/personnalisation", icon: Brain },
+      // Les manières de faire, qui valent partout (23/10/2026) : jusque-là, seulement dans le panneau de Cowork.
+      { label: t("Compétences"), path: "/parametres/competences", icon: Sparkles },
       // Le moteur et les modèles de la machine : où ils sont, la place qu'il reste (28/09/2026).
       { label: t("Modèles locaux"), path: "/parametres/modeles-locaux", icon: HardDrive },
       { label: t("Modèles cloud"), path: "/parametres/modeles", icon: Cloud },

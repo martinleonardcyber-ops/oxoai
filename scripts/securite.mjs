@@ -10075,6 +10075,111 @@ console.log("\n49. Mémoire de la conversation : par personne, chiffrée, effac�
   );
 }
 
+console.log("\n50. Compétences : personnelles isolées, import sans exécution, taille bornée, place du modèle (23/10/2026)");
+{
+  const essai = await new Promise((fin) => {
+    const e = spawn(process.execPath, [join(RACINE, "scripts", "essai-competences.mjs")], { stdio: ["ignore", "pipe", "pipe"] });
+    let sortie = "";
+    e.stdout.on("data", (b) => (sortie += b));
+    e.stderr.on("data", (b) => (sortie += b));
+    const minuterie = setTimeout(() => e.kill(), 5 * 60_000);
+    e.on("close", (status) => {
+      clearTimeout(minuterie);
+      fin({ status, sortie });
+    });
+  });
+  const lignes = essai.sortie.split("\n");
+  for (const ligne of lignes) {
+    const ok = /^\s+✓ (.*)$/.exec(ligne);
+    const ko = /^\s+✗ (.*?)(?:  —  obtenu : .*)?$/.exec(ligne);
+    if (ok) verifier(`competences : ${ok[1]}`, true, "");
+    else if (ko) verifier(`competences : ${ko[1]}`, false, ligne.split("  —  obtenu : ")[1] ?? "");
+  }
+  verifier("competences : l'essai s'est déroulé jusqu'au bout", essai.status === 0, `${essai.status} ${lignes.slice(-6).join(" ")}`);
+
+  // Les règles seules, sans instance.
+  const { pathToFileURL: versUrl } = await import("node:url");
+  const R = await import(versUrl(join(RACINE, "gateway", "src", "competencesRegles.ts")).href);
+  const base = { id: "c1", nom: "Nom", quand: "Quand", instructions: "Faire ceci." };
+  verifier(
+    "competences : bornes (nom, quand, procédure, cinq fichiers, total) ; un nom de fichier n'est jamais un chemin ni un caractère de contrôle",
+    R.competenceAcceptable(base) &&
+      !R.competenceAcceptable({ ...base, nom: "n".repeat(81) }) &&
+      !R.competenceAcceptable({ ...base, quand: "q".repeat(301) }) &&
+      !R.competenceAcceptable({ ...base, instructions: "i".repeat(12_001) }) &&
+      !R.competenceAcceptable({ ...base, instructions: 42 }) &&
+      !R.competenceAcceptable({ ...base, fichiers: Array.from({ length: 6 }, (_, i) => ({ nom: `f${i}`, contenu: "x" })) }) &&
+      !R.competenceAcceptable({ ...base, fichiers: [{ nom: "a/b.txt", contenu: "x" }] }) &&
+      !R.competenceAcceptable({ ...base, fichiers: [{ nom: "a\\b.txt", contenu: "x" }] }) &&
+      !R.competenceAcceptable({ ...base, fichiers: [{ nom: "..", contenu: "x" }] }) &&
+      !R.competenceAcceptable({ ...base, fichiers: [{ nom: "a\u0001", contenu: "x" }] }) &&
+      !R.competenceAcceptable({ ...base, fichiers: [{ nom: "a.txt", contenu: "x".repeat(20_001) }] }) &&
+      !R.competenceAcceptable({ ...base, instructions: "i".repeat(12_000), fichiers: Array.from({ length: 5 }, (_, i) => ({ nom: `f${i}`, contenu: "x".repeat(20_000) })) }) &&
+      R.competenceAcceptable({ ...base, fichiers: [{ nom: "modele.md", contenu: "x".repeat(20_000) }] }),
+    "competencesRegles.ts",
+  );
+  verifier(
+    "competences : une personnelle n'est vue que de son autrice ; le champ des agents (`visibility`) ne suffit pas à partager",
+    R.voitCompetence({ ownerId: "a", visibilite: "personnel" }, "a") &&
+      !R.voitCompetence({ ownerId: "a", visibilite: "personnel" }, "b") &&
+      !R.voitCompetence({ ownerId: "a", visibility: "organisation" }, "b") &&
+      R.voitCompetence({ ownerId: "a", visibilite: "organisation" }, "b"),
+    "competencesRegles.ts",
+  );
+  // Cent compétences longues : ce qui part reste dans la place, et aucune procédure n'est coupée.
+  const cent = Array.from({ length: 100 }, (_, i) => ({ id: `c${i}`, nom: `Procédure ${i}`, quand: `Quand il faut traiter le dossier numéro ${i} ${"avec beaucoup de détails ".repeat(10)}`.slice(0, 300), instructions: `Étape. FIN-${i}`.padStart(200, "x") }));
+  const choix = R.choisirCompetences(cent, "traiter le dossier numéro 7", R.placeCompetences(8192));
+  const finsEntieres = (choix.consigne.match(/FIN-\d+/g) ?? []).length;
+  const debutsEntiers = (choix.consigne.match(/### Procédure \d+/g) ?? []).length;
+  verifier(
+    "competences : cent compétences longues, modèle de 8 192 jetons : tout tient dans 2 048 caractères, index borné, chaque procédure donnée l'est en entier",
+    choix.mode === "index" && choix.consigne.length <= R.placeCompetences(8192) && /\(et \d+ autre\(s\)\)/.test(choix.consigne) && finsEntieres === debutsEntiers && choix.appliquees.length <= R.ENTIERES_MAX,
+    `${choix.consigne.length} caractères, ${debutsEntiers} en entier, ${finsEntieres} fins`,
+  );
+  verifier(
+    "competences : sans compétence active, rien ne part ; la place va de 2 000 à 8 000 caractères",
+    R.choisirCompetences([{ ...base, active: false }], "nom", 4000).consigne === null && R.placeCompetences(4096) === 2000 && R.placeCompetences(200_000) === 8000 && R.placeCompetences(NaN) === 2048,
+    "competencesRegles.ts",
+  );
+
+  const src = (...p) => readFileSync(join(RACINE, ...p), "utf8");
+  const gw = src("gateway", "src", "competences.ts") + src("gateway", "src", "competencesRegles.ts");
+  const lecteur = src("src", "lib", "competencesFichier.ts");
+  verifier(
+    "competences : ni l'instance ni le lecteur d'import ne lancent, n'écrivent ni n'évaluent rien d'une compétence (aucun processus, aucune écriture de fichier, aucun eval)",
+    !/child_process|spawn|execFile|exec\(|writeFile|eval\(|new Function|import\(/.test(gw) && !/child_process|eval\(|new Function|import\(|innerHTML|electron/.test(lecteur) && !/db\(\)\.write/.test(src("gateway", "src", "competences.ts")),
+    "competences.ts, competencesRegles.ts, competencesFichier.ts",
+  );
+  const chatSrc = src("gateway", "src", "chat.ts");
+  verifier(
+    "competences : ajoutées seulement pour l'écran qui les demande ou pour un employé (organisation seule), et `competences` ne part jamais chez le moteur",
+    /\(interfaceHelix && qui && \(body as \{ competences\?: unknown \}\)\.competences === true\) \|\| \(!interfaceHelix && employeDemandeur\)/.test(chatSrc) &&
+      /interfaceHelix \? qui! : null/.test(chatSrc) &&
+      /memoire: _mem, competences: _comp, \.\.\.rest/.test(chatSrc) &&
+      /if \(userId === null\) return liste\.filter\(\(c\) => c\.visibilite === "organisation" && c\.active !== false\)/.test(src("gateway", "src", "competences.ts")),
+    "chat.ts, competences.ts",
+  );
+  verifier(
+    "competences : Code les reçoit au nom de l'autrice de la demande ; l'authz les juge sur `visibilite` et leurs bornes",
+    /if \(auteur\) texteEnvoye \+= await competences\.consignePourCode\(auteur\.userId, body\.text\);/.test(src("gateway", "src", "index.ts")) &&
+      /voit: \(item, qui\) => voitCompetence\(item, qui\.userId\),[\s\S]{0,120}valide: competenceAcceptable/.test(src("gateway", "src", "authz.ts")),
+    "index.ts, authz.ts",
+  );
+  verifier(
+    "competences : export RGPD et effacement du compte couvrent les compétences personnelles (fichiers joints compris, dans l'enregistrement)",
+    /const competences = tableau\(await db\(\)\.read\("competences"\)\)\.filter\(\(c\) => c\.ownerId === qui\.userId\);/.test(src("gateway", "src", "export.ts")) &&
+      /db\(\)\.write\("competences", tableau\(competences\)\.filter\(\(c\) => c\.ownerId !== userId\)\)/.test(src("gateway", "src", "effacement.ts")),
+    "export.ts, effacement.ts",
+  );
+  const aide = src("src", "lib", "aide.ts");
+  const article = aide.slice(aide.indexOf('id: "competences",'), aide.indexOf('id: "travailler-ensemble",'));
+  verifier(
+    "competences : un article d'aide « Créer vos compétences », qui mène aux Réglages, sans nom de produit en dur ni « pas encore essayé »",
+    article.length > 500 && /titre: t\("Créer vos compétences"\)/.test(article) && /lien: "\/parametres\/competences"/.test(article) && !/Helix|pas encore essay|pas été essay/i.test(article),
+    article.slice(0, 200),
+  );
+}
+
 console.log(`\n${reussis} vérification(s) réussie(s), ${echecs.length} échec(s).`);
 if (echecs.length) {
   console.log("Échecs :");

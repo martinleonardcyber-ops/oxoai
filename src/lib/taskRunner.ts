@@ -1,7 +1,6 @@
 import { streamChat } from "./gateway";
 import { getTask, updateTask, type Task, type TaskToolTrace } from "./store/tasks";
 import { buildSystemPrompt, loadProfile } from "./store/profile";
-import { competencesVisibles, consignesDesCompetences } from "./store/competences";
 import { currentUser } from "./store/identity";
 import { getAgent, DEFAULT_AGENT, instructionsPourLeChat, type Agent } from "./store/agents";
 import { branding } from "@/config/branding";
@@ -66,17 +65,7 @@ export async function runTask(
 ): Promise<Task> {
   const agent: Agent = (task.agentId ? getAgent(task.agentId) : undefined) ?? DEFAULT_AGENT;
   const profile = loadProfile(currentUser().id);
-  /*
-   * Une tâche s'exécute sans personne devant l'écran : raison de plus pour
-   * qu'elle suive les procédures de la maison. On lit les compétences visibles
-   * du propriétaire de la tâche, pas celles d'un autre.
-   */
-  const systemPrompt = buildSystemPrompt(
-    profile,
-    branding.name,
-    instructionsPourLeChat(agent),
-    consignesDesCompetences(competencesVisibles(currentUser())),
-  );
+  const systemPrompt = buildSystemPrompt(profile, branding.name, instructionsPourLeChat(agent));
 
   updateTask(task.id, {
     status: "en-cours",
@@ -110,6 +99,12 @@ export async function runTask(
         model: options.modelUid ?? agent.modelUid,
         effort: "moyen",
         tools: agent.toolsEnabled,
+        /*
+         * Une tâche s'exécute sans personne devant l'écran : raison de plus pour
+         * qu'elle suive les compétences de la maison. L'instance les ajoute au
+         * nom de la personne de la séance (gateway/src/competences.ts).
+         */
+        competences: true,
         ...(agent.id !== DEFAULT_AGENT.id ? { agent: agent.id } : {}),
         signal: options.signal,
       },

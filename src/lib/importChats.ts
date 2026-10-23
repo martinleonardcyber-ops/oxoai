@@ -21,7 +21,7 @@ import { GEMINI_FICHIER_MAX, activitesDepuisHtml, activitesDepuisJson, chatsDepu
 /* Lecture ZIP                                                          */
 /* ------------------------------------------------------------------ */
 
-interface EntreeZip {
+export interface EntreeZip {
   nom: string;
   methode: number;
   tailleCompressee: number;
@@ -39,7 +39,7 @@ async function tranche(f: Blob, debut: number, fin: number): Promise<DataView> {
 }
 
 /** Le répertoire d'une archive ZIP (ZIP64 compris). */
-async function repertoire(f: Blob): Promise<EntreeZip[]> {
+export async function repertoire(f: Blob): Promise<EntreeZip[]> {
   const queue = Math.min(f.size, 65_557);
   const fin = await tranche(f, f.size - queue, f.size);
   let eocd = -1;
@@ -110,9 +110,9 @@ async function repertoire(f: Blob): Promise<EntreeZip[]> {
  * une petite taille et se décompresse en gigaoctets ne remplit pas la
  * mémoire) : rend alors `null`.
  */
-async function lireEntree(f: Blob, e: EntreeZip): Promise<string>;
-async function lireEntree(f: Blob, e: EntreeZip, max: number): Promise<string | null>;
-async function lireEntree(f: Blob, e: EntreeZip, max?: number): Promise<string | null> {
+export async function lireEntree(f: Blob, e: EntreeZip): Promise<string>;
+export async function lireEntree(f: Blob, e: EntreeZip, max: number): Promise<string | null>;
+export async function lireEntree(f: Blob, e: EntreeZip, max?: number): Promise<string | null> {
   const entete = await tranche(f, e.debutEnTete, e.debutEnTete + 30);
   const debut = e.debutEnTete + 30 + u16(entete, 26) + u16(entete, 28);
   const brut = f.slice(debut, debut + e.tailleCompressee);

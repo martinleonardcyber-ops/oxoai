@@ -130,6 +130,8 @@ export type HelixEvent =
    * combien venaient d'autres Chats de la personne.
    */
   | { type: "memoire"; extraits: number; autresChats?: number }
+  /* Les compétences données en entier au modèle pour cette demande (gateway/src/competences.ts, 23/10/2026). */
+  | { type: "competences"; noms: string[] }
   /*
    * La réponse s'est arrêtée par sa longueur, sans place pour la suite
    * (gateway/src/chat.ts, 16/10/2026) : ce qui est écrit reste une réponse,
@@ -329,6 +331,8 @@ export async function streamChat(
      * le réglage « Retrouver aussi ce qui a été dit dans mes autres Chats ».
      */
     memoire?: { chat: string; autresChats: boolean };
+    /** Ajouter les compétences de la personne (gateway/src/competences.ts, 23/10/2026) : Chat, Cowork, tâches. */
+    competences?: boolean;
     signal?: AbortSignal;
   },
   handlers: StreamHandlers,
@@ -347,6 +351,7 @@ export async function streamChat(
       ...(opts.agent ? { agent: opts.agent } : {}),
       ...(opts.web ? { web: true } : {}),
       ...(opts.memoire ? { memoire: opts.memoire } : {}),
+      ...(opts.competences ? { competences: true } : {}),
       stream: true,
     }),
   });

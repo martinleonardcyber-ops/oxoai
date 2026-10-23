@@ -1530,6 +1530,13 @@ sait faire.
 tâches (ADR-035) : on ne code pas une règle de sélection que le modèle fait
 mieux, et une règle codée se trompe sans qu'on puisse la corriger sans livrer.
 
+**Révisé le 23/10/2026.** Ce n'est plus l'écran qui les recopie : l'instance les ajoute
+au moment d'appeler le modèle (`gateway/src/competences.ts`), pour le Chat, Cowork, Code, les
+tâches et les employés (ceux-ci, celles de l'organisation seulement), toutes en entier si elles
+tiennent, sinon l'index et celles qui correspondent à la demande. Fichiers joints texte, import et
+export au format SKILL.md, écran dans Réglages. Voir PROJET.md, « Fait le 23/10/2026 ». Le
+paragraphe suivant décrit la version de 0.24.0.
+
 **Où elles s'appliquent.** Cowork, le Chat, et les tâches exécutées par un agent
 — partout où `buildSystemPrompt` passe. Les consignes sont placées **après** le
 rôle et **avant** les préférences personnelles : une procédure d'entreprise ne

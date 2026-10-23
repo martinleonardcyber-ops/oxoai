@@ -4298,6 +4298,13 @@ trentaine d'échanges ; redemander le fait. À voir : la ligne « extrait(s) plu
 réponse, si le modèle s'en sert, les scores réels (journal `[memoire]`), la gomme dans la liste des
 Chats, le réglage « autres Chats » ; sur un poste de plus de 18 Go, le résumé au repos au journal.
 
+**Compétences (23/10/2026, § 5)** : dans l'application de bureau, Réglages, Compétences ; ajouter
+« Mail de relance poli », l'allumer, demander une relance dans le Chat, puis dans Cowork et Code.
+À voir : si le modèle suit la manière de faire, la ligne « Compétence : … », le journal
+`[competences]` ; exporter une compétence (le ZIP s'enregistre-t-il ?) et la réimporter ; importer
+une archive SKILL.md venue d'un autre outil ; une compétence partagée à l'organisation dans un
+employé toujours actif.
+
 **Serveurs MCP ajoutés (16/10/2026, § 3.5)** : dans l'application, Connecteurs, « Ajouter un
 serveur MCP », un programme (par exemple un serveur MCP écrit en Node) puis une adresse en https
 avec OAuth ; cocher un outil « lecture seule », retirer. Sous Windows : `npx` et un `.exe`
@@ -6123,6 +6130,61 @@ Granite 4.1 8B ; trois quarts d'heure plus tard rien n'était prêt. `provision.
 est repris deux fois (5 s puis 10 s d'attente) ; s'il échoue encore, seuls des modèles de taille
 égale ou moindre restent essayés (`plafondGo`). Que LM Studio reprenne un téléchargement là où il
 s'était arrêté n'est pas vérifié (au pire il recommence le fichier).
+
+**Fait le 23/10/2026 : un vrai système de compétences (skills).** Demandé par Medhi : « rajoute un
+système de skills, la possibilité pour les gens de créer leurs skills ». Ce qui existait (ADR-043,
+0.24.0) : des compétences créées dans le panneau de Cowork (nom, quand, procédure), recopiées par
+chaque écran dans ses consignes, toutes, jusqu'à 6 000 caractères à chaque message, dans le Chat,
+Cowork et les tâches lancées depuis l'écran ; ni Code, ni les employés, ni les tâches programmées de
+l'instance. Deux défauts trouvés en lisant : **une compétence « Toute l'organisation » ne partait
+chez aucun collègue** (`authz.ts` la jugeait sur le champ des agents, `visibility`, alors qu'elle
+porte `visibilite`) ; et l'interrupteur d'une compétence partagée écrivait dans celle du collègue,
+ce que l'instance refusait sans rien dire. Ce qui est fait :
+- **L'instance les ajoute elle-même** (`gateway/src/competences.ts`, `competencesRegles.ts`), au
+  moment d'appeler le modèle : Chat, Cowork, tâches de l'écran et tâches programmées le demandent
+  (`competences: true`, retiré avant le moteur) ; Code les reçoit après la méthode de travail
+  (`/helix/code/prompt`) ; les employés toujours actifs ne reçoivent **que celles partagées à
+  l'organisation** (ils parlent à plusieurs personnes). Toutes en entier si elles tiennent dans un
+  douzième de la conversation (2 000 à 8 000 caractères) ; sinon l'index (nom et « quand »,
+  borné à la moitié de cette place) et le texte complet des trois au plus qui correspondent à la
+  demande, par les mots (racines de six lettres, nom et « quand » comptent triple). Jamais une
+  procédure coupée. L'écran reçoit l'événement `competences` et écrit « Compétence : … » sous la
+  réponse (gardé avec le Chat).
+- **OpenClaw** : son format de skills n'est pas utilisé. Helix l'a coupé exprès (`skills: []`,
+  `allowBundled: []`, atelier éteint) parce qu'une skill d'OpenClaw peut porter des scripts ; les
+  compétences arrivent à l'employé par la passerelle, comme du texte.
+- **Un écran à elles** : Réglages, IA et modèles, Compétences (`CompetencesReglages.tsx`) : créer,
+  modifier, allumer, éteindre, supprimer, lire celles des collègues, exporter, importer ; trois
+  exemples sans marque (compte rendu de réunion, relecture, mail de relance poli), ajoutés éteints.
+  Éditeur commun (`EditeurCompetence.tsx`) avec jusqu'à cinq fichiers joints texte (20 000
+  caractères chacun). Le panneau de Cowork garde la liste courte et renvoie aux Réglages. Celle
+  d'un collègue s'éteint pour soi seul (profil, `competencesEteintes`, lu aussi par l'instance).
+- **Format d'échange SKILL.md** (`competencesFichier.ts`) : export en ZIP `<nom>/SKILL.md` (en-tête
+  `name`, `description`, titre `# Nom`, instructions) plus les fichiers joints ; import d'une archive,
+  d'un `.md` seul ou d'un SKILL.md choisi avec ses voisins. Le contenu s'ouvre dans l'éditeur avant
+  d'être ajouté, avec ce qui a été ignoré (`allowed-tools` et autres champs), écarté (binaire, trop
+  grand, plus de cinq) ou signalé (code joint, « jamais exécuté »). Rien d'une compétence ne
+  s'exécute : aucun chemin du code ne l'écrit sur le disque ni ne la lance, et la consigne dit au
+  modèle qu'un fichier joint est à lire, pas à exécuter.
+- **Bornes à l'instance** (`authz.ts`, `valide`) : nom 80, quand 300, procédure 12 000, cinq
+  fichiers, 60 000 en tout, nom de fichier sans chemin ni caractère de contrôle ; hors bornes, refusée
+  comme l'enregistrement d'autrui, l'ancienne version reste, jamais tronquée. Une lecture ratée de la
+  collection ne donne qu'une demande sans compétence : rien n'est réécrit. Export RGPD et
+  effacement du compte les couvraient déjà (fichiers joints compris, dans l'enregistrement).
+- Article d'aide « Créer vos compétences » ; six catalogues à 100 %.
+
+**Vérifié** : `scripts/essai-competences.mjs`, 41 contrôles, faux moteur à 4 096 jetons (sert quand
+la demande s'y prête, pas sinon ; index et texte complet quand la place manque ; personnelle
+invisible à une collègue, partagée qui lui sert, éteinte pour elle seule ; bornes ; le vrai lecteur
+de l'interface, empaqueté, sur une archive SKILL.md avec script, image et `__MACOSX` ; export relu à
+l'identique ; script joint arrivé au modèle en texte, fichier témoin jamais créé) ; section 50 de
+`securite.mjs`, lancée seule (51 contrôles) ; `npm run typecheck`. Écran regardé contre une
+passerelle et un Vite jetables : page Réglages, compétence d'une collègue, exemple ajouté puis
+allumé, éditeur, et « Compétence : Mail de relance poli » sous la réponse du Chat.
+**Pas vérifié** : qu'un vrai modèle suit une compétence ; Code et un employé OpenClaw de bout en bout
+(seul le code est relu, et la section 50 en contrôle le câblage) ; l'import dans l'application de
+bureau (sélecteur de fichiers d'Electron, téléchargement de l'export) ; une archive SKILL.md réelle
+venue d'un autre outil ; l'écran en arabe.
 
 **Décidé et vérifié le 12/10/2026 : connecteurs Roblox Studio et Blender.** Medhi : « je veux
 juste que ça fonctionne, fais au mieux ». Décisions prises en conséquence :

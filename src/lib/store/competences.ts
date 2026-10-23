@@ -1,54 +1,79 @@
 import { storage, newId } from "./storage";
 import type { User } from "./identity";
-import { t, tf } from "@/lib/i18n";
+import { loadProfile, saveProfile } from "./profile";
+import { t } from "@/lib/i18n";
 
 /**
- * Compétences : des procédures écrites une fois, appliquées ensuite.
+ * Compétences : des manières de faire écrites une fois, appliquées ensuite.
  *
  * ── Ce que c'est, et ce que ce n'est pas ────────────────────────────────────
  *
  * Une compétence n'est **pas** un outil. Les outils, ce sont les connecteurs :
  * du code qui lit un fichier, envoie un mail, ouvre une page. Une compétence
- * est une **manière de s'y prendre**, en français, que le modèle lit et suit :
- * « voici comment on rédige un compte rendu de visite chez nous », « voici les
- * mentions obligatoires d'un devis », « voici l'ordre des étapes pour
- * facturer ».
+ * est une **manière de s'y prendre**, que le modèle lit et suit : « voici
+ * comment on rédige un compte rendu de visite chez nous », « voici les
+ * mentions obligatoires d'un devis ». ADR-043.
  *
- * C'est la réponse à la remarque qu'on entend dans toutes les entreprises :
- * l'assistant est bon, mais il ne sait pas **comment nous faisons**. Écrire
- * cette manière de faire une fois vaut mieux que la redire à chaque
- * conversation, et c'est exactement ce que le bouton « Créer une compétence »
- * promettait sans le tenir.
+ * ── Comment elle est utilisée, depuis le 23/10/2026 ────────────────────────
  *
- * ── Comment elle est utilisée ───────────────────────────────────────────────
+ * L'écran ne la recopie plus dans ses consignes. C'est l'instance qui l'ajoute
+ * au moment d'appeler le modèle (gateway/src/competences.ts), pour le Chat,
+ * Cowork, Code, les tâches et les employés : toutes en entier si elles
+ * tiennent dans la place du modèle, sinon le nom et la phrase « quand » de
+ * chacune, et le texte complet de celles qui correspondent à la demande.
+ * L'écran se contente de dire `competences: true` (useChat, taskRunner).
  *
- * Le modèle reçoit, dans ses consignes, la liste des compétences actives : leur
- * nom, quand s'en servir, et leurs instructions. Il choisit lui-même celles qui
- * s'appliquent — c'est déjà le principe retenu pour le découpage des tâches
- * (ADR-035) : on ne code pas une règle de sélection que le modèle fait mieux.
+ * ── Ce qui a changé le 23/10/2026 ──────────────────────────────────────────
  *
- * La liste envoyée est bornée (voir `consignesDesCompetences`) : des consignes
- * qui débordent chassent la question de l'utilisateur hors de la fenêtre du
- * modèle, et un petit modèle est le premier à en souffrir.
+ * Demandé par Medhi : « un système de skills, la possibilité pour les gens de
+ * créer leurs skills ». Un écran à elles (Réglages, IA et modèles), des
+ * fichiers joints (modèles, exemples), l'import et l'export au format
+ * SKILL.md (competencesFichier.ts), des exemples à ajouter, et un
+ * interrupteur personnel pour celles d'un collègue.
  */
 
 export type VisibiliteCompetence = "personnel" | "organisation";
 
+/** Un fichier joint : un modèle de document, un exemple. Du texte, jamais exécuté. */
+export interface FichierCompetence {
+  nom: string;
+  contenu: string;
+}
+
 export interface Competence {
   id: string;
   nom: string;
-  /** Quand s'en servir : c'est là-dessus que le modèle décide. */
+  /** Quand s'en servir : c'est là-dessus que le modèle décide, et que l'instance la retrouve. */
   quand: string;
-  /** La procédure elle-même, en français. */
+  /** La manière de faire elle-même. */
   instructions: string;
-  /** Une compétence inactive est conservée mais n'est plus envoyée au modèle. */
+  /** Allumée par son autrice. Une compétence inactive est conservée mais n'est plus envoyée au modèle. */
   active: boolean;
   visibilite: VisibiliteCompetence;
   ownerId: string;
   organisationId: string;
   createdAt: string;
   updatedAt: string;
+  /** Au plus cinq fichiers texte (23/10/2026). */
+  fichiers?: FichierCompetence[];
+  /** D'où elle vient : un fichier importé, un exemple ajouté, ou écrite ici (absent). */
+  origine?: "importee" | "exemple";
 }
+
+/**
+ * Bornes, les mêmes que l'instance (gateway/src/competencesRegles.ts,
+ * `BORNES_COMPETENCE`) : une compétence qui les dépasse y serait refusée, et
+ * la copie de ce poste ne s'enregistrerait jamais. L'écran les applique avant.
+ */
+export const BORNES = {
+  nom: 80,
+  quand: 300,
+  instructions: 12_000,
+  fichiers: 5,
+  nomFichier: 120,
+  fichier: 20_000,
+  total: 60_000,
+} as const;
 
 const CLE = "competences";
 
@@ -77,22 +102,51 @@ export function competence(id: string): Competence | undefined {
   return toutes().find((c) => c.id === id);
 }
 
-export function creerCompetence(
-  proprietaire: User,
-  donnees: Pick<Competence, "nom" | "quand" | "instructions" | "visibilite">,
-): Competence {
+/** Taille d'une compétence, telle que l'instance la mesure. */
+export function tailleCompetence(c: Pick<Competence, "nom" | "quand" | "instructions" | "fichiers">): number {
+  return c.nom.length + c.quand.length + c.instructions.length + (c.fichiers ?? []).reduce((n, f) => n + f.nom.length + f.contenu.length, 0);
+}
+
+/** Ce qui empêche d'enregistrer, ou null. Les mêmes règles que l'instance. */
+export function problemeCompetence(c: Pick<Competence, "nom" | "quand" | "instructions" | "fichiers">): string | null {
+  if (!c.nom.trim()) return t("Donnez un nom à la compétence.");
+  if (!c.instructions.trim()) return t("Écrivez la manière de faire.");
+  if (c.nom.length > BORNES.nom) return t("Le nom est trop long.");
+  if (c.quand.length > BORNES.quand) return t("La phrase « quand s'en servir » est trop longue.");
+  if (c.instructions.length > BORNES.instructions) return t("La manière de faire est trop longue.");
+  const fichiers = c.fichiers ?? [];
+  if (fichiers.length > BORNES.fichiers) return t("Cinq fichiers joints au plus.");
+  for (const f of fichiers) {
+    if (!nomDeFichierValide(f.nom)) return t("Un fichier joint a un nom invalide.");
+    if (f.contenu.length > BORNES.fichier) return t("Un fichier joint est trop long.");
+  }
+  if (tailleCompetence(c) > BORNES.total) return t("La compétence est trop longue, fichiers compris.");
+  return null;
+}
+
+/** Un nom de fichier joint n'est qu'une étiquette : ni chemin, ni caractère de contrôle. */
+export function nomDeFichierValide(nom: string): boolean {
+  return nom.trim() !== "" && nom.length <= BORNES.nomFichier && !/[\\/\u0000-\u001f]/.test(nom) && !/^\.+$/.test(nom.trim());
+}
+
+export type DonneesCompetence = Pick<Competence, "nom" | "quand" | "instructions" | "visibilite"> &
+  Partial<Pick<Competence, "fichiers" | "origine" | "active">>;
+
+export function creerCompetence(proprietaire: User, donnees: DonneesCompetence): Competence {
   const maintenant = new Date().toISOString();
   const nouvelle: Competence = {
     id: newId(),
     nom: donnees.nom.trim() || t("Compétence sans nom"),
     quand: donnees.quand.trim(),
     instructions: donnees.instructions.trim(),
-    active: true,
+    active: donnees.active ?? true,
     visibilite: donnees.visibilite,
     ownerId: proprietaire.id,
     organisationId: proprietaire.organisationId,
     createdAt: maintenant,
     updatedAt: maintenant,
+    ...(donnees.fichiers && donnees.fichiers.length > 0 ? { fichiers: donnees.fichiers } : {}),
+    ...(donnees.origine ? { origine: donnees.origine } : {}),
   };
   ecrire([nouvelle, ...toutes()]);
   return nouvelle;
@@ -110,65 +164,83 @@ export function supprimerCompetence(id: string): void {
   ecrire(toutes().filter((c) => c.id !== id));
 }
 
-/**
- * Limites de ce qui part dans les consignes.
- *
- * Elles ne sont pas décoratives. Les consignes sont renvoyées **à chaque tour**
- * de la conversation : ce qu'on y met est payé à chaque message, et prend la
- * place du travail en cours. Un modèle de 8 milliards de paramètres, qui est le
- * cas courant sur un poste, tient environ 8 000 jetons de contexte utile ; on
- * s'interdit donc d'en consommer plus d'une petite part.
- *
- * Quand la limite est atteinte, on tronque **par compétence entière** et on le
- * dit dans les consignes : une procédure coupée au milieu est pire qu'une
- * procédure absente, parce que le modèle en suit la moitié avec assurance.
- */
-const MAX_COMPETENCES = 12;
-const MAX_CARACTERES = 6000;
+/* ---- Allumée pour moi ---------------------------------------------------- */
 
 /**
- * Le bloc de consignes décrivant les compétences actives, ou null s'il n'y en
- * a aucune. Rendu séparément pour être testable sans monter d'interface.
+ * Une compétence sert-elle pour cette personne ? La sienne : son interrupteur.
+ * Celle d'un collègue : allumée par lui, et pas éteinte par elle (son profil).
+ * Jusqu'au 23/10/2026, l'interrupteur d'une compétence partagée écrivait dans
+ * la compétence du collègue, ce que l'instance refusait sans rien dire.
  */
-export function consignesDesCompetences(liste: Competence[]): string | null {
-  const actives = liste.filter((c) => c.active && c.instructions.trim());
-  if (actives.length === 0) return null;
+export function allumeePour(c: Competence, user: User): boolean {
+  if (!c.active) return false;
+  if (c.ownerId === user.id) return true;
+  return !(loadProfile(user.id).competencesEteintes ?? []).includes(c.id);
+}
 
-  const retenues: Competence[] = [];
-  let taille = 0;
-  let ecartees = 0;
-  for (const c of actives.slice(0, MAX_COMPETENCES)) {
-    const cout = c.nom.length + c.quand.length + c.instructions.length + 40;
-    if (taille + cout > MAX_CARACTERES) {
-      ecartees++;
-      continue;
-    }
-    retenues.push(c);
-    taille += cout;
+export function basculerPourMoi(c: Competence, user: User, allumer: boolean): void {
+  if (c.ownerId === user.id) {
+    modifierCompetence(c.id, { active: allumer });
+    return;
   }
-  ecartees += Math.max(0, actives.length - MAX_COMPETENCES);
-  if (retenues.length === 0) return null;
+  const profil = loadProfile(user.id);
+  const avant = new Set(profil.competencesEteintes ?? []);
+  if (allumer) avant.delete(c.id);
+  else avant.add(c.id);
+  saveProfile({ ...profil, competencesEteintes: [...avant] });
+  window.dispatchEvent(new Event("helix:profile-changed"));
+}
 
-  const blocs = retenues.map((c) =>
-    [
-      `### ${c.nom}`,
-      c.quand ? `Quand : ${c.quand}` : "",
-      c.instructions,
-    ]
-      .filter(Boolean)
-      .join("\n"),
-  );
+/* ---- Exemples ------------------------------------------------------------ */
 
+export interface ExempleCompetence {
+  cle: string;
+  nom: string;
+  quand: string;
+  instructions: string;
+}
+
+/**
+ * Trois exemples, proposés à l'ajout et jamais imposés : la personne les
+ * ajoute d'un clic (désactivés, pour qu'elle les relise avant), puis les
+ * adapte. Sans marque, écrits pour n'importe quelle entreprise.
+ */
+export function exemplesDeCompetences(): ExempleCompetence[] {
   return [
-    t("Procédures de l'entreprise. Avant de répondre, regarde si l'une d'elles ") +
-      t("s'applique à la demande ; si oui, suis-la à la lettre. Si aucune ne ") +
-      t("s'applique, n'en parle pas et réponds normalement."),
-    ...blocs,
-    ecartees > 0
-      ? tf("({0} autre(s) procédure(s) existent mais ne tiennent pas ici. ", ecartees) +
-        t("Dis-le si la demande semble en relever.)")
-      : "",
-  ]
-    .filter(Boolean)
-    .join("\n\n");
+    {
+      cle: "compte-rendu-reunion",
+      nom: t("Compte rendu de réunion"),
+      quand: t("Quand on me demande le compte rendu d'une réunion, à partir de notes ou d'une transcription"),
+      instructions: [
+        t("1. En tête : l'objet de la réunion, la date, les personnes présentes."),
+        t("2. Trois parties, dans cet ordre : ce qui a été dit, ce qui a été décidé, ce qui reste à faire."),
+        t("3. Chaque point à faire porte un responsable et une échéance ; s'ils manquent, écrire « à préciser »."),
+        t("4. Phrases courtes, sans jugement sur les personnes."),
+        t("5. Ne jamais inventer un chiffre ou une décision : ce qui n'est pas dans les notes n'est pas dans le compte rendu."),
+      ].join("\n"),
+    },
+    {
+      cle: "relecture-texte",
+      nom: t("Relecture d'un texte"),
+      quand: t("Quand on me demande de relire, corriger ou améliorer un texte"),
+      instructions: [
+        t("1. Corriger l'orthographe, la grammaire et la ponctuation, sans changer le sens."),
+        t("2. Garder le ton et le niveau de langue de l'auteur."),
+        t("3. Rendre d'abord le texte corrigé en entier, puis une courte liste des changements importants."),
+        t("4. Signaler ce qui semble faux ou ambigu sans le réécrire de son propre chef."),
+      ].join("\n"),
+    },
+    {
+      cle: "mail-relance",
+      nom: t("Mail de relance poli"),
+      quand: t("Quand on me demande de relancer quelqu'un par mail, pour une réponse, un paiement ou un document attendu"),
+      instructions: [
+        t("1. Objet court et clair, qui rappelle le sujet."),
+        t("2. Rappeler en une phrase la demande initiale et sa date."),
+        t("3. Dire précisément ce qui est attendu, et pour quand."),
+        t("4. Ton courtois, sans reproche ; proposer son aide si quelque chose bloque."),
+        t("5. Préparer un brouillon : ne jamais l'envoyer sans qu'on le demande."),
+      ].join("\n"),
+    },
+  ];
 }

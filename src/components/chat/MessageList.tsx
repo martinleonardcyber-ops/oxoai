@@ -16,6 +16,7 @@ import {
   ExternalLink,
   Scissors,
   History,
+  Sparkles,
 } from "lucide-react";
 import { dureeCourte, dureeMesuree, useMaintenant } from "@/lib/durees";
 import type { Citation } from "@/lib/connaissances";
@@ -400,6 +401,23 @@ function MemoireUtilisee({ message }: { message: Message }) {
 }
 
 /**
+ * Compétences données en entier au modèle pour cette réponse (23/10/2026,
+ * gateway/src/competences.ts) : une ligne discrète, comme la mémoire. Elle
+ * nomme celles qui correspondaient à la demande ; elle ne prétend pas que le
+ * modèle les a suivies.
+ */
+function CompetencesUtilisees({ message }: { message: Message }) {
+  const noms = message.competences;
+  if (!noms || noms.length === 0) return null;
+  return (
+    <p className="mt-3 flex items-center gap-1.5 text-xs text-muted-foreground" title={t("Donnée en entier à l'assistant pour cette demande")}>
+      <Sparkles size={13} strokeWidth={1.75} className="shrink-0" />
+      {noms.length === 1 ? tf("Compétence : {0}", noms[0]) : tf("Compétences : {0}", noms.join(", "))}
+    </p>
+  );
+}
+
+/**
  * Sources de la recherche sur le web, sous la réponse (28/09/2026), sur le
  * modèle des citations des bases de connaissances : en avant, celles que la
  * réponse cite par leur numéro ([3]) ; les autres, repliées et dites pour ce
@@ -550,6 +568,7 @@ function Bubble({ message, onContinuer }: { message: Message; onContinuer?: () =
         <Sources message={message} />
         <SourcesWeb message={message} />
         <MemoireUtilisee message={message} />
+        <CompetencesUtilisees message={message} />
         {message.error && (
           <p
             role="alert"
