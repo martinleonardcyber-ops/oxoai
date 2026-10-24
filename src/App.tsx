@@ -1,3 +1,4 @@
+import { FenetreMiseAJour } from "@/components/layout/FenetreMiseAJour";
 import {
   createBrowserRouter,
   createHashRouter,
@@ -200,13 +201,23 @@ export default function App() {
 
   if (!signedIn)
     return (
-      <LoginPage
-        onSignedIn={() => {
-          setSignedIn(true);
-          // Les Chats et les projets de la personne, relus sans attendre la relève suivante.
-          void relireMaintenant();
-        }}
-      />
+      <>
+        <LoginPage
+          onSignedIn={() => {
+            setSignedIn(true);
+            // Les Chats et les projets de la personne, relus sans attendre la relève suivante.
+            void relireMaintenant();
+          }}
+        />
+        {/*
+          La mise à jour proposée dès l'écran de connexion (24/10/2026, Medhi) :
+          sans cela, une personne qui a perdu son mot de passe ne voyait jamais
+          la fenêtre, qui ne vit qu'après la connexion, et ne recevait donc
+          jamais la version qui apporte « Mot de passe oublié ? ». La fenêtre
+          ne parle qu'au processus principal d'Electron, sans séance.
+        */}
+        <FenetreMiseAJour />
+      </>
     );
 
   return <RouterProvider router={router} />;
