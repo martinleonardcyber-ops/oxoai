@@ -292,9 +292,39 @@ const commentNode = (): string =>
  * `python3-venv`) : la création de l'environnement échouait au milieu de
  * l'installation. On le vérifie avant.
  */
+/*
+ * Et seulement un Python pour lequel les paquets figés ont été résolus
+ * (3.9 à 3.14, 64 bits, `OPTIONS_PIP_FIGEES`). Vu sur l'essai Windows du
+ * 24/10/2026 : la dictée s'arrêtait sur « No matching distribution found for
+ * ctranslate2==4.8.2 (from versions: none) », roue introuvable pour
+ * l'interpréteur de la machine, alors que les roues Windows de 3.9 à 3.14 sont
+ * toutes dans la liste. Un autre Python (3.15, sorti en octobre 2026, ou un
+ * 32 bits) laisse la place à celui que Helix pose (pythonPrive.ts, 3.12).
+ */
+const PYTHON_PREVU = "import sys, struct, venv, ensurepip; sys.exit(0 if (3, 9) <= sys.version_info[:2] <= (3, 14) and struct.calcsize('P') == 8 else 3)";
+async function pythonPrevu(python: string): Promise<boolean> {
+  try {
+    await exec(python, ["-c", PYTHON_PREVU], { timeout: 20_000 });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Un environnement fait par un Python hors de la liste (ci-dessus) : retiré
+ * avant l'installation, qui le recrée avec un Python prévu. Sans cela, chaque
+ * nouvel essai retombait sur la même roue introuvable.
+ */
+async function retirerVenvImprevu(): Promise<void> {
+  if (!(await existe(pythonVenv(), constants.X_OK)) || (await pythonPrevu(pythonVenv()))) return;
+  console.warn("[helix] environnement Python de l'atelier fait par un Python hors des versions prévues : recréé.");
+  await rm(dossierPython(), { recursive: true, force: true });
+}
+
 async function venvDisponible(python: string): Promise<boolean> {
   try {
-    await exec(python, ["-c", "import venv, ensurepip"], { timeout: 20_000 });
+    await exec(python, ["-c", PYTHON_PREVU], { timeout: 20_000 });
     return true;
   } catch {
     return false;
@@ -767,6 +797,7 @@ async function executerPreparation(onProgres: (p: Progres) => void): Promise<Bil
 
   /* ------------------------------- Python ------------------------------------ */
   try {
+    await retirerVenvImprevu();
     if (!(await existe(pythonVenv(), constants.X_OK))) {
       const python = await pythonPourVenv(true, (p) =>
         onProgres({ phase: "python", message: tf("Installation de Python ({0} %)...", p), percent: 2 + Math.round(p * 0.04) }),
@@ -1554,6 +1585,7 @@ async function executerDictee(onProgres: (p: ProgresDictee) => void): Promise<Bi
   await rm(temoinDictee(), { force: true });
 
   /* ------------------------------ venv ---------------------------------------- */
+  if (!avant.paquetInstalle) await retirerVenvImprevu();
   if (!(await existe(pythonVenv(), constants.X_OK))) {
     const python = await pythonPourVenv(true, (p) => onProgres({ phase: "python", message: tf("Installation de Python ({0} %)...", p), percent: 2 }));
     if (!python) throw new Error(t("Python 3 est introuvable."));

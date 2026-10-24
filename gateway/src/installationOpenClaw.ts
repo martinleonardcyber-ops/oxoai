@@ -30,7 +30,7 @@ import { detecterVisualCpp, installerVisualCpp } from "./visualCpp.ts";
  * (`install-cli.sh`, docs.openclaw.ai/install/installer), refait ici pas à pas
  * plutôt que d'exécuter un script téléchargé :
  *
- *  1. un Node officiel (24.21.0 LTS, épinglé avec ses empreintes, ou la version
+ *  1. un Node officiel (24.22.1 LTS, épinglé avec ses empreintes, ou la version
  *     du profil), dont l'archive est vérifiée avant d'être ouverte ;
  *  2. OpenClaw installé par le npm de ce Node, dans ce même dossier, à la
  *     version qu'Helix a éprouvée (ou celle du profil), sans aucun script
@@ -201,19 +201,20 @@ async function telecharger(url: string, delaiMs: number): Promise<Response> {
 /*
  * Node épinglé, avec l'empreinte SHA-256 de chaque archive écrite ici (revue
  * de sécurité du 27/09/2026, relevées ce jour-là dans `SHASUMS256.txt` de
- * nodejs.org) : avant, Helix prenait la dernière 24 LTS publiée et son
+ * nodejs.org ; 24.22.1 le 24/10/2026, correctif de sécurité des certificats
+ * compromis d'octobre 2026, exigé par OpenClaw depuis sa 2026.10.6) : avant, Helix prenait la dernière 24 LTS publiée et son
  * empreinte sur le même serveur. Une version imposée par le profil
  * (`openclaw.node`) reste possible : c'est alors l'exploitant qui la choisit,
  * et son empreinte est lue dans `SHASUMS256.txt`.
  */
-const NODE_EPINGLE = "24.21.0";
+const NODE_EPINGLE = "24.22.1";
 const EMPREINTES_NODE: Record<string, string> = {
-  "node-v24.21.0-darwin-arm64.tar.gz": "bed7eea5325e1108f32ce5228ddd6a5f0f08a499ee42aa7442aea583702f6057",
-  "node-v24.21.0-darwin-x64.tar.gz": "1462cb3b3046b815cf8ea436d3da450ec1a9f11dac7e5a46b0ada5305d7e8097",
-  "node-v24.21.0-linux-x64.tar.gz": "6e1db87ef58b8819e5d5402eff1536491b18edd8eb7bee5ef7897876e88dc5ff",
-  "node-v24.21.0-linux-arm64.tar.gz": "724282c3b43aec998aa9527380465b45d229e021b58035f5f4f63095eabfe5d5",
-  "node-v24.21.0-win-x64.zip": "158f7685b44de51f6c0df1d153526cbcd3e1bc739a8dfc607721cef75de9e541",
-  "node-v24.21.0-win-arm64.zip": "8779b1bde1d39f8d420e3b57aa657b39891af434d3de44a919044cec06785921",
+  "node-v24.22.1-darwin-arm64.tar.gz": "89c682593d76cd44233fa53b1563264e7de9cbb189cad169135c5b4fadfbc0a7",
+  "node-v24.22.1-darwin-x64.tar.gz": "d132557e7ee2b85af08b0c8c34338e65c6430f2238d01f727728ef42dc83b035",
+  "node-v24.22.1-linux-x64.tar.gz": "eb6728e77c576a35162c122c45ccadf224d89ff00abc8dae46cc2897c6002d7c",
+  "node-v24.22.1-linux-arm64.tar.gz": "33c37be234ba8bee041961047b19160f4d7d0f164e8e246f78bdd10feff148b3",
+  "node-v24.22.1-win-x64.zip": "d2046d28c2c3dcd211ac5145c0bf30e2047ef9dfb306693c8c6e2eccd8b95fa5",
+  "node-v24.22.1-win-arm64.zip": "a0c807319fede24c4a0d8f84564c82a619bd313b16b10c007c383c2609e99171",
 };
 
 const versionNode = (): string => deployment().openclaw?.node?.replace(/^v/, "") || NODE_EPINGLE;

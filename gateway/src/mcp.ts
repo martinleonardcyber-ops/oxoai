@@ -613,8 +613,16 @@ async function resoudreNpx(): Promise<{ command: string; prefixe: string[]; path
      * 27/09/2026) : une application ouverte depuis le Finder n'a pas celui de
      * Homebrew, et `npx` y échouait (« env: node »).
      */
-    const npx = dansLePath("npx") ?? ["/opt/homebrew/bin/npx", "/usr/local/bin/npx"].find((c) => existsSync(c));
-    if (npx && assezRecent(join(dirname(npx), "node"))) return { command: npx, prefixe: [], path: dirname(npx) };
+    /*
+     * Le premier dont le Node démarre, pas seulement le premier présent
+     * (24/10/2026) : sur le Mac de Medhi, une mise à jour de Homebrew avait
+     * remplacé simdjson, et `/opt/homebrew/bin/node` ne démarrait plus
+     * (« Library not loaded: libsimdjson.30.dylib ») ; Helix téléchargeait
+     * alors son propre Node, alors que celui de `/usr/local` marchait.
+     */
+    const candidats = [dansLePath("npx"), "/opt/homebrew/bin/npx", "/usr/local/bin/npx"].filter((c): c is string => Boolean(c) && existsSync(c as string));
+    const npx = [...new Set(candidats)].find((c) => assezRecent(join(dirname(c), "node")));
+    if (npx) return { command: npx, prefixe: [], path: dirname(npx) };
   } else {
     const node = dansLePath("node.exe");
     const script = node ? join(dirname(node), "node_modules", "npm", "bin", "npx-cli.js") : null;

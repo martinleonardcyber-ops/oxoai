@@ -57,8 +57,10 @@ console.log("A. Node officiel pour Windows");
   const mac = P.archiveNode({ platform: "darwin", arch: "arm64", release: "25.0.0" });
   verifier("macOS inchangé : 13.5 au moins, archive tar.gz", "erreur" in vieuxMac && mac.dossier === "darwin-arm64" && mac.extension === ".tar.gz", JSON.stringify([vieuxMac, mac]));
   const source = lire("gateway", "src", "installationOpenClaw.ts");
-  const empreinte = (nom) => new RegExp(`"node-v24\\.21\\.0-${nom}\\.zip": "[0-9a-f]{64}"`).test(source);
-  verifier("les deux archives Windows de Node 24.21.0 ont leur empreinte SHA-256 écrite dans le code", empreinte("win-x64") && empreinte("win-arm64"), "empreinte manquante");
+  // La version épinglée, lue dans le code : le contrôle suit ses montées (24.22.1 le 24/10/2026).
+  const epingle = source.match(/const NODE_EPINGLE = "([\d.]+)"/)?.[1] ?? "?";
+  const empreinte = (nom) => new RegExp(`"node-v${epingle.replace(/\./g, "\\.")}-${nom}\\.zip": "[0-9a-f]{64}"`).test(source);
+  verifier(`les deux archives Windows de Node ${epingle} ont leur empreinte SHA-256 écrite dans le code`, empreinte("win-x64") && empreinte("win-arm64"), "empreinte manquante");
   const tar = P.commandeExtraction("C:\\Users\\Jean Dupont\\.helix\\a.zip", "C:\\Users\\Jean Dupont\\.helix\\x", ".zip", W, { SystemRoot: "D:\\WINDOWS" });
   verifier("extraction : le tar.exe de System32 (lu dans SystemRoot), `-xf` pour un .zip, chemins avec espaces en un seul argument", tar.fichier === "D:\\WINDOWS\\System32\\tar.exe" && tar.args[0] === "-xf" && tar.args[1] === "C:\\Users\\Jean Dupont\\.helix\\a.zip", JSON.stringify(tar));
 }

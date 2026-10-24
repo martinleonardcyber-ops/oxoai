@@ -6364,6 +6364,58 @@ Electron (préchargement, `nouveautes.json` dans le vrai profil, lien ouvert dan
 système), une vraie mise à jour d'un clic suivie du premier lancement, l'API GitHub appelée depuis
 `net.fetch` d'Electron, un poste rattaché (la doublure ne joue pas le coffre), Windows et Linux.
 
+**Fait le 24/10/2026 : « le modèle s'installe pas, ça charge à l'infini » sur des PC, et les dépendances.**
+Signalé par Medhi, pour des personnes sous Windows. Lu dans l'essai Windows de GitHub de la 2026.1024.2
+(run 40093536932, journaux de LM Studio en artefact) :
+- **Le téléchargeur de LM Studio reste à 0 %**, puis abandonne seul au bout de treize minutes (« Download
+  failed: Timed-out. Please try to resume »). La garde de Helix (dix minutes sans un mot de `lms`) ne
+  partait jamais : `lms get` redessine son animation dix fois par seconde à « 0.00% », chaque image la
+  réarmait. Trois essais, puis le modèle suivant : une demi-heure sur 0 %. Désormais (`provision.ts`) :
+  seul un progrès (pourcentage, ou octets sur le disque, relevés toutes les 15 s) réarme la garde ; trois
+  minutes sans progrès, `lms get` est arrêté et relancé, et LM Studio reprend (vu dans le même essai :
+  la reprise a fini Qwen3 1.7B en deux secondes) ; cinq essais au plus, et deux de suite sans rien gagner
+  disent la connexion arrêtée. Après cela, seuls les modèles déjà sur la machine sont encore essayés. Le
+  pourcentage n'est publié qu'une fois par point gagné (avant : à chaque image de l'animation).
+- **Le modèle de repli chargé deux fois** (« qwen/qwen3-1.7b » et « qwen/qwen3-1.7b:2 » au sélecteur) :
+  un modèle déjà en mémoire (`lms ps`) passe directement à l'essai, sans `lms load`.
+- **Les commandes courtes de `lms`** (`ps`, `ls`, `unload`) étaient lancées sans limite de temps par la mise
+  en route : bornées à 90 s, et un moteur qui ne répond plus est dit (« Le moteur des modèles ne démarre pas
+  sur cette machine ») au lieu de laisser « Vérification des modèles disponibles... ». `lms load` : 5 min,
+  comme dans backends.ts. L'écran de mise en route borne sa lecture de l'état à 2 min (`useProvision.ts`),
+  puis montre « Moteur indisponible » et « Réessayer ».
+- **La dictée ne s'installait pas sous Windows** : « No matching distribution found for ctranslate2==4.8.2
+  (from versions: none) », alors que les 35 roues, Windows compris, sont dans `atelier-paquets.json`.
+  L'interpréteur de la machine était hors des versions résolues (3.9 à 3.14) ; vraisemblablement Python 3.15,
+  sorti en octobre 2026 (pas vérifié sur la machine de GitHub). L'atelier ne prend plus qu'un Python 3.9 à
+  3.14 en 64 bits, sinon celui que Helix pose (3.12), et recrée un environnement fait par un autre.
+- **Dépendances** (30 alertes de GitHub) : kit MCP 1.30.0 → 1.32.2 (client OAuth qui pouvait envoyer les
+  identifiants à un serveur d'autorisation choisi par le serveur MCP, redirections qui renvoyaient les
+  en-têtes, requête qui épuisait la mémoire ; il emporte express, body-parser, proxy-addr, hono, zod),
+  Electron 44.4.5 → 44.9.3 (certificats eMudhra compromis), mises à jour dans leurs plages du reste. Reste
+  `postcss-selector-parser` (sous Tailwind 3, à la construction seulement, sur nos propres feuilles de
+  style) : la correction demande Tailwind 4. Le npm 11.19 de ce Mac ne lance plus les scripts d'installation :
+  le binaire d'Electron se pose par `node node_modules/electron/install.js` (empreinte vérifiée par
+  `@electron/get`).
+- **Node de Helix 24.21.0 → 24.22.1** (`installationOpenClaw.ts`, empreintes relevées dans `SHASUMS256.txt`) :
+  correctif d'octobre 2026 des certificats compromis, exigé par OpenClaw depuis sa 2026.10.6. Un poste déjà
+  installé garde son Node jusqu'à la prochaine installation ou mise à jour d'OpenClaw (`assurerNodePrive`
+  rend celui en place), qui pose le nouveau et OpenClaw dedans, avec la mise de côté et le retour en arrière
+  habituels. OpenClaw 2026.9.4 demande Node 24.16 ou plus.
+- **OpenClaw reste en 2026.9.4** : la 2026.10.7 (publiée sur npm le 24/10 à 07:36 UTC) change le format des
+  données des agents, et ses propres notes réparent des agents « held by affected upgrades » ; l'essayer
+  demande d'avancer `DEPENDANCES_NPM_AVANT` au jour même, ce qui ferait entrer dans les arbres des serveurs
+  d'outils des versions publiées dans les heures précédentes, ce que cette date existe pour éviter. À faire :
+  dans quelques jours, essai OpenClaw sous Windows et instance jetable sur le Mac (jamais Eden), agents
+  existants redémarrés intacts.
+- **Un `npx` dont le Node ne démarre pas** (`mcp.ts`, `resoudreNpx`) : le premier candidat présent était pris,
+  et sans Node qui démarre, Helix posait le sien. Vu le même jour sur ce Mac : une mise à jour de Homebrew
+  (simdjson 5.0.5, à 19:21, pas par Helix) a cassé `/opt/homebrew/bin/node` (« Library not loaded:
+  libsimdjson.30.dylib ») ; deux essais de la batterie (tournée, contexte) échouaient, l'instance
+  jetable allant chercher Node 24.22.1 chez nodejs.org. C'est désormais le premier dont le Node démarre
+  (`/usr/local/bin/npx` ici). Le Node de Homebrew de ce Mac reste à réparer (`brew reinstall node`), par Medhi.
+**Pas essayé** : la nouvelle garde de téléchargement sur une vraie connexion lente (l'essai Windows de GitHub
+le dira), la dictée sous Windows avec Python 3.15.
+
 **Fait le 23/10/2026 : Roblox branché, le Chat répondait sans ses outils.** Captures de Medhi :
 Roblox Studio branché (28 outils), qwen/qwen3.5-9b à 32 768 jetons, « crée un sol en bois dans
 Roblox Studio » ; l'écran disait « trop peu pour ses outils, il répond cette fois sans eux » et

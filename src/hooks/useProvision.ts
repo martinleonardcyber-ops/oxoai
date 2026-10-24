@@ -105,7 +105,8 @@ export function useProvision() {
   }, []);
 
   const load = useCallback(() => {
-    apiFetch(`/helix/provision`)
+    // Borné (24/10/2026) : une instance qui ne répond pas laissait « Analyse de votre machine... » tourner sans fin ; l'écran « Moteur indisponible » propose de réessayer.
+    apiFetch(`/helix/provision`, { signal: AbortSignal.timeout(120_000) })
       .then((r) => (r.ok ? r.json() : Promise.reject(new Error(String(r.status)))))
       .then((data: Status) => {
         setStatus(data);

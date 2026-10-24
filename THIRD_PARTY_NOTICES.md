@@ -121,7 +121,7 @@ empreintes, est dans `gateway/src/atelier-paquets.json`, `gateway/src/entraineme
 | mammoth (atelier) | BSD-2-Clause | Oui | |
 | jszip (atelier) | MIT ou GPL-3.0, au choix | Oui | Pris sous MIT. |
 | llmster 0.0.25-1 (moteur de LM Studio) | conditions d'Element Labs, propriétaires | Sans objet : jamais redistribué | Acceptées par la personne à l'installation. |
-| OpenCode 1.18.32, Node 24.21.0, OpenClaw 2026.9.4 | MIT (npm : Artistic-2.0) | Oui | |
+| OpenCode 1.18.32, Node 24.22.1, OpenClaw 2026.9.4 | MIT (npm : Artistic-2.0) | Oui | |
 | Microsoft Visual C++ Redistributable 14.51.36247.0, x64 et arm64 (`gateway/src/visualCpp.ts`, Windows) | Conditions de licence de Microsoft (logiciel fermé, gratuit ; https://visualstudio.microsoft.com/license-terms/) | Sans objet : jamais redistribué | Téléchargé par Helix chez Microsoft (download.visualstudio.microsoft.com, adresse versionnée, empreinte SHA-256 et signature Authenticode de Microsoft vérifiées), seulement quand les bibliothèques manquent sur le PC, puis installé par Windows avec l'autorisation d'administrateur de la personne ; ni l'application ni ce dépôt ne le contiennent. Accepté par Medhi le 29/09/2026 (PROJET.md § 3.9) ; SECURITE.md § 64. |
 | RTK 0.50.0 (`gateway/src/rtk.ts`, Helix Code) | Apache-2.0 (© RTK AI Labs, github.com/rtk-ai/rtk) | Oui | Archive officielle de la publication, empreinte SHA-256 écrite dans le code, posée dans les données de Helix (macOS et Linux). Télémétrie coupée à chaque appel (`RTK_TELEMETRY_DISABLED=1`) ; SECURITE.md § 50. |
 | llama.cpp b11146 = v0.5.0 (`gateway/src/llamaCpp.ts`, Mac Intel) | MIT (© The ggml authors, github.com/ggml-org/llama.cpp) | Oui | Archive officielle de la publication (`llama-b11146-bin-macos-x64.tar.gz`), empreinte SHA-256 écrite dans le code, posée dans les données de Helix ; son fichier LICENSE est posé avec elle. SECURITE.md § 54. |
@@ -363,7 +363,7 @@ relire la page de marque, puis `node scripts/gen-marques.cjs --noter` et vérifi
 
 34 paquets, fondus par esbuild dans la passerelle.
 
-#### @hono/node-server 2.0.12 (MIT)
+#### @hono/node-server 2.1.5 (MIT)
 
 `LICENSE` :
 
@@ -391,7 +391,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-#### @modelcontextprotocol/sdk 1.30.0 (MIT)
+#### @modelcontextprotocol/sdk 1.32.2 (MIT)
 
 `LICENSE` :
 
@@ -561,7 +561,7 @@ OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 ```
 
-#### eventsource-parser 3.1.0 (MIT)
+#### eventsource-parser 3.1.1 (MIT)
 
 `LICENSE` :
 
@@ -617,7 +617,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-#### fast-uri 3.1.8 (BSD-3-Clause)
+#### fast-uri 3.1.9 (BSD-3-Clause)
 
 `LICENSE` :
 
@@ -654,7 +654,7 @@ The complete list of contributors can be found at:
 - https://github.com/garycourt/uri-js/graphs/contributors
 ```
 
-#### hono 4.13.8 (MIT)
+#### hono 4.13.13 (MIT)
 
 `LICENSE` :
 
@@ -748,7 +748,7 @@ The above copyright notice and this permission notice shall be included in all c
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 ```
 
-#### pg 8.23.0 (MIT)
+#### pg 8.23.1 (MIT)
 
 `LICENSE` :
 
@@ -776,7 +776,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-#### pg-cloudflare 1.4.0 (MIT)
+#### pg-cloudflare 1.4.1 (MIT)
 
 `LICENSE` :
 
@@ -804,7 +804,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-#### pg-connection-string 2.14.0 (MIT)
+#### pg-connection-string 2.14.1 (MIT)
 
 `LICENSE` :
 
@@ -880,7 +880,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-#### pg-protocol 1.16.0 (MIT)
+#### pg-protocol 1.16.1 (MIT)
 
 `LICENSE` :
 
@@ -1157,7 +1157,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 ```
 
-#### zod 4.4.3 (MIT)
+#### zod 4.6.7 (MIT)
 
 `LICENSE` :
 
@@ -1263,7 +1263,7 @@ ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 ```
 
-#### pdfjs-dist 6.3.289 (Apache-2.0)
+#### pdfjs-dist 6.4.299 (Apache-2.0)
 
 `LICENSE` :
 
@@ -1502,7 +1502,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-#### react-router 7.18.2 (MIT)
+#### react-router 7.18.4 (MIT)
 
 `LICENSE.md` :
 
@@ -1532,7 +1532,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-#### react-router-dom 7.18.2 (MIT)
+#### react-router-dom 7.18.4 (MIT)
 
 `LICENSE.md` :
 
@@ -1590,7 +1590,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-#### set-cookie-parser 2.7.2 (MIT)
+#### set-cookie-parser 2.7.3 (MIT)
 
 `LICENSE` :
 
@@ -1650,7 +1650,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-#### vite 6.4.3 (MIT)
+#### vite 6.4.5 (MIT)
 
 `LICENSE.md` :
 
@@ -1687,20 +1687,20 @@ SOFTWARE.
 
 | Paquet | Version | Licence |
 |---|---|---|
-| @hono/node-server | 2.0.12 | MIT |
-| @modelcontextprotocol/sdk | 1.30.0 | MIT |
+| @hono/node-server | 2.1.5 | MIT |
+| @modelcontextprotocol/sdk | 1.32.2 | MIT |
 | accepts | 2.0.0 | MIT |
 | ajv | 8.20.0 | MIT |
 | ajv-formats | 3.0.1 | MIT |
 | argparse | 2.0.1 | Python-2.0 |
-| body-parser | 2.3.0 | MIT |
+| body-parser | 2.4.0 | MIT |
 | builder-util-runtime | 9.7.0 | MIT |
 | bytes | 3.1.2 | MIT |
 | call-bind-apply-helpers | 1.0.2 | MIT |
 | call-bound | 1.0.4 | MIT |
-| content-disposition | 1.1.0 | MIT |
+| content-disposition | 2.0.1 | MIT |
 | content-type | 1.0.5 | MIT |
-| content-type | 2.0.0 | MIT |
+| content-type | 2.1.0 | MIT |
 | cookie | 0.7.2 | MIT |
 | cookie | 1.1.1 | MIT |
 | cookie-signature | 1.2.2 | MIT |
@@ -1710,7 +1710,7 @@ SOFTWARE.
 | depd | 2.0.0 | MIT |
 | dunder-proto | 1.0.1 | MIT |
 | ee-first | 1.1.1 | MIT |
-| electron-updater | 6.8.9 | MIT |
+| electron-updater | 6.8.11 | MIT |
 | encodeurl | 2.0.0 | MIT |
 | es-define-property | 1.0.1 | MIT |
 | es-errors | 1.3.0 | MIT |
@@ -1718,11 +1718,11 @@ SOFTWARE.
 | escape-html | 1.0.3 | MIT |
 | etag | 1.8.1 | MIT |
 | eventsource | 3.0.7 | MIT |
-| eventsource-parser | 3.1.0 | MIT |
-| express | 5.2.1 | MIT |
-| express-rate-limit | 8.6.0 | MIT |
+| eventsource-parser | 3.1.1 | MIT |
+| express | 5.3.0 | MIT |
+| express-rate-limit | 8.7.1 | MIT |
 | fast-deep-equal | 3.1.3 | MIT |
-| fast-uri | 3.1.8 | BSD-3-Clause |
+| fast-uri | 3.1.9 | BSD-3-Clause |
 | finalhandler | 2.1.1 | MIT |
 | forwarded | 0.2.0 | MIT |
 | fresh | 2.0.0 | MIT |
@@ -1734,15 +1734,15 @@ SOFTWARE.
 | graceful-fs | 4.2.11 | ISC |
 | has-symbols | 1.1.0 | MIT |
 | hasown | 2.0.4 | MIT |
-| hono | 4.13.8 | MIT |
+| hono | 4.13.13 | MIT |
 | http-errors | 2.0.1 | MIT |
 | iconv-lite | 0.7.3 | MIT |
 | inherits | 2.0.4 | ISC |
-| ip-address | 10.7.2 | MIT |
+| ip-address | 10.7.4 | MIT |
 | ipaddr.js | 1.9.1 | MIT |
 | is-promise | 4.0.0 | MIT |
 | isexe | 2.0.0 | ISC |
-| jose | 6.2.4 | MIT |
+| jose | 6.2.13 | MIT |
 | js-tokens | 4.0.0 | MIT |
 | js-yaml | 4.3.2 | MIT |
 | json-schema-traverse | 1.0.0 | MIT |
@@ -1759,23 +1759,23 @@ SOFTWARE.
 | mime-db | 1.54.0 | MIT |
 | mime-types | 3.0.2 | MIT |
 | ms | 2.1.3 | MIT |
-| negotiator | 1.0.0 | MIT |
+| negotiator | 1.1.0 | MIT |
 | object-assign | 4.1.1 | MIT |
 | object-inspect | 1.13.4 | MIT |
-| on-finished | 2.4.1 | MIT |
+| on-finished | 2.4.2 | MIT |
 | once | 1.4.0 | ISC |
 | parseurl | 1.3.3 | MIT |
 | path-key | 3.1.1 | MIT |
 | path-to-regexp | 8.4.2 | MIT |
 | pkce-challenge | 5.0.1 | MIT |
-| proxy-addr | 2.0.7 | MIT |
-| qs | 6.16.0 | BSD-3-Clause |
+| proxy-addr | 2.0.8 | MIT |
+| qs | 6.16.1 | BSD-3-Clause |
 | range-parser | 1.3.0 | MIT |
 | raw-body | 3.0.2 | MIT |
 | react | 18.3.1 | MIT |
 | react-dom | 18.3.1 | MIT |
-| react-router | 7.18.2 | MIT |
-| react-router-dom | 7.18.2 | MIT |
+| react-router | 7.18.4 | MIT |
+| react-router-dom | 7.18.4 | MIT |
 | require-from-string | 2.0.2 | MIT |
 | router | 2.2.0 | MIT |
 | safer-buffer | 2.1.2 | MIT |
@@ -1784,7 +1784,7 @@ SOFTWARE.
 | semver | 7.7.4 | ISC |
 | send | 1.2.1 | MIT |
 | serve-static | 2.2.1 | MIT |
-| set-cookie-parser | 2.7.2 | MIT |
+| set-cookie-parser | 2.7.3 | MIT |
 | setprototypeof | 1.2.0 | ISC |
 | shebang-command | 2.0.0 | MIT |
 | shebang-regex | 3.0.0 | MIT |
@@ -1801,7 +1801,7 @@ SOFTWARE.
 | vary | 1.1.2 | MIT |
 | which | 2.0.2 | ISC |
 | wrappy | 1.0.2 | ISC |
-| zod | 4.4.3 | MIT |
+| zod | 4.6.7 | MIT |
 | zod-to-json-schema | 3.25.2 | ISC |
 
 <!-- fin de la partie générée -->

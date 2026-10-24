@@ -689,18 +689,27 @@ function parsePercent(line: string): number | undefined {
   return Number.isFinite(value) ? Math.min(100, Math.max(0, value)) : undefined;
 }
 
+/** Commandes courtes de `lms` (`ps`, `ls`, `unload`) : au-delà, le moteur ne répond plus (24/10/2026). */
+const DELAI_LMS_COURT_MS = 90_000;
+/** Un chargement en mémoire, comme dans backends.ts. */
+const DELAI_LMS_CHARGEMENT_MS = 300_000;
+/** Un téléchargement sans progrès pendant ce temps est relancé, et LM Studio le reprend où il en était. */
+const SANS_PROGRES_MS = 3 * 60_000;
+
 function run(
   command: string,
   args: string[],
   onLine: (line: string) => void,
-  silenceMaxMs?: number,
-  activite?: () => number,
+  options: { silenceMaxMs?: number; progres?: () => string; totalMaxMs?: number } = {},
 ): Promise<{ ok: boolean; output: string; muet?: boolean }> {
+  const { silenceMaxMs, progres } = options;
+  // Une commande sans garde ne bloque plus la mise en route : sans réponse du moteur, l'écran restait sur « Vérification... » (24/10/2026).
+  const totalMaxMs = options.totalMaxMs ?? (silenceMaxMs ? undefined : DELAI_LMS_COURT_MS);
   return new Promise((resolve) => {
     const child = spawn(command, args, { stdio: ["ignore", "pipe", "pipe"] });
     let output = "";
     /*
-     * `silenceMaxMs` : plus rien de la commande pendant ce temps, elle est
+     * `silenceMaxMs` : rien n'avance pendant ce temps, la commande est
      * arrêtée. Un `lms get` bloqué par une coupure du réseau gardait sinon
      * l'écran sur le même pourcentage, et toute nouvelle tentative attendait
      * derrière lui (revue du 27/09/2026).
@@ -716,24 +725,32 @@ function run(
       }, silenceMaxMs);
     };
     armer();
+    const plafond = totalMaxMs
+      ? setTimeout(() => {
+          muet = true;
+          child.kill();
+        }, totalMaxMs)
+      : undefined;
     /*
-     * `activite` : une mesure qui bouge tant que le travail avance (la taille
-     * des fichiers du modèle). Un `lms` qui n'écrit rien sans terminal (celui
-     * de llmster sous Linux, pas vérifié) n'est donc pas coupé tant que le
-     * téléchargement grossit (revue Linux du 27/09/2026).
+     * `progres` : une mesure qui bouge tant que le travail avance (taille des
+     * fichiers du modèle, pourcentage annoncé). Avec elle, c'est elle seule qui
+     * réarme la garde, pas la sortie : vu sur l'essai Windows du 24/10/2026,
+     * `lms get` redessine son animation dix fois par seconde à « 0.00% », et
+     * la garde, réarmée à chaque image, laissait l'écran treize minutes sur
+     * 0 % avant que LM Studio n'abandonne de lui-même (« Timed-out »).
      */
-    let derniere = activite?.();
-    const sonde = activite
+    let derniere = progres?.();
+    const sonde = progres
       ? setInterval(() => {
-          const v = activite();
+          const v = progres();
           if (v !== derniere) {
             derniere = v;
             armer();
           }
-        }, 30_000)
+        }, 15_000)
       : undefined;
     const handle = (chunk: Buffer) => {
-      armer();
+      if (!progres) armer();
       const text = chunk.toString();
       output += text;
       for (const line of text.split(/\r?\n|\r/)) {
@@ -745,11 +762,13 @@ function run(
     child.stderr.on("data", handle);
     child.on("close", (code) => {
       clearTimeout(garde);
+      clearTimeout(plafond);
       clearInterval(sonde);
       resolve({ ok: code === 0 && !muet, output, muet });
     });
     child.on("error", (err) => {
       clearTimeout(garde);
+      clearTimeout(plafond);
       clearInterval(sonde);
       resolve({ ok: false, output: String(err) });
     });
@@ -896,6 +915,23 @@ async function nomChezLmStudio(lms: string, key: string, commande: "ls" | "ps"):
     .map((e) => (commande === "ps" ? (e.identifier ?? e.modelKey) : e.modelKey))
     .filter((n): n is string => typeof n === "string");
   return noms.find((n) => n === key) ?? noms.find((n) => memeModele(n, key)) ?? key;
+}
+
+/** Le nom sous lequel LM Studio sert déjà ce modèle (`lms ps`), ou null s'il n'est pas en mémoire. */
+async function chargeSous(lms: string, key: string): Promise<string | null> {
+  const { ok, output } = await run(lms, ["ps", "--json"], () => {});
+  if (!ok) return null;
+  try {
+    const lu = JSON.parse(output) as unknown;
+    if (!Array.isArray(lu)) return null;
+    const noms = (lu as { identifier?: unknown; modelKey?: unknown; type?: unknown }[])
+      .filter((e) => e.type !== "embedding")
+      .map((e) => e.identifier ?? e.modelKey)
+      .filter((n): n is string => typeof n === "string");
+    return noms.find((n) => n === key) ?? noms.find((n) => memeModele(n, key)) ?? null;
+  } catch {
+    return null;
+  }
 }
 
 /**
@@ -1106,6 +1142,20 @@ async function provision(
   }
 
   let installed = await run(lms, ["ls"], () => {});
+  /*
+   * Le moteur ne répond plus du tout (`lms ps` ou `lms ls` sans réponse en
+   * une minute et demie) : dit tout de suite, au lieu de laisser l'écran sur
+   * « Vérification des modèles disponibles... » (24/10/2026).
+   */
+  if (loadedNow.muet || installed.muet) {
+    console.error(`[helix] moteur LM Studio sans réponse à « lms ${loadedNow.muet ? "ps" : "ls"} » : ${diagnosticInstallation()}`);
+    setState({
+      phase: "error",
+      message: t("Le moteur des modèles ne démarre pas sur cette machine."),
+      error: tf("Quittez {0} puis rouvrez-le : l'écran de mise en route proposera de réinstaller le moteur. Si cela se répète, installez LM Studio depuis lmstudio.ai, ouvrez-le une fois, puis revenez.", nomProduit()),
+    });
+    return state;
+  }
 
   // On tente le modèle recommandé, puis les plus légers si la machine refuse ou s'il répond mal.
   const candidates = replis(hw, catalogue, start);
@@ -1127,6 +1177,8 @@ async function provision(
    * faisait passer au suivant (revue du 27/09/2026).
    */
   let echec: { message: string; error: string } | null = null;
+  /** Un téléchargement a cessé d'avancer : la connexion est arrêtée, les modèles à télécharger ne sont plus tentés. */
+  let reseauArrete = false;
   for (const choice of candidates) {
     if (choice.downloadGb >= plafondGo) continue;
     // Noté défaillant pendant cette mise en route, ou avant : pas réessayé d'office.
@@ -1169,6 +1221,8 @@ async function provision(
     }
 
     if (!installed.output.includes(choice.key)) {
+      // Connexion arrêtée sur un modèle précédent : seuls les modèles déjà là sont encore essayés.
+      if (reseauArrete) continue;
       setState({
         phase: "downloading",
         message: tf("Téléchargement de {0} (~{1} Go)...", choice.label, choice.downloadGb),
@@ -1176,41 +1230,63 @@ async function provision(
       });
 
       /*
-       * Dix minutes sans un mot de `lms` : téléchargement arrêté, dit comme tel.
+       * Trois minutes sans progrès (ni pourcentage, ni octets sur le disque) :
+       * `lms get` est arrêté et relancé, et LM Studio reprend où il en était.
+       * Vu sur l'essai Windows du 24/10/2026 : son téléchargeur reste parfois
+       * à 0 % puis abandonne de lui-même au bout de treize minutes
+       * (« Timed-out. Please try to resume »), et la reprise suivante a fini
+       * Qwen3 1.7B en deux secondes, ce qui était déjà reçu étant gardé. Deux
+       * essais de suite sans rien gagner : la connexion est arrêtée, dit
+       * comme tel, au lieu de laisser l'écran sur 0 % une demi-heure.
        *
-       * Un échec en cours de route est repris sur le même modèle, deux fois
-       * (16/10/2026). Vu sur la machine Linux de l'essai GitHub : Qwen3 1.7B
-       * s'est arrêté à 40 %, et Helix est passé au suivant du classement,
-       * Qwen3 8B (5 Go), puis Granite 4.1 8B, encore plus long à venir sur la
-       * même connexion : trois quarts d'heure plus tard, rien n'était prêt.
-       * LM Studio reprend un téléchargement interrompu (non vérifié : au pire,
-       * il recommence le fichier).
+       * Reprendre le même modèle plutôt que passer au suivant (16/10/2026) :
+       * sur la machine Linux de l'essai GitHub, Qwen3 1.7B s'était arrêté à
+       * 40 %, et Helix passait à Qwen3 8B (5 Go), puis Granite 4.1 8B, encore
+       * plus longs à venir sur la même connexion.
        */
+      const ESSAIS = 5;
       let got: { ok: boolean; output: string; muet?: boolean } = { ok: false, output: "" };
-      for (let essai = 0; essai < 3; essai++) {
+      let meilleur = 0;
+      let affiche = -1;
+      let lu = 0;
+      let sansProgres = 0;
+      for (let essai = 0; essai < ESSAIS; essai++) {
         if (essai > 0) {
-          setState({ message: tf("Téléchargement de {0} interrompu, reprise ({1} sur 2)...", choice.label, essai) });
-          await new Promise((r) => setTimeout(r, essai * 5_000));
+          setState({ message: tf("Téléchargement de {0} interrompu, reprise ({1} sur {2})...", choice.label, essai, ESSAIS - 1) });
+          await new Promise((r) => setTimeout(r, Math.min(essai * 5_000, 15_000)));
         }
+        const tailleAvant = tailleDesModeles();
+        const meilleurAvant = meilleur;
+        lu = 0;
         got = await run(lms, ["get", choice.key, "--yes"], (line) => {
           const percent = parsePercent(line);
-          if (percent !== undefined) {
-            setState({
-              percent,
-              message: tf("Téléchargement de {0}... {1}%", choice.label, Math.round(percent)),
-            });
-          }
-        }, 10 * 60_000, tailleDesModeles);
-        // Réussi, réseau muet (dit plus bas) ou moteur absent : rien à reprendre.
-        if (got.ok || got.muet || /daemon is not running|no valid installation|failed to start or connect to local LM Studio/i.test(got.output)) break;
+          if (percent === undefined) return;
+          lu = percent;
+          meilleur = Math.max(meilleur, percent);
+          // Une fois par point gagné : l'animation de `lms` redessine la même valeur dix fois par seconde.
+          if (Math.floor(percent) === affiche) return;
+          affiche = Math.floor(percent);
+          setState({ percent, message: tf("Téléchargement de {0}... {1}%", choice.label, affiche) });
+        }, { silenceMaxMs: SANS_PROGRES_MS, progres: () => `${tailleDesModeles()}|${lu}` });
+        // Réussi ou moteur absent (dit plus bas) : rien à reprendre.
+        if (got.ok || /daemon is not running|no valid installation|failed to start or connect to local LM Studio/i.test(got.output)) break;
+        sansProgres = meilleur > meilleurAvant || tailleDesModeles() > tailleAvant ? 0 : sansProgres + 1;
+        if (sansProgres >= 2) break;
       }
 
       if (!got.ok) {
         const message = tf("Le téléchargement de {0} a échoué.", choice.label);
-        // Réseau muet : un autre modèle n'irait pas mieux, on le dit tout de suite.
-        if (got.muet) {
-          setState({ phase: "error", message, error: t("Plus aucune progression depuis dix minutes : vérifiez la connexion, puis réessayez.") });
-          return state;
+        /*
+         * Connexion arrêtée : un autre modèle à télécharger n'irait pas mieux.
+         * Un modèle plus léger déjà sur la machine est encore essayé ; sinon,
+         * l'échec est dit à la fin, avec ce message.
+         */
+        if (sansProgres >= 2) {
+          console.error(`[helix] téléchargement de ${choice.key} arrêté, sans progrès : ${raisonTelechargement(got.output)}`);
+          reseauArrete = true;
+          echec = { message, error: t("Le téléchargement n'avance plus depuis plusieurs minutes : vérifiez la connexion, puis réessayez. Ce qui a déjà été reçu est gardé.") };
+          plafondGo = Math.min(plafondGo, choice.downloadGb + 0.01);
+          continue;
         }
         console.error(`[helix] téléchargement de ${choice.key} refusé : ${got.output.slice(-400)}`);
         /*
@@ -1252,7 +1328,24 @@ async function provision(
     // Le nom sous lequel LM Studio a rangé le modèle (« qwen/qwen3-1.7b » pour « qwen3-1.7b », `nomChezLmStudio`).
     const cle = await nomChezLmStudio(lms, choice.key, "ls");
     const charger = () =>
-      run(lms, ["load", cle, "--yes", "--ttl", String(TTL_SECONDES), ...optionsDeChargement()], () => {});
+      run(lms, ["load", cle, "--yes", "--ttl", String(TTL_SECONDES), ...optionsDeChargement()], () => {}, { totalMaxMs: DELAI_LMS_CHARGEMENT_MS });
+
+    /*
+     * Déjà en mémoire (le modèle de repli, chargé par une mise en route
+     * précédente) : directement à l'essai. Vu sur l'essai Windows du
+     * 24/10/2026 : après l'échec de Qwen3.5 2B, Qwen3 1.7B, déjà servi, était
+     * chargé une seconde fois, et le sélecteur du Chat montrait
+     * « qwen/qwen3-1.7b » et « qwen/qwen3-1.7b:2 ».
+     */
+    const servi = await chargeSous(lms, choice.key);
+    if (servi) {
+      if (await essaiReussi(lms, choice, suivantDe(choice), servi)) return state;
+      echec = {
+        message: tf("{0} ne répond pas correctement sur cette machine.", choice.label),
+        error: t("Aucun autre modèle adapté à cette machine ne reste à essayer. Choisissez-en un dans le sélecteur de modèles du Chat, ou branchez un modèle par une clé."),
+      };
+      continue;
+    }
 
     // Pas à côté d'un autre modèle si les deux ne tiennent pas : le Mac se figerait (voir backends.ts).
     await faireLaPlace(lms, cle);
