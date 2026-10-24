@@ -882,6 +882,7 @@
   "La connexion au service a échoué.": "サービスへの接続に失敗しました。",
   "La connexion est déjà en train d'aboutir.": "接続はすでに完了しつつあります。",
   "La connexion n'a pas abouti": "接続できませんでした",
+  "La connexion s'est arrêtée pendant le téléchargement, ou elle est trop lente : vérifiez-la, puis réessayez.": "ダウンロード中に接続が止まったか、速度が遅すぎます。接続を確認して、もう一度お試しください。",
   "La conversation dépassait la place de {0} : les plus anciens messages ou résultats ont été retirés pour cette réponse, et la demande renvoyée.": "会話が {0} の容量を超えていました。この回答のために最も古いメッセージや結果を取り除き、依頼を再送しました。",
   "La conversation dépasse ce que {0} peut lire d'un coup. Ouvrez un nouveau Chat, ou retirez une pièce jointe ou une partie du texte.": "会話が {0} が一度に読める量を超えています。新しいチャットを開くか、添付ファイルやテキストの一部を削除してください。",
   "La copie a échoué : les modèles restent où ils étaient, rien n'a été effacé. {0}": "コピーに失敗しました。モデルは元の場所のままで、何も削除されていません。{0}",

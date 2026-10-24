@@ -882,6 +882,7 @@
   "La connexion au service a échoué.": "La conexión con el servicio ha fallado.",
   "La connexion est déjà en train d'aboutir.": "La conexión ya se está completando.",
   "La connexion n'a pas abouti": "La conexión no se ha completado",
+  "La connexion s'est arrêtée pendant le téléchargement, ou elle est trop lente : vérifiez-la, puis réessayez.": "La conexión se detuvo durante la descarga o es demasiado lenta: compruébala y vuelve a intentarlo.",
   "La conversation dépassait la place de {0} : les plus anciens messages ou résultats ont été retirés pour cette réponse, et la demande renvoyée.": "La conversación superaba el espacio de {0}: se retiraron los mensajes o resultados más antiguos para esta respuesta, y se volvió a enviar la solicitud.",
   "La conversation dépasse ce que {0} peut lire d'un coup. Ouvrez un nouveau Chat, ou retirez une pièce jointe ou une partie du texte.": "La conversación supera lo que {0} puede leer de una vez. Abre un nuevo Chat, o quita un archivo adjunto o una parte del texto.",
   "La copie a échoué : les modèles restent où ils étaient, rien n'a été effacé. {0}": "La copia ha fallado: los modelos siguen donde estaban, no se ha borrado nada. {0}",

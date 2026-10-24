@@ -882,6 +882,7 @@
   "La connexion au service a échoué.": "The connection to the service failed.",
   "La connexion est déjà en train d'aboutir.": "The connection is already being completed.",
   "La connexion n'a pas abouti": "The connection did not go through",
+  "La connexion s'est arrêtée pendant le téléchargement, ou elle est trop lente : vérifiez-la, puis réessayez.": "The connection stopped during the download, or it is too slow: check it, then try again.",
   "La conversation dépassait la place de {0} : les plus anciens messages ou résultats ont été retirés pour cette réponse, et la demande renvoyée.": "The conversation was larger than {0}'s space: the oldest messages or results were removed for this answer, and the request was sent again.",
   "La conversation dépasse ce que {0} peut lire d'un coup. Ouvrez un nouveau Chat, ou retirez une pièce jointe ou une partie du texte.": "The conversation is longer than {0} can read at once. Open a new Chat, or remove an attachment or part of the text.",
   "La copie a échoué : les modèles restent où ils étaient, rien n'a été effacé. {0}": "The copy failed: the models stay where they were, nothing was deleted. {0}",

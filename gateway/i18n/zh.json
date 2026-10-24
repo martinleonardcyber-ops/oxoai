@@ -882,6 +882,7 @@
   "La connexion au service a échoué.": "连接服务失败。",
   "La connexion est déjà en train d'aboutir.": "连接正在完成中。",
   "La connexion n'a pas abouti": "连接未成功",
+  "La connexion s'est arrêtée pendant le téléchargement, ou elle est trop lente : vérifiez-la, puis réessayez.": "下载过程中连接中断，或网速太慢：请检查网络后重试。",
   "La conversation dépassait la place de {0} : les plus anciens messages ou résultats ont été retirés pour cette réponse, et la demande renvoyée.": "对话超出了 {0} 的空间：本次回答已移除最早的消息或结果，并重新发送了请求。",
   "La conversation dépasse ce que {0} peut lire d'un coup. Ouvrez un nouveau Chat, ou retirez une pièce jointe ou une partie du texte.": "对话超出了 {0} 一次能读取的长度。请新建一个 Chat，或移除附件或部分文字。",
   "La copie a échoué : les modèles restent où ils étaient, rien n'a été effacé. {0}": "复制失败：模型保留在原处，未删除任何内容。{0}",

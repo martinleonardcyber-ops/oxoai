@@ -882,6 +882,7 @@
   "La connexion au service a échoué.": "Die Verbindung zum Dienst ist fehlgeschlagen.",
   "La connexion est déjà en train d'aboutir.": "Die Verbindung wird bereits abgeschlossen.",
   "La connexion n'a pas abouti": "Die Verbindung ist nicht zustande gekommen",
+  "La connexion s'est arrêtée pendant le téléchargement, ou elle est trop lente : vérifiez-la, puis réessayez.": "Die Verbindung ist während des Downloads abgebrochen oder zu langsam: Prüfen Sie sie und versuchen Sie es erneut.",
   "La conversation dépassait la place de {0} : les plus anciens messages ou résultats ont été retirés pour cette réponse, et la demande renvoyée.": "Die Unterhaltung war größer als der Raum von {0}: Die ältesten Nachrichten oder Ergebnisse wurden für diese Antwort entfernt, und die Anfrage wurde erneut gesendet.",
   "La conversation dépasse ce que {0} peut lire d'un coup. Ouvrez un nouveau Chat, ou retirez une pièce jointe ou une partie du texte.": "Die Unterhaltung übersteigt, was {0} auf einmal lesen kann. Öffnen Sie einen neuen Chat oder entfernen Sie einen Anhang oder einen Teil des Textes.",
   "La copie a échoué : les modèles restent où ils étaient, rien n'a été effacé. {0}": "Das Kopieren ist fehlgeschlagen: Die Modelle bleiben, wo sie waren, es wurde nichts gelöscht. {0}",

@@ -834,6 +834,25 @@ function tailleDesModeles(): number {
   return total;
 }
 
+/**
+ * Ce que l'écran dit d'un téléchargement raté (24/10/2026). La sortie de
+ * `lms get` est surtout sa barre de progression, couleurs et retours chariot
+ * compris : vu sur la machine Windows de l'essai, l'écran affichait
+ * « 24% | 4.08 MB / 1.67 GB | 154.72 KB/s | ETA 02:59:47 » suivi de codes de
+ * terminal. On retire les codes, on écarte les lignes de progression, et s'il
+ * ne reste rien, c'est que la connexion s'est arrêtée en route.
+ */
+export function raisonTelechargement(sortie: string): string {
+  const propre = sortie
+    .replace(/\u001b\[[0-9;?]*[A-Za-z]/g, "")
+    .replace(/\u001b[78su]/g, "")
+    .split(/\r?\n|\r/)
+    .map((l) => l.trim())
+    .filter((l) => l && !/^[⠀-⣿]?\s*\[?[▏▎▍▌▋▊▉█\s]*\]?\s*\d+(?:\.\d+)?%\s*\|/.test(l) && !/^\d+(?:\.\d+)?%\s*\|/.test(l));
+  const reste = [...new Set(propre)].join(" ").slice(-300).trim();
+  return reste || t("La connexion s'est arrêtée pendant le téléchargement, ou elle est trop lente : vérifiez-la, puis réessayez.");
+}
+
 /** Un `lms get` tourne-t-il déjà pour ce modèle, lancé par une session passée ? */
 async function dejaEnTelechargement(key: string): Promise<boolean> {
   /*
@@ -1209,7 +1228,7 @@ async function provision(
           });
           return state;
         }
-        echec = { message, error: got.output.slice(-400) };
+        echec = { message, error: raisonTelechargement(got.output) };
         // Après un téléchargement raté, jamais un modèle plus lourd à télécharger : il échouerait plus sûrement encore.
         plafondGo = Math.min(plafondGo, choice.downloadGb + 0.01);
         continue;

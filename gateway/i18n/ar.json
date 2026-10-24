@@ -882,6 +882,7 @@
   "La connexion au service a échoué.": "فشل الاتصال بالخدمة.",
   "La connexion est déjà en train d'aboutir.": "الاتصال في طور الاكتمال بالفعل.",
   "La connexion n'a pas abouti": "لم يكتمل الاتصال",
+  "La connexion s'est arrêtée pendant le téléchargement, ou elle est trop lente : vérifiez-la, puis réessayez.": "انقطع الاتصال أثناء التنزيل أو أنه بطيء جدًا: تحقّق منه ثم أعد المحاولة.",
   "La conversation dépassait la place de {0} : les plus anciens messages ou résultats ont été retirés pour cette réponse, et la demande renvoyée.": "تجاوزت المحادثة مساحة {0}: أُزيلت أقدم الرسائل أو النتائج لهذه الإجابة، وأُعيد إرسال الطلب.",
   "La conversation dépasse ce que {0} peut lire d'un coup. Ouvrez un nouveau Chat, ou retirez une pièce jointe ou une partie du texte.": "المحادثة تتجاوز ما يستطيع {0} قراءته دفعة واحدة. افتح Chat جديدًا، أو أزِل مرفقًا أو جزءًا من النص.",
   "La copie a échoué : les modèles restent où ils étaient, rien n'a été effacé. {0}": "فشل النسخ: النماذج باقية في مكانها، ولم يُمحَ شيء. {0}",
