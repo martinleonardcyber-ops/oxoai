@@ -3,7 +3,7 @@
   "nomAffiche": "Helix",
   "depotMisesAJour": "medhiclb/HelixAI",
   "private": true,
-  "version": "2026.1024.2",
+  "version": "2026.1024.3",
   "license": "AGPL-3.0-only",
   "description": "Plateforme d'IA souveraine, locale et open source",
   "desktopName": "helix-plateforme.desktop",
