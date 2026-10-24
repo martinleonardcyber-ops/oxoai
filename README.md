@@ -14,13 +14,13 @@
 </p>
 
 <p align="center">
-  <strong>English</strong> ·
   <a href="README.fr.md">Français</a> ·
-  <a href="README.zh.md">中文</a> ·
-  <a href="README.ja.md">日本語</a> ·
+  <strong>English</strong> ·
   <a href="README.es.md">Español</a> ·
   <a href="README.de.md">Deutsch</a> ·
-  <a href="README.ar.md">العربية</a>
+  <a href="README.ar.md">العربية</a> ·
+  <a href="README.zh.md">中文</a> ·
+  <a href="README.ja.md">日本語</a>
 </p>
 
 <p align="center">
