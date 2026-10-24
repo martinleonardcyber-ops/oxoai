@@ -44,21 +44,23 @@ import ar from "@/i18n/ar.json";
  */
 
 /*
- * L'anglais d'abord : c'est la langue de référence du logiciel, celle qu'il
- * prend par défaut (décision de la 0.26.0, rappelée par le client le
- * 25/09/2026). Les phrases françaises restent les clés du catalogue : c'est
- * une affaire de code, pas ce que l'écran présente.
+ * L'ordre de l'écran est celui du site helix-agence.fr (24/10/2026, demandé
+ * par Medhi) : français, anglais, espagnol, allemand, arabe, chinois,
+ * japonais. Il ne décide pas de la langue par défaut : c'est `PAR_DEFAUT`,
+ * l'anglais, quand la langue du système n'est pas reconnue (décision de la
+ * 0.26.0, rappelée le 25/09/2026). Les phrases françaises restent les clés du
+ * catalogue : c'est une affaire de code, pas ce que l'écran présente.
  */
 export const LANGUES = [
-  { code: "en", nom: "Anglais", natif: "English" },
   { code: "fr", nom: "Français", natif: "Français" },
-  { code: "zh", nom: "Chinois", natif: "中文" },
-  // Demandé par Medhi le 28/09/2026.
-  { code: "ja", nom: "Japonais", natif: "日本語" },
+  { code: "en", nom: "Anglais", natif: "English" },
   // Demandés par Medhi le 30/09/2026 : l'espagnol, l'allemand et l'arabe.
   { code: "es", nom: "Espagnol", natif: "Español" },
   { code: "de", nom: "Allemand", natif: "Deutsch" },
   { code: "ar", nom: "Arabe", natif: "العربية" },
+  { code: "zh", nom: "Chinois", natif: "中文" },
+  // Demandé par Medhi le 28/09/2026.
+  { code: "ja", nom: "Japonais", natif: "日本語" },
 ] as const;
 
 export type Langue = (typeof LANGUES)[number]["code"];
