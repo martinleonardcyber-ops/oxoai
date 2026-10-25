@@ -1,0 +1,344 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>OxoAI — Ton espace de travail IA, sur ta machine</title>
+  <meta name="description" content="Chat, agents, code, bases de connaissances et entraînement avec des modèles qui tournent sur ta machine. Gratuit, open source, sans compte.">
+  <meta property="og:title" content="OxoAI — Ton IA, chez toi.">
+  <meta property="og:description" content="L'espace de travail IA local et open source. Rien ne part en ligne sans ta clé.">
+  <meta property="og:image" content="/img/chat.jpg">
+  <meta name="theme-color" content="#110f19">
+  <link rel="icon" href="/img/icon.png">
+  <link rel="preload" href="/fonts/instrument-serif.woff2" as="font" type="font/woff2" crossorigin>
+  <style>
+    @font-face { font-family: 'Figtree'; src: url('/fonts/figtree.woff2') format('woff2'); font-weight: 300 900; font-display: swap; }
+    @font-face { font-family: 'Instrument Serif'; src: url('/fonts/instrument-serif.woff2') format('woff2'); font-weight: 400; font-style: normal; font-display: swap; }
+    @font-face { font-family: 'Instrument Serif'; src: url('/fonts/instrument-serif-italic.woff2') format('woff2'); font-weight: 400; font-style: italic; font-display: swap; }
+
+    :root {
+      --bg: #f4f2ed; --surface: #ffffff; --surface-2: #efece6; --text: #16141c; --text-2: #46434f; --muted: #7a7684;
+      --line: rgba(28, 24, 40, 0.09); --ink: #110f19;
+      --iris: #6a4cf0; --ember: #ff6a45; --ok: #10a37f;
+      --grad: linear-gradient(110deg, #7a5cff 0%, #b45cf0 45%, #ff6a45 100%);
+      --serif: 'Instrument Serif', Georgia, serif;
+      --r: 22px;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root { --bg: #0a0a0e; --surface: #15151c; --surface-2: #1c1c25; --text: #f3f2f7; --text-2: #c9c7d3; --muted: #8f8c9b; --line: rgba(255, 255, 255, 0.08); --iris: #a493ff; --ok: #3ccf9e; }
+    }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body { margin: 0; background: var(--bg); color: var(--text); font-family: 'Figtree', system-ui, sans-serif; font-size: 17px; line-height: 1.55; -webkit-font-smoothing: antialiased; }
+    a { color: inherit; }
+    img { max-width: 100%; height: auto; display: block; }
+    .wrap { width: min(1140px, 100% - 40px); margin: 0 auto; }
+    em.g { font-style: italic; background: var(--grad); -webkit-background-clip: text; background-clip: text; color: transparent; padding-right: 0.06em; }
+
+    /* nav */
+    nav { position: sticky; top: 0; z-index: 10; backdrop-filter: blur(16px) saturate(1.3); background: color-mix(in srgb, var(--bg) 78%, transparent); border-bottom: 1px solid var(--line); }
+    nav .wrap { display: flex; align-items: center; gap: 28px; height: 64px; }
+    .brand { display: flex; align-items: center; gap: 10px; font-weight: 800; font-size: 18px; letter-spacing: -0.02em; text-decoration: none; }
+    .brand img { width: 30px; height: 30px; border-radius: 9px; }
+    nav .links { display: flex; align-items: center; gap: 24px; margin-left: auto; font-size: 15px; font-weight: 600; line-height: 1; }
+    nav .links a { text-decoration: none; color: var(--text-2); }
+    nav .links a:hover { color: var(--text); }
+    .btn { display: inline-flex; align-items: center; gap: 10px; padding: 12px 20px; border-radius: 14px; font-weight: 700; font-size: 15.5px; text-decoration: none; transition: transform 140ms, box-shadow 160ms, background 160ms; white-space: nowrap; }
+    .btn svg { width: 18px; height: 18px; flex: none; }
+    .btn:hover { transform: translateY(-1px); }
+    .btn.dark { background: var(--text); color: var(--bg); }
+    .btn.light { background: #fff; color: #16141c; box-shadow: 0 10px 30px -12px rgba(0, 0, 0, 0.5); }
+    .btn.glass { background: rgba(255, 255, 255, 0.1); color: #fff; border: 1px solid rgba(255, 255, 255, 0.2); }
+    .btn.small { padding: 9px 16px; font-size: 14px; border-radius: 11px; }
+    .btn small { font-weight: 600; opacity: 0.6; }
+
+    /* hero */
+    .hero { position: relative; overflow: hidden; isolation: isolate; background: var(--ink); color: #fff; padding: 110px 0 0; }
+    .hero::before { content: ''; position: absolute; inset: 0; z-index: -1;
+      background: radial-gradient(45% 60% at 85% 20%, rgba(255, 106, 69, 0.42), transparent 65%), radial-gradient(50% 70% at 15% 95%, rgba(122, 92, 255, 0.6), transparent 65%), radial-gradient(35% 50% at 50% 0%, rgba(180, 92, 240, 0.3), transparent 70%); }
+    .hero::after { content: ''; position: absolute; inset: 0; z-index: -1; background-image: radial-gradient(rgba(255, 255, 255, 0.07) 1px, transparent 1px); background-size: 22px 22px; mask-image: linear-gradient(180deg, #000, transparent 80%); }
+    .pill-tag { display: inline-flex; align-items: center; gap: 8px; padding: 6px 14px 6px 10px; border-radius: 999px; background: rgba(255, 255, 255, 0.08); border: 1px solid rgba(255, 255, 255, 0.14); font-size: 14px; font-weight: 600; color: rgba(255, 255, 255, 0.85); }
+    .pill-tag i { width: 8px; height: 8px; border-radius: 50%; background: #5ee0b0; box-shadow: 0 0 0 4px rgba(94, 224, 176, 0.18); }
+    .hero h1 { font-family: var(--serif); font-weight: 400; font-size: clamp(54px, 8.6vw, 112px); line-height: 0.95; letter-spacing: -0.02em; margin: 24px 0 22px; }
+    .hero h1 em { font-style: italic; background: linear-gradient(100deg, #c9b8ff, #ffb19a); -webkit-background-clip: text; background-clip: text; color: transparent; padding-right: 0.06em; }
+    .hero p.lead { font-size: clamp(18px, 2vw, 21px); color: rgba(255, 255, 255, 0.72); max-width: 640px; margin: 0 0 34px; }
+    .cta { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
+    .fine { margin-top: 16px; font-size: 14px; color: rgba(255, 255, 255, 0.55); }
+    .hero-shot { position: relative; margin-top: 70px; }
+    .window { position: relative; border-radius: 16px 16px 0 0; overflow: hidden; border: 1px solid rgba(255, 255, 255, 0.14); border-bottom: 0; background: #161513; box-shadow: 0 -10px 90px -20px rgba(122, 92, 255, 0.55); }
+    .window .bar { display: flex; gap: 8px; padding: 13px 15px; background: #1d1c1a; border-bottom: 1px solid rgba(255, 255, 255, 0.06); }
+    .window .bar i { width: 12px; height: 12px; border-radius: 50%; background: #ff5f57; }
+    .window .bar i:nth-child(2) { background: #febc2e; }
+    .window .bar i:nth-child(3) { background: #28c840; }
+    .shot-note { margin: 16px 0 26px; text-align: center; font-size: 14px; color: rgba(255, 255, 255, 0.6); }
+
+    section { padding: 110px 0; }
+    .kicker { font-size: 13px; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; color: var(--iris); margin-bottom: 14px; }
+    h2 { font-family: var(--serif); font-weight: 400; font-size: clamp(40px, 5.4vw, 66px); line-height: 1; letter-spacing: -0.015em; margin: 0 0 18px; }
+    .sub { color: var(--text-2); font-size: 19px; max-width: 640px; margin: 0; }
+
+    /* steps */
+    .steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; margin-top: 54px; }
+    .step { padding: 30px; border-radius: var(--r); background: var(--surface); border: 1px solid var(--line); }
+    .step .n { font-family: var(--serif); font-style: italic; font-size: 54px; line-height: 1; background: var(--grad); -webkit-background-clip: text; background-clip: text; color: transparent; }
+    .step h3 { font-size: 21px; margin: 18px 0 6px; letter-spacing: -0.01em; }
+    .step p { margin: 0; color: var(--text-2); font-size: 16px; }
+    kbd { font-family: inherit; font-weight: 800; font-size: 0.9em; padding: 2px 9px; border-radius: 8px; background: var(--surface-2); border: 1px solid var(--line); border-bottom-width: 3px; }
+
+    /* features */
+    .feat { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-top: 54px; }
+    .f { padding: 24px; border-radius: 18px; background: var(--surface); border: 1px solid var(--line); }
+    .f .ic { width: 42px; height: 42px; border-radius: 12px; display: grid; place-items: center; background: color-mix(in srgb, var(--iris) 12%, transparent); color: var(--iris); margin-bottom: 16px; }
+    .f .ic svg { width: 21px; height: 21px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+    .f h3 { margin: 0 0 6px; font-size: 17px; letter-spacing: -0.01em; }
+    .f p { margin: 0; color: var(--text-2); font-size: 15px; }
+
+    /* gallery */
+    .gallery { display: grid; grid-template-columns: 1.4fr 1fr; gap: 18px; margin-top: 54px; align-items: start; }
+    .shot { border-radius: 18px; overflow: hidden; border: 1px solid var(--line); background: var(--surface); box-shadow: 0 30px 70px -40px rgba(30, 10, 80, 0.5); }
+    .shot figcaption { padding: 14px 18px; font-size: 14.5px; color: var(--text-2); border-top: 1px solid var(--line); }
+    .stack { display: grid; gap: 18px; }
+
+    /* comparison */
+    table { width: 100%; border-collapse: separate; border-spacing: 0; margin-top: 46px; border-radius: var(--r); overflow: hidden; border: 1px solid var(--line); background: var(--surface); font-size: 16px; }
+    th, td { padding: 16px 22px; text-align: left; border-bottom: 1px solid var(--line); }
+    tr:last-child td { border-bottom: 0; }
+    th { font-size: 14px; color: var(--muted); font-weight: 700; background: var(--surface-2); }
+    th.us, td.us { background: color-mix(in srgb, var(--iris) 7%, var(--surface)); font-weight: 700; }
+    th.us { color: var(--iris); }
+    .yes { color: var(--ok); font-weight: 800; }
+    .note { font-size: 13px; color: var(--muted); margin-top: 14px; }
+
+    /* download */
+    .dl { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin-top: 46px; }
+    .card { padding: 32px; border-radius: var(--r); background: var(--surface); border: 1px solid var(--line); display: flex; flex-direction: column; gap: 14px; }
+    .card h3 { margin: 0; font-size: 26px; letter-spacing: -0.02em; display: flex; align-items: center; gap: 12px; }
+    .card h3 svg { width: 26px; height: 26px; }
+    .card ol { margin: 0; padding-left: 20px; color: var(--text-2); font-size: 15.5px; display: grid; gap: 6px; }
+    .card .btn { align-self: flex-start; margin-top: 6px; }
+    .req { font-size: 14px; color: var(--muted); }
+    .dl-count { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; margin: 26px 0 -20px; padding: 9px 16px; border-radius: 999px; background: var(--surface); border: 1px solid var(--line); font-size: 15px; color: var(--text-2); }
+    .dl-count b { color: var(--text); font-variant-numeric: tabular-nums; }
+    .dl-count .split { color: var(--muted); }
+    @media (min-width: 520px) { .dl-count .split { padding-left: 10px; border-left: 1px solid var(--line); } }
+    .dl-count .pulse { width: 8px; height: 8px; border-radius: 50%; background: var(--ok); box-shadow: 0 0 0 4px color-mix(in srgb, var(--ok) 18%, transparent); }
+    [hidden] { display: none !important; }
+
+    /* faq */
+    details { border-bottom: 1px solid var(--line); padding: 20px 0; }
+    details:first-of-type { border-top: 1px solid var(--line); margin-top: 40px; }
+    summary { cursor: pointer; font-weight: 700; font-size: 18px; list-style: none; display: flex; justify-content: space-between; gap: 20px; }
+    summary::after { content: '+'; font-weight: 400; font-size: 26px; line-height: 1; color: var(--muted); transition: transform 200ms; }
+    details[open] summary::after { transform: rotate(45deg); }
+    details p { color: var(--text-2); margin: 12px 0 0; max-width: 780px; }
+
+    /* final */
+    .final { text-align: center; background: var(--ink); color: #fff; position: relative; overflow: hidden; isolation: isolate; }
+    .final::before { content: ''; position: absolute; inset: 0; z-index: -1; background: radial-gradient(50% 80% at 50% 120%, rgba(122, 92, 255, 0.6), transparent 70%), radial-gradient(30% 50% at 85% 0%, rgba(255, 106, 69, 0.35), transparent 70%); }
+    .final h2 { font-size: clamp(46px, 7vw, 88px); }
+    .final .cta { justify-content: center; margin-top: 30px; }
+    footer { padding: 40px 0 50px; font-size: 14px; color: var(--muted); }
+    footer .wrap { display: flex; flex-wrap: wrap; gap: 14px 28px; justify-content: space-between; }
+    footer a { color: var(--text-2); }
+
+    .reveal { opacity: 0; transform: translateY(18px); transition: opacity 700ms ease, transform 700ms cubic-bezier(0.2, 0.8, 0.2, 1); }
+    .reveal.in { opacity: 1; transform: none; }
+
+    @media (max-width: 960px) {
+      .steps, .feat, .dl, .gallery { grid-template-columns: 1fr 1fr; }
+      nav .links a:not(.btn) { display: none; }
+    }
+    @media (max-width: 640px) {
+      body { font-size: 16px; }
+      .steps, .feat, .dl, .gallery { grid-template-columns: 1fr; }
+      section { padding: 76px 0; }
+      .hero { padding-top: 70px; }
+      th, td { padding: 12px 12px; font-size: 14px; }
+    }
+    @media (max-width: 420px) {
+      .cta .btn { flex: 1 1 100%; justify-content: center; }
+      .btn small { display: none; }
+      table { table-layout: fixed; }
+      th, td { padding: 10px 8px; font-size: 13px; overflow-wrap: anywhere; }
+      th:first-child, td:first-child { width: 31%; }
+      .card { padding: 22px 18px; }
+      .card .btn { align-self: stretch; justify-content: center; white-space: normal; }
+    }
+    .dl > *, .steps > *, .feat > *, .gallery > * { min-width: 0; }
+    @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } .reveal { opacity: 1; transform: none; } }
+      .soon { display: inline-flex; align-items: center; gap: 8px; padding: 5px 12px; border-radius: 999px; font-size: 13px; font-weight: 700; background: color-mix(in srgb, var(--ember) 14%, transparent); color: var(--ember); align-self: flex-start; }
+    pre.cmd { margin: 0; padding: 14px 16px; border-radius: 12px; background: var(--ink); color: #e9e6f5; font-size: 13.5px; line-height: 1.6; overflow-x: auto; }
+    .credit { font-size: 14px; color: var(--muted); }
+  </style>
+</head>
+<body>
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <symbol id="apple" viewBox="0 0 24 24"><path fill="currentColor" d="M16.4 12.6c0-2.4 2-3.6 2.1-3.7-1.1-1.7-2.9-1.9-3.5-1.9-1.5-.2-2.9.9-3.7.9-.8 0-1.9-.9-3.2-.8-1.6 0-3.1 1-4 2.4-1.7 3-.4 7.4 1.2 9.8.8 1.2 1.8 2.5 3 2.4 1.2 0 1.7-.8 3.1-.8s1.9.8 3.2.8c1.3 0 2.1-1.2 2.9-2.4.9-1.3 1.3-2.6 1.3-2.7 0 0-2.4-.9-2.4-4zM14 5.3c.7-.8 1.1-1.9 1-3-.9 0-2.1.6-2.8 1.4-.6.7-1.2 1.8-1 2.9 1.1.1 2.1-.5 2.8-1.3z"/></symbol>
+    <symbol id="win" viewBox="0 0 24 24"><path fill="currentColor" d="M3 5.5 10.4 4.5v7H3zM11.4 4.4 21 3v8.5h-9.6zM3 12.5h7.4v7L3 18.5zM11.4 12.5H21V21l-9.6-1.4z"/></symbol>
+    <symbol id="gh" viewBox="0 0 24 24"><path fill="currentColor" d="M12 2a10 10 0 0 0-3.2 19.5c.5.1.7-.2.7-.5v-1.7c-2.8.6-3.4-1.3-3.4-1.3-.5-1.2-1.1-1.5-1.1-1.5-.9-.6.1-.6.1-.6 1 .1 1.5 1 1.5 1 .9 1.5 2.3 1.1 2.9.8.1-.6.4-1.1.6-1.3-2.2-.3-4.6-1.1-4.6-5 0-1.1.4-2 1-2.7-.1-.2-.4-1.3.1-2.7 0 0 .8-.3 2.8 1a9.6 9.6 0 0 1 5 0c1.9-1.3 2.8-1 2.8-1 .5 1.4.2 2.5.1 2.7.6.7 1 1.6 1 2.7 0 3.9-2.4 4.7-4.6 5 .4.3.7.9.7 1.9v2.8c0 .3.2.6.7.5A10 10 0 0 0 12 2z"/></symbol>
+  </svg>
+
+  <nav>
+    <div class="wrap">
+      <a class="brand" href="#"><img src="/img/icon.png" alt="">OxoAI</a>
+      <div class="links">
+        <a href="#comment">Comment ça marche</a>
+        <a href="#fonctions">Fonctions</a>
+        <a href="#comparaison">Comparaison</a>
+        <a href="https://github.com/martinleonardcyber-ops/oxoai">GitHub</a>
+        <a class="btn dark small" href="#telecharger">Télécharger</a>
+      </div>
+    </div>
+  </nav>
+
+  <header class="hero">
+    <div class="wrap">
+      <span class="pill-tag"><i></i>Gratuit · Open source · 100 % local</span>
+      <h1>Ton IA,<br><em>chez toi.</em></h1>
+      <p class="lead">Discute, fais travailler des agents, code et interroge tes documents avec des modèles qui tournent sur ta machine. Rien ne part en ligne sans une clé que tu ajoutes toi-même.</p>
+      <div class="cta">
+        <a class="btn light" href="#telecharger"><svg><use href="#apple"/></svg>Bientôt sur Mac</a>
+        <a class="btn glass" href="https://github.com/martinleonardcyber-ops/oxoai"><svg><use href="#gh"/></svg>Voir le code</a>
+      </div>
+      <p class="fine">macOS, Windows et Linux · interface en 7 langues · licence AGPL-3.0</p>
+      <div class="hero-shot">
+        <div class="window"><div class="bar" aria-hidden="true"><i></i><i></i><i></i></div>
+          <img src="/img/chat.jpg" alt="Un chat d’OxoAI : la réponse d’un modèle Qwen qui tourne sur la machine, avec le temps de réflexion" width="1800" height="1125">
+        </div>
+      </div>
+      <p class="shot-note">Une vraie conversation : Qwen 3 a répondu en 38 secondes, sur un Mac, sans connexion à un service d’IA.</p>
+    </div>
+  </header>
+
+  <section id="comment">
+    <div class="wrap">
+      <div class="kicker reveal">Comment ça marche</div>
+      <h2 class="reveal">Installe, choisis, <em class="g">travaille.</em></h2>
+      <p class="sub reveal">OxoAI s’occupe de la partie technique : le moteur, le modèle et la mémoire de ta machine.</p>
+      <div class="steps">
+        <div class="step reveal"><div class="n">1</div><h3>Installe OxoAI</h3><p>Une application de bureau, comme les autres. Pas de compte en ligne : ton compte reste sur ta machine.</p></div>
+        <div class="step reveal"><div class="n">2</div><h3>Un modèle à ta taille</h3><p>OxoAI installe le moteur de LM Studio et le modèle ouvert le mieux noté qui tient dans ta mémoire. Tu peux en choisir d’autres.</p></div>
+        <div class="step reveal"><div class="n">3</div><h3>Au travail</h3><p>Chat, agents, code, documents : tout se calcule sur ta machine. Un modèle cloud ne sert que si tu ajoutes sa clé.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="fonctions" style="padding-top:0">
+    <div class="wrap">
+      <div class="kicker reveal">Fonctions</div>
+      <h2 class="reveal">Tout un atelier, <em class="g">sans abonnement.</em></h2>
+      <div class="feat">
+        <div class="f reveal"><div class="ic"><svg viewBox="0 0 24 24"><path d="M4 6.5A2.5 2.5 0 0 1 6.5 4h11A2.5 2.5 0 0 1 20 6.5v8a2.5 2.5 0 0 1-2.5 2.5H10l-4 3.5V17h0a2 2 0 0 1-2-2z"/></svg></div><h3>Chat</h3><p>Qwen, Mistral, gpt-oss, GLM, Granite… choisis pour ta machine. Pièces jointes, dictée, recherche sur le web avec ses sources.</p></div>
+        <div class="f reveal"><div class="ic"><svg viewBox="0 0 24 24"><path d="M5 18.5V5.5A2 2 0 0 1 7 3.5h12v14H7a2 2 0 0 0-2 2 2 2 0 0 0 2 2h12"/><path d="M9 8h6M9 11.5h4"/></svg></div><h3>Bases de connaissances</h3><p>Tes documents indexés sur la machine. Les réponses citent les passages qu’elles utilisent.</p></div>
+        <div class="f reveal"><div class="ic"><svg viewBox="0 0 24 24"><rect x="4" y="7" width="16" height="12" rx="3"/><path d="M12 7V4M9 12h.01M15 12h.01M9.5 15.5h5"/></svg></div><h3>Agents</h3><p>Des agents avec leurs missions programmées, qui tournent fenêtre fermée et laissent un compte rendu.</p></div>
+        <div class="f reveal"><div class="ic"><svg viewBox="0 0 24 24"><path d="M16 18l6-6-6-6M8 6l-6 6 6 6"/></svg></div><h3>OxoAI Code</h3><p>Un agent de code sur ton projet, avec ses tâches et ses fichiers en direct. Aussi dans VS Code et le terminal.</p></div>
+        <div class="f reveal"><div class="ic"><svg viewBox="0 0 24 24"><path d="M7 3.5h7l4 4v13H7z"/><path d="M14 3.5v4h4M10 12h5M10 15.5h5"/></svg></div><h3>Cowork</h3><p>Un agent qui produit des documents Word, Excel, PowerPoint et PDF à partir de tes fichiers.</p></div>
+        <div class="f reveal"><div class="ic"><svg viewBox="0 0 24 24"><rect x="8.5" y="3.5" width="7" height="11" rx="3.5"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5v3"/></svg></div><h3>Réunions</h3><p>Enregistrées, transcrites avec Whisper et résumées sur ta machine, avec décisions et tâches.</p></div>
+        <div class="f reveal"><div class="ic"><svg viewBox="0 0 24 24"><path d="M12 3.5 5 6v5.5c0 4.3 3 7.7 7 9 4-1.3 7-4.7 7-9V6z"/><path d="m9 12 2.2 2.2L15.5 10"/></svg></div><h3>Ton accord d’abord</h3><p>Mail, agenda, Drive, Slack, Notion, serveurs MCP : rien qui modifie quelque chose ne se fait sans toi.</p></div>
+        <div class="f reveal"><div class="ic"><svg viewBox="0 0 24 24"><path d="M12 3.5 13.7 9 19 10.7 13.7 12.4 12 18l-1.7-5.6L5 10.7 10.3 9z"/></svg></div><h3>Entraînement</h3><p>Apprends tes propres faits à un petit modèle ouvert à partir d’exemples, puis utilise-le dans le Chat.</p></div>
+      </div>
+
+      <div class="gallery">
+        <figure class="shot reveal" style="margin:0"><img src="/img/modeles.jpg" alt="La page Modèles : les modèles libres installables sur la machine, avec leur note et leur taille" loading="lazy" width="1800" height="1125"><figcaption>Les modèles libres que ta machine fait tourner, avec leur note, leur taille et leur licence.</figcaption></figure>
+        <div class="stack">
+          <figure class="shot reveal" style="margin:0"><img src="/img/code.jpg" alt="OxoAI Code, prêt à travailler sur un projet" loading="lazy" width="1800" height="1125"><figcaption>OxoAI Code, avec l’approbation avant chaque modification.</figcaption></figure>
+          <figure class="shot reveal" style="margin:0"><img src="/img/reunions.jpg" alt="La page Réunions" loading="lazy" width="1800" height="1125"><figcaption>Les réunions, transcrites sur ta machine.</figcaption></figure>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="comparaison" style="padding-top:0">
+    <div class="wrap">
+      <div class="kicker reveal">Comparaison</div>
+      <h2 class="reveal">Une IA à toi, <em class="g">pas en location.</em></h2>
+      <p class="sub reveal">Ce qui change quand le modèle tourne sur ta machine plutôt que chez un service en ligne.</p>
+      <table class="reveal">
+        <thead><tr><th></th><th class="us">OxoAI</th><th>Assistant IA en ligne</th></tr></thead>
+        <tbody>
+          <tr><td>Où vont tes messages</td><td class="us">Nulle part : ils restent sur ta machine</td><td>Sur les serveurs du service</td></tr>
+          <tr><td>Compte</td><td class="us">Local, aucun compte en ligne</td><td>Compte en ligne obligatoire</td></tr>
+          <tr><td>Hors connexion</td><td class="us"><span class="yes">Oui</span>, une fois le modèle installé</td><td>Non</td></tr>
+          <tr><td>Prix</td><td class="us">Gratuit</td><td>Souvent un abonnement pour aller plus loin</td></tr>
+          <tr><td>Code source</td><td class="us">Public, licence AGPL-3.0</td><td>Fermé, en général</td></tr>
+          <tr><td>Puissance des modèles</td><td class="us">Celle de ta machine (ou un modèle cloud avec ta clé)</td><td>Les plus gros modèles du marché</td></tr>
+        </tbody>
+      </table>
+      <p class="note">Une comparaison générale : chaque service en ligne a ses propres règles, à vérifier chez lui.</p>
+    </div>
+  </section>
+
+  <section id="telecharger" style="padding-top:0">
+    <div class="wrap">
+      <div class="kicker reveal">Télécharger</div>
+      <h2 class="reveal">Bientôt <em class="g">dans tes Applications.</em></h2>
+      <p class="sub reveal">La première version téléchargeable d’OxoAI est en préparation. En attendant, tu peux le lancer depuis son code.</p>
+      <p class="dl-count" id="dl-count" hidden><span class="pulse"></span><span><b data-dl="total"></b> <span data-dl="total-word"></span></span></p>
+      <div class="dl">
+        <div class="card reveal">
+          <h3><svg><use href="#apple"/></svg>Mac, Windows, Linux</h3>
+          <span class="soon">Première version en préparation</span>
+          <p class="req" style="margin:0">Les fichiers d’installation (.dmg, .exe, AppImage) arriveront dans les publications GitHub. Mac avec puce Apple conseillé, 16 Go de mémoire pour les meilleurs modèles.</p>
+          <a class="btn dark" href="https://github.com/martinleonardcyber-ops/oxoai/releases"><svg><use href="#gh"/></svg>Suivre les publications</a>
+        </div>
+        <div class="card reveal">
+          <h3><svg><use href="#gh"/></svg>Depuis le code</h3>
+          <pre class="cmd">git clone https://github.com/martinleonardcyber-ops/oxoai.git
+cd oxoai && npm ci
+npm run dev   # puis, dans un 2e terminal :
+npm run app</pre>
+          <span class="req">Il faut Node.js. Le guide complet est dans le README.</span>
+          <a class="btn dark" href="https://github.com/martinleonardcyber-ops/oxoai#lancer-depuis-les-sources"><svg><use href="#gh"/></svg>Lire le README</a>
+        </div>
+      </div>
+
+      <details class="reveal"><summary>Est-ce que mes conversations sont envoyées quelque part ?</summary><p>Non, tant que tu utilises un modèle local : tout se calcule sur ta machine. Une conversation ne part chez un fournisseur cloud que si tu ajoutes sa clé d’API et choisis un de ses modèles ; le sélecteur dit où tourne chaque modèle. La recherche sur le web, si tu l’actives, envoie tes questions à DuckDuckGo.</p></details>
+      <details class="reveal"><summary>Il faut quelle machine ?</summary><p>OxoAI choisit un modèle qui tient dans la mémoire de ta machine, du petit portable à la station de travail. 16 Go de mémoire sont conseillés ; avec moins, un modèle plus léger est choisi. Les Mac à puce Apple s’en sortent très bien.</p></details>
+      <details class="reveal"><summary>D’où vient OxoAI ?</summary><p>OxoAI est une version modifiée de <a href="https://github.com/medhiclb/HelixAI">HelixAI</a>, créé par Medhi Clabaut (Helix Agence) et publié sous licence AGPL-3.0. OxoAI reste sous la même licence, avec son code entièrement public. Il n’est pas affilié à HelixAI.</p></details>
+      <details class="reveal"><summary>C’est vraiment gratuit ?</summary><p>Oui. Pas d’abonnement, pas de compte, pas de publicité, pas de télémétrie. Seuls les modèles cloud, si tu choisis d’en brancher un, te sont facturés par leur fournisseur avec ta propre clé.</p></details>
+    </div>
+  </section>
+
+  <section class="final">
+    <div class="wrap">
+      <h2>Ton IA.<br><em style="font-style:italic;background:linear-gradient(100deg,#c9b8ff,#ffb19a);-webkit-background-clip:text;background-clip:text;color:transparent">Tes données.</em></h2>
+      <div class="cta">
+        <a class="btn light" href="https://github.com/martinleonardcyber-ops/oxoai"><svg><use href="#gh"/></svg>Voir OxoAI sur GitHub</a>
+        <a class="btn glass" href="https://oxoflow.vercel.app">Découvrir OxoFlow</a>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <div class="wrap">
+      <span>OxoAI · licence AGPL-3.0 · version modifiée de <a href="https://github.com/medhiclb/HelixAI">HelixAI</a></span>
+      <span><a href="https://github.com/martinleonardcyber-ops/oxoai">GitHub</a> · <a href="https://github.com/martinleonardcyber-ops/oxoai/releases">Versions</a> · <a href="https://github.com/martinleonardcyber-ops/oxoai/issues">Signaler un problème</a></span>
+    </div>
+  </footer>
+
+  <script>
+    // real download count: sum of every release asset's download_count on GitHub
+    // (stays hidden while nothing has been published, never a made-up number)
+    (async () => {
+      let n;
+      try { n = JSON.parse(sessionStorage.getItem('oxoai-dl') || 'null'); } catch { n = null; }
+      if (!n) {
+        try {
+          const r = await fetch('https://api.github.com/repos/martinleonardcyber-ops/oxoai/releases?per_page=100');
+          if (!r.ok) return;
+          n = { total: 0 };
+          for (const rel of await r.json()) for (const a of rel.assets || []) if (/\.(dmg|exe|AppImage|deb|zip)$/i.test(a.name)) n.total += a.download_count;
+          try { sessionStorage.setItem('oxoai-dl', JSON.stringify(n)); } catch { /* private mode */ }
+        } catch { return; }
+      }
+      if (!n.total) return;
+      const set = (k, v) => document.querySelectorAll(`[data-dl="${k}"]`).forEach((el) => { el.textContent = v; });
+      set('total', n.total.toLocaleString('fr-FR')); set('total-word', n.total > 1 ? 'téléchargements' : 'téléchargement');
+      document.getElementById('dl-count').hidden = false;
+    })();
+    // reveal on scroll
+    const io = new IntersectionObserver((es) => es.forEach((e) => { if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); } }), { threshold: 0.12 });
+    document.querySelectorAll('.reveal').forEach((el) => io.observe(el));
+  </script>
+</body>
+</html>

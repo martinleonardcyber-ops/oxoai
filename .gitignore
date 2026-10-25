@@ -26,3 +26,6 @@ screenshots/
 .oxoai-editeur/
 .env
 .env.*
+
+# Vercel
+.vercel
