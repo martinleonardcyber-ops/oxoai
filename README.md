@@ -12,6 +12,8 @@ tournent en local. Gratuit, open source, sans compte et sans télémétrie.</p>
   <img alt="Interface en 7 langues" src="https://img.shields.io/badge/interface-7%20langues-e266b2">
 </p>
 
+<p align="center"><a href="https://oxoai.vercel.app"><b>oxoai.vercel.app</b></a></p>
+
 <p align="center"><sub>OxoAI est une version modifiée de <a href="https://github.com/medhiclb/HelixAI">HelixAI</a>,
 de Medhi Clabaut (Helix Agence). De la même famille que <a href="https://github.com/martinleonardcyber-ops/oxoflow">OxoFlow</a>.</sub></p>
 
