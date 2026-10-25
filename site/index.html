@@ -168,6 +168,9 @@
     @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } .reveal { opacity: 1; transform: none; } }
       .soon { display: inline-flex; align-items: center; gap: 8px; padding: 5px 12px; border-radius: 999px; font-size: 13px; font-weight: 700; background: color-mix(in srgb, var(--ember) 14%, transparent); color: var(--ember); align-self: flex-start; }
     pre.cmd { margin: 0; padding: 14px 16px; border-radius: 12px; background: var(--ink); color: #e9e6f5; font-size: 13.5px; line-height: 1.6; overflow-x: auto; }
+    #cmd { white-space: pre-wrap; word-break: break-all; }
+    .btn.ghost { background: transparent; color: var(--text); border: 1px solid var(--line); cursor: pointer; font-family: inherit; }
+    .card .cta .btn { margin-top: 0; align-self: auto; }
     .credit { font-size: 14px; color: var(--muted); }
   </style>
 </head>
@@ -197,10 +200,10 @@
       <h1>Ton IA,<br><em>chez toi.</em></h1>
       <p class="lead">Discute, fais travailler des agents, code et interroge tes documents avec des modèles qui tournent sur ta machine. Rien ne part en ligne sans une clé que tu ajoutes toi-même.</p>
       <div class="cta">
-        <a class="btn light" href="#telecharger"><svg><use href="#apple"/></svg>Bientôt sur Mac</a>
+        <a class="btn light" data-dmg href="https://github.com/martinleonardcyber-ops/oxoai/releases/download/v2026.1026.0/OxoAI-2026.1026.0-arm64.dmg"><svg><use href="#apple"/></svg>Télécharger pour Mac <small>Apple Silicon</small></a>
         <a class="btn glass" href="https://github.com/martinleonardcyber-ops/oxoai"><svg><use href="#gh"/></svg>Voir le code</a>
       </div>
-      <p class="fine">macOS, Windows et Linux · interface en 7 langues · licence AGPL-3.0</p>
+      <p class="fine">Mac à puce Apple (M1 et suivants) · Windows et Linux bientôt · <a href="#telecharger">installation</a><span class="dl-hero" hidden> · <b data-dl="total"></b> <span data-dl="total-word"></span></span></p>
       <div class="hero-shot">
         <div class="window"><div class="bar" aria-hidden="true"><i></i><i></i><i></i></div>
           <img src="/img/chat.jpg" alt="Un chat d’OxoAI : la réponse d’un modèle Qwen qui tourne sur la machine, avec le temps de réflexion" width="1800" height="1125">
@@ -271,24 +274,32 @@
   <section id="telecharger" style="padding-top:0">
     <div class="wrap">
       <div class="kicker reveal">Télécharger</div>
-      <h2 class="reveal">Bientôt <em class="g">dans tes Applications.</em></h2>
-      <p class="sub reveal">La première version téléchargeable d’OxoAI est en préparation. En attendant, tu peux le lancer depuis son code.</p>
+      <h2 class="reveal">Prêt en <em class="g">deux minutes.</em></h2>
+      <p class="sub reveal">L’application n’est pas signée par Apple (c’est payant) : la commande ci-dessous l’installe sans l’avertissement de macOS, sinon il y a un écran à passer au premier lancement.</p>
       <p class="dl-count" id="dl-count" hidden><span class="pulse"></span><span><b data-dl="total"></b> <span data-dl="total-word"></span></span></p>
       <div class="dl">
         <div class="card reveal">
-          <h3><svg><use href="#apple"/></svg>Mac, Windows, Linux</h3>
-          <span class="soon">Première version en préparation</span>
-          <p class="req" style="margin:0">Les fichiers d’installation (.dmg, .exe, AppImage) arriveront dans les publications GitHub. Mac avec puce Apple conseillé, 16 Go de mémoire pour les meilleurs modèles.</p>
-          <a class="btn dark" href="https://github.com/martinleonardcyber-ops/oxoai/releases"><svg><use href="#gh"/></svg>Suivre les publications</a>
+          <h3><svg><use href="#apple"/></svg>Mac</h3>
+          <ol>
+            <li><b>En une commande</b> (conseillé) : ouvre le Terminal, colle-la et appuie sur Entrée. Elle vérifie le fichier puis installe OxoAI dans Applications.</li>
+          </ol>
+          <pre class="cmd" id="cmd">curl -fsSL https://raw.githubusercontent.com/martinleonardcyber-ops/oxoai/main/scripts/installer-macos.sh | sh</pre>
+          <ol start="2">
+            <li><b>Ou à la main</b> : ouvre le <b>.dmg</b> et glisse OxoAI dans Applications. Si macOS refuse de l’ouvrir : <i>Réglages Système › Confidentialité et sécurité</i>, puis <b>Ouvrir quand même</b>.</li>
+            <li>Au premier lancement, choisis <b>Poste autonome</b> : OxoAI installe son moteur et un modèle adapté à ta machine.</li>
+          </ol>
+          <span class="req">macOS sur puce Apple (M1 et suivantes) · 16 Go de mémoire conseillés · le modèle (plusieurs Go) se télécharge une fois</span>
+          <div class="cta"><a class="btn dark" data-dmg href="https://github.com/martinleonardcyber-ops/oxoai/releases/download/v2026.1026.0/OxoAI-2026.1026.0-arm64.dmg"><svg><use href="#apple"/></svg>Télécharger le .dmg</a><button class="btn ghost" type="button" id="copier">Copier la commande</button></div>
         </div>
         <div class="card reveal">
-          <h3><svg><use href="#gh"/></svg>Depuis le code</h3>
+          <h3><svg><use href="#win"/></svg>Windows et Linux</h3>
+          <span class="soon">Bientôt</span>
+          <p class="req" style="margin:0">Les versions Windows et Linux arriveront dans les publications GitHub. En attendant, OxoAI se lance depuis son code sur les trois systèmes.</p>
           <pre class="cmd">git clone https://github.com/martinleonardcyber-ops/oxoai.git
 cd oxoai && npm ci
 npm run dev   # puis, dans un 2e terminal :
 npm run app</pre>
-          <span class="req">Il faut Node.js. Le guide complet est dans le README.</span>
-          <a class="btn dark" href="https://github.com/martinleonardcyber-ops/oxoai#lancer-depuis-les-sources"><svg><use href="#gh"/></svg>Lire le README</a>
+          <a class="btn dark" href="https://github.com/martinleonardcyber-ops/oxoai/releases"><svg><use href="#gh"/></svg>Toutes les versions</a>
         </div>
       </div>
 
@@ -303,7 +314,8 @@ npm run app</pre>
     <div class="wrap">
       <h2>Ton IA.<br><em style="font-style:italic;background:linear-gradient(100deg,#c9b8ff,#ffb19a);-webkit-background-clip:text;background-clip:text;color:transparent">Tes données.</em></h2>
       <div class="cta">
-        <a class="btn light" href="https://github.com/martinleonardcyber-ops/oxoai"><svg><use href="#gh"/></svg>Voir OxoAI sur GitHub</a>
+        <a class="btn light" data-dmg href="https://github.com/martinleonardcyber-ops/oxoai/releases/download/v2026.1026.0/OxoAI-2026.1026.0-arm64.dmg"><svg><use href="#apple"/></svg>Télécharger pour Mac</a>
+        <a class="btn glass" href="https://github.com/martinleonardcyber-ops/oxoai"><svg><use href="#gh"/></svg>Code source</a>
         <a class="btn glass" href="https://oxoflow.vercel.app">Découvrir OxoFlow</a>
       </div>
     </div>
@@ -326,16 +338,27 @@ npm run app</pre>
         try {
           const r = await fetch('https://api.github.com/repos/martinleonardcyber-ops/oxoai/releases?per_page=100');
           if (!r.ok) return;
-          n = { total: 0 };
-          for (const rel of await r.json()) for (const a of rel.assets || []) if (/\.(dmg|exe|AppImage|deb|zip)$/i.test(a.name)) n.total += a.download_count;
+          n = { total: 0, dmg: null };
+          const rels = await r.json();
+          for (const rel of rels) for (const a of rel.assets || []) if (/\.(dmg|exe|AppImage|deb)$/i.test(a.name)) n.total += a.download_count;
+          const last = rels.find((x) => !x.draft && !x.prerelease);
+          n.dmg = last?.assets?.find((a) => /-arm64\.dmg$/.test(a.name))?.browser_download_url ?? null;
           try { sessionStorage.setItem('oxoai-dl', JSON.stringify(n)); } catch { /* private mode */ }
         } catch { return; }
       }
+      if (n.dmg && n.dmg.startsWith('https://github.com/martinleonardcyber-ops/oxoai/')) document.querySelectorAll('[data-dmg]').forEach((a) => { a.href = n.dmg; });
       if (!n.total) return;
+      document.querySelector('.dl-hero').hidden = false;
       const set = (k, v) => document.querySelectorAll(`[data-dl="${k}"]`).forEach((el) => { el.textContent = v; });
       set('total', n.total.toLocaleString('fr-FR')); set('total-word', n.total > 1 ? 'téléchargements' : 'téléchargement');
       document.getElementById('dl-count').hidden = false;
     })();
+    // copy the install command
+    document.getElementById('copier').addEventListener('click', async (e) => {
+      try { await navigator.clipboard.writeText(document.getElementById('cmd').textContent); e.target.textContent = 'Commande copiée'; }
+      catch { e.target.textContent = 'Sélectionne-la et copie-la'; }
+      setTimeout(() => { e.target.textContent = 'Copier la commande'; }, 2500);
+    });
     // reveal on scroll
     const io = new IntersectionObserver((es) => es.forEach((e) => { if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); } }), { threshold: 0.12 });
     document.querySelectorAll('.reveal').forEach((el) => io.observe(el));

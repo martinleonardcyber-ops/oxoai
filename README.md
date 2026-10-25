@@ -49,9 +49,23 @@ de Medhi Clabaut (Helix Agence). De la même famille que <a href="https://github
 
 ## Installation
 
-Les premières versions téléchargeables d'OxoAI arrivent bientôt dans les
-[publications](https://github.com/martinleonardcyber-ops/oxoai/releases). En attendant, tu peux
-le lancer depuis les sources.
+**Mac à puce Apple (M1 et suivants)** : télécharge la [dernière version](https://github.com/martinleonardcyber-ops/oxoai/releases/latest).
+
+En une commande (conseillé) : l'image disque est vérifiée contre `SHA256SUMS.txt`, puis OxoAI
+s'installe dans Applications sans l'avertissement de macOS.
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/martinleonardcyber-ops/oxoai/main/scripts/installer-macos.sh | sh
+```
+
+Ou à la main : ouvre le `.dmg` et glisse OxoAI dans Applications. L'application n'est pas
+signée par Apple : au premier lancement, va dans *Réglages Système › Confidentialité et
+sécurité* et clique sur **Ouvrir quand même**.
+
+Au premier lancement, choisis **Poste autonome** : OxoAI installe le moteur de LM Studio et le
+modèle le mieux adapté à ta mémoire (16 Go conseillés).
+
+Windows et Linux arrivent bientôt ; en attendant, OxoAI se lance depuis les sources.
 
 ## Lancer depuis les sources
 
