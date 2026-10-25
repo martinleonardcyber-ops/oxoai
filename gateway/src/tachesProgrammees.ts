@@ -7,7 +7,7 @@ import { phraseLangue } from "./plan.ts";
 import { t, tf } from "./langue.ts";
 
 /**
- * Les tâches programmées : une consigne, un rythme, et Helix l'exécute avec les
+ * Les tâches programmées : une consigne, un rythme, et OxoAI l'exécute avec les
  * outils de la personne, fenêtre fermée ou non.
  *
  * Demandé par Medhi le 26/09/2026 : « je veux programmer des tâches comme le
@@ -436,14 +436,14 @@ export function toolsForModel(): Outil[] {
       function: {
         name: "taches__programmer",
         description:
-          "Programme une tâche que Helix exécutera seul, avec les outils de la personne, à un rythme régulier (même fenêtre fermée). " +
+          "Programme une tâche que OxoAI exécutera seul, avec les outils de la personne, à un rythme régulier (même fenêtre fermée). " +
           "Par exemple : chaque lundi à 8 h, résumer les mails de la semaine. La personne verra la tâche et l'acceptera avant qu'elle soit créée.",
         parameters: {
           type: "object",
           required: ["titre", "consigne", "rythme", "heure"],
           properties: {
             titre: { type: "string", description: "Nom court de la tâche." },
-            consigne: { type: "string", description: "Ce que Helix doit faire à chaque fois, précisément." },
+            consigne: { type: "string", description: "Ce que OxoAI doit faire à chaque fois, précisément." },
             rythme: { type: "string", enum: ["chaque-jour", "jours-ouvres", "chaque-semaine", "chaque-mois"] },
             jour: { type: "number", description: "Pour chaque-semaine : 0 dimanche, 1 lundi … 6 samedi. Pour chaque-mois : 1 à 31, ou -1 pour le dernier jour du mois." },
             heure: { type: "string", description: "HH:MM, heure de la machine." },

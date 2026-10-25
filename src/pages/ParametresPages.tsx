@@ -101,7 +101,7 @@ import { t, tf } from "@/lib/i18n";
 /* ========================================================================== */
 /*
  * L'identité du compte (nom, adresse) appartient à l'instance : elle est créée
- * par « /helix/auth/create », modifiée par « /helix/auth/profil », et relue à
+ * par « /oxoai/auth/create », modifiée par « /oxoai/auth/profil », et relue à
  * chaque connexion. L'écran n'enregistre donc rien lui-même : il envoie, puis
  * n'affiche comme fait que ce que l'instance a accepté. Un nom changé ici et
  * gardé seulement dans le navigateur serait écrasé à la connexion suivante,
@@ -445,7 +445,7 @@ function CarteInstance() {
         <Input
           value={adresse}
           onChange={(e) => setAdresse(e.target.value)}
-          placeholder={t("helix.mon-entreprise.fr")}
+          placeholder={t("oxoai.mon-entreprise.fr")}
         />
       </Field>
       {echec && (
@@ -578,6 +578,18 @@ export function PreferencesSettings() {
           >
             <Code2 size={14} strokeWidth={1.75} />{" "}{tf("Code source de {0}", branding.name)}
           </a>
+          {/* AGPL § 5 : la version modifiée le dit, et les droits d'origine restent cités. */}
+          <p className="mt-3">
+            {tf("{0} est une version modifiée de {1}, logiciel créé par {2}. Les droits d'auteur sur le code d'origine restent les siens.", branding.name, "HelixAI", "Medhi Clabaut (Helix Agence)")}{" "}
+            <a
+              href="https://github.com/medhiclb/HelixAI"
+              target="_blank"
+              rel="noreferrer"
+              className="text-foreground underline underline-offset-4 hover:no-underline"
+            >
+              {t("Projet d'origine")}
+            </a>
+          </p>
         </div>
       </Card>
     </SettingsPage>
@@ -1494,6 +1506,7 @@ export function ConfidentialiteSettings() {
       <SettingsRow
         title={t("Export de vos données")}
         desc={t("Téléchargez toutes vos données personnelles au format JSON")}
+        last={!branding.urls.dpoEmail}
       >
         <Card>
           <p className="flex items-center gap-2 text-lg font-semibold text-foreground">
@@ -1540,6 +1553,7 @@ export function ConfidentialiteSettings() {
         </Card>
       </SettingsRow>
 
+      {branding.urls.dpoEmail && (
       <SettingsRow
         title={t("Délégué à la Protection des Données")}
         desc={t("Contactez notre DPO pour exercer vos droits")}
@@ -1564,6 +1578,7 @@ export function ConfidentialiteSettings() {
           </p>
         </Card>
       </SettingsRow>
+      )}
     </SettingsPage>
   );
 }

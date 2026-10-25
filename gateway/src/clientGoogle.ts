@@ -10,7 +10,7 @@ import { lister, t, tf } from "./langue.ts";
  *
  * Aucun identifiant Google n'est livré avec le produit : chaque organisation
  * crée le sien dans sa console Google Cloud (drive.ts dit pourquoi). Jusqu'au
- * 26/09/2026, il ne se renseignait que dans helix.config.json, à la main. Ajouté
+ * 26/09/2026, il ne se renseignait que dans oxoai.config.json, à la main. Ajouté
  * ce jour-là, quand Medhi a voulu brancher son Google Agenda : il se saisit
  * aussi dans l'écran des connecteurs, une fois, pour les deux services. Le
  * profil de déploiement, s'il en porte un, l'emporte (c'est l'intégrateur qui

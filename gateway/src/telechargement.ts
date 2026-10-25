@@ -55,12 +55,12 @@ export interface EtatPaquet {
 
 /** Le dossier `.app` qui contient ce processus, s'il y en a un. */
 function applicationEnCours(): string | null {
-  const force = process.env.HELIX_APP_BUNDLE;
+  const force = process.env.OXOAI_APP_BUNDLE;
   if (force) return existsSync(force) ? force : null;
   /*
    * Le `.app` le plus extérieur (28/09/2026) : la passerelle tourne désormais
    * dans un `utilityProcess`, dont le binaire est l'assistant rangé dans
-   * l'application (`Helix.app/Contents/Frameworks/Helix Helper.app/…`). Le
+   * l'application (`OxoAI.app/Contents/Frameworks/OxoAI Helper.app/…`). Le
    * premier `.app` rencontré en remontant était celui de l'assistant, et
    * c'est lui qu'on aurait servi.
    */
@@ -86,15 +86,15 @@ function versionDe(app: string): string | undefined {
 }
 
 const dossierPaquets = (): string => {
-  const base = process.env.HELIX_DATA_DIR ?? join(homedir(), ".helix", "data");
+  const base = process.env.OXOAI_DATA_DIR ?? join(homedir(), ".oxoai", "data");
   const dossier = join(base, "telechargements");
   if (!existsSync(dossier)) mkdirSync(dossier, { recursive: true });
   return dossier;
 };
 
 /**
- * Le nom du fichier : celui de l'application elle-même (« Helix.app » donne
- * « Helix-0.26.0-mac-arm64.zip »). Le nom de marque réglé dans l'instance
+ * Le nom du fichier : celui de l'application elle-même (« OxoAI.app » donne
+ * « OxoAI-0.26.0-mac-arm64.zip »). Le nom de marque réglé dans l'instance
  * pouvait valoir « l'application » tant qu'aucune marque n'était posée, et
  * donnait un fichier « lapplication-… » que personne ne reconnaît.
  */

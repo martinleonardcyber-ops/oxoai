@@ -22,7 +22,7 @@ import { verifier as verifierDebit } from "../debit.ts";
  *
  * Les employés OpenClaw ont déjà des canaux Telegram, WhatsApp et Discord
  * (employes.ts, `CANAUX` ; CanauxEmploye.tsx). Rien n'y est réutilisable, et
- * c'est normal : là, Helix ne parle jamais à Telegram ni à Discord. Il garde le
+ * c'est normal : là, OxoAI ne parle jamais à Telegram ni à Discord. Il garde le
  * jeton chiffré et le passe à OpenClaw par l'environnement ; c'est OpenClaw qui
  * tient la connexion, reçoit les messages et fait répondre l'employé. Le bot y
  * est l'interface de l'employé : les gens lui écrivent pour lui parler. Ici, le
@@ -98,7 +98,7 @@ export const DEFINITIONS: Record<IdMessagerie, Definition> = {
    *    d'erreur (clientHttps.ts ne cite jamais l'adresse), ni au journal ;
    *  - un bot n'a pas d'historique à lire : il reçoit les messages par
    *    `getUpdates` (ou un webhook), et Telegram ne les garde « pas plus de
-   *    24 heures ». Helix les relève donc toutes les minutes tant que le bot
+   *    24 heures ». OxoAI les relève donc toutes les minutes tant que le bot
    *    est branché, et garde les derniers de chaque conversation, chiffrés ;
    *  - `getUpdates` « ne marche pas si un webhook est posé », et deux lecteurs
    *    en même temps se font refuser (409) : d'où le refus d'un bot déjà lu
@@ -134,11 +134,11 @@ export const DEFINITIONS: Record<IdMessagerie, Definition> = {
    *    développeur, page « Bot », « Privileged Gateway Intents » ; sans examen
    *    sous 100 serveurs (drapeau `GATEWAY_MESSAGE_CONTENT_LIMITED`, 1 << 19,
    *    de `GET /applications/@me`), examinée au-delà (`GATEWAY_MESSAGE_CONTENT`,
-   *    1 << 18) et au-delà de 10 000 utilisateurs. Helix lit ces drapeaux et le
+   *    1 << 18) et au-delà de 10 000 utilisateurs. OxoAI lit ces drapeaux et le
    *    dit à l'écran et au modèle ;
    *  - envoyer : `POST /channels/{id}/messages`, 2000 caractères, permission
    *    SEND_MESSAGES. Discord conseille `allowed_mentions` pour un texte venu
-   *    d'ailleurs : Helix n'autorise aucune mention (ni @everyone, ni rôle, ni
+   *    d'ailleurs : OxoAI n'autorise aucune mention (ni @everyone, ni rôle, ni
    *    personne). `nonce` + `enforce_nonce` : Discord refuse lui-même un second
    *    message identique « dans les dernières minutes » ;
    *  - limites : 50 requêtes par seconde pour le bot, limites par route dites
@@ -161,7 +161,7 @@ export const DEFINITIONS: Record<IdMessagerie, Definition> = {
    *    une fenêtre de 24 heures s'ouvre » ; on peut y répondre librement ; hors
    *    d'elle, « seuls des modèles de message approuvés » partent
    *    (https://developers.facebook.com/docs/whatsapp/cloud-api/guides/send-messages).
-   *    Helix ne connaît la fenêtre que par les messages reçus : il faut donc que
+   *    OxoAI ne connaît la fenêtre que par les messages reçus : il faut donc que
    *    Meta puisse joindre l'instance (webhook, plus bas). L'erreur 131047 de
    *    Meta dit la même chose si la fenêtre s'est fermée entre-temps ;
    *  - **modèles** : seuls ceux au statut APPROVED s'envoient ; catégories
@@ -640,7 +640,7 @@ export async function releverTelegram(): Promise<void> {
 
 /* ---- WhatsApp : notifications de Meta (webhook) ---- */
 
-export const CHEMIN_WEBHOOK = "/helix/messageries/whatsapp/webhook";
+export const CHEMIN_WEBHOOK = "/oxoai/messageries/whatsapp/webhook";
 
 function memeValeur(a: string, b: string): boolean {
   const x = Buffer.from(a, "utf8");
@@ -662,7 +662,7 @@ function repondreTexte(res: http.ServerResponse, statut: number, texte: string):
  * un débit limité (debit.ts). Elle ne rend rien d'autre que « reçu ».
  */
 /** La limite des notifications signées (debit.ts) : la route elle-même n'y est plus soumise avant la signature. */
-export const CHEMIN_DEBIT_SIGNE = "/helix/messageries/whatsapp/webhook#signee";
+export const CHEMIN_DEBIT_SIGNE = "/oxoai/messageries/whatsapp/webhook#signee";
 
 export async function webhookWhatsApp(req: http.IncomingMessage, res: http.ServerResponse, url: URL): Promise<void> {
   await charger();
@@ -1468,7 +1468,7 @@ async function resultatWhatsApp(r: Reponse, n: string, texte: string, titre: str
 /* ------------------------------------------------------------------ */
 
 /**
- * `GET /helix/messageries` : l'état, pour toute séance. `POST …/connecter`,
+ * `GET /oxoai/messageries` : l'état, pour toute séance. `POST …/connecter`,
  * `…/envoi`, `…/oublier` : l'administrateur (vérifié par index.ts avant
  * d'arriver ici), comme les connexions natives.
  */

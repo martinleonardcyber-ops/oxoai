@@ -60,7 +60,7 @@ export interface EntreeCatalogue {
   lanceur?: true;
   /** Page officielle où la personne télécharge l'application elle-même. */
   telechargement?: string;
-  /** Livré avec Helix : déjà là, ne s'ajoute ni ne se retire. */
+  /** Livré avec OxoAI : déjà là, ne s'ajoute ni ne se retire. */
   integre?: true;
 }
 
@@ -133,7 +133,7 @@ export interface GroupeOutils {
  * endroits. Sans ce signal, brancher Notion depuis les réglages laissait le
  * menu du composeur afficher l'ancienne liste jusqu'au prochain rechargement.
  */
-export const CONNECTEURS_CHANGE = "helix:connecteurs-change";
+export const CONNECTEURS_CHANGE = "oxoai:connecteurs-change";
 
 export function signalerChangement(): void {
   if (typeof window !== "undefined") {
@@ -144,7 +144,7 @@ export function signalerChangement(): void {
 /** `null` si l'instance ne répond pas : l'écran le dit plutôt que d'afficher du vide. */
 export async function etat(): Promise<EtatConnecteurs | null> {
   try {
-    const res = await apiFetch("/helix/connecteurs");
+    const res = await apiFetch("/oxoai/connecteurs");
     if (!res.ok) return null;
     return (await res.json()) as EtatConnecteurs;
   } catch {
@@ -155,7 +155,7 @@ export async function etat(): Promise<EtatConnecteurs | null> {
 /** Groupes d'outils réellement proposés au modèle. `null` si instance muette. */
 export async function outils(): Promise<GroupeOutils[] | null> {
   try {
-    const res = await apiFetch("/helix/outils");
+    const res = await apiFetch("/oxoai/outils");
     if (!res.ok) return null;
     const corps = (await res.json()) as { groupes: GroupeOutils[] };
     return corps.groupes;
@@ -201,7 +201,7 @@ export async function ajouter(
   id: string,
   secrets: Record<string, string>,
 ): Promise<Resultat> {
-  const resultat = await poster("/helix/connecteurs/ajouter", { id, secrets });
+  const resultat = await poster("/oxoai/connecteurs/ajouter", { id, secrets });
   if (resultat.ok) signalerChangement();
   return resultat;
 }
@@ -213,7 +213,7 @@ export async function ajouter(
  *
  * Rend soit `pret` (l'instance était déjà autorisée), soit `adresse`, la page
  * du service à ouvrir dans le navigateur. Cette page est celle du service,
- * chez lui : le mot de passe de la personne n'est jamais vu par Helix.
+ * chez lui : le mot de passe de la personne n'est jamais vu par OxoAI.
  */
 export async function connecter(
   id: string,
@@ -221,7 +221,7 @@ export async function connecter(
   /** L'écriture cochée, pour un service qui la propose (`ecritureAuChoix`). */
   ecriture?: boolean,
 ): Promise<Resultat & { adresse?: string; pret?: boolean }> {
-  const resultat = (await poster("/helix/connecteurs/connecter", {
+  const resultat = (await poster("/oxoai/connecteurs/connecter", {
     id,
     ...identifiants,
     ...(ecriture ? { ecriture: true } : {}),
@@ -232,7 +232,7 @@ export async function connecter(
 
 /** Retire un connecteur : ses outils disparaissent, son secret est effacé. */
 export async function retirer(id: string): Promise<Resultat> {
-  const resultat = await poster("/helix/connecteurs/retirer", { id });
+  const resultat = await poster("/oxoai/connecteurs/retirer", { id });
   if (resultat.ok) signalerChangement();
   return resultat;
 }
@@ -248,14 +248,14 @@ export type DemandePersonnalise =
   | { mode: "adresse"; id: string; label: string; description?: string; url: string };
 
 export async function ajouterPersonnalise(demande: DemandePersonnalise): Promise<Resultat & { adresse?: string }> {
-  const resultat = (await poster("/helix/connecteurs/personnalise", demande)) as Resultat & { adresse?: string };
+  const resultat = (await poster("/oxoai/connecteurs/personnalise", demande)) as Resultat & { adresse?: string };
   if (resultat.ok && !resultat.adresse) signalerChangement();
   return resultat;
 }
 
 /** Les outils d'un serveur ajouté que l'administrateur marque « lecture seule » (les autres demandent l'accord). */
 export async function definirLectures(id: string, lectures: string[]): Promise<Resultat> {
-  const resultat = await poster("/helix/connecteurs/personnalise/lectures", { id, lectures });
+  const resultat = await poster("/oxoai/connecteurs/personnalise/lectures", { id, lectures });
   if (resultat.ok) signalerChangement();
   return resultat;
 }

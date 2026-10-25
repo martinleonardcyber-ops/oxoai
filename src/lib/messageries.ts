@@ -39,7 +39,7 @@ export interface ResultatMessagerie {
 
 export async function etatMessageries(): Promise<EtatMessageries | null> {
   try {
-    const res = await apiFetch("/helix/messageries");
+    const res = await apiFetch("/oxoai/messageries");
     if (!res.ok) return null;
     return (await res.json()) as EtatMessageries;
   } catch {
@@ -49,7 +49,7 @@ export async function etatMessageries(): Promise<EtatMessageries | null> {
 
 async function poster(suite: string, corps: Record<string, unknown>): Promise<ResultatMessagerie> {
   try {
-    const res = await apiFetch(`/helix/messageries${suite}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(corps) });
+    const res = await apiFetch(`/oxoai/messageries${suite}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(corps) });
     const json = (await res.json().catch(() => ({}))) as Partial<ResultatMessagerie> & Partial<EtatMessageries> & { error?: { message?: string } };
     if (json.error?.message) return { ok: false, message: json.error.message };
     return {

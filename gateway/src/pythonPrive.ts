@@ -9,7 +9,7 @@ import { t, tf } from "./langue.ts";
 import { renommer } from "./processus.ts";
 
 /**
- * Le Python que Helix pose lui-même, quand la machine n'en a pas un qui
+ * Le Python que OxoAI pose lui-même, quand la machine n'en a pas un qui
  * convient.
  *
  * Décidé par Medhi le 27/09/2026 (« Python doit s'installer ») : exception à la
@@ -70,18 +70,18 @@ export function tarDuSysteme(): string {
   return ["/usr/bin/tar", "/bin/tar"].find((c) => existsSync(c)) ?? "tar";
 }
 
-const racine = () => join(process.env.HELIX_DATA_DIR ?? join(homedir(), ".helix", "data"), "python-moteur");
+const racine = () => join(process.env.OXOAI_DATA_DIR ?? join(homedir(), ".oxoai", "data"), "python-moteur");
 const dossierVersion = () => join(racine(), `${VERSION}+${PUBLICATION}`);
 const executable = (dossier: string) =>
   process.platform === "win32" ? join(dossier, "python", "python.exe") : join(dossier, "python", "bin", "python3");
 
-/** Le Python posé par Helix, s'il l'est. */
+/** Le Python posé par OxoAI, s'il l'est. */
 export function pythonPrive(): string | null {
   const exe = executable(dossierVersion());
   return existsSync(exe) ? exe : null;
 }
 
-/** Helix sait-il poser Python ici ? La raison sinon. */
+/** OxoAI sait-il poser Python ici ? La raison sinon. */
 export function pythonPriveInstallable(): string | null {
   const c = cible();
   return c && ARCHIVES[c] ? null : tf("Pas de Python autonome pour ce système ({0}, {1}).", process.platform, process.arch);
@@ -182,6 +182,6 @@ async function installer(avancer?: (pourcent: number) => void): Promise<string> 
     throw new Error(t("Python s'est installé mais ne démarre pas sur cette machine."));
   }
   avancer?.(100);
-  console.log(`[helix] Python ${VERSION} posé dans ${dossierVersion()}.`);
+  console.log(`[oxoai] Python ${VERSION} posé dans ${dossierVersion()}.`);
   return exe;
 }

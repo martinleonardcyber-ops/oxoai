@@ -66,7 +66,7 @@ const when = (on: boolean, route: RouteObject): RouteObject[] => (on ? [route] :
  * ignore. Le serveur de développement, lui, garde des adresses propres.
  */
 /*
- * Depuis la 0.23.0, l'interface livrée est servie sous `helix://app` et non
+ * Depuis la 0.23.0, l'interface livrée est servie sous `oxoai://app` et non
  * plus depuis le disque. Le routeur à ancre reste le bon choix pour elle, et
  * pour une raison de plus que le chemin : un routeur d'historique remplace
  * l'adresse entière à chaque navigation, **paramètres compris**. Or l'adresse
@@ -142,10 +142,10 @@ export default function App() {
   const [configured, setConfigured] = useState(() => isConfigured());
   const [signedIn, setSignedIn] = useState(() => isSignedIn());
   /*
-   * Invitation arrivée par lien `helix://rejoindre`, cliquée dans un mail.
+   * Invitation arrivée par lien `oxoai://rejoindre`, cliquée dans un mail.
    *
    * Elle ne concerne pas que le premier lancement : une personne qui utilise
-   * déjà Helix sur son poste peut être invitée sur l'instance d'un collègue.
+   * déjà OxoAI sur son poste peut être invitée sur l'instance d'un collègue.
    * L'écran de rattachement s'ouvre alors par-dessus l'application, en disant
    * ce que cela change et en laissant renoncer.
    */

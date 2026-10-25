@@ -45,26 +45,26 @@ const poster = (chemin: string, corps: unknown) =>
   apiFetch(chemin, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(corps) });
 
 export async function chargerGroupes(): Promise<{ groupes: Groupe[]; annuaire: Personne[] }> {
-  return lire(await apiFetch("/helix/groupes"));
+  return lire(await apiFetch("/oxoai/groupes"));
 }
 
 export async function creerGroupe(d: { nom: string; description: string; membres: string[] }): Promise<Groupe> {
-  return (await lire<{ groupe: Groupe }>(await poster("/helix/groupes", d))).groupe;
+  return (await lire<{ groupe: Groupe }>(await poster("/oxoai/groupes", d))).groupe;
 }
 
 export async function modifierGroupe(
   id: string,
   d: { nom?: string; description?: string; membres?: string[]; responsables?: string[] },
 ): Promise<Groupe> {
-  return (await lire<{ groupe: Groupe }>(await poster(`/helix/groupes/${encodeURIComponent(id)}`, d))).groupe;
+  return (await lire<{ groupe: Groupe }>(await poster(`/oxoai/groupes/${encodeURIComponent(id)}`, d))).groupe;
 }
 
 export async function quitterGroupe(id: string): Promise<void> {
-  await lire(await poster(`/helix/groupes/${encodeURIComponent(id)}/quitter`, {}));
+  await lire(await poster(`/oxoai/groupes/${encodeURIComponent(id)}/quitter`, {}));
 }
 
 export async function supprimerGroupe(id: string): Promise<void> {
-  await lire(await poster(`/helix/groupes/${encodeURIComponent(id)}/supprimer`, {}));
+  await lire(await poster(`/oxoai/groupes/${encodeURIComponent(id)}/supprimer`, {}));
 }
 
 /** Les groupes et l'annuaire, rechargeables. `null` tant que rien n'est arrivé. */

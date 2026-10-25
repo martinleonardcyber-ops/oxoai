@@ -4,13 +4,13 @@ import { cleLlamaCpp, moteurOuvert, urlLlamaCpp } from "./llamaCppBase.ts";
 import type { BackendConfig, Role } from "./types.ts";
 
 /** Port d'écoute de la passerelle. */
-export const PORT = Number(process.env.HELIX_GATEWAY_PORT ?? 8787);
+export const PORT = Number(process.env.OXOAI_GATEWAY_PORT ?? 8787);
 
 /**
  * Interface d'écoute. **Boucle locale par défaut** : sur un poste autonome, la
  * passerelle donne accès aux fichiers et à l'exécution d'outils, elle n'a
  * aucune raison d'être joignable depuis le réseau. Une instance partagée
- * l'ouvre explicitement — `HELIX_GATEWAY_HOST=0.0.0.0`, ou `share: true` dans
+ * l'ouvre explicitement — `OXOAI_GATEWAY_HOST=0.0.0.0`, ou `share: true` dans
  * le profil de déploiement — pour que ce soit une décision, pas un défaut.
  */
 /**
@@ -27,7 +27,7 @@ export const PORT = Number(process.env.HELIX_GATEWAY_PORT ?? 8787);
  * ouverte au réseau sans chiffrement, tout en se croyant sur la boucle locale.
  * Trouvé par la batterie de sécurité (scripts/securite.mjs).
  */
-const hoteDemande = process.env.HELIX_GATEWAY_HOST?.trim();
+const hoteDemande = process.env.OXOAI_GATEWAY_HOST?.trim();
 export const HOST =
   hoteDemande ||
   (deployment().share || ouverteDepuisLEcran() ? "0.0.0.0" : "127.0.0.1");
@@ -37,7 +37,7 @@ export const HOST =
  *
  * Une seule fonction, parce que deux endroits en décidaient séparément et ne
  * disaient pas la même chose : `tls.ts` ne chiffrait que sur `share: true` ou
- * `HELIX_GATEWAY_HOST=0.0.0.0`. Une adresse d'écoute nommée — `192.168.1.10`,
+ * `OXOAI_GATEWAY_HOST=0.0.0.0`. Une adresse d'écoute nommée — `192.168.1.10`,
  * `::`, le nom de la machine — ouvrait donc l'instance au réseau **en clair**,
  * jetons compris, sans que rien ne le signale.
  */
@@ -48,7 +48,7 @@ const BASE_BACKENDS: BackendConfig[] = [
   {
     id: "exo",
     label: "Cluster exo",
-    baseUrl: process.env.HELIX_EXO_URL ?? "http://localhost:52415/v1",
+    baseUrl: process.env.OXOAI_EXO_URL ?? "http://localhost:52415/v1",
     kind: "exo",
     priority: 5,
     enabled: true,
@@ -56,14 +56,14 @@ const BASE_BACKENDS: BackendConfig[] = [
   {
     id: "lmstudio",
     label: "LM Studio",
-    baseUrl: process.env.HELIX_LMSTUDIO_URL ?? "http://localhost:1234/v1",
+    baseUrl: process.env.OXOAI_LMSTUDIO_URL ?? "http://localhost:1234/v1",
     kind: "lmstudio",
     priority: 10,
     // Coupé là où sert le moteur ouvert (Mac Intel) : un seul moteur local à la fois (llamaCppBase.ts).
     enabled: !moteurOuvert(),
   },
   /*
-   * Le moteur ouvert, llama.cpp (MIT), posé et démarré par Helix
+   * Le moteur ouvert, llama.cpp (MIT), posé et démarré par OxoAI
    * (llamaCpp.ts, 28/09/2026) : sur 127.0.0.1, avec une clé tirée pour
    * cette machine. Ses modèles sont chargés à 32 768 jetons, comme ceux de
    * LM Studio sur une machine de 36 Go ou moins (`optionsDeChargement`).

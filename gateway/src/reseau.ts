@@ -13,8 +13,8 @@ import { dirname, join } from "node:path";
  *
  *  1. **un particulier**, seul sur sa machine : rien à ouvrir ;
  *  2. **une entreprise**, instance sur un serveur ou un cluster, postes
- *     rattachés : l'intégrateur règle `share` dans `helix.config.json` ;
- *  3. **quelqu'un qui a Helix sur son PC et veut inviter une personne à
+ *     rattachés : l'intégrateur règle `share` dans `oxoai.config.json` ;
+ *  3. **quelqu'un qui a OxoAI sur son PC et veut inviter une personne à
  *     travailler avec lui.** Là, il n'y avait rien : il fallait éditer un
  *     fichier JSON à la main. Pour un produit qui promet de ne rien compliquer,
  *     c'était la marche de trop.
@@ -42,7 +42,7 @@ interface EtatReseau {
 }
 
 function fichier(): string {
-  const base = process.env.HELIX_DATA_DIR ?? join(homedir(), ".helix", "data");
+  const base = process.env.OXOAI_DATA_DIR ?? join(homedir(), ".oxoai", "data");
   return join(base, "reseau.json");
 }
 

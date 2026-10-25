@@ -70,7 +70,7 @@ const NOM_MAX = 120;
 const ELEMENTS_MAX = 20_000;
 
 const dossierFichiers = () =>
-  join(process.env.HELIX_DATA_DIR ?? join(homedir(), ".helix", "data"), "bibliotheque");
+  join(process.env.OXOAI_DATA_DIR ?? join(homedir(), ".oxoai", "data"), "bibliotheque");
 const cheminContenu = (id: string) => join(dossierFichiers(), id);
 const cheminTexte = (id: string) => join(dossierFichiers(), `${id}.texte`);
 

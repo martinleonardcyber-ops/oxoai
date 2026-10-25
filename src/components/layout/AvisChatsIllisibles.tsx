@@ -63,7 +63,7 @@ function rienNEstPerdu(incident: IncidentGrand, relue: boolean): string {
     : t("Rien n'a été effacé : le fichier est laissé tel quel, cet ordinateur n'écrit pas par-dessus, et n'envoie rien à l'instance tant qu'elle ne lui a pas rendu vos Chats.");
 }
 
-const CLE_FERME = "helix:avis-chats-illisibles";
+const CLE_FERME = "oxoai:avis-chats-illisibles";
 
 function lireFermes(): string[] {
   try {

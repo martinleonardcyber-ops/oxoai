@@ -22,9 +22,9 @@
  *
  * Ce qui tient : pas d'accès à Node (`nodeIntegration` coupé, `sandbox`
  * actif, rien sur `window`), et la page ne peut parler au processus principal
- * que par les deux canaux de ce bot (`helix:bot-morceau`, `helix:bot-fini`),
+ * que par les deux canaux de ce bot (`oxoai:bot-morceau`, `oxoai:bot-fini`),
  * que botReunion.cjs n'accepte que de la fenêtre de ce bot ; les autres
- * canaux `helix:*` vérifient qu'ils viennent de la fenêtre principale.
+ * canaux `oxoai:*` vérifient qu'ils viennent de la fenêtre principale.
  *
  * Ce qui ne tient pas, dit comme tel (seconde tournée du test d'intrusion,
  * 28/09/2026). Les références d'origine capturées ici ne protègent pas le son
@@ -128,20 +128,20 @@ const { ipcRenderer } = require("electron");
        */
       const donnees = e && e.data;
       if (!(donnees instanceof BlobOrigine) || donnees.size <= 0) return;
-      void enTableau.call(donnees).then((b) => ipcRenderer.send("helix:bot-morceau", b));
+      void enTableau.call(donnees).then((b) => ipcRenderer.send("oxoai:bot-morceau", b));
     });
     enregistreur.addEventListener("stop", () => {
       // Le dernier morceau part avant ce signal : le processus principal peut conclure.
-      setTimeout(() => ipcRenderer.send("helix:bot-fini"), 300);
+      setTimeout(() => ipcRenderer.send("oxoai:bot-fini"), 300);
     });
     enregistreur.start(10_000);
   }
 
   function arreter() {
     if (enregistreur && enregistreur.state !== "inactive") enregistreur.stop();
-    else ipcRenderer.send("helix:bot-fini");
+    else ipcRenderer.send("oxoai:bot-fini");
   }
 
-  ipcRenderer.on("helix:bot-demarrer", demarrer);
-  ipcRenderer.on("helix:bot-arreter", arreter);
+  ipcRenderer.on("oxoai:bot-demarrer", demarrer);
+  ipcRenderer.on("oxoai:bot-arreter", arreter);
 })();

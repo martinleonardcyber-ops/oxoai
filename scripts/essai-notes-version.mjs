@@ -23,19 +23,19 @@ const verifier = (nom, ok, obtenu) => {
 
 // Une note de la forme publiée depuis la 2026.927.4 : chapeau, Downloads, What's new, Notes.
 const note = [
-  "Helix AI 9.9.9 gives long Chats a memory.",
+  "OxoAI AI 9.9.9 gives long Chats a memory.",
   "",
   "## Downloads",
   "",
   "| Platform | File | Installation |",
   "|---|---|---|",
-  "| macOS (Apple Silicon) | `Helix-9.9.9-arm64.dmg` | Drag Helix to Applications |",
+  "| macOS (Apple Silicon) | `OxoAI-9.9.9-arm64.dmg` | Drag OxoAI to Applications |",
   "",
   "SHA-256 checksums are in `SHA256SUMS.txt`.",
   "",
   "## What's new",
   "",
-  "- **Memory of a conversation.** Older messages are kept, see [the guide](https://github.com/medhiclb/HelixAI/blob/main/docs/GUIDE.md).",
+  "- **Memory of a conversation.** Older messages are kept, see [the guide](https://github.com/martinleonardcyber-ops/oxoai/blob/main/docs/GUIDE.md).",
   "- **First model download.** Resumed on the same model.",
   "",
   "2482 automated checks, 0 failures.",
@@ -45,7 +45,7 @@ const note = [
   "- On macOS, choose \"Always Allow\" when asked for the keychain.",
 ].join("\r\n");
 const extrait = n.extraireNouveautes(note);
-verifier("chapeau gardé", extrait.startsWith("Helix AI 9.9.9 gives long Chats a memory."), extrait);
+verifier("chapeau gardé", extrait.startsWith("OxoAI AI 9.9.9 gives long Chats a memory."), extrait);
 verifier("« What's new » gardé, gras et lien https compris", /\*\*Memory of a conversation\.\*\*/.test(extrait) && /\[the guide\]\(https:\/\/github\.com\//.test(extrait), extrait);
 verifier("ni tableau ni section « Downloads »", !/\|/.test(extrait) && !/Downloads|SHA256SUMS|arm64\.dmg/.test(extrait), extrait);
 verifier("section « Notes » écartée", !/keychain|## Notes/.test(extrait), extrait);
@@ -74,7 +74,7 @@ const piege = [
   "- [cliquer](javascript:alert(1))",
   "- [fichier](file:///etc/passwd)",
   "- [données](data:text/html;base64,PHNjcmlwdD4=)",
-  "- [bon](https://github.com/medhiclb/HelixAI/releases)",
+  "- [bon](https://github.com/martinleonardcyber-ops/oxoai/releases)",
   "- ![image](https://exemple.test/i.png)",
   "- direction ‮esrever‬ et ⁦isolé⁩, contrôle \u0007",
 ].join("\n");
@@ -82,7 +82,7 @@ const p = n.extraireNouveautes(piege);
 verifier("<script>, <style>, commentaires et balises retirés", !/<|alert\('a'\)|x\.js|display:none|caché|onerror/i.test(p), p);
 verifier("le texte d'une balise ordinaire reste", /plus/.test(p) && /texte gardé/.test(p), p);
 verifier("liens javascript:, file:, data: réduits à leur texte", /- cliquer$/m.test(p) && /- fichier$/m.test(p) && /- données$/m.test(p) && !/javascript:|file:|data:/i.test(p), p);
-verifier("lien https gardé", /\[bon\]\(https:\/\/github\.com\/medhiclb\/HelixAI\/releases\)/.test(p), p);
+verifier("lien https gardé", /\[bon\]\(https:\/\/github\.com\/martinleonardcyber-ops\/oxoai\/releases\)/.test(p), p);
 verifier("image réduite à son texte, sans adresse", /- image$/m.test(p) && !/i\.png/.test(p), p);
 verifier("caractères de direction et de contrôle retirés", !/[‪-‮⁦-⁩\u0007]/.test(p) && /esrever/.test(p), JSON.stringify(p));
 
@@ -96,7 +96,7 @@ verifier("« <!-- », « <a » et « <script » répétés sans fin : traité en
 verifier("note absente ou d'un autre type : texte vide", n.extraireNouveautes(undefined) === "" && n.extraireNouveautes(null) === "" && n.extraireNouveautes(42) === "42");
 
 // Les versions montrées.
-const pub = (tag, d = {}) => ({ tag_name: tag, body: `## What's new\n\n- ${tag}`, html_url: `https://github.com/medhiclb/HelixAI/releases/tag/${tag}`, published_at: "2026-10-16T15:53:28Z", assets: [], ...d });
+const pub = (tag, d = {}) => ({ tag_name: tag, body: `## What's new\n\n- ${tag}`, html_url: `https://github.com/martinleonardcyber-ops/oxoai/releases/tag/${tag}`, published_at: "2026-10-16T15:53:28Z", assets: [], ...d });
 const liste = [
   pub("v2026.1016.2"),
   pub("v2026.1016.1"),
@@ -125,17 +125,17 @@ verifier("doublon « 1.2.3 » et « v1.2.3 » : une seule", n.choisirPublication
 verifier("liste illisible : null", n.lireListe("{") === null && n.lireListe('{"message":"Not Found"}') === null && Array.isArray(n.lireListe("[]")));
 
 // La note traduite jointe à la publication.
-const fichier = (name, size = 2000, url = `https://github.com/medhiclb/HelixAI/releases/download/v9.9.9/${name}`) => ({ name, size, browser_download_url: url });
+const fichier = (name, size = 2000, url = `https://github.com/martinleonardcyber-ops/oxoai/releases/download/v9.9.9/${name}`) => ({ name, size, browser_download_url: url });
 verifier("note traduite trouvée pour la langue de l'écran", n.noteTraduiteDe([fichier("notes.fr.md"), fichier("notes.de.md")], "fr")?.name === "notes.fr.md");
 verifier("anglais : jamais de note jointe (c'est le texte de la publication)", n.noteTraduiteDe([fichier("notes.en.md")], "en") === null);
 verifier("note traduite trop lourde, hors de GitHub, ou langue inconnue : écartée", n.noteTraduiteDe([fichier("notes.fr.md", 10 * 1024 * 1024)], "fr") === null && n.noteTraduiteDe([fichier("notes.fr.md", 2000, "https://exemple.test/notes.fr.md")], "fr") === null && n.noteTraduiteDe([fichier("notes.xx.md")], "xx") === null && n.noteTraduiteDe([fichier("notes.fr.md", null)], "fr") === null);
 verifier("note traduite nettoyée comme l'autre", !/<script|javascript:/i.test(n.extraireNoteTraduite("# Nouveautés\n<script>x()</script>\n- [a](javascript:x)")));
-verifier("page de la publication : GitHub seulement", n.lienPublication(pub("v1.0.0")) === "https://github.com/medhiclb/HelixAI/releases/tag/v1.0.0" && n.lienPublication({ html_url: "javascript:alert(1)" }) === null && n.lienPublication({ html_url: "https://exemple.test/releases/tag/v1" }) === null);
+verifier("page de la publication : GitHub seulement", n.lienPublication(pub("v1.0.0")) === "https://github.com/martinleonardcyber-ops/oxoai/releases/tag/v1.0.0" && n.lienPublication({ html_url: "javascript:alert(1)" }) === null && n.lienPublication({ html_url: "https://exemple.test/releases/tag/v1" }) === null);
 verifier("date de publication lue, sinon null", n.datePublication(pub("v1.0.0")) === "2026-10-16T15:53:28Z" && n.datePublication({ published_at: "<b>" }) === null);
 
 // Le rendu par TexteRiche, construit comme l'interface (esbuild), en HTML statique.
 {
-  const dossier = mkdtempSync(join(tmpdir(), "helix-notes-"));
+  const dossier = mkdtempSync(join(tmpdir(), "oxoai-notes-"));
   try {
     const { build } = await import("esbuild");
     await build({
@@ -156,11 +156,11 @@ verifier("date de publication lue, sinon null", n.datePublication(pub("v1.0.0"))
     const { TexteRiche, renderToStaticMarkup, createElement } = require(join(dossier, "rendu.cjs"));
     const rendre = (texte, liens) => renderToStaticMarkup(createElement(TexteRiche, { texte, liens }));
     // Le texte brut, sans le nettoyage de notesVersion.cjs : le rendu tient seul.
-    const brut = "### Titre\n<script>alert(1)</script>\n- [x](javascript:alert(1))\n- [y](JaVaScRiPt:alert(1))\n- [z](https://github.com/medhiclb/HelixAI) et **gras**\n- [w](https://exemple.test/a\"onmouseover=\"alert(1))";
+    const brut = "### Titre\n<script>alert(1)</script>\n- [x](javascript:alert(1))\n- [y](JaVaScRiPt:alert(1))\n- [z](https://github.com/martinleonardcyber-ops/oxoai) et **gras**\n- [w](https://exemple.test/a\"onmouseover=\"alert(1))";
     const html = rendre(brut, true);
     verifier("rendu : aucune balise <script> produite (le texte est échappé)", !/<script/i.test(html) && /&lt;script&gt;/.test(html), html);
     verifier("rendu : aucun href javascript:", !/href="\s*javascript:/i.test(html) && (html.match(/<a /g) ?? []).length === 2, html);
-    verifier("rendu : lien https ouvert hors de l'application (target=_blank, noopener)", /<a href="https:\/\/github\.com\/medhiclb\/HelixAI" target="_blank" rel="noreferrer noopener"/.test(html), html);
+    verifier("rendu : lien https ouvert hors de l'application (target=_blank, noopener)", /<a href="https:\/\/github\.com\/martinleonardcyber-ops\/oxoai" target="_blank" rel="noreferrer noopener"/.test(html), html);
     verifier("rendu : un guillemet dans l'adresse ne sort pas de l'attribut", !/onmouseover="/.test(html), html);
     verifier("rendu : titres, listes et gras mis en forme", /<ul/.test(html) && /<strong[^>]*>gras<\/strong>/.test(html) && /font-semibold[^>]*>Titre</.test(html), html);
     verifier("rendu du Chat inchangé : sans `liens`, aucun lien cliquable", !/<a /.test(rendre(brut, false)), rendre(brut, false));
@@ -180,11 +180,11 @@ verifier("date de publication lue, sinon null", n.datePublication(pub("v1.0.0"))
 {
   const Module = require("node:module");
   const { mkdirSync, writeFileSync, readFileSync, existsSync } = await import("node:fs");
-  const AUX = mkdtempSync(join(tmpdir(), "helix-nouveautes-"));
+  const AUX = mkdtempSync(join(tmpdir(), "oxoai-nouveautes-"));
   const profil = join(AUX, "profil");
   mkdirSync(join(AUX, "ressources"), { recursive: true });
   process.resourcesPath = join(AUX, "ressources");
-  process.env.HELIX_DATA_DIR = join(AUX, "donnees");
+  process.env.OXOAI_DATA_DIR = join(AUX, "donnees");
   let routeur = async () => new Response("", { status: 404 });
   const canaux = {};
   const appels = [];
@@ -209,13 +209,13 @@ verifier("date de publication lue, sinon null", n.datePublication(pub("v1.0.0"))
     tag_name: tag,
     draft: false,
     prerelease: false,
-    html_url: `https://github.com/medhiclb/HelixAI/releases/tag/${tag}`,
+    html_url: `https://github.com/martinleonardcyber-ops/oxoai/releases/tag/${tag}`,
     published_at: "2026-10-23T08:00:00Z",
     body: `Intro ${tag}.\n\n## Downloads\n\n| a | b |\n\n## What's new\n\n- nouveauté de ${tag}\n<script>alert(1)</script>\n\n## Notes\n\n- note`,
     assets: [],
     ...d,
   });
-  const fr = { name: "notes.fr.md", size: 60, browser_download_url: "https://github.com/medhiclb/HelixAI/releases/download/v9.0.0/notes.fr.md" };
+  const fr = { name: "notes.fr.md", size: 60, browser_download_url: "https://github.com/martinleonardcyber-ops/oxoai/releases/download/v9.0.0/notes.fr.md" };
   const liste = [corps("v9.0.0", { assets: [fr] }), corps("v8.9.1"), corps("v8.9.0"), corps("v9.1.0", { prerelease: true })];
   routeur = async (url) => {
     if (url.includes("/releases?per_page=")) return new Response(JSON.stringify(liste));
@@ -227,7 +227,7 @@ verifier("date de publication lue, sinon null", n.datePublication(pub("v1.0.0"))
   let m = neuf();
   let refuse = false;
   try {
-    await canaux["helix:maj-nouveautes"]({}, { jusqua: "9.0.0", langue: "en" });
+    await canaux["oxoai:maj-nouveautes"]({}, { jusqua: "9.0.0", langue: "en" });
   } catch {
     refuse = true;
   }
@@ -243,35 +243,35 @@ verifier("date de publication lue, sinon null", n.datePublication(pub("v1.0.0"))
   mkdirSync(join(profil, "Local Storage"), { recursive: true });
   m = neuf();
   await m.demarrerMiseAJour(() => true);
-  l = await canaux["helix:maj-lancement"]({});
+  l = await canaux["oxoai:maj-lancement"]({});
   verifier("profil d'avant le repère : mise à jour reconnue, version précédente inconnue", l.inconnue && !l.depuis, JSON.stringify(l));
 
   // Mise à jour depuis 8.9.0 : les versions sautées, la plus récente d'abord.
   writeFileSync(join(profil, "nouveautes.json"), JSON.stringify({ vue: "8.9.0", nePlusAfficher: false }));
   m = neuf();
   await m.demarrerMiseAJour(() => true);
-  l = await canaux["helix:maj-lancement"]({});
+  l = await canaux["oxoai:maj-lancement"]({});
   verifier("mise à jour depuis 8.9.0 reconnue", l.depuis === "8.9.0" && l.version === "9.0.0", JSON.stringify(l));
-  const r = await canaux["helix:maj-nouveautes"]({}, { depuis: l.depuis, jusqua: l.version, langue: "en" });
+  const r = await canaux["oxoai:maj-nouveautes"]({}, { depuis: l.depuis, jusqua: l.version, langue: "en" });
   verifier(
     "nouveautés de 9.0.0 et 8.9.1, sans 8.9.0 (installée) ni la préversion, sans tableau ni script",
     r.ok && r.versions.map((v) => v.version).join() === "9.0.0,8.9.1" && r.versions.every((v) => !/\||<script|Downloads|## Notes/.test(v.texte) && /nouveauté de v/.test(v.texte)),
     JSON.stringify(r).slice(0, 400),
   );
-  verifier("une seule lecture de la liste pour deux demandes (gardée une demi-heure)", (await canaux["helix:maj-nouveautes"]({}, { jusqua: "9.0.0", langue: "en" })).ok && appels.filter((a) => a.includes("/releases?")).length === 1, appels.join(" "));
-  const rf = await canaux["helix:maj-nouveautes"]({}, { depuis: "8.9.0", jusqua: "9.0.0", langue: "fr" });
+  verifier("une seule lecture de la liste pour deux demandes (gardée une demi-heure)", (await canaux["oxoai:maj-nouveautes"]({}, { jusqua: "9.0.0", langue: "en" })).ok && appels.filter((a) => a.includes("/releases?")).length === 1, appels.join(" "));
+  const rf = await canaux["oxoai:maj-nouveautes"]({}, { depuis: "8.9.0", jusqua: "9.0.0", langue: "fr" });
   verifier(
     "écran en français : la note `notes.fr.md` jointe est prise pour 9.0.0, nettoyée ; l'anglais pour 8.9.1",
     rf.ok && rf.versions[0].langue === "fr" && /Mémoire/.test(rf.versions[0].texte) && !/<img|onerror/.test(rf.versions[0].texte) && rf.versions[1].langue === "en",
     JSON.stringify(rf).slice(0, 400),
   );
-  verifier("demande mal formée : rien n'est lu", !(await canaux["helix:maj-nouveautes"]({}, { jusqua: "../../etc", langue: "fr" })).ok && !(await canaux["helix:maj-nouveautes"]({}, null)).ok);
+  verifier("demande mal formée : rien n'est lu", !(await canaux["oxoai:maj-nouveautes"]({}, { jusqua: "../../etc", langue: "fr" })).ok && !(await canaux["oxoai:maj-nouveautes"]({}, null)).ok);
 
   // Vue, avec « Ne plus afficher » : le lancement suivant ne montre rien et garde le réglage.
-  await canaux["helix:maj-nouveautes-vues"]({}, { nePlusAfficher: true });
+  await canaux["oxoai:maj-nouveautes-vues"]({}, { nePlusAfficher: true });
   m = neuf();
   await m.demarrerMiseAJour(() => true);
-  l = await canaux["helix:maj-lancement"]({});
+  l = await canaux["oxoai:maj-lancement"]({});
   verifier("« Ne plus afficher » gardé, et plus rien à montrer pour cette version", l.nePlusAfficher && !l.depuis && !l.inconnue, JSON.stringify(l));
 
   // Hors ligne : pas de notes, mais la page des publications.
@@ -280,31 +280,31 @@ verifier("date de publication lue, sinon null", n.datePublication(pub("v1.0.0"))
   routeur = async () => {
     throw new Error("net::ERR_INTERNET_DISCONNECTED");
   };
-  const h = await canaux["helix:maj-nouveautes"]({}, { jusqua: "9.0.0", langue: "en" });
-  verifier("hors ligne : rien ne casse, un lien vers la page des publications", !h.ok && h.lien === "https://github.com/medhiclb/HelixAI/releases", JSON.stringify(h));
+  const h = await canaux["oxoai:maj-nouveautes"]({}, { jusqua: "9.0.0", langue: "en" });
+  verifier("hors ligne : rien ne casse, un lien vers la page des publications", !h.ok && h.lien === "https://github.com/martinleonardcyber-ops/oxoai/releases", JSON.stringify(h));
 
   // Une liste qui n'en finit pas : refusée sans tout lire.
   m = neuf();
   await m.demarrerMiseAJour(() => true);
   routeur = async () => new Response(new ReadableStream({ pull(c) { c.enqueue(new Uint8Array(1024 * 1024).fill(32)); } }));
-  const g = await canaux["helix:maj-nouveautes"]({}, { jusqua: "9.0.0", langue: "en" });
+  const g = await canaux["oxoai:maj-nouveautes"]({}, { jusqua: "9.0.0", langue: "en" });
   verifier("liste de publications sans fin : refusée au-delà de 4 Mo, rien ne casse", !g.ok && g.lien, JSON.stringify(g));
 
   // Mise à jour coupée : GitHub n'est pas contacté.
-  process.env.HELIX_SANS_MISE_A_JOUR = "1";
+  process.env.OXOAI_SANS_MISE_A_JOUR = "1";
   m = neuf();
   await m.demarrerMiseAJour(() => true);
   appels.length = 0;
-  const c = await canaux["helix:maj-nouveautes"]({}, { jusqua: "9.0.0", langue: "en" });
-  verifier("HELIX_SANS_MISE_A_JOUR=1 : aucune note lue, aucun lien, rien contacté", !c.ok && c.lien === null && appels.length === 0, JSON.stringify(c));
-  delete process.env.HELIX_SANS_MISE_A_JOUR;
+  const c = await canaux["oxoai:maj-nouveautes"]({}, { jusqua: "9.0.0", langue: "en" });
+  verifier("OXOAI_SANS_MISE_A_JOUR=1 : aucune note lue, aucun lien, rien contacté", !c.ok && c.lien === null && appels.length === 0, JSON.stringify(c));
+  delete process.env.OXOAI_SANS_MISE_A_JOUR;
 
   // Paquet qui porte le serveur de l'agence : pas GitHub.
   m = neuf();
   await m.demarrerMiseAJour(() => true);
-  writeFileSync(join(AUX, "ressources", "app-update.yml"), "provider: generic\nurl: https://maj.exemple.test/helix\n");
+  writeFileSync(join(AUX, "ressources", "app-update.yml"), "provider: generic\nurl: https://maj.exemple.test/oxoai\n");
   appels.length = 0;
-  const a = await canaux["helix:maj-nouveautes"]({}, { jusqua: "9.0.0", langue: "en" });
+  const a = await canaux["oxoai:maj-nouveautes"]({}, { jusqua: "9.0.0", langue: "en" });
   verifier("serveur de l'agence inscrit : GitHub n'est pas contacté pour les notes", !a.ok && a.lien === null && appels.length === 0, JSON.stringify(a));
   Module._load = charger;
   verifier("le repère du profil n'est jamais écrit ailleurs que dans le profil", existsSync(join(profil, "nouveautes.json")) && !existsSync(join(AUX, "donnees", "nouveautes.json")));
@@ -313,7 +313,7 @@ verifier("date de publication lue, sinon null", n.datePublication(pub("v1.0.0"))
 
 if (process.argv.includes("--reseau")) {
   const depot = require("../package.json").depotMisesAJour;
-  const r = await fetch(`https://api.github.com/repos/${depot}/releases?per_page=30`, { headers: { Accept: "application/vnd.github+json", "User-Agent": "Helix" } });
+  const r = await fetch(`https://api.github.com/repos/${depot}/releases?per_page=30`, { headers: { Accept: "application/vnd.github+json", "User-Agent": "OxoAI" } });
   const vraies = n.lireListe(await r.text()) ?? [];
   console.log(`\n${vraies.length} publications lues sur ${depot}`);
   for (const v of vraies) {

@@ -58,11 +58,11 @@ async function poster(chemin: string, corps?: unknown): Promise<Resultat> {
   }
 }
 
-export const etatClientGoogle = () => lire<EtatClientGoogle>("/helix/google/client");
-export const enregistrerClientGoogle = (clientId: string, clientSecret: string) => poster("/helix/google/client", { clientId, clientSecret });
-export const effacerClientGoogle = () => poster("/helix/google/client/effacer");
+export const etatClientGoogle = () => lire<EtatClientGoogle>("/oxoai/google/client");
+export const enregistrerClientGoogle = (clientId: string, clientSecret: string) => poster("/oxoai/google/client", { clientId, clientSecret });
+export const effacerClientGoogle = () => poster("/oxoai/google/client/effacer");
 
-export const etatAgendaGoogle = () => lire<EtatAgendaGoogle>("/helix/agenda/google");
-export const connecterAgendaGoogle = (ecriture: boolean) => poster("/helix/agenda/google/connecter", { ecriture });
-export const collerAdresseAgendaGoogle = (adresse: string) => poster("/helix/agenda/google/code", { adresse });
-export const oublierAgendaGoogle = () => poster("/helix/agenda/google/oublier");
+export const etatAgendaGoogle = () => lire<EtatAgendaGoogle>("/oxoai/agenda/google");
+export const connecterAgendaGoogle = (ecriture: boolean) => poster("/oxoai/agenda/google/connecter", { ecriture });
+export const collerAdresseAgendaGoogle = (adresse: string) => poster("/oxoai/agenda/google/code", { adresse });
+export const oublierAgendaGoogle = () => poster("/oxoai/agenda/google/oublier");

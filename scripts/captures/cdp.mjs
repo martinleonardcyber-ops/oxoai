@@ -36,7 +36,7 @@ export const enJs = (v) => JSON.stringify(v).replace(/[<>/\u2028\u2029]/g, (c) =
 export async function lancerChrome({ largeur = 1280, hauteur = 800, densite = 2, langue = "en" } = {}) {
   const binaire = CHROMES.find((c) => existsSync(c));
   if (!binaire) throw new Error("Chrome introuvable : donnez son chemin dans CHROME.");
-  const profil = mkdtempSync(join(tmpdir(), "helix-captures-chrome-"));
+  const profil = mkdtempSync(join(tmpdir(), "oxoai-captures-chrome-"));
   const processus = spawn(
     binaire,
     [

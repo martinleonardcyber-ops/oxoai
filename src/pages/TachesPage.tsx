@@ -237,7 +237,7 @@ const PREFERENCES_DEFAUT: Preferences = {
 };
 
 /* La clé porte le compte : deux personnes qui partagent un poste gardent chacune leurs réglages. */
-const clePreferences = (userId: string) => `helix:preferences-taches:${userId}`;
+const clePreferences = (userId: string) => `oxoai:preferences-taches:${userId}`;
 
 /** Garde d'une liste relue : seules les valeurs connues survivent. */
 function listeDe<T extends string>(brut: unknown, permises: readonly T[]): T[] {
@@ -759,7 +759,7 @@ function ActionsCompteRendu({ titre, texte, onAgrandir }: { titre: string; texte
 /* ========================================================================== */
 
 /** Colonne des rubriques réduite à ses icônes, sur ce poste. */
-const CLE_COLONNE_REDUITE = "helix.taches.colonneReduite";
+const CLE_COLONNE_REDUITE = "oxoai.taches.colonneReduite";
 
 function ProjectsPanel({
   rubrique,

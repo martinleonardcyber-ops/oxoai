@@ -1,23 +1,23 @@
 #!/bin/sh
-# Installe Helix sur macOS en une commande, depuis la dernière publication GitHub.
+# Installe OxoAI sur macOS en une commande, depuis la dernière publication GitHub.
 #
 # Pourquoi (27/09/2026) : tant que l'application n'est pas signée et certifiée
 # par Apple (compte Apple Developer, SIGNATURE.md § 1), un .dmg téléchargé par
 # un navigateur est marqué « téléchargé », et macOS l'arrête (« Apple n'a pas pu
-# vérifier… »). Téléchargé ici, par le Terminal, il n'est pas marqué : Helix
+# vérifier… »). Téléchargé ici, par le Terminal, il n'est pas marqué : OxoAI
 # s'ouvre directement. L'intégrité n'y perd rien : l'image disque est vérifiée
 # contre SHA256SUMS.txt de la même publication avant d'être ouverte, et sa
 # signature de code l'est aussi avant la copie.
 #
-#   curl -fsSL https://raw.githubusercontent.com/medhiclb/HelixAI/main/scripts/installer-macos.sh | sh
+#   curl -fsSL https://raw.githubusercontent.com/martinleonardcyber-ops/oxoai/main/scripts/installer-macos.sh | sh
 #   (dépôt public depuis le 27/09/2026 ; `gh`, s'il est connecté, sert aussi)
 set -eu
 
 # Tout le script est dans une fonction, appelée à la dernière ligne (test d'intrusion du 27/09/2026) :
 # lu par `curl | sh`, un téléchargement coupé en route exécutait les lignes déjà reçues, par exemple
-# jusqu'à `rm -rf "$CIBLE/Helix.app"` sans la mise en place qui suit. Coupé, il ne fait plus rien.
+# jusqu'à `rm -rf "$CIBLE/OxoAI.app"` sans la mise en place qui suit. Coupé, il ne fait plus rien.
 principal() {
-DEPOT="medhiclb/HelixAI"
+DEPOT="martinleonardcyber-ops/oxoai"
 TRAVAIL="$(mktemp -d)"
 trap 'hdiutil detach -quiet "$TRAVAIL/volume" 2>/dev/null || true; rm -rf "$TRAVAIL"' EXIT
 
@@ -29,7 +29,7 @@ case "$(uname -m)" in
   *) echo "Processeur non pris en charge : $(uname -m)." >&2; exit 1 ;;
 esac
 
-echo "Recherche de la dernière version de Helix..."
+echo "Recherche de la dernière version de OxoAI..."
 if command -v gh >/dev/null 2>&1 && gh auth status >/dev/null 2>&1; then
   gh release download -R "$DEPOT" -p "*-$ARCH.dmg" -p 'SHA256SUMS.txt' -D "$TRAVAIL"
 else
@@ -57,29 +57,29 @@ echo "Empreinte vérifiée."
 
 mkdir -p "$TRAVAIL/volume"
 hdiutil attach -quiet -nobrowse -readonly -mountpoint "$TRAVAIL/volume" "$DMG"
-codesign --verify --deep --strict "$TRAVAIL/volume/Helix.app" || { echo "Signature de code invalide : installation arrêtée." >&2; exit 1; }
+codesign --verify --deep --strict "$TRAVAIL/volume/OxoAI.app" || { echo "Signature de code invalide : installation arrêtée." >&2; exit 1; }
 
-# HELIX_CIBLE : un autre dossier que Applications (essais) ; Helix en marche n'est alors ni fermé ni rouvert.
-# Le processus de l'application par son chemin : `pgrep -x Helix` prenait aussi d'autres programmes lancés depuis un dossier « Helix ».
-helix_ouvert() { pgrep -f "Helix.app/Contents/MacOS/Helix" >/dev/null 2>&1; }
-if [ -z "${HELIX_CIBLE:-}" ] && helix_ouvert; then
-  echo "Fermeture de Helix..."
-  osascript -e 'tell application "Helix" to quit' >/dev/null 2>&1 || true
+# OXOAI_CIBLE : un autre dossier que Applications (essais) ; OxoAI en marche n'est alors ni fermé ni rouvert.
+# Le processus de l'application par son chemin : `pgrep -x OxoAI` prenait aussi d'autres programmes lancés depuis un dossier « OxoAI ».
+oxoai_ouvert() { pgrep -f "OxoAI.app/Contents/MacOS/OxoAI" >/dev/null 2>&1; }
+if [ -z "${OXOAI_CIBLE:-}" ] && oxoai_ouvert; then
+  echo "Fermeture de OxoAI..."
+  osascript -e 'tell application "OxoAI" to quit' >/dev/null 2>&1 || true
   # Jusqu'à 30 s : l'arrêt de la passerelle et des outils prend quelques secondes.
   i=0
-  while helix_ouvert && [ $i -lt 30 ]; do sleep 1; i=$((i + 1)); done
-  helix_ouvert && { echo "Helix ne s'est pas fermé : quittez-le (Helix > Quitter), puis relancez cette commande." >&2; exit 1; }
+  while oxoai_ouvert && [ $i -lt 30 ]; do sleep 1; i=$((i + 1)); done
+  oxoai_ouvert && { echo "OxoAI ne s'est pas fermé : quittez-le (OxoAI > Quitter), puis relancez cette commande." >&2; exit 1; }
 fi
-CIBLE="${HELIX_CIBLE:-/Applications}"
+CIBLE="${OXOAI_CIBLE:-/Applications}"
 [ -w "$CIBLE" ] || [ ! -e "$CIBLE" ] || CIBLE="$HOME/Applications"
 mkdir -p "$CIBLE"
 # Copiée à côté, puis mise en place : une copie qui échoue laisse l'ancienne application intacte.
-rm -rf "$CIBLE/.Helix.app.nouveau"
-ditto "$TRAVAIL/volume/Helix.app" "$CIBLE/.Helix.app.nouveau"
-rm -rf "$CIBLE/Helix.app"
-mv "$CIBLE/.Helix.app.nouveau" "$CIBLE/Helix.app"
-echo "Helix est installé dans $CIBLE."
-[ -n "${HELIX_CIBLE:-}" ] || { echo "Ouverture..."; open "$CIBLE/Helix.app"; }
+rm -rf "$CIBLE/.OxoAI.app.nouveau"
+ditto "$TRAVAIL/volume/OxoAI.app" "$CIBLE/.OxoAI.app.nouveau"
+rm -rf "$CIBLE/OxoAI.app"
+mv "$CIBLE/.OxoAI.app.nouveau" "$CIBLE/OxoAI.app"
+echo "OxoAI est installé dans $CIBLE."
+[ -n "${OXOAI_CIBLE:-}" ] || { echo "Ouverture..."; open "$CIBLE/OxoAI.app"; }
 }
 
 principal "$@"

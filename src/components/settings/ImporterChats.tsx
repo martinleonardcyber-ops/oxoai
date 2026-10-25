@@ -169,13 +169,13 @@ export function ImporterChats() {
         bilanEnCours.illisibles = demandes - choisisComplets.length;
       }
       // Projets ensuite : les Chats s'y rangent.
-      const projetsHelix = new Map<string, string>();
+      const projetsOxoAI = new Map<string, string>();
       for (const p of donnees.projets.filter((x) => projetsChoisis.has(x.cle))) {
         const description = [p.description, p.instructions ? `${t("Instructions du projet d'origine :")}\n${p.instructions}` : ""]
           .filter(Boolean)
           .join("\n\n");
         const projet = createProject(moi, p.nom, description);
-        projetsHelix.set(p.cle, projet.id);
+        projetsOxoAI.set(p.cle, projet.id);
         bilanEnCours.projets++;
         if (avecAgents && p.instructions) {
           createAgent(moi, {
@@ -232,7 +232,7 @@ export function ImporterChats() {
           sharedWith: [],
           organisationId: moi.organisationId,
           origin: "local" as const,
-          ...(c.projet && projetsHelix.has(c.projet) ? { projectId: projetsHelix.get(c.projet) } : {}),
+          ...(c.projet && projetsOxoAI.has(c.projet) ? { projectId: projetsOxoAI.get(c.projet) } : {}),
           messages: c.messages.map((m) => ({ id: newId(), role: m.role, content: m.content, createdAt: m.createdAt })),
           createdAt: c.creeLe,
           updatedAt: c.modifieLe,
@@ -280,7 +280,7 @@ export function ImporterChats() {
         <Card className="space-y-3">
           <p className="text-sm font-medium text-foreground">{t("Depuis les logiciels de cet ordinateur")}</p>
           <p className="text-sm text-muted-foreground">
-            {t("Helix a trouvé ces logiciels d'IA sur cet ordinateur. Il reprend ce qu'ils y ont laissé, sans export à demander : vous choisissez ensuite ce que vous gardez.")}
+            {t("OxoAI a trouvé ces logiciels d'IA sur cet ordinateur. Il reprend ce qu'ils y ont laissé, sans export à demander : vous choisissez ensuite ce que vous gardez.")}
           </p>
           {lisibles.map((l) => (
             <div key={l.id} className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border p-3">

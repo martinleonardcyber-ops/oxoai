@@ -40,7 +40,7 @@ export interface Resultat {
 /** `null` si la passerelle ne répond pas : l'écran le dit. */
 export async function etat(): Promise<EtatDrive | null> {
   try {
-    const res = await apiFetch("/helix/drive");
+    const res = await apiFetch("/oxoai/drive");
     if (!res.ok) return null;
     return (await res.json()) as EtatDrive;
   } catch {
@@ -74,10 +74,10 @@ async function poster(chemin: string, corps?: unknown): Promise<Resultat> {
 }
 
 /** Lance l'autorisation : l'instance rend l'adresse de consentement de Google. */
-export const connecter = () => poster("/helix/drive/connecter");
+export const connecter = () => poster("/oxoai/drive/connecter");
 
 /** Achève une autorisation dont la redirection n'a pas atteint l'instance. */
-export const collerAdresse = (adresse: string) => poster("/helix/drive/code", { adresse });
+export const collerAdresse = (adresse: string) => poster("/oxoai/drive/code", { adresse });
 
 /** Débranche le Drive, et révoque l'accès chez Google. */
-export const oublier = () => poster("/helix/drive/oublier");
+export const oublier = () => poster("/oxoai/drive/oublier");

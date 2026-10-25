@@ -1,7 +1,7 @@
 import { jetonsDesMessages, jetonsDunMessage, margeDeContexte, reservePourLaReponse } from "./documentsJoints.ts";
 
 /**
- * Une conversation qui tient dans la place du modèle, coupée par Helix et
+ * Une conversation qui tient dans la place du modèle, coupée par OxoAI et
  * jamais par le moteur (27/09/2026).
  *
  * Vu par Medhi sur un PC Windows sans carte graphique (Ministral 3B, llmster) :
@@ -10,7 +10,7 @@ import { jetonsDesMessages, jetonsDunMessage, margeDeContexte, reservePourLaRepo
  * conversation chargée (documentsJoints.ts) ; l'historique, les consignes et
  * les outils partaient en entier, quelle que soit cette taille. Au-delà, c'est
  * LM Studio qui coupe, selon sa politique de dépassement (garder le début et
- * couper le milieu, faire glisser une fenêtre, ou s'arrêter), sans que Helix
+ * couper le milieu, faire glisser une fenêtre, ou s'arrêter), sans que OxoAI
  * ni la personne sachent ce que le modèle a encore sous les yeux : la consigne
  * système ou la question peuvent disparaître.
  *
@@ -185,7 +185,7 @@ export function tenirDansLaPlace(
 
 /**
  * Le moteur a refusé la demande, trop longue pour sa place (16/10/2026) :
- * l'estimation de Helix (3 caractères par jeton) s'est trompée, ou la taille
+ * l'estimation de OxoAI (3 caractères par jeton) s'est trompée, ou la taille
  * n'était pas connue (un modèle cloud, un serveur qui ne la publie pas). On
  * raccourcit à 60 % de l'estimation, avec les mêmes règles que
  * `tenirDansLaPlace` (consigne et question gardées, tours entiers, résultats

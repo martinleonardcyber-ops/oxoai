@@ -33,7 +33,7 @@ import { fileURLToPath } from "node:url";
 
 export const VERSION = "2.1.9";
 
-const travail = mkdtempSync(join(tmpdir(), "helix-blender-empreintes-"));
+const travail = mkdtempSync(join(tmpdir(), "oxoai-blender-empreintes-"));
 try {
   const entree = join(travail, "entree.in");
   const sortie = join(travail, "sortie.txt");

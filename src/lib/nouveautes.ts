@@ -40,7 +40,7 @@ interface PontNouveautes {
 /** Le pont de l'application de bureau, s'il connaît les nouveautés (absent d'une application plus ancienne et d'un navigateur). */
 export const pontNouveautes = (): Required<PontNouveautes> | undefined => {
   if (typeof window === "undefined") return undefined;
-  const p = (window as unknown as { helix?: { miseAJour?: PontNouveautes } }).helix?.miseAJour;
+  const p = (window as unknown as { oxoai?: { miseAJour?: PontNouveautes } }).oxoai?.miseAJour;
   return p && typeof p.nouveautes === "function" && typeof p.lancement === "function" && typeof p.nouveautesVues === "function"
     ? (p as Required<PontNouveautes>)
     : undefined;

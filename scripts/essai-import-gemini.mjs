@@ -49,7 +49,7 @@ function verifier(nom, ok, detail = "") {
 /* Le vrai lecteur, empaqueté                                           */
 /* ------------------------------------------------------------------ */
 
-const TMP = mkdtempSync(join(tmpdir(), "helix-essai-gemini-"));
+const TMP = mkdtempSync(join(tmpdir(), "oxoai-essai-gemini-"));
 await build({
   stdin: {
     contents:
@@ -64,7 +64,7 @@ await build({
   platform: "browser",
   outfile: join(TMP, "lecteur.mjs"),
   alias: { "@": join(RACINE, "src") },
-  define: { "import.meta.env": "{}", __HELIX_VERSION__: '"essai"' },
+  define: { "import.meta.env": "{}", __OXOAI_VERSION__: '"essai"' },
   loader: { ".png": "empty", ".svg": "empty", ".css": "empty" },
   logLevel: "error",
   plugins: [
@@ -81,7 +81,7 @@ await build({
     },
   ],
 });
-const magasin = new Map([["helix:langue", "fr"]]);
+const magasin = new Map([["oxoai:langue", "fr"]]);
 globalThis.localStorage = {
   getItem: (k) => (magasin.has(k) ? magasin.get(k) : null),
   setItem: (k, v) => void magasin.set(k, String(v)),
@@ -421,7 +421,7 @@ console.log("\n7. Double import : aucun doublon, rien d'écrit par-dessus");
   const deja = L.chatsDejaImportes(moi, "gemini");
   verifier("le magasin des Chats retient ce qui a été importé, par clé d'origine", a.chats.every((x) => deja.get(x.cle) === x.messages.length), [...deja].join(" "));
   verifier("rien d'importé pour une autre personne ou une autre source", L.chatsDejaImportes("quelqu-un-d-autre", "gemini").size === 0 && L.chatsDejaImportes(moi, "chatgpt").size === 0);
-  const avant = JSON.parse(localStorage.getItem("helix:sessions") ?? "[]");
+  const avant = JSON.parse(localStorage.getItem("oxoai:sessions") ?? "[]");
   verifier("le Chat déjà là est intact après l'import", avant.some((s) => s.id === "s-existant" && s.title === "Chat de la personne"), String(avant.length));
   const aReprendre = c.chats.filter((x) => !deja.has(x.cle) || x.messages.length > deja.get(x.cle));
   verifier("second import : seuls le nouveau Chat et la conversation qui a grandi sont à reprendre", aReprendre.length === 2, aReprendre.map((x) => x.cle).join(", "));

@@ -33,11 +33,11 @@ async function lire<T>(res: Response): Promise<T> {
 }
 
 export const apercuEffacement = async (): Promise<Apercu> =>
-  lire<Apercu>(await apiFetch("/helix/compte/effacement"));
+  lire<Apercu>(await apiFetch("/oxoai/compte/effacement"));
 
 export async function effacerMonCompte(password: string, code: string): Promise<void> {
   await lire(
-    await apiFetch("/helix/compte/effacer", {
+    await apiFetch("/oxoai/compte/effacer", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ password, code: code || undefined }),

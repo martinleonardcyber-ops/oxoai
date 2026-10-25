@@ -25,7 +25,7 @@ import type { VerdictEcouteur } from "./palmier.ts";
  *  - les outils s'exécutent un par un sur le fil du jeu : les appels ne se
  *    superposent pas (mcp.ts, `serie`).
  *
- * Helix ne télécharge ni ne distribue rien : il parle à l'éditeur que la
+ * OxoAI ne télécharge ni ne distribue rien : il parle à l'éditeur que la
  * personne a installé et ouvert. Comme pour Palmier Pro et Blender, un port
  * sans authentification peut être pris par n'importe quel programme de la
  * machine (le 8000 est aussi celui de nombreux serveurs de développement) :
@@ -56,16 +56,16 @@ export const DOCUMENTATION_UNREAL = "https://dev.epicgames.com/documentation/unr
 /*
  * Pour les essais seulement (scripts/essai-roblox-blender.mjs, partie D),
  * posées par qui lance la passerelle, jamais par une requête :
- *  - `HELIX_ESSAI_UNREAL_PORT` : le port du faux éditeur ;
- *  - `HELIX_ESSAI_UNREAL_EXECUTABLE` (chemin absolu) : l'exécutable qui doit
+ *  - `OXOAI_ESSAI_UNREAL_PORT` : le port du faux éditeur ;
+ *  - `OXOAI_ESSAI_UNREAL_EXECUTABLE` (chemin absolu) : l'exécutable qui doit
  *    écouter, à la place du nom et de la signature (le faux est un script Node).
  */
 export function portUnreal(): number {
-  const essai = Number(process.env.HELIX_ESSAI_UNREAL_PORT);
+  const essai = Number(process.env.OXOAI_ESSAI_UNREAL_PORT);
   return Number.isInteger(essai) && essai >= 1024 && essai <= 65535 ? essai : PORT_UNREAL;
 }
 const executableEssai = (): string | null => {
-  const v = process.env.HELIX_ESSAI_UNREAL_EXECUTABLE;
+  const v = process.env.OXOAI_ESSAI_UNREAL_EXECUTABLE;
   return v && isAbsolute(v) ? v : null;
 };
 

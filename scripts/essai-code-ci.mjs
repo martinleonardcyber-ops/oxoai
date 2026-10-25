@@ -1,6 +1,6 @@
 /*
  * Une session de l'écran Code ouverte comme l'écran l'ouvre, avec le vrai
- * OpenCode posé par Helix, sur une machine jetable (02/10/2026).
+ * OpenCode posé par OxoAI, sur une machine jetable (02/10/2026).
  *
  * Signalé par Medhi le 02/10/2026 : sous Linux, l'écran Code n'ouvre pas de
  * session (« Réessayer »). Rien ne se voyait d'ici, faute de Linux : cet essai
@@ -12,7 +12,7 @@
  * Ce qui tourne, tout sur 127.0.0.1 : une passerelle (`node gateway/src/index.ts`),
  * données et dossier de projet jetables ; un faux moteur compatible OpenAI à la
  * place de LM Studio (une réponse courte, en flux). OpenCode est celui que
- * Helix télécharge et vérifie lui-même (opencodePrive.ts), dans les données
+ * OxoAI télécharge et vérifie lui-même (opencodePrive.ts), dans les données
  * jetables. Rien ne touche au LM Studio, à l'OpenCode ni aux réglages du poste.
  *
  * Gardé dans le dossier de sortie : le journal de la passerelle (avec celui
@@ -100,7 +100,7 @@ await new Promise((ok) => moteur.listen(0, "127.0.0.1", ok));
 const PORT_MOTEUR = moteur.address().port;
 
 /* ── La passerelle jetable ──────────────────────────────────────────────── */
-const TMP = mkdtempSync(join(tmpdir(), "helix-essai-code-"));
+const TMP = mkdtempSync(join(tmpdir(), "oxoai-essai-code-"));
 const DONNEES = join(TMP, "donnees");
 const PROJET = join(TMP, "projet");
 mkdirSync(DONNEES, { recursive: true });
@@ -115,15 +115,15 @@ const passerelle = spawn(process.execPath, [join(RACINE, "gateway", "src", "inde
   cwd: RACINE,
   env: {
     ...process.env,
-    HELIX_DATA_DIR: DONNEES,
-    HELIX_CONFIG: join(TMP, "helix.config.json"),
-    HELIX_GATEWAY_PORT: String(PORT),
-    HELIX_CODE_DIR: PROJET,
-    HELIX_WORKSPACE: join(TMP, "espace"),
-    HELIX_LUME_DIR: join(TMP, "lume"),
-    HELIX_LMSTUDIO_URL: `http://127.0.0.1:${PORT_MOTEUR}/v1`,
-    HELIX_EXO_URL: "http://127.0.0.1:9/v1",
-    HELIX_SANS_MISE_A_JOUR: "1",
+    OXOAI_DATA_DIR: DONNEES,
+    OXOAI_CONFIG: join(TMP, "oxoai.config.json"),
+    OXOAI_GATEWAY_PORT: String(PORT),
+    OXOAI_CODE_DIR: PROJET,
+    OXOAI_WORKSPACE: join(TMP, "espace"),
+    OXOAI_LUME_DIR: join(TMP, "lume"),
+    OXOAI_LMSTUDIO_URL: `http://127.0.0.1:${PORT_MOTEUR}/v1`,
+    OXOAI_EXO_URL: "http://127.0.0.1:9/v1",
+    OXOAI_SANS_MISE_A_JOUR: "1",
   },
   stdio: ["ignore", "pipe", "pipe"],
 });
@@ -132,7 +132,7 @@ passerelle.stderr.pipe(journal);
 
 let JETON = "";
 let SEANCE = "";
-const entetes = () => ({ "Content-Type": "application/json", Authorization: `Bearer ${JETON}`, "X-Helix-Langue": "fr", ...(SEANCE ? { "X-Helix-Session": SEANCE } : {}) });
+const entetes = () => ({ "Content-Type": "application/json", Authorization: `Bearer ${JETON}`, "X-OxoAI-Langue": "fr", ...(SEANCE ? { "X-OxoAI-Session": SEANCE } : {}) });
 const lireJson = async (r) => {
   const texte = await r.text();
   try {
@@ -156,20 +156,20 @@ try {
 
   dire("2. Le compte administrateur");
   const motDePasse = `Essai-${randomBytes(12).toString("base64url")}-9a`;
-  const compte = await lireJson(await fetch(`${G}/helix/auth/create`, { method: "POST", headers: entetes(), body: JSON.stringify({ fullName: "Administrateur essai", email: "admin@essai-code.test", password: motDePasse }) }));
+  const compte = await lireJson(await fetch(`${G}/oxoai/auth/create`, { method: "POST", headers: entetes(), body: JSON.stringify({ fullName: "Administrateur essai", email: "admin@essai-code.test", password: motDePasse }) }));
   SEANCE = compte.corps?.session?.token ?? "";
   if (!verifier("le premier compte est créé", Boolean(SEANCE), compte.texte.slice(0, 300))) throw new Error("pas de séance");
 
-  dire("3. OpenCode, posé par Helix de lui-même");
+  dire("3. OpenCode, posé par OxoAI de lui-même");
   let etat = null;
   let relance = false;
   for (let i = 0; i < 360; i++) {
-    etat = (await lireJson(await fetch(`${G}/helix/code`, { headers: entetes() }))).corps;
+    etat = (await lireJson(await fetch(`${G}/oxoai/code`, { headers: entetes() }))).corps;
     if (etat?.available) break;
     // Pas d'installation en cours ni d'erreur au bout de 20 s : on la demande, comme le bouton de l'écran.
     if (!relance && i >= 40 && !etat?.installation?.enCours) {
       relance = true;
-      const r = await lireJson(await fetch(`${G}/helix/code/installer`, { method: "POST", headers: entetes(), body: "{}" }));
+      const r = await lireJson(await fetch(`${G}/oxoai/code/installer`, { method: "POST", headers: entetes(), body: "{}" }));
       dire(`   installation demandée : ${r.statut} ${r.texte.slice(0, 200)}`);
     }
     if (etat?.installation?.erreur && relance) break;
@@ -180,7 +180,7 @@ try {
   if (!verifier("OpenCode est posé et trouvé", Boolean(etat?.available), JSON.stringify(etat))) throw new Error("pas d'OpenCode");
 
   dire("4. Le modèle choisi pour Code");
-  const modeles = (await lireJson(await fetch(`${G}/helix/models`, { headers: entetes() }))).corps;
+  const modeles = (await lireJson(await fetch(`${G}/oxoai/models`, { headers: entetes() }))).corps;
   const liste = (modeles?.data ?? modeles?.models ?? []).map((m) => m.id ?? m.uid ?? m);
   dire(`   modèles : ${JSON.stringify(liste).slice(0, 300)}`);
   const modele = liste.find((m) => String(m).includes(MODELE));
@@ -188,15 +188,15 @@ try {
 
   dire("5. Une session, comme l'écran Code l'ouvre");
   const t0 = Date.now();
-  const session = await lireJson(await fetch(`${G}/helix/code/session`, { method: "POST", headers: entetes(), body: JSON.stringify({ model: modele, effort: "moyen", dossier: PROJET }) }));
+  const session = await lireJson(await fetch(`${G}/oxoai/code/session`, { method: "POST", headers: entetes(), body: JSON.stringify({ model: modele, effort: "moyen", dossier: PROJET }) }));
   dire(`   ${session.statut} en ${Date.now() - t0} ms : ${session.texte.slice(0, 400)}`);
   const id = session.corps?.data?.id;
   verifier("la session s'ouvre (200, un identifiant)", session.statut === 200 && Boolean(id), `${session.statut} ${session.texte}`);
 
   if (id) {
     dire("6. Une demande dans la session");
-    const flux = await fetch(`${G}/helix/code/events?sessionID=${encodeURIComponent(id)}`, { headers: entetes(), signal: AbortSignal.timeout(120_000) }).catch((e) => e);
-    const demande = await lireJson(await fetch(`${G}/helix/code/prompt`, { method: "POST", headers: entetes(), body: JSON.stringify({ sessionID: id, text: "Dis bonjour en une phrase.", model: modele, effort: "moyen" }) }));
+    const flux = await fetch(`${G}/oxoai/code/events?sessionID=${encodeURIComponent(id)}`, { headers: entetes(), signal: AbortSignal.timeout(120_000) }).catch((e) => e);
+    const demande = await lireJson(await fetch(`${G}/oxoai/code/prompt`, { method: "POST", headers: entetes(), body: JSON.stringify({ sessionID: id, text: "Dis bonjour en une phrase.", model: modele, effort: "moyen" }) }));
     dire(`   demande : ${demande.statut} ${demande.texte.slice(0, 300)}`);
     verifier("la demande est acceptée", demande.statut >= 200 && demande.statut < 300, `${demande.statut} ${demande.texte}`);
     let vu = "";
@@ -222,8 +222,8 @@ try {
      * phrase qui lui dit le dossier du projet et le bon chemin.
      */
     dire("7. Un chemin absolu hors du dossier du projet (/app/PLAN.md)");
-    const flux7 = await fetch(`${G}/helix/code/events?sessionID=${encodeURIComponent(id)}`, { headers: entetes(), signal: AbortSignal.timeout(120_000) }).catch((e) => e);
-    const demande7 = await lireJson(await fetch(`${G}/helix/code/prompt`, { method: "POST", headers: entetes(), body: JSON.stringify({ sessionID: id, text: "ESSAI-HORS-PROJET : lis le plan.", model: modele, effort: "moyen" }) }));
+    const flux7 = await fetch(`${G}/oxoai/code/events?sessionID=${encodeURIComponent(id)}`, { headers: entetes(), signal: AbortSignal.timeout(120_000) }).catch((e) => e);
+    const demande7 = await lireJson(await fetch(`${G}/oxoai/code/prompt`, { method: "POST", headers: entetes(), body: JSON.stringify({ sessionID: id, text: "ESSAI-HORS-PROJET : lis le plan.", model: modele, effort: "moyen" }) }));
     dire(`   demande : ${demande7.statut} ${demande7.texte.slice(0, 200)}`);
     let vu7 = "";
     if (flux7 instanceof Response && flux7.body) {

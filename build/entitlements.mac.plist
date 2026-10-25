@@ -3,7 +3,7 @@
 <plist version="1.0">
 <dict>
   <!--
-    Droits requis par Helix sous « hardened runtime ».
+    Droits requis par OxoAI sous « hardened runtime ».
     Le durcissement est obligatoire pour la notarisation Apple.
   -->
 

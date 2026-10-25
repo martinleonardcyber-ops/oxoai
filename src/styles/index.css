@@ -120,7 +120,7 @@
    *
    * 1. Ce qui est technique reste de gauche à droite : code, chemins,
    *    commandes, adresses, jetons, numéros de version. Un chemin lu à l'envers
-   *    (« Helix/Application Support/~ ») ne se recopie pas.
+   *    (« OxoAI/Application Support/~ ») ne se recopie pas.
    */
   /*
    * Un bloc préformaté sans police de code (trace d'un outil, rapport à
@@ -207,7 +207,7 @@
 }
 
 /* Animation discrete du mark (helice) : flottement + leger balancement. */
-@keyframes logo-helix {
+@keyframes logo-oxoai {
   0% {
     transform: translateY(0) rotate(-1.5deg);
   }
@@ -220,7 +220,7 @@
 }
 @media (prefers-reduced-motion: no-preference) {
   .animate-logo {
-    animation: logo-helix 4s ease-in-out infinite;
+    animation: logo-oxoai 4s ease-in-out infinite;
     transform-origin: center;
     will-change: transform;
   }
@@ -292,18 +292,6 @@
   /* Une commande posée sur la poignée reste une commande, jamais une zone de glisser. */
   :root[data-desktop="1"] :is(button, a, input, textarea, select, [role="button"], [role="dialog"]) {
     -webkit-app-region: no-drag;
-  }
-
-  /*
-   * Logo de marque : un tracé noir sur fond transparent (le visuel livré était
-   * sur blanc opaque ; `scripts/icones/marque-transparente.mjs` en a fait de la
-   * vraie transparence le 30/09/2026). En thème sombre, le tracé est inversé
-   * en blanc. Avant, le blanc était effacé par un mélange de calques
-   * (`multiply`, puis `screen` en sombre) : un carré gris restait autour du
-   * logo sous Windows en thème sombre, là où le navigateur isole le calque.
-   */
-  :root[data-theme="sombre"] .logo-marque {
-    filter: invert(1);
   }
 
   /*

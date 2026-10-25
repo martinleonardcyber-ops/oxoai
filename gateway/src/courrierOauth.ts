@@ -254,7 +254,7 @@ const BOUCLE = /^(https?:\/\/)(localhost|127\.0\.0\.1|\[::1\])(:\d{1,5})?$/i;
 export function retourEnvoye(fournisseur: FournisseurCourrier, base: string): string {
   const racine = base.replace(/\/+$/, "");
   const nom = fournisseur === "microsoft" ? racine.replace(BOUCLE, (_t: string, schema: string, _h: string, port?: string) => `${schema}localhost${port ?? ""}`) : racine;
-  return `${nom}/helix/oauth/retour`;
+  return `${nom}/oxoai/oauth/retour`;
 }
 
 /**

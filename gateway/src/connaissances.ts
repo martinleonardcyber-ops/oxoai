@@ -139,7 +139,7 @@ export const RRF_K = 60;
 const BASES_PAR_QUESTION_MAX = 10;
 
 const dossierIndex = () =>
-  join(process.env.HELIX_DATA_DIR ?? join(homedir(), ".helix", "data"), "connaissances");
+  join(process.env.OXOAI_DATA_DIR ?? join(homedir(), ".oxoai", "data"), "connaissances");
 const dossierBase = (baseId: string) => join(dossierIndex(), baseId);
 const cheminIndex = (baseId: string, docId: string) => join(dossierBase(baseId), `${docId}.index`);
 const place = (baseId: string, docId: string) => `connaissances:${baseId}:${docId}`;
@@ -1134,15 +1134,15 @@ export async function contextePourChat(
 /* ---- Pour les employés OpenClaw ------------------------------------ */
 
 /**
- * Nom de l'outil tel qu'Helix le sert ; chez OpenClaw, il porte en plus le
- * préfixe du serveur de l'employé (`helix-<id>__connaissances__chercher`).
+ * Nom de l'outil tel qu'OxoAI le sert ; chez OpenClaw, il porte en plus le
+ * préfixe du serveur de l'employé (`oxoai-<id>__connaissances__chercher`).
  */
 export const OUTIL_EMPLOYE = "connaissances__chercher";
 
 /** Passages rendus à un employé : moins qu'au Chat, un petit modèle relit tout à chaque étape. */
 const PASSAGES_EMPLOYE_MAX = 8;
 
-/** Définition donnée au modèle de l'employé (format OpenAI, comme les autres outils d'Helix). */
+/** Définition donnée au modèle de l'employé (format OpenAI, comme les autres outils d'OxoAI). */
 export function outilEmploye(): {
   type: "function";
   function: { name: string; description: string; parameters: Record<string, unknown> };

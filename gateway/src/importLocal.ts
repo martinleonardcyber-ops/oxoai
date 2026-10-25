@@ -12,7 +12,7 @@ const exec = promisify(execFile);
  * Import sans export : ce que les autres logiciels d'IA laissent sur ce poste.
  *
  * Demandé le 24/09/2026 : « sur Codex ou Claude, on importe automatiquement ».
- * Codex reprend, à son installation, la configuration de Claude Code ; Helix
+ * Codex reprend, à son installation, la configuration de Claude Code ; OxoAI
  * fait de même, et plus : il trouve les logiciels d'IA installés, dit ce
  * qu'il peut en reprendre, et le reprend au clic.
  *
@@ -102,7 +102,7 @@ export interface Logiciel {
   id: "claude-code" | "codex" | "cursor" | "chatgpt" | "claude";
   nom: string;
   present: boolean;
-  /** Ce que Helix peut en reprendre. */
+  /** Ce que OxoAI peut en reprendre. */
   lisible: boolean;
   conversations: number;
   instructions: boolean;
@@ -246,7 +246,7 @@ interface Entree {
   date: number;
 }
 
-/** Les dossiers de travail deviennent des projets Helix, avec leurs instructions (CLAUDE.md, AGENTS.md). */
+/** Les dossiers de travail deviennent des projets OxoAI, avec leurs instructions (CLAUDE.md, AGENTS.md). */
 function projetDe(dossier: string | undefined, projets: Map<string, ProjetLu> | null): string | undefined {
   if (!dossier) return undefined;
   if (projets && !projets.has(dossier)) {
@@ -640,7 +640,7 @@ export async function logicielsTrouves(): Promise<Logiciel[]> {
       instructions: existsSync(join(MAISON, ".cursorrules")),
       note: cursorLisible
         ? t("Conversations de l'agent et du Chat.")
-        : t("Ses conversations sont dans sa propre base, que Helix ne peut pas lire sur cet ordinateur."),
+        : t("Ses conversations sont dans sa propre base, que OxoAI ne peut pas lire sur cet ordinateur."),
     },
     {
       id: "chatgpt",

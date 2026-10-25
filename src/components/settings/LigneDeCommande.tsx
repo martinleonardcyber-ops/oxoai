@@ -6,11 +6,11 @@ import { InfoBox } from "@/components/ui/InfoBox";
 import { t, tf } from "@/lib/i18n";
 
 /**
- * La ligne de commande `helix`, livrée avec l'application de bureau.
+ * La ligne de commande `oxoai`, livrée avec l'application de bureau.
  *
  * Le bouton pose un lanceur dans ~/.local/bin (electron/ligneDeCommande.cjs),
  * sans droit d'administrateur, et ajoute ce dossier au PATH du shell s'il n'y
- * est pas. Sous Windows (04/10/2026), un `helix.cmd` dans ~\.helix\bin, et ce
+ * est pas. Sous Windows (04/10/2026), un `oxoai.cmd` dans ~\.oxoai\bin, et ce
  * dossier ajouté au PATH du compte : les phrases le disent ainsi. Hors de l'application de bureau (navigateur, poste sans pont), il
  * n'y a rien à poser : l'écran le dit au lieu d'offrir un bouton mort.
  */
@@ -25,7 +25,7 @@ interface EtatCli {
   dossier?: string;
   installe: boolean;
   aJour: boolean;
-  /** Un autre programme occupe déjà ~/.local/bin/helix : il n'est jamais remplacé. */
+  /** Un autre programme occupe déjà ~/.local/bin/oxoai : il n'est jamais remplacé. */
   etranger?: boolean;
   dansLePath: boolean;
   chemin: string;
@@ -61,15 +61,15 @@ interface PontCli {
 }
 
 const pont = (): PontCli | undefined =>
-  (window as unknown as { helix?: { ligneDeCommande?: PontCli } }).helix?.ligneDeCommande;
+  (window as unknown as { oxoai?: { ligneDeCommande?: PontCli } }).oxoai?.ligneDeCommande;
 
 /** Relu à chaque affichage : les rôles suivent la langue choisie. */
 const commandes = (): { commande: string; role: string }[] => [
-  { commande: "helix connexion", role: t("Se connecter une fois avec son compte de l'instance.") },
-  { commande: "helix chat", role: t("Un Chat dans le terminal, avec les modèles de l'instance.") },
-  { commande: "helix chat --outils", role: t("Le même Chat, avec vos connecteurs et la barrière d'approbation.") },
-  { commande: "helix code", role: t("L'agent de code sur le dossier courant.") },
-  { commande: "helix --aide", role: t("Toutes les commandes et options.") },
+  { commande: "oxoai connexion", role: t("Se connecter une fois avec son compte de l'instance.") },
+  { commande: "oxoai chat", role: t("Un Chat dans le terminal, avec les modèles de l'instance.") },
+  { commande: "oxoai chat --outils", role: t("Le même Chat, avec vos connecteurs et la barrière d'approbation.") },
+  { commande: "oxoai code", role: t("L'agent de code sur le dossier courant.") },
+  { commande: "oxoai --aide", role: t("Toutes les commandes et options.") },
 ];
 
 export function LigneDeCommande() {
@@ -130,12 +130,12 @@ export function LigneDeCommande() {
             <span className="min-w-0 flex-1">
               <span className="block text-sm font-medium text-foreground">
                 {etat.etranger
-                  ? t("Un autre programme nommé helix est déjà installé à cet endroit : il n'est pas remplacé.")
+                  ? t("Un autre programme nommé oxoai est déjà installé à cet endroit : il n'est pas remplacé.")
                   : etat.installe && etat.aJour
-                  ? t("La commande helix est en place.")
+                  ? t("La commande oxoai est en place.")
                   : etat.installe
-                    ? t("La commande helix vise une autre copie de l'application : mettez-la à jour.")
-                    : t("La commande helix n'est pas encore en place.")}
+                    ? t("La commande oxoai vise une autre copie de l'application : mettez-la à jour.")
+                    : t("La commande oxoai n'est pas encore en place.")}
               </span>
               <span className="block break-all text-xs text-muted-foreground">{etat.chemin}</span>
             </span>
@@ -161,7 +161,7 @@ export function LigneDeCommande() {
             <p className="text-xs text-muted-foreground">
               {etat.windows
                 ? tf(
-                    "Un petit lanceur, helix.cmd, est posé dans {0}, sans droit d'administrateur, et ce dossier est ajouté au PATH de votre compte Windows ; « Retirer » enlève les deux.",
+                    "Un petit lanceur, oxoai.cmd, est posé dans {0}, sans droit d'administrateur, et ce dossier est ajouté au PATH de votre compte Windows ; « Retirer » enlève les deux.",
                     etat.dossier ?? etat.chemin.replace(/[\\/][^\\/]*$/, ""),
                   )
                 : tf(
@@ -181,7 +181,7 @@ export function LigneDeCommande() {
           {etat.installe && etat.ligneAjoutee && (
             <p className="text-xs text-muted-foreground">
               {etat.windows
-                ? t("Ouvrez un nouveau terminal (PowerShell ou Invite de commandes) et tapez helix : les terminaux déjà ouverts gardent l'ancien PATH.")
+                ? t("Ouvrez un nouveau terminal (PowerShell ou Invite de commandes) et tapez oxoai : les terminaux déjà ouverts gardent l'ancien PATH.")
                 : tf("Ouvrez un nouveau terminal : la ligne ajoutée à {0} ne vaut que pour les terminaux ouverts ensuite.", etat.profil.replace(/^.*\//, "~/"))}
             </p>
           )}

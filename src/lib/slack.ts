@@ -29,7 +29,7 @@ export interface Resultat {
 
 export async function etat(): Promise<EtatSlack | null> {
   try {
-    const res = await apiFetch("/helix/slack");
+    const res = await apiFetch("/oxoai/slack");
     if (!res.ok) return null;
     return (await res.json()) as EtatSlack;
   } catch {
@@ -59,10 +59,10 @@ async function poster(chemin: string, corps?: unknown): Promise<Resultat> {
 }
 
 /** Essaie puis enregistre le jeton de bot. En cas d'échec, rien n'est gardé. */
-export const configurer = (jeton: string) => poster("/helix/slack/configurer", { jeton });
+export const configurer = (jeton: string) => poster("/oxoai/slack/configurer", { jeton });
 
 /** Efface le jeton de l'instance. Il reste valable chez Slack : l'écran le dit. */
-export const oublier = () => poster("/helix/slack/oublier");
+export const oublier = () => poster("/oxoai/slack/oublier");
 
 /**
  * Nom technique du bot, tel que Slack l'accepte dans un manifeste : lettres

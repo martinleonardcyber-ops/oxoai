@@ -22,25 +22,25 @@ import { ecouteurs, executableParLsof, identite, reel, type Ecouteur } from "./e
  *  - un **serveur MCP** en Python (stdio), qui traduit les appels d'outils en
  *    commandes pour ce port.
  *
- * Helix pose le serveur lui-même, dans un environnement Python à lui
+ * OxoAI pose le serveur lui-même, dans un environnement Python à lui
  * (`<données>/blender-mcp`), avec `pip --require-hashes --no-deps
  * --only-binary=:all:` et la liste figée de blender-paquets.json (version et
  * empreinte de chaque roue, dépendances comprises, refaite par
  * `node scripts/blender-empreintes.mjs`). Python : celui du système s'il est
- * en 3.10 à 3.14 et sait créer un environnement, sinon celui que Helix pose
+ * en 3.10 à 3.14 et sait créer un environnement, sinon celui que OxoAI pose
  * (pythonPrive.ts). Le module complémentaire est celui que livre la roue
  * vérifiée, contrôlé une seconde fois par son empreinte, puis recopié à part
- * pour que la personne l'installe dans Blender (Helix n'écrit pas dans les
+ * pour que la personne l'installe dans Blender (OxoAI n'écrit pas dans les
  * dossiers de Blender).
  *
- * Ce qui sortirait de la machine sans Helix (SECURITE.md § 65) :
+ * Ce qui sortirait de la machine sans OxoAI (SECURITE.md § 65) :
  *  - la télémétrie du serveur (Supabase de l'auteur : nom de l'outil, durée,
  *    réussite, même sans consentement) : coupée au lancement par les trois
  *    variables que le serveur lit (`DISABLE_TELEMETRY`…), et avec elle les
  *    « trajectoires » et captures, qui passent par le même interrupteur ;
  *  - la vérification de mise à jour du module, au démarrage de Blender
  *    (raw.githubusercontent.com) : elle se lit dans l'environnement de
- *    Blender, que Helix ne lance pas ; dite à la personne, rien de la scène
+ *    Blender, que OxoAI ne lance pas ; dite à la personne, rien de la scène
  *    n'y part et rien ne s'installe sans son clic dans Blender ;
  *  - les bibliothèques (Poly Haven, Sketchfab, Poly Pizza) et les générateurs
  *    (Hyper3D, Hunyuan3D, Tripo) : éteints par défaut dans le module ; et
@@ -68,27 +68,27 @@ export const TELECHARGEMENT_BLENDER = "https://www.blender.org/download/";
  * de la Stichting Blender Foundation. Identifiant `org.blenderfoundation.blender`
  * et équipe `68UA947AUU` relus le 12/10/2026 sur le vrai Blender 5.2.2
  * (`codesign -dv`, essai de bout en bout noté dans PROJET.md). Une autre
- * signature : Helix refuse de parler au port, ce qui échoue fermé.
+ * signature : OxoAI refuse de parler au port, ce qui échoue fermé.
  */
 export const EXIGENCE_BLENDER = 'anchor apple generic and identifier "org.blenderfoundation.blender" and certificate leaf[subject.OU] = "68UA947AUU"';
 
 /*
  * Pour les essais seulement (scripts/essai-roblox-blender.mjs), posées par qui
  * lance la passerelle, jamais par une requête :
- *  - `HELIX_ESSAI_BLENDER_PORT` : le port du faux module ;
- *  - `HELIX_ESSAI_BLENDER_EXECUTABLE` (chemin absolu) : l'exécutable qui doit
+ *  - `OXOAI_ESSAI_BLENDER_PORT` : le port du faux module ;
+ *  - `OXOAI_ESSAI_BLENDER_EXECUTABLE` (chemin absolu) : l'exécutable qui doit
  *    écouter, à la place de la signature (le faux module est un script Node) ;
- *  - `HELIX_ESSAI_BLENDER_SERVEUR` (chemin absolu) : le serveur MCP à lancer à
- *    la place de celui de l'environnement de Helix (un faux, ou le vrai posé
+ *  - `OXOAI_ESSAI_BLENDER_SERVEUR` (chemin absolu) : le serveur MCP à lancer à
+ *    la place de celui de l'environnement de OxoAI (un faux, ou le vrai posé
  *    à part), sans rien installer.
  */
 export function portBlender(): number {
-  const essai = Number(process.env.HELIX_ESSAI_BLENDER_PORT);
+  const essai = Number(process.env.OXOAI_ESSAI_BLENDER_PORT);
   return Number.isInteger(essai) && essai >= 1024 && essai <= 65535 ? essai : PORT_BLENDER;
 }
 const absolu = (v: string | undefined): string | null => (v && isAbsolute(v) ? v : null);
-const executableEssai = () => absolu(process.env.HELIX_ESSAI_BLENDER_EXECUTABLE);
-const serveurEssai = () => absolu(process.env.HELIX_ESSAI_BLENDER_SERVEUR);
+const executableEssai = () => absolu(process.env.OXOAI_ESSAI_BLENDER_EXECUTABLE);
+const serveurEssai = () => absolu(process.env.OXOAI_ESSAI_BLENDER_SERVEUR);
 
 /** Blender tourne sur macOS, Windows et Linux : la fiche se montre partout. */
 export const blenderProposable = (): boolean => ["darwin", "win32", "linux"].includes(process.platform);
@@ -229,16 +229,16 @@ export async function ecouteurBlender(port = portBlender()): Promise<VerdictBlen
  * addon.py 2.1.9) : un module qui marche répond à `ping` en quelques
  * dizaines de millisecondes. Réglable pour les essais.
  */
-const DELAI_SONDE_MS = Number(process.env.HELIX_ESSAI_BLENDER_SONDE_MS) > 0 ? Number(process.env.HELIX_ESSAI_BLENDER_SONDE_MS) : 4_000;
+const DELAI_SONDE_MS = Number(process.env.OXOAI_ESSAI_BLENDER_SONDE_MS) > 0 ? Number(process.env.OXOAI_ESSAI_BLENDER_SONDE_MS) : 4_000;
 
 /**
  * Le module répond-il ? (16/10/2026, bogue signalé par Medhi : « bouge le
  * cube sur blender », trois `get_addon_status` d'une minute chacun.)
  *
- * Mesuré le 16/10/2026 (faux module muet, port ouvert sans réponse) : Helix
+ * Mesuré le 16/10/2026 (faux module muet, port ouvert sans réponse) : OxoAI
  * reconnaissait Blender sur le port, lançait l'appel, et le serveur « MCP for
  * Blender » attendait la réponse du module jusqu'à 180 s (`sock.settimeout`
- * de server.py), bien après les 60 s du délai MCP de Helix. D'où 60,8 s par
+ * de server.py), bien après les 60 s du délai MCP de OxoAI. D'où 60,8 s par
  * appel sur ce Mac, et 1 min 02 sous Windows, où PowerShell s'ajoute. Un
  * module muet, c'est un port ouvert par Blender dont le fil principal ne
  * traite plus rien : une boîte de dialogue ou une fenêtre de fichier ouverte,
@@ -293,10 +293,10 @@ export async function blenderJoignable(port = portBlender()): Promise<VerdictBle
 }
 
 /* ------------------------------------------------------------------ */
-/* Le serveur MCP, posé par Helix                                      */
+/* Le serveur MCP, posé par OxoAI                                      */
 /* ------------------------------------------------------------------ */
 
-const racine = () => join(process.env.HELIX_DATA_DIR ?? join(homedir(), ".helix", "data"), "blender-mcp");
+const racine = () => join(process.env.OXOAI_DATA_DIR ?? join(homedir(), ".oxoai", "data"), "blender-mcp");
 const dossierVenv = () => join(racine(), "venv");
 const pythonVenv = () => (process.platform === "win32" ? join(dossierVenv(), "Scripts", "python.exe") : join(dossierVenv(), "bin", "python3"));
 const marque = () => join(racine(), "version.txt");
@@ -317,11 +317,11 @@ export function serveurBlenderInstalle(): boolean {
  * Les versions de Python pour lesquelles blender-paquets.json a des roues :
  * 3.10 à 3.14 (`paquets.python`). Un Python 3.15 trouvé sur la machine
  * créerait un environnement où pip ne trouve aucune roue de pydantic-core
- * (relecture du 12/10/2026) : on prend alors celui de Helix.
+ * (relecture du 12/10/2026) : on prend alors celui de OxoAI.
  */
 export const versionPythonAcceptee = (majeure: number, mineure: number): boolean => majeure === 3 && mineure >= 10 && mineure <= 14;
 
-/** Un Python 3.10 à 3.14 qui sait créer un environnement : celui de Helix s'il est posé, sinon celui du système, sinon Helix pose le sien. */
+/** Un Python 3.10 à 3.14 qui sait créer un environnement : celui de OxoAI s'il est posé, sinon celui du système, sinon OxoAI pose le sien. */
 async function pythonPourVenv(): Promise<string> {
   const prive = pythonPrive();
   if (prive) return prive;
@@ -337,7 +337,7 @@ async function pythonPourVenv(): Promise<string> {
       }
     }
   }
-  // Ni l'un ni l'autre : Helix pose son Python 3.12 (github.com, empreinte vérifiée, pythonPrive.ts).
+  // Ni l'un ni l'autre : OxoAI pose son Python 3.12 (github.com, empreinte vérifiée, pythonPrive.ts).
   console.log(`[blender] pas de Python 3.10 à 3.14 sur cette machine : Python privé posé d'abord (${taillePythonPriveMo()} Mo).`);
   return assurerPythonPrive();
 }
@@ -425,7 +425,7 @@ async function installerServeur(): Promise<void> {
 
 /**
  * La commande du serveur, toujours la même : l'interpréteur de l'environnement
- * de Helix, en mode isolé (`-I` : ni PYTHONPATH, ni paquets de l'utilisateur,
+ * de OxoAI, en mode isolé (`-I` : ni PYTHONPATH, ni paquets de l'utilisateur,
  * ni dossier courant), qui appelle le point d'entrée du paquet. Rien ne vient
  * d'une requête ni du magasin.
  */
@@ -487,9 +487,9 @@ export function refusBlenderRecent(): Promise<string | null> {
 export const serveurBlenderAPoser = (): boolean => !serveurBlenderInstalle();
 
 /**
- * Au retrait du connecteur : l'environnement de Helix (`<données>/blender-mcp`)
+ * Au retrait du connecteur : l'environnement de OxoAI (`<données>/blender-mcp`)
  * est effacé, après la fin d'une installation en cours. Le module coché dans
- * Blender, Helix n'y touche pas : la personne le décoche (l'écran le dit).
+ * Blender, OxoAI n'y touche pas : la personne le décoche (l'écran le dit).
  */
 export async function effacerServeurBlender(): Promise<void> {
   await installation?.catch(() => undefined);

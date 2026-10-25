@@ -26,22 +26,22 @@ export interface EtatMachine {
 }
 
 export async function lireMachine(): Promise<EtatMachine> {
-  const res = await apiFetch("/helix/machine");
+  const res = await apiFetch("/oxoai/machine");
   if (!res.ok) throw new Error(t("L'instance n'a pas répondu."));
   return (await res.json()) as EtatMachine;
 }
 
 export async function demarrerMachine(): Promise<void> {
-  await apiFetch("/helix/machine/demarrer", { method: "POST" });
+  await apiFetch("/oxoai/machine/demarrer", { method: "POST" });
 }
 
 export async function arreterMachine(): Promise<void> {
-  await apiFetch("/helix/machine/arreter", { method: "POST" });
+  await apiFetch("/oxoai/machine/arreter", { method: "POST" });
 }
 
 /** Efface la machine et rend sa place sur le disque. Refusé tant qu'elle est choisie. */
 export async function effacerMachine(): Promise<void> {
-  const res = await apiFetch("/helix/machine/effacer", { method: "POST" });
+  const res = await apiFetch("/oxoai/machine/effacer", { method: "POST" });
   if (!res.ok) {
     const corps = (await res.json().catch(() => ({}))) as { error?: { message?: string } };
     throw new Error(corps.error?.message ?? t("L'instance n'a pas répondu."));
@@ -54,7 +54,7 @@ export async function effacerMachine(): Promise<void> {
  */
 export async function ecranMachine(): Promise<string | null> {
   try {
-    const res = await apiFetch("/helix/machine/ecran");
+    const res = await apiFetch("/oxoai/machine/ecran");
     if (!res.ok) return null;
     return URL.createObjectURL(await res.blob());
   } catch {

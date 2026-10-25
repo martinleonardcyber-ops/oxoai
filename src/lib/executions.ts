@@ -17,7 +17,7 @@ import { t, tf, lister } from "@/lib/i18n";
  * passerelle, fenêtre fermée.
  */
 
-export const TACHES_CHANGEES = "helix:tasks-changed";
+export const TACHES_CHANGEES = "oxoai:tasks-changed";
 
 const enCours = new Map<string, AbortController>();
 const abonnes = new Set<() => void>();

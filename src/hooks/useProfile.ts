@@ -9,7 +9,7 @@ import {
 } from "@/lib/store/profile";
 
 /** Événement interne : garde les écrans synchronisés après une sauvegarde. */
-const CHANGED = "helix:profile-changed";
+const CHANGED = "oxoai:profile-changed";
 
 /** Profil privé de l'utilisateur connecté. */
 export function useProfile() {

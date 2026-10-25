@@ -55,7 +55,7 @@ const APPS = {
   shopify: { id: "shopifyclientid0123456789abcdef", secret: "SECRET-SHOPIFY-DE-TEST" },
   salesforce: { id: "3MVG9sfEssaiClientId.abcdef", secret: "SECRET-SALESFORCE-DE-TEST" },
   pipedrive: { id: "pipedriveessai01", secret: "SECRET-PIPEDRIVE-DE-TEST" },
-  zendesk: { id: "helix_essai_zendesk", secret: "SECRET-ZENDESK-DE-TEST" },
+  zendesk: { id: "oxoai_essai_zendesk", secret: "SECRET-ZENDESK-DE-TEST" },
 };
 const BASIC = {
   woo: Buffer.from(`${CLES.wooCle}:${CLES.wooSecret}`).toString("base64"),
@@ -299,9 +299,9 @@ await new Promise((ok) => faux.listen(PORT_FAUX, "127.0.0.1", ok));
 /* Passerelle jetable, transport et résolution remplacés                      */
 /* ------------------------------------------------------------------------- */
 
-const AUX = mkdtempSync(join(tmpdir(), "helix-commerce-aux-"));
-const DONNEES = mkdtempSync(join(tmpdir(), "helix-commerce-donnees-"));
-const ESPACE = mkdtempSync(join(tmpdir(), "helix-commerce-espace-"));
+const AUX = mkdtempSync(join(tmpdir(), "oxoai-commerce-aux-"));
+const DONNEES = mkdtempSync(join(tmpdir(), "oxoai-commerce-donnees-"));
+const ESPACE = mkdtempSync(join(tmpdir(), "oxoai-commerce-espace-"));
 const PREALABLE = join(AUX, "prealable.mjs");
 writeFileSync(
   PREALABLE,
@@ -339,14 +339,14 @@ const PORT = await portLibre();
 const G = `http://127.0.0.1:${PORT}`;
 const ENV = {
   ...process.env,
-  HELIX_CONFIG: join(AUX, "profil.json"),
-  HELIX_GATEWAY_PORT: String(PORT),
-  HELIX_DATA_DIR: DONNEES,
-  HELIX_WORKSPACE: ESPACE,
-  HELIX_CODE_DIR: ESPACE,
-  HELIX_LMSTUDIO_URL: "http://127.0.0.1:9/v1",
-  HELIX_EXO_URL: "http://127.0.0.1:9/v1",
-  HELIX_GATEWAY_HOST: "127.0.0.1",
+  OXOAI_CONFIG: join(AUX, "profil.json"),
+  OXOAI_GATEWAY_PORT: String(PORT),
+  OXOAI_DATA_DIR: DONNEES,
+  OXOAI_WORKSPACE: ESPACE,
+  OXOAI_CODE_DIR: ESPACE,
+  OXOAI_LMSTUDIO_URL: "http://127.0.0.1:9/v1",
+  OXOAI_EXO_URL: "http://127.0.0.1:9/v1",
+  OXOAI_GATEWAY_HOST: "127.0.0.1",
 };
 const passerelle = spawn(process.execPath, ["--import", PREALABLE, join(RACINE, "gateway", "src", "index.ts")], { env: ENV, stdio: ["ignore", "pipe", "pipe"] });
 let journal = "";
@@ -369,26 +369,26 @@ if (!demarree) {
 }
 
 const JETON = readFileSync(join(DONNEES, "instance-token"), "utf8").trim();
-const avecJeton = { "Content-Type": "application/json", Authorization: `Bearer ${JETON}`, "X-Helix-Langue": "fr" };
+const avecJeton = { "Content-Type": "application/json", Authorization: `Bearer ${JETON}`, "X-OxoAI-Langue": "fr" };
 const appel = (chemin, options = {}) => fetch(`${G}${chemin}`, { redirect: "manual", ...options });
 const poster = (chemin, entetes, corps) => appel(chemin, { method: "POST", headers: entetes, body: JSON.stringify(corps ?? {}) });
-const premier = await (await poster("/helix/auth/create", avecJeton, { fullName: "Alice Essai", email: "alice@example.test", password: "Mot2PasseSolide!42" })).json();
-const A = { ...avecJeton, "X-Helix-Session": premier.session?.token };
+const premier = await (await poster("/oxoai/auth/create", avecJeton, { fullName: "Alice Essai", email: "alice@example.test", password: "Mot2PasseSolide!42" })).json();
+const A = { ...avecJeton, "X-OxoAI-Session": premier.session?.token };
 const idA = premier.account?.id;
-const creeB = await (await poster("/helix/auth/create", A, { fullName: "Bruno Essai", email: "bruno@example.test", password: "Provisoire2Passe!11" })).json();
-const connB = await (await poster("/helix/auth/mot-de-passe-provisoire", avecJeton, { accountId: creeB.account?.id, password: "Provisoire2Passe!11", nouveau: "Bruno2PasseSolide!57" })).json();
-const B = { ...avecJeton, "X-Helix-Session": connB.session?.token };
+const creeB = await (await poster("/oxoai/auth/create", A, { fullName: "Bruno Essai", email: "bruno@example.test", password: "Provisoire2Passe!11" })).json();
+const connB = await (await poster("/oxoai/auth/mot-de-passe-provisoire", avecJeton, { accountId: creeB.account?.id, password: "Provisoire2Passe!11", nouveau: "Bruno2PasseSolide!57" })).json();
+const B = { ...avecJeton, "X-OxoAI-Session": connB.session?.token };
 const idB = creeB.account?.id;
-const etatDe = async (entetes = A) => (await (await appel("/helix/commerce", { headers: entetes })).json()).services ?? [];
+const etatDe = async (entetes = A) => (await (await appel("/oxoai/commerce", { headers: entetes })).json()).services ?? [];
 const service = async (id) => (await etatDe()).find((s) => s.id === id);
-const enregistrer = (corps, entetes = A) => poster("/helix/commerce/enregistrer", entetes, corps);
+const enregistrer = (corps, entetes = A) => poster("/oxoai/commerce/enregistrer", entetes, corps);
 
 /* ------------------------------------------------------------------------- */
 console.log("\nA. Qui a le droit");
 {
-  const sans = await appel("/helix/commerce", { headers: avecJeton });
+  const sans = await appel("/oxoai/commerce", { headers: avecJeton });
   verifier("état du commerce : sans séance → 401", sans.status === 401, sans.status);
-  const vueB = await (await appel("/helix/commerce", { headers: B })).json();
+  const vueB = await (await appel("/oxoai/commerce", { headers: B })).json();
   verifier("un collègue voit l'état des six services, et l'écran sait qu'il n'administre pas", Array.isArray(vueB.services) && vueB.services.length === 6 && vueB.administrateur === false, JSON.stringify(vueB).slice(0, 200));
   for (const [suite, corps] of [
     ["/enregistrer", { service: "stripe", cle: CLES.stripe }],
@@ -396,14 +396,14 @@ console.log("\nA. Qui a le droit");
     ["/connecter", { service: "salesforce" }],
     ["/oublier", { service: "pipedrive" }],
   ]) {
-    const r = await poster(`/helix/commerce${suite}`, B, corps);
+    const r = await poster(`/oxoai/commerce${suite}`, B, corps);
     verifier(`un collègue qui n'administre pas : ${suite} (${corps.service}) refusé (403)`, r.status === 403, r.status);
   }
   verifier("et rien n'est parti chez un service pour ces refus", recues.length === 0, recues.map((x) => x.hote).join(", "));
   const inconnu = await enregistrer({ service: "paypal", cle: "x" });
   verifier("un service hors de la liste est refusé (400)", inconnu.status === 400, inconnu.status);
   for (const id of ["stripe", "zendesk"]) {
-    const mcp = await poster("/helix/connecteurs/ajouter", A, { id, command: "/bin/sh" });
+    const mcp = await poster("/oxoai/connecteurs/ajouter", A, { id, command: "/bin/sh" });
     const jMcp = await mcp.json().catch(() => ({}));
     verifier(`un connecteur MCP ne peut pas prendre le préfixe « ${id} » (réservé)`, mcp.status === 400 && /intégré/.test(jMcp.message ?? ""), JSON.stringify(jMcp).slice(0, 160));
   }
@@ -460,14 +460,14 @@ console.log("\nB. Clés et identifiants : essayés avant d'être gardés, jamais
 
 /** L'adresse d'autorisation, décortiquée. */
 async function depart(id, ecriture = false) {
-  const r = await poster("/helix/commerce/connecter", A, { service: id, ecriture });
+  const r = await poster("/oxoai/commerce/connecter", A, { service: id, ecriture });
   const j = await r.json().catch(() => ({}));
   const u = typeof j.url === "string" ? new URL(j.url) : null;
   return { statut: r.status, j, u, p: u?.searchParams ?? new URLSearchParams() };
 }
 /** Le service renvoie la personne sur l'instance, comme le ferait son navigateur. */
 async function retour(d, code) {
-  const r = await appel(`/helix/oauth/retour?state=${encodeURIComponent(d.p.get("state") ?? "")}&code=${encodeURIComponent(code)}`);
+  const r = await appel(`/oxoai/oauth/retour?state=${encodeURIComponent(d.p.get("state") ?? "")}&code=${encodeURIComponent(code)}`);
   return { statut: r.status, page: await r.text() };
 }
 
@@ -490,7 +490,7 @@ console.log("\nC. Accord dans le navigateur : Salesforce, Pipedrive, Zendesk");
   const sf = await depart("salesforce");
   verifier(
     "Salesforce : chez login.salesforce.com, portées « api refresh_token », PKCE S256, retour sur l'instance, `state` tiré au sort",
-    sf.u?.origin === "https://login.salesforce.com" && sf.u?.pathname === "/services/oauth2/authorize" && sf.p.get("scope") === "api refresh_token" && sf.p.get("code_challenge_method") === "S256" && /^[A-Za-z0-9_-]{43}$/.test(sf.p.get("code_challenge") ?? "") && sf.p.get("redirect_uri") === `${G}/helix/oauth/retour` && /^commerce\.[A-Za-z0-9_-]{43}$/.test(sf.p.get("state") ?? "") && sf.p.get("client_id") === APPS.salesforce.id,
+    sf.u?.origin === "https://login.salesforce.com" && sf.u?.pathname === "/services/oauth2/authorize" && sf.p.get("scope") === "api refresh_token" && sf.p.get("code_challenge_method") === "S256" && /^[A-Za-z0-9_-]{43}$/.test(sf.p.get("code_challenge") ?? "") && sf.p.get("redirect_uri") === `${G}/oxoai/oauth/retour` && /^commerce\.[A-Za-z0-9_-]{43}$/.test(sf.p.get("state") ?? "") && sf.p.get("client_id") === APPS.salesforce.id,
     sf.j.url,
   );
   verifier("le secret ne voyage jamais dans l'adresse d'autorisation", !SECRETS.test(sf.j.url ?? "") && !sf.p.has("client_secret"), sf.j.url);
@@ -503,9 +503,9 @@ console.log("\nC. Accord dans le navigateur : Salesforce, Pipedrive, Zendesk");
 
   // `state` faux : ignoré, et la demande en cours reste en attente.
   const avant = recues.length;
-  const faux1 = await appel("/helix/oauth/retour?state=commerce.faux&code=CODE-zendesk");
-  const faux2 = await appel(`/helix/oauth/retour?state=${encodeURIComponent((zd.p.get("state") ?? "") + "x")}&code=CODE-zendesk`);
-  const faux3 = await appel("/helix/oauth/retour?state=commerce.faux&error=access_denied");
+  const faux1 = await appel("/oxoai/oauth/retour?state=commerce.faux&code=CODE-zendesk");
+  const faux2 = await appel(`/oxoai/oauth/retour?state=${encodeURIComponent((zd.p.get("state") ?? "") + "x")}&code=CODE-zendesk`);
+  const faux3 = await appel("/oxoai/oauth/retour?state=commerce.faux&error=access_denied");
   const zdAttente = await service("zendesk");
   verifier("retour public : un `state` faux (inventé, allongé, avec une erreur) est refusé, rien n'est échangé, la demande reste en attente", [faux1, faux2, faux3].every((r) => r.status === 400) && zdAttente?.attente === true && zdAttente?.configure === false && recues.length === avant, `${faux1.status} ${faux2.status} ${faux3.status} ${recues.length - avant}`);
 
@@ -539,18 +539,18 @@ console.log("\nC. Accord dans le navigateur : Salesforce, Pipedrive, Zendesk");
   // Le navigateur qui revient ne dit pas la langue de l'écran : l'issue reste dans celle de qui a lancé (ici, le français).
   const issueZd = (await service("zendesk"))?.issue?.message ?? "";
   verifier("l'issue de la connexion est écrite dans la langue de l'administrateur qui l'a lancée, pas dans celle du navigateur qui revient", /Zendesk connecté/.test(issueZd) && !/connected/.test(issueZd), issueZd);
-  const rejoue = await appel(`/helix/oauth/retour?state=${encodeURIComponent(zd2.p.get("state") ?? "")}&code=CODE-zendesk`);
+  const rejoue = await appel(`/oxoai/oauth/retour?state=${encodeURIComponent(zd2.p.get("state") ?? "")}&code=CODE-zendesk`);
   verifier("un retour rejoué (même `state`, même code) ne vaut plus rien", rejoue.status === 400, rejoue.status);
 }
 
 console.log("\nE. Clés et jetons : jamais à l'écran, jamais en clair sur le disque, jamais au journal");
 {
   for (const [nom, entetes] of [["administrateur", A], ["collègue", B]]) {
-    const brut = await (await appel("/helix/commerce", { headers: entetes })).text();
+    const brut = await (await appel("/oxoai/commerce", { headers: entetes })).text();
     const tous = JSON.parse(brut).services ?? [];
     verifier(`état (${nom}) : les six services branchés, sans aucune clé, aucun secret, aucun jeton`, tous.length === 6 && tous.every((s) => s.configure) && !SECRETS.test(brut), `${tous.filter((s) => !s.configure).map((s) => s.id)} ${brut.match(SECRETS)?.[0] ?? ""}`);
   }
-  const outils = await (await appel("/helix/outils", { headers: A })).text();
+  const outils = await (await appel("/oxoai/outils", { headers: A })).text();
   verifier("la puce « Outils » nomme les services branchés, sans rien de secret", /Stripe/.test(outils) && /Zendesk/.test(outils) && !SECRETS.test(outils), outils.slice(0, 200));
   const fichiers = [];
   const parcourir = (d) => {
@@ -580,14 +580,14 @@ console.log("\nG. Un appel recopié d'un ticket lu n'est pas un appel du modèle
   const enCours = appel("/v1/chat/completions", { method: "POST", headers: A, body: JSON.stringify({ model: "essai-commerce", stream: true, tools: true, messages: [{ role: "user", content: "RESUME-TICKET : résume le ticket 42." }] }) }).then((r) => r.text());
   let carte;
   for (let t = 0; t < 8000 && !carte; t += 200) {
-    const e = await (await appel("/helix/approbation", { headers: A })).json().catch(() => ({}));
+    const e = await (await appel("/oxoai/approbation", { headers: A })).json().catch(() => ({}));
     carte = (e.enAttente ?? []).find((d) => d.detail?.outil === "zendesk__repondre");
     if (!carte) {
       const fini = await Promise.race([enCours.then(() => true), attendre(200).then(() => false)]);
       if (fini) break;
     }
   }
-  if (carte) await poster("/helix/approbation/repondre", A, { id: carte.id, accord: false });
+  if (carte) await poster("/oxoai/approbation/repondre", A, { id: carte.id, accord: false });
   const flux = await enCours;
   const pendant = recues.slice(avant);
   verifier("témoin : le modèle a bien lu le ticket piégé par un vrai appel", pendant.some((x) => x.chemin?.startsWith("/api/v2/tickets/42/comments.json")) && auModele.length >= 2, `${pendant.map((x) => x.chemin).join(" ")} ${auModele.length}`);
@@ -712,7 +712,7 @@ sortie.lecturesModifient = c.LECTURES_COMMERCE.filter((n) => ap.modifie(n) || ap
 sortie.ecrituresToujours = c.ECRITURES_COMMERCE.every((n) => ap.modifie(n) && ap.demandeToujours(n));
 // Débrancher : révoquer chez le service quand il le permet ; sinon dire où.
 const { avecLangueDe } = await import(${src("langue.ts")});
-await avecLangueDe({ "x-helix-langue": "fr" }, new URL("http://essai/"), async () => {
+await avecLangueDe({ "x-oxoai-langue": "fr" }, new URL("http://essai/"), async () => {
   for (const id of c.IDS_COMMERCE) sortie["oubli_" + id] = await c.oublier(id, A.userId);
 });
 sortie.apres = (await c.etat("http://127.0.0.1")).filter((s) => s.configure || s.application.disponible && s.mode !== "oauth").map((s) => s.id);

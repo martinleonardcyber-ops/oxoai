@@ -16,9 +16,9 @@ import { t, tf } from "./langue.ts";
  * l'activer dans Studio : Assistant, « … », Manage MCP Servers, « Enable
  * Studio as MCP server ». Roblox Studio n'existe pas sous Linux. L'ancien
  * serveur `Roblox/studio-rust-mcp-server` (MIT) est archivé depuis avril 2026 :
- * Helix ne s'en sert pas.
+ * OxoAI ne s'en sert pas.
  *
- * Rien n'est téléchargé : Helix lance le programme de l'installation de Studio
+ * Rien n'est téléchargé : OxoAI lance le programme de l'installation de Studio
  * que la personne a faite elle-même, à son chemin fixe, jamais un chemin reçu
  * d'une requête ni relu du magasin. Sur macOS, la signature de `StudioMCP` et
  * celle de `RobloxStudio.app` sont vérifiées avant chaque lancement
@@ -28,7 +28,7 @@ import { t, tf } from "./langue.ts";
  * vers setup.rbxcdn.com/mac/RobloxStudio.dmg, 10,6 Mo, publié le 07/10/2026) :
  * « Developer ID Application: Roblox Corporation (2CFABCH843) », notarié ;
  * pas encore sur un Studio installé (PROJET.md, 12/10). Si Studio était signé
- * par une autre équipe, Helix refuse de le lancer : échec fermé. Sous Windows, le fichier de commandes est
+ * par une autre équipe, OxoAI refuse de le lancer : échec fermé. Sous Windows, le fichier de commandes est
  * dans le dossier de l'utilisateur, sans signature à lire : c'est le chemin
  * que donne Roblox, rien de plus (SECURITE.md § 65).
  */
@@ -40,12 +40,12 @@ export const DOCUMENTATION_ROBLOX = "https://create.roblox.com/docs/studio/mcp";
 
 /*
  * Pour les essais seulement (scripts/essai-roblox-blender.mjs) :
- * `HELIX_ESSAI_ROBLOX_EXECUTABLE` (chemin absolu) remplace le programme et sa
+ * `OXOAI_ESSAI_ROBLOX_EXECUTABLE` (chemin absolu) remplace le programme et sa
  * vérification de signature (le faux serveur est un script Node). Posée par
  * qui lance la passerelle, jamais par une requête.
  */
 const executableEssai = (): string | null => {
-  const brut = process.env.HELIX_ESSAI_ROBLOX_EXECUTABLE;
+  const brut = process.env.OXOAI_ESSAI_ROBLOX_EXECUTABLE;
   return brut && isAbsolute(brut) ? brut : null;
 };
 

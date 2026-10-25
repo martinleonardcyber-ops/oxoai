@@ -21,7 +21,7 @@ export interface EtatPaquet {
 
 export async function etatPaquets(): Promise<EtatPaquet[] | null> {
   try {
-    const res = await apiFetch("/helix/telecharger");
+    const res = await apiFetch("/oxoai/telecharger");
     if (!res.ok) return null;
     return ((await res.json()) as { paquets: EtatPaquet[] }).paquets;
   } catch {
@@ -31,7 +31,7 @@ export async function etatPaquets(): Promise<EtatPaquet[] | null> {
 
 export async function preparerMac(): Promise<{ ok: boolean; message?: string }> {
   try {
-    const res = await apiFetch("/helix/telecharger/macos/preparer", { method: "POST" });
+    const res = await apiFetch("/oxoai/telecharger/macos/preparer", { method: "POST" });
     if (res.ok) return { ok: true };
     const corps = (await res.json().catch(() => ({}))) as { error?: { message?: string } };
     return { ok: false, message: corps.error?.message ?? t("L'instance n'a pas répondu.") };
@@ -54,7 +54,7 @@ export async function telecharger(plateforme: Plateforme): Promise<boolean> {
   const b = await billet();
   if (!b) return false;
   window.open(
-    `${GATEWAY_BASE}/helix/telecharger/${plateforme}?flux=${encodeURIComponent(b)}&langue=${langue()}`,
+    `${GATEWAY_BASE}/oxoai/telecharger/${plateforme}?flux=${encodeURIComponent(b)}&langue=${langue()}`,
     "_blank",
     "noopener",
   );

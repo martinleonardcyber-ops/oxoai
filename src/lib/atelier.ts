@@ -80,7 +80,7 @@ export interface Verification {
 /** Inventaire de la machine. `null` si la passerelle ne répond pas. */
 export async function diagnostic(): Promise<Diagnostic | null> {
   try {
-    const res = await apiFetch("/helix/atelier");
+    const res = await apiFetch("/oxoai/atelier");
     if (!res.ok) return null;
     return (await res.json()) as Diagnostic;
   } catch {
@@ -96,7 +96,7 @@ export async function diagnostic(): Promise<Diagnostic | null> {
  * envoyer de POST, on lit le corps de la réponse au fil de l'eau.
  */
 export async function preparer(onProgres: (p: Progres) => void): Promise<Bilan> {
-  const res = await apiFetch("/helix/atelier/preparer", { method: "POST" });
+  const res = await apiFetch("/oxoai/atelier/preparer", { method: "POST" });
 
   if (!res.ok) {
     const corps = (await res.json().catch(() => ({}))) as { error?: { message?: string } };
@@ -144,7 +144,7 @@ export async function preparer(onProgres: (p: Progres) => void): Promise<Bilan> 
 
 /** Épreuves fonctionnelles : produire puis relire un document de chaque format. */
 export async function verifier(): Promise<Verification> {
-  const res = await apiFetch("/helix/atelier/verifier", { method: "POST" });
+  const res = await apiFetch("/oxoai/atelier/verifier", { method: "POST" });
   if (!res.ok) {
     const corps = (await res.json().catch(() => ({}))) as { error?: { message?: string } };
     throw new Error(corps.error?.message ?? tf("Vérification impossible ({0}).", res.status));

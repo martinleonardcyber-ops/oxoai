@@ -13,9 +13,9 @@
  * Aucune dépendance : Node 20 ou plus (fetch intégré), modules standard.
  *
  * Instance : celle de l'application de cet ordinateur par défaut
- * (http://127.0.0.1:8787, jeton lu dans ~/.helix/data/instance-token). Une
- * instance d'entreprise se donne par --adresse / HELIX_ADRESSE et
- * --jeton / HELIX_JETON.
+ * (http://127.0.0.1:8787, jeton lu dans ~/.oxoai/data/instance-token). Une
+ * instance d'entreprise se donne par --adresse / OXOAI_ADRESSE et
+ * --jeton / OXOAI_JETON.
  */
 
 import fs from "node:fs";
@@ -188,12 +188,12 @@ function adresseInstance(brute) {
   return { adresse: `${url.protocol}//${url.host}`, locale };
 }
 
-const dossierDonnees = () => process.env.HELIX_DATA_DIR || path.join(os.homedir(), ".helix", "data");
-const fichierSeance = () => process.env.HELIX_CLI_SEANCE || path.join(os.homedir(), ".helix", "cli-seance");
+const dossierDonnees = () => process.env.OXOAI_DATA_DIR || path.join(os.homedir(), ".oxoai", "data");
+const fichierSeance = () => process.env.OXOAI_CLI_SEANCE || path.join(os.homedir(), ".oxoai", "cli-seance");
 
 function contexte(options) {
-  const { adresse, locale } = adresseInstance(options.adresse || process.env.HELIX_ADRESSE || ADRESSE_DEFAUT);
-  let jeton = String(options.jeton || process.env.HELIX_JETON || "").trim();
+  const { adresse, locale } = adresseInstance(options.adresse || process.env.OXOAI_ADRESSE || ADRESSE_DEFAUT);
+  let jeton = String(options.jeton || process.env.OXOAI_JETON || "").trim();
   /*
    * Le jeton de l'application de ce poste n'est lu que pour une adresse
    * locale : l'envoyer à une instance d'entreprise lui remettrait la clé de
@@ -208,7 +208,7 @@ function contexte(options) {
       const vise = new URL(adresse).port || (adresse.startsWith("https:") ? "443" : "80");
       if (ouvert === vise) jeton = fs.readFileSync(path.join(dossierDonnees(), "instance-token"), "utf8").trim();
     } catch {
-      /* pas d'application sur ce poste (ou d'une version qui ne note pas son port) : il faudra HELIX_JETON */
+      /* pas d'application sur ce poste (ou d'une version qui ne note pas son port) : il faudra OXOAI_JETON */
     }
   }
   return { adresse, locale, jeton, seance: lireSeance(adresse)?.seance ?? "" };
@@ -244,7 +244,7 @@ function lireSeance(adresse) {
 function ecrireSeances(contenu) {
   const chemin = fichierSeance();
   fs.mkdirSync(path.dirname(chemin), { recursive: true, mode: 0o700 });
-  // `mode` ne change pas un dossier qui existe déjà (revue du 26/09/2026 : ~/.helix restait en 0755).
+  // `mode` ne change pas un dossier qui existe déjà (revue du 26/09/2026 : ~/.oxoai restait en 0755).
   try {
     fs.chmodSync(path.dirname(chemin), 0o700);
   } catch {
@@ -288,15 +288,15 @@ async function appel(ctx, chemin, { methode = "GET", corps, seance = true, signa
          * le terminal mêlait les deux langues (« Files », « Choose your own
          * password… » au milieu du français ; essai-cli.mjs échouait depuis).
          */
-        "X-Helix-Langue": "fr",
+        "X-OxoAI-Langue": "fr",
         ...(corps !== undefined ? { "Content-Type": "application/json" } : {}),
-        ...(seance && ctx.seance ? { "X-Helix-Session": ctx.seance } : {}),
+        ...(seance && ctx.seance ? { "X-OxoAI-Session": ctx.seance } : {}),
         ...(entetes ?? {}),
       },
       body: corps !== undefined ? JSON.stringify(corps) : undefined,
       signal,
       /*
-       * Jamais de redirection suivie : `fetch` renverrait `X-Helix-Session`
+       * Jamais de redirection suivie : `fetch` renverrait `X-OxoAI-Session`
        * (et le jeton) à l'adresse désignée par la redirection, même d'une
        * autre origine (vérifié sur Node 24, revue du 26/09/2026).
        */
@@ -316,7 +316,7 @@ async function appel(ctx, chemin, { methode = "GET", corps, seance = true, signa
 async function echec(ctx, r) {
   const corps = await jsonPropre(r).catch(() => ({}));
   if (r.status === 401) {
-    const sonde = await appel(ctx, "/helix/models", { seance: false }).catch(() => null);
+    const sonde = await appel(ctx, "/oxoai/models", { seance: false }).catch(() => null);
     if (sonde && sonde.status === 401) return new ErreurCli(T.jetonRefuse);
     if (ctx.seance) return new ErreurCli(T.seanceExpiree);
     return new ErreurCli(corps?.error?.message ? `${corps.error.message}\n${T.nonConnecte}` : T.nonConnecte);
@@ -508,7 +508,7 @@ class Approbations {
     let essais = 0;
     while (!this.arret.signal.aborted && essais < 5) {
       try {
-        const r = await appel(this.ctx, "/helix/approbation/evenements", { signal: this.arret.signal });
+        const r = await appel(this.ctx, "/oxoai/approbation/evenements", { signal: this.arret.signal });
         if (!r.ok || !r.body) return;
         essais = 0;
         for await (const donnee of evenements(r)) {
@@ -593,7 +593,7 @@ class Approbations {
       if (this.arret.signal.aborted && !courant.refuser) return;
       const accord = !courant.refuser && reponse !== null && /^\s*(o|oui)\s*$/i.test(reponse);
       courant.repondu = true;
-      const r = await appel(this.ctx, "/helix/approbation/repondre", {
+      const r = await appel(this.ctx, "/oxoai/approbation/repondre", {
         methode: "POST",
         corps: { id: demande.id, accord },
       }).catch((err) => ({ ok: false, status: 0, json: async () => ({ error: { message: err.message } }) }));
@@ -634,8 +634,8 @@ function cheminLisible(p, base = process.cwd()) {
 function libelleOutil(nom, args = {}, base) {
   let serveur = "";
   let court = String(nom || "outil");
-  // Connecteurs servis à l'agent de code : « helix_drive__chercher » chez OpenCode.
-  if (court.startsWith("helix_")) court = court.slice("helix_".length);
+  // Connecteurs servis à l'agent de code : « oxoai_drive__chercher » chez OpenCode.
+  if (court.startsWith("oxoai_")) court = court.slice("oxoai_".length);
   const sep = court.indexOf("__");
   if (sep > 0) {
     serveur = court.slice(0, sep);
@@ -781,7 +781,7 @@ function separateurReflexion() {
  * modèle converse, rien n'agit. Avec, c'est `tools: true` : l'instance donne
  * au modèle ses outils (fichiers de Cowork, connecteurs), les exécute elle-même
  * après sa barrière d'approbation, et raconte ce qu'elle fait par des
- * évènements `helix` que l'on affiche ligne à ligne.
+ * évènements `oxoai` que l'on affiche ligne à ligne.
  */
 async function questionChat(ctx, etat, signal) {
   const messages = etat.outils ? etat.historique : [{ role: "system", content: T.noteSansOutils }, ...etat.historique];
@@ -796,7 +796,7 @@ async function questionChat(ctx, etat, signal) {
     },
   });
   if (!r.ok || !r.body) throw await echec(ctx, r);
-  if (!etat.modeleVu) etat.modeleVu = r.headers.get("x-helix-model") || "";
+  if (!etat.modeleVu) etat.modeleVu = r.headers.get("x-oxoai-model") || "";
 
   let reponse = "";
   let outil = null;
@@ -839,7 +839,7 @@ async function questionChat(ctx, etat, signal) {
       continue;
     }
     if (ev.error) throw new ErreurCli(ev.error.message || T.refus(500));
-    const h = ev.helix;
+    const h = ev.oxoai;
     if (h) {
       if (h.type === "tool_start") outil = libelleOutil(h.name, h.args ?? {}, os.homedir());
       else if (h.type === "tool_end") {
@@ -944,10 +944,10 @@ async function commandeChat(ctx, options, texteInitial) {
 /** Ce que l'agent aura sous la main, dit avant de commencer. */
 async function presenterOutils(ctx) {
   try {
-    const { groupes } = await json(ctx, "/helix/outils");
+    const { groupes } = await json(ctx, "/oxoai/outils");
     const actifs = (groupes ?? []).filter((g) => g.actif).map((g) => g.label);
     ligne(discret(actifs.length ? T.outilsActifs(actifs.join(", ")) : T.aucunOutil));
-    const mcp = await json(ctx, "/helix/mcp").catch(() => null);
+    const mcp = await json(ctx, "/oxoai/mcp").catch(() => null);
     if (mcp?.workspace && (groupes ?? []).some((g) => g.id === "fichiers" && g.actif)) {
       ligne(discret(T.dossierOutils(cheminLisible(mcp.workspace, os.homedir()))));
     }
@@ -1029,13 +1029,13 @@ function traduire(brut) {
   const erreur = (e) => (typeof e === "string" ? e : typeof e?.message === "string" ? e.message : "");
   if (type === "session.next.prompted" && typeof d.messageID === "string") return { genre: "demande", messageID: d.messageID };
   // Le modèle n'a encore rien rendu : il lit, attend son tour ou se charge (gateway/src/attenteModele.ts).
-  if (type === "helix.statut" && ["lecture", "attente", "chargement", "fin"].includes(d.etat)) {
+  if (type === "oxoai.statut" && ["lecture", "attente", "chargement", "fin"].includes(d.etat)) {
     const nombre = (v) => (typeof v === "number" && Number.isFinite(v) ? v : undefined);
     const ecoule = Math.max(0, (nombre(d.timestamp) ?? Date.now()) - (nombre(d.depuis) ?? Date.now()));
     return { genre: "attente", etat: d.etat, depuis: Date.now() - ecoule, progression: nombre(d.progression), jetons: nombre(d.jetons), sousTache: d.sousTache === true };
   }
-  if (type === "helix.activite") return { genre: "activite", phase: d.phase, outil: typeof d.tool === "string" ? d.tool : undefined, sousTache: d.sousTache === true };
-  if (type === "helix.soustache" && (d.etat === "fini" || d.etat === "echec")) {
+  if (type === "oxoai.activite") return { genre: "activite", phase: d.phase, outil: typeof d.tool === "string" ? d.tool : undefined, sousTache: d.sousTache === true };
+  if (type === "oxoai.soustache" && (d.etat === "fini" || d.etat === "echec")) {
     return { genre: "sous-outil", outil: String(d.tool ?? "outil"), args: d.input ?? {}, ok: d.etat === "fini" };
   }
   if (type === "session.next.text.ended" && typeof d.text === "string") return { genre: "texte", texte: d.text };
@@ -1054,7 +1054,7 @@ function traduire(brut) {
 }
 
 async function ouvrirSessionCode(ctx, etat) {
-  const r = await appel(ctx, "/helix/code/session", {
+  const r = await appel(ctx, "/oxoai/code/session", {
     methode: "POST",
     corps: { dossier: etat.dossier, ...(etat.modele ? { model: etat.modele } : {}), ...(etat.effort ? { effort: etat.effort } : {}) },
   });
@@ -1181,7 +1181,7 @@ async function demandeCode(ctx, etat, texte, signal) {
     let reprises = 0;
     while (!arret.aborted) {
       const suite = apres !== undefined ? `&after=${apres}` : "";
-      const r = await appel(ctx, `/helix/code/events?sessionID=${encodeURIComponent(session)}${suite}`, { signal: arret });
+      const r = await appel(ctx, `/oxoai/code/events?sessionID=${encodeURIComponent(session)}${suite}`, { signal: arret });
       if (!r.ok || !r.body) throw await echec(ctx, r);
       for await (const donnee of evenements(r)) {
         let brut;
@@ -1213,7 +1213,7 @@ async function demandeCode(ctx, etat, texte, signal) {
 
   let flux = lancer(etat.session, etat.dernier);
   try {
-    const r = await appel(ctx, "/helix/code/prompt", {
+    const r = await appel(ctx, "/oxoai/code/prompt", {
       methode: "POST",
       signal,
       corps: {
@@ -1229,10 +1229,10 @@ async function demandeCode(ctx, etat, texte, signal) {
       throw new ErreurCli(corps?.error?.message || T.refus(r.status));
     }
     etat.modeleEnvoi = undefined;
-    if (corps?.helixRelance?.sessionID) {
+    if (corps?.oxoaiRelance?.sessionID) {
       // L'instance a relancé la demande dans une session neuve : on suit celle-là.
       flux.abort();
-      etat.session = corps.helixRelance.sessionID;
+      etat.session = corps.oxoaiRelance.sessionID;
       etat.dernier = undefined;
       ligne(discret(T.codeRelance));
       tour.attente = [];
@@ -1259,7 +1259,7 @@ async function demandeCode(ctx, etat, texte, signal) {
 
 async function interrompreCode(ctx, etat) {
   if (!etat.session) return;
-  await appel(ctx, "/helix/code/interrupt", { methode: "POST", corps: { sessionID: etat.session } }).catch(() => {});
+  await appel(ctx, "/oxoai/code/interrupt", { methode: "POST", corps: { sessionID: etat.session } }).catch(() => {});
   ligne(discret(T.codeInterrompu));
 }
 
@@ -1345,7 +1345,7 @@ async function commandeCode(ctx, options, texteInitial) {
 /* ------------------------------------------------------------------ */
 
 async function commandeConnexion(ctx, options) {
-  const { value: comptes = [] } = await json(ctx, "/helix/data/accounts", { seance: false });
+  const { value: comptes = [] } = await json(ctx, "/oxoai/data/accounts", { seance: false });
   if (comptes.length === 0) throw new ErreurCli(T.aucunCompte);
 
   let compte;
@@ -1367,7 +1367,7 @@ async function commandeConnexion(ctx, options) {
   const nom = compte.fullName || compte.email;
   const motDePasse = await demanderSecret(T.motDePasse(nom));
   const poste = `Terminal (${os.hostname()})`;
-  let r = await appel(ctx, "/helix/auth/verify", {
+  let r = await appel(ctx, "/oxoai/auth/verify", {
     methode: "POST",
     seance: false,
     corps: { accountId: compte.id, password: motDePasse, poste, rester: true },
@@ -1376,7 +1376,7 @@ async function commandeConnexion(ctx, options) {
   if (!r.ok && corps?.error?.code === "deux-facteurs-requis" && corps.defi) {
     const code = await demander(T.codeDeuxFacteurs);
     if (!code) throw new ErreurCli(T.saisieInterrompue);
-    r = await appel(ctx, "/helix/auth/deux-facteurs", {
+    r = await appel(ctx, "/oxoai/auth/deux-facteurs", {
       methode: "POST",
       seance: false,
       corps: { defi: corps.defi, code: code.trim(), poste, rester: true },
@@ -1402,12 +1402,12 @@ async function commandeDeconnexion(ctx) {
   // Fermée sur l'instance d'abord : oubliée ici seulement, elle resterait valable.
   let fermee = false;
   try {
-    const r = await appel(ctx, "/helix/auth/sessions");
+    const r = await appel(ctx, "/oxoai/auth/sessions");
     if (r.ok) {
       const { sessions = [] } = await jsonPropre(r);
       const courante = sessions.find((s) => s.courante);
       if (courante) {
-        const f = await appel(ctx, "/helix/auth/revoke", { methode: "POST", corps: { id: courante.id } });
+        const f = await appel(ctx, "/oxoai/auth/revoke", { methode: "POST", corps: { id: courante.id } });
         fermee = f.ok;
       }
     } else if (r.status === 401) fermee = true; // déjà fermée ou expirée
@@ -1424,12 +1424,12 @@ async function commandeDeconnexion(ctx) {
 
 async function listerModeles(ctx) {
   const { data = [] } = await json(ctx, "/v1/models");
-  const utiles = data.filter((m) => !(m.helix?.roles ?? []).every((r) => r === "embed"));
+  const utiles = data.filter((m) => !(m.oxoai?.roles ?? []).every((r) => r === "embed"));
   if (utiles.length === 0) return ligne(T.aucunModele);
   ligne(T.modelesTitre);
   for (const m of utiles) {
-    const roles = (m.helix?.roles ?? []).join(", ");
-    const charge = m.helix?.loaded ? ` ${vert(T.modeleCharge)}` : "";
+    const roles = (m.oxoai?.roles ?? []).join(", ");
+    const charge = m.oxoai?.loaded ? ` ${vert(T.modeleCharge)}` : "";
     ligne(`  ${m.id}${charge}${roles ? discret(`  (${roles})`) : ""}`);
   }
 }
@@ -1443,7 +1443,7 @@ async function listerModeles(ctx) {
 const HORS_CODE = new Set(["fichiers", "bureau", "ecran", "controle"]);
 
 async function listerOutils(ctx) {
-  const { groupes = [] } = await json(ctx, "/helix/outils", { seance: false });
+  const { groupes = [] } = await json(ctx, "/oxoai/outils", { seance: false });
   ligne(T.outilsTitre);
   for (const g of groupes) {
     const etatG = g.actif ? vert(T.outilsActif) : discret(T.outilsInactif);
@@ -1453,7 +1453,7 @@ async function listerOutils(ctx) {
     if (!g.actif && g.obstacle) ligne(discret(`      ${g.obstacle}`));
   }
   if (ctx.seance) {
-    const r = await appel(ctx, "/helix/approbation");
+    const r = await appel(ctx, "/oxoai/approbation");
     if (r.ok) ligne(T.outilsNiveau((await jsonPropre(r)).niveau));
     else ligne(discret(T.outilsNiveauInconnu));
   } else ligne(discret(T.outilsNiveauInconnu));

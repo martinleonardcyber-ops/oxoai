@@ -263,7 +263,7 @@ const AUCUNE_ADRESSE = "\u0000adresse-declaree";
  * seule, et rien ne le vérifie.
  *
  * Laisser une adresse déclarée rattacher les invitations reviendrait à rouvrir
- * la faille de prise de compte déjà fermée sur `/helix/auth/create` : il
+ * la faille de prise de compte déjà fermée sur `/oxoai/auth/create` : il
  * suffirait de se déclarer à l'adresse d'une invitée en attente pour hériter
  * de ses projets et conversations. Un compte qui a changé son adresse n'est
  * donc plus reconnu que par son identifiant ; les partages qu'on lui adresse

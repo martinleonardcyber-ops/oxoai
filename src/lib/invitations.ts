@@ -24,7 +24,7 @@ export const estCodeInvitation = (valeur: string): boolean => FORME_CODE.test(va
  * Un lien d'invitation collé, décomposé en adresse et code.
  *
  * Le clic est la voie normale : le système réveille l'application et remplit
- * les deux champs. Mais un lien `helix://` ne s'ouvre que si l'application est
+ * les deux champs. Mais un lien `oxoai://` ne s'ouvre que si l'application est
  * déjà installée, et certaines messageries le rendent en texte mort. La
  * personne fait alors ce que tout le monde fait — elle le copie et le colle —
  * et le champ doit comprendre, au lieu de répondre « adresse invalide ».
@@ -39,7 +39,7 @@ export function lireLienInvitation(
   if (!texte) return null;
   try {
     const url = new URL(texte);
-    if (url.protocol === "helix:" && url.host === "rejoindre") {
+    if (url.protocol === "oxoai:" && url.host === "rejoindre") {
       const champs = new URLSearchParams(url.hash.replace(/^#/, ""));
       const adresse = champs.get("a")?.trim();
       const code = champs.get("c")?.trim();
@@ -63,7 +63,7 @@ export interface InvitationRecue {
 }
 
 /**
- * S'abonne aux liens `helix://rejoindre` ouverts depuis le système.
+ * S'abonne aux liens `oxoai://rejoindre` ouverts depuis le système.
  *
  * Hors application native — navigateur, développement — il n'y a pas de pont :
  * l'abonnement ne sert alors à rien, et le dit en ne faisant rien. La voie
@@ -72,9 +72,9 @@ export interface InvitationRecue {
 export function surInvitation(rappel: (invitation: InvitationRecue) => void): () => void {
   const pont = (
     window as unknown as {
-      helix?: { surInvitation?: (r: (i: InvitationRecue) => void) => () => void };
+      oxoai?: { surInvitation?: (r: (i: InvitationRecue) => void) => () => void };
     }
-  ).helix?.surInvitation;
+  ).oxoai?.surInvitation;
   if (!pont) return () => undefined;
   return pont((invitation) => {
     if (invitation && typeof invitation.adresse === "string" && typeof invitation.code === "string") {
@@ -99,7 +99,7 @@ export interface InvitationCreee {
   /** Pourquoi il n'est pas parti, le cas échéant. */
   motif?: string;
   adresse: string;
-  /** Lien `helix://rejoindre` : une seule chose à transmettre, au lieu de deux. */
+  /** Lien `oxoai://rejoindre` : une seule chose à transmettre, au lieu de deux. */
   lien?: string;
 }
 
@@ -117,7 +117,7 @@ export async function inviter(
   email: string,
 ): Promise<{ ok: true; valeur: InvitationCreee } | { ok: false; message: string }> {
   try {
-    const res = await apiFetch("/helix/invitations/inviter", {
+    const res = await apiFetch("/oxoai/invitations/inviter", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email }),
@@ -137,7 +137,7 @@ export async function inviter(
 
 export async function invitationsEnAttente(): Promise<Invitation[]> {
   try {
-    const res = await apiFetch("/helix/invitations");
+    const res = await apiFetch("/oxoai/invitations");
     if (!res.ok) return [];
     return ((await res.json()) as { invitations?: Invitation[] }).invitations ?? [];
   } catch {
@@ -148,7 +148,7 @@ export async function invitationsEnAttente(): Promise<Invitation[]> {
 /** Le compte connecté est-il l'administrateur de l'instance ? `false` si l'instance ne répond pas. */
 export async function suisAdministrateur(): Promise<boolean> {
   try {
-    const res = await apiFetch("/helix/invitations");
+    const res = await apiFetch("/oxoai/invitations");
     if (!res.ok) return false;
     return ((await res.json()) as { administrateur?: boolean }).administrateur === true;
   } catch {
@@ -158,7 +158,7 @@ export async function suisAdministrateur(): Promise<boolean> {
 
 export async function annulerInvitation(email: string): Promise<boolean> {
   try {
-    const res = await apiFetch("/helix/invitations", {
+    const res = await apiFetch("/oxoai/invitations", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email }),
@@ -181,7 +181,7 @@ export async function rejoindreAvecCode(
   code: string,
 ): Promise<{ ok: true; jeton: string; email: string } | { ok: false; message: string }> {
   try {
-    const res = await fetch(`${adresse.replace(/\/+$/, "")}/helix/invitations/rejoindre`, {
+    const res = await fetch(`${adresse.replace(/\/+$/, "")}/oxoai/invitations/rejoindre`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ code: code.trim() }),
@@ -209,7 +209,7 @@ export async function rejoindreAvecCode(
  * création du compte. Dans le stockage de session : elle ne survit pas à la
  * fermeture de l'application, ce qui est exactement sa durée de vie utile.
  */
-const CLE = "helix:invitation-en-cours";
+const CLE = "oxoai:invitation-en-cours";
 
 export function retenirInvitation(code: string, email: string): void {
   try {

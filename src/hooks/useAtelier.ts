@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { diagnostic as lireDiagnostic, type Diagnostic } from "@/lib/atelier";
 
 /** Signal interne : l'atelier vient de changer d'état après une préparation. */
-export const ATELIER_CHANGE = "helix:atelier-change";
+export const ATELIER_CHANGE = "oxoai:atelier-change";
 
 /**
  * État de l'atelier bureautique, pour les écrans qui en dépendent.

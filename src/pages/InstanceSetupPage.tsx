@@ -109,7 +109,7 @@ export function InstanceSetupPage({
    * Lien cliqué : les deux champs arrivent remplis. On s'arrête là.
    *
    * Le rattachement ne part **pas** tout seul, et c'est délibéré. Le système
-   * ouvre un lien `helix://` d'où qu'il vienne : du mail attendu, mais aussi
+   * ouvre un lien `oxoai://` d'où qu'il vienne : du mail attendu, mais aussi
    * d'une page web visitée par hasard. Rien ne distingue les deux à
    * l'arrivée. Un rattachement automatique laisserait donc n'importe quel
    * site pointer ce poste vers l'instance de son choix, où la personne
@@ -223,10 +223,10 @@ export function InstanceSetupPage({
             )}
             <Field
               label={t("Adresse de l'instance")}
-              hint={t("Collez ici le lien reçu par mail, il remplira les deux champs. Ou saisissez l'adresse : helix.mon-entreprise.fr")}
+              hint={t("Collez ici le lien reçu par mail, il remplira les deux champs. Ou saisissez l'adresse : oxoai.mon-entreprise.fr")}
             >
               <Input
-                placeholder={t("helix.mon-entreprise.fr")}
+                placeholder={t("oxoai.mon-entreprise.fr")}
                 value={url}
                 autoFocus
                 onChange={(e) => setUrl(e.target.value)}

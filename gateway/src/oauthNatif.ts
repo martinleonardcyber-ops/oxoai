@@ -41,7 +41,7 @@ import { DEFINITION_MICROSOFT, type ServiceMicrosoft } from "./natifs/microsoftB
  * L'organisation, toujours. Pour Google, c'est l'application déjà saisie pour
  * Drive et Agenda (clientGoogle.ts). Pour LinkedIn, Meta (Facebook et
  * Instagram) et TikTok, chaque organisation crée la sienne chez le fournisseur
- * et en colle l'identifiant et le secret à l'écran, une fois. Helix ne peut pas
+ * et en colle l'identifiant et le secret à l'écran, une fois. OxoAI ne peut pas
  * fournir d'identifiant partagé : chez ces trois fournisseurs, une application
  * qui sert d'autres comptes que ceux de son éditeur passe une revue, et la
  * réussir ferait de l'agence l'éditrice d'une application qui publie au nom de
@@ -190,7 +190,7 @@ const VERSION_META = "v25.0";
 /*
  * Version de l'API « Marketing » de LinkedIn, au format AAAAMM, exigée par
  * chaque appel à `/rest/…` ; LinkedIn en retire une par mois après un an
- * (la 202510 s'éteint le 15/10/2026). À relever à chaque version de Helix.
+ * (la 202510 s'éteint le 15/10/2026). À relever à chaque version de OxoAI.
  * Ici depuis le 29/09/2026 (elle était dans outilsNatifs.ts) : la connexion de
  * la Page d'entreprise s'en sert déjà pour lire le compte (`identite`), et ce
  * module ne peut pas importer outilsNatifs.ts, qui l'importe.
@@ -1140,7 +1140,7 @@ function pageBoucle(res: http.ServerResponse, statut: number, titre: string, mes
  * l'ouverture du port). « localhost » ne se réécrit en 127.0.0.1 que si
  * 127.0.0.1 mène à elle.
  *
- * Tournée de la 2026.928.3 (SECURITE.md § 43) : avec `HELIX_GATEWAY_HOST=::1`,
+ * Tournée de la 2026.928.3 (SECURITE.md § 43) : avec `OXOAI_GATEWAY_HOST=::1`,
  * ou `localhost` (que macOS résout d'abord en ::1), la passerelle n'écoute pas
  * sur 127.0.0.1 ; l'adresse de retour de X, réécrite en 127.0.0.1, ne menait
  * à rien (essayé : connexion refusée), et la connexion à X ne pouvait pas
@@ -1168,7 +1168,7 @@ export function adresseDeRetour(id: IdNatif, base: string): string {
   const def = DEFINITIONS[id];
   if (def.retour === "instance") {
     const racine = base.replace(/\/+$/, "");
-    return `${def.sansLocalhost ? sansLocalhost(racine) : racine}/helix/oauth/retour`;
+    return `${def.sansLocalhost ? sansLocalhost(racine) : racine}/oxoai/oauth/retour`;
   }
   // Google accepte tout port de la boucle locale pour une application « de bureau » ; TikTok, le joker `*` ; Microsoft ignore le port de « localhost ».
   if (def.boucleLocalhost) return `http://localhost${def.cheminBoucle}`;
@@ -1306,7 +1306,7 @@ export async function demarrer(brutId: unknown, qui: string, base: string, brutC
 
 /**
  * Le retour du fournisseur : par la boucle locale, par la route publique de
- * l'instance (index.ts, `/helix/oauth/retour`), ou recopié à l'écran.
+ * l'instance (index.ts, `/oxoai/oauth/retour`), ou recopié à l'écran.
  */
 export async function recevoir(parametres: URLSearchParams, quiCollage: string | null): Promise<{ ok: boolean; message: string; nom?: string }> {
   const recu = parametres.get("state") ?? "";

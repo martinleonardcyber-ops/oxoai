@@ -89,12 +89,12 @@ async function lire<T>(res: Response): Promise<T> {
 
 const poster = (chemin: string, corps: unknown = {}) =>
   apiFetch(chemin, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(corps) });
-const chemin = (id: string, action = "") => `/helix/reunions/${encodeURIComponent(id)}${action ? `/${action}` : ""}`;
+const chemin = (id: string, action = "") => `/oxoai/reunions/${encodeURIComponent(id)}${action ? `/${action}` : ""}`;
 
-export const chargerReunions = async (): Promise<EtatReunions> => lire(await apiFetch("/helix/reunions"));
+export const chargerReunions = async (): Promise<EtatReunions> => lire(await apiFetch("/oxoai/reunions"));
 export const lireReunion = async (id: string): Promise<{ reunion: Reunion; segments: Segment[] }> => lire(await apiFetch(chemin(id)));
 export const creerReunion = async (d: { titre?: string; source: Reunion["source"]; lien?: string; langue?: Langue }): Promise<Reunion> =>
-  (await lire<{ reunion: Reunion }>(await poster("/helix/reunions", d))).reunion;
+  (await lire<{ reunion: Reunion }>(await poster("/oxoai/reunions", d))).reunion;
 export const modifierReunion = async (id: string, d: { titre?: string; visibilite?: Visibilite; groupes?: string[] }): Promise<Reunion> =>
   (await lire<{ reunion: Reunion }>(await poster(chemin(id), d))).reunion;
 export const terminerReunion = async (id: string): Promise<Reunion> =>
@@ -106,9 +106,9 @@ export const relancerReunion = async (id: string): Promise<Reunion> =>
 export const supprimerReunion = async (id: string): Promise<void> => {
   await lire(await poster(chemin(id, "supprimer")));
 };
-export const lireReglages = async (): Promise<Reglages> => (await lire<{ reglages: Reglages }>(await apiFetch("/helix/reunions/reglages"))).reglages;
+export const lireReglages = async (): Promise<Reglages> => (await lire<{ reglages: Reglages }>(await apiFetch("/oxoai/reunions/reglages"))).reglages;
 export const modifierReglages = async (d: Partial<Reglages>): Promise<Reglages> =>
-  (await lire<{ reglages: Reglages }>(await poster("/helix/reunions/reglages", d))).reglages;
+  (await lire<{ reglages: Reglages }>(await poster("/oxoai/reunions/reglages", d))).reglages;
 
 /** Envoie du son brut à une réunion en cours d'enregistrement (ou un fichier importé, d'un bloc). */
 export async function envoyerSon(id: string, son: Blob): Promise<void> {
@@ -266,7 +266,7 @@ export class EnregistreurReunion {
  * réunions le retrouve au retour.
  */
 let courant: EnregistreurReunion | null = null;
-export const ENREGISTREMENT_CHANGE = "helix:enregistrement-reunion";
+export const ENREGISTREMENT_CHANGE = "oxoai:enregistrement-reunion";
 
 export function enregistrementCourant(): EnregistreurReunion | null {
   return courant;
@@ -307,7 +307,7 @@ interface Passerelle {
 /** Le pont du bot, présent seulement dans l'application de bureau. */
 export function pontBot(): PontBot | null {
   if (typeof window === "undefined") return null;
-  return (window as unknown as { helix?: { bot?: PontBot } }).helix?.bot ?? null;
+  return (window as unknown as { oxoai?: { bot?: PontBot } }).oxoai?.bot ?? null;
 }
 
 /** Ce que le processus principal doit savoir pour envoyer le son à l'instance : jamais écrit sur le disque. */

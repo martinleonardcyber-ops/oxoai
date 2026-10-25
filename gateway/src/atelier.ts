@@ -37,7 +37,7 @@ const exec = promisify(execFile);
  * depuis une entrée utilisateur, et tout passe par `execFile`/`spawn` avec un
  * tableau d'arguments — jamais par un shell.
  *
- * Tout est installé dans un environnement **isolé** sous `~/.helix/cowork` :
+ * Tout est installé dans un environnement **isolé** sous `~/.oxoai/cowork` :
  * un venv Python et un préfixe npm. Ni les installations globales, ni le PATH
  * de l'utilisateur, ni ses projets ne sont touchés, et aucun droit
  * administrateur n'est demandé.
@@ -103,14 +103,14 @@ const TAILLE_NODE_MO = 100;
 /* ------------------------------- emplacements --------------------------------- */
 
 /**
- * Racine de l'atelier. `HELIX_DATA_DIR` prime, comme pour le jeton d'instance
- * (auth.ts) : ce que Helix écrit reste sous le dossier que l'exploitant a
+ * Racine de l'atelier. `OXOAI_DATA_DIR` prime, comme pour le jeton d'instance
+ * (auth.ts) : ce que OxoAI écrit reste sous le dossier que l'exploitant a
  * désigné, ce qui permet aussi de vérifier une installation sans toucher à
  * celle de la machine.
  */
 export function racine(): string {
-  const force = process.env.HELIX_DATA_DIR;
-  return force ? join(force, "cowork") : join(homedir(), ".helix", "cowork");
+  const force = process.env.OXOAI_DATA_DIR;
+  return force ? join(force, "cowork") : join(homedir(), ".oxoai", "cowork");
 }
 
 const dossierPython = () => join(racine(), "python");
@@ -270,8 +270,8 @@ const trouverNode = () => localiser("node", cheminsUsuels("node"));
 
 /*
  * Comment installer ce qui manque, selon le système : la commande exacte, que
- * la personne lance elle-même (Helix ne passe pas administrateur). Elle n'est
- * donnée que là où Helix ne sait pas poser Python (pythonPrive.ts) ni Node
+ * la personne lance elle-même (OxoAI ne passe pas administrateur). Elle n'est
+ * donnée que là où OxoAI ne sait pas poser Python (pythonPrive.ts) ni Node
  * (installationOpenClaw.ts) lui-même.
  */
 const commentPython = (): string =>
@@ -299,7 +299,7 @@ const commentNode = (): string =>
  * ctranslate2==4.8.2 (from versions: none) », roue introuvable pour
  * l'interpréteur de la machine, alors que les roues Windows de 3.9 à 3.14 sont
  * toutes dans la liste. Un autre Python (3.15, sorti en octobre 2026, ou un
- * 32 bits) laisse la place à celui que Helix pose (pythonPrive.ts, 3.12).
+ * 32 bits) laisse la place à celui que OxoAI pose (pythonPrive.ts, 3.12).
  */
 const PYTHON_PREVU = "import sys, struct, venv, ensurepip; sys.exit(0 if (3, 9) <= sys.version_info[:2] <= (3, 14) and struct.calcsize('P') == 8 else 3)";
 async function pythonPrevu(python: string): Promise<boolean> {
@@ -318,7 +318,7 @@ async function pythonPrevu(python: string): Promise<boolean> {
  */
 async function retirerVenvImprevu(): Promise<void> {
   if (!(await existe(pythonVenv(), constants.X_OK)) || (await pythonPrevu(pythonVenv()))) return;
-  console.warn("[helix] environnement Python de l'atelier fait par un Python hors des versions prévues : recréé.");
+  console.warn("[oxoai] environnement Python de l'atelier fait par un Python hors des versions prévues : recréé.");
   await rm(dossierPython(), { recursive: true, force: true });
 }
 
@@ -335,7 +335,7 @@ const obstacleVenv = (): string =>
 
 /*
  * Python pour créer l'environnement de l'atelier : celui du système s'il sait
- * en créer un, sinon celui que Helix pose lui-même (pythonPrive.ts, décidé par
+ * en créer un, sinon celui que OxoAI pose lui-même (pythonPrive.ts, décidé par
  * Medhi le 27/09/2026). `installer` : le poser s'il manque (à l'installation),
  * pas au diagnostic, qui ne fait que regarder.
  */
@@ -352,10 +352,10 @@ async function pythonPourVenv(installer: boolean, avancer?: (pourcent: number) =
  * Par le Node auquel ce script appartient, s'il est là (`node.exe` à côté de
  * `node_modules` sous Windows, `bin/node` ailleurs) : npm suit les versions de
  * Node, pas celle d'Electron (audit Windows du 27/09/2026). Sinon, le Node de
- * Helix s'il est posé, et à défaut `node` du PATH.
+ * OxoAI s'il est posé, et à défaut `node` du PATH.
  *
  * Plus jamais le binaire de la passerelle (28/09/2026) : dans l'application de
- * bureau, c'est celui de Helix, qui n'est plus un Node depuis que le fusible
+ * bureau, c'est celui de OxoAI, qui n'est plus un Node depuis que le fusible
  * RunAsNode est fermé ; le lancer ouvrirait une seconde application.
  */
 function nodeDuScript(script: string): string {
@@ -371,7 +371,7 @@ function nodeDuScript(script: string): string {
 /**
  * Le Node qui charge les bibliothèques de l'atelier pour les vérifier : celui
  * du npm qui les a installées (le même Node, les mêmes modules natifs), sinon
- * le Node du système, sinon celui de Helix. Null s'il n'y en a aucun.
+ * le Node du système, sinon celui de OxoAI. Null s'il n'y en a aucun.
  */
 async function nodeDeLAtelier(): Promise<string | null> {
   const npm = await trouverNpm();
@@ -535,7 +535,7 @@ async function optionnels(): Promise<OutilOptionnel[]> {
 /** Inspection en lecture seule : rien n'est installé, rien n'est modifié. */
 export async function diagnostic(): Promise<Diagnostic> {
   const [cheminPython, cheminNpm, cheminNode] = await Promise.all([
-    // Celui du système, sinon celui que Helix a posé (pythonPrive.ts).
+    // Celui du système, sinon celui que OxoAI a posé (pythonPrive.ts).
     trouverPython().then((p) => p ?? pythonPrive()),
     trouverNpm(),
     trouverNode(),
@@ -604,7 +604,7 @@ export async function diagnostic(): Promise<Diagnostic> {
   ];
 
   const obstacles: string[] = [];
-  // Sans Python qui convienne, Helix pose le sien à la préparation : ce n'est un obstacle que là où il ne sait pas le faire.
+  // Sans Python qui convienne, OxoAI pose le sien à la préparation : ce n'est un obstacle que là où il ne sait pas le faire.
   const venvLa = await existe(pythonVenv(), constants.X_OK);
   if (!venvLa && !(await pythonPourVenv(false)) && pythonPriveInstallable() !== null) {
     obstacles.push(
@@ -614,7 +614,7 @@ export async function diagnostic(): Promise<Diagnostic> {
     );
   }
   /*
-   * Sans npm sur la machine, Helix pose son propre Node officiel (vérifié par
+   * Sans npm sur la machine, OxoAI pose son propre Node officiel (vérifié par
    * son empreinte publiée, installationOpenClaw.ts) à la préparation : ce
    * n'est un obstacle que là où il ne sait pas le faire.
    */
@@ -644,7 +644,7 @@ export async function diagnostic(): Promise<Diagnostic> {
     tailleEstimeeMo:
       (manquantesPython > 0 ? TAILLE_PYTHON_MO : 0) +
       (manquantesNode > 0 ? TAILLE_NODE_MO : 0) +
-      // Python lui-même, quand Helix doit le poser.
+      // Python lui-même, quand OxoAI doit le poser.
       (!venvLa && !(await pythonPourVenv(false)) ? taillePythonPriveMo() : 0),
   };
 }
@@ -885,7 +885,7 @@ async function executerPreparation(onProgres: (p: Progres) => void): Promise<Bil
       join(dossierNode(), "package.json"),
       JSON.stringify(
         {
-          name: "helix-atelier",
+          name: "oxoai-atelier",
           version: "1.0.0",
           private: true,
           description: "Bibliothèques bureautiques isolées de l'atelier Cowork.",
@@ -1113,7 +1113,7 @@ export async function verifier(): Promise<Verification> {
     };
   }
 
-  const travail = await mkdtemp(join(tmpdir(), "helix-atelier-"));
+  const travail = await mkdtemp(join(tmpdir(), "oxoai-atelier-"));
   const epreuves: Epreuve[] = [];
 
   try {
@@ -1418,7 +1418,7 @@ const temoinDictee = () => join(dossierDictee(), "pret.json");
  * Réduit au strict nécessaire plutôt qu'hérité : la passerelle n'a aucune
  * raison de confier ses propres variables à un interpréteur. `HF_HUB_OFFLINE`
  * interdit toute requête vers Hugging Face ; `HF_HOME` garde son éventuel cache
- * sous le dossier de Helix plutôt que dans celui de l'utilisateur.
+ * sous le dossier de OxoAI plutôt que dans celui de l'utilisateur.
  */
 export function environnementHorsLigne(): NodeJS.ProcessEnv {
   const base: NodeJS.ProcessEnv =
@@ -1537,7 +1537,7 @@ from faster_whisper import WhisperModel
 modele = WhisperModel(sys.argv[1], device="cpu", compute_type="int8", local_files_only=True)
 segments, _ = modele.transcribe(numpy.zeros(16000, dtype=numpy.float32), language="fr", vad_filter=True)
 list(segments)
-sys.stdout.write("@@HELIX@@" + json.dumps({"ok": True}))
+sys.stdout.write("@@OXOAI@@" + json.dumps({"ok": True}))
 `;
 import { lister, t, tf } from "./langue.ts";
 
@@ -1705,7 +1705,7 @@ async function executerDictee(onProgres: (p: ProgresDictee) => void): Promise<Bi
     ["-I", "-c", SCRIPT_ESSAI_DICTEE, dossierChoisi],
     { timeout: 3 * 60_000, maxBuffer: 1024 * 1024, env: environnementHorsLigne() },
   );
-  if (!stdout.includes("@@HELIX@@")) {
+  if (!stdout.includes("@@OXOAI@@")) {
     throw new Error(t("L'essai de transcription n'a rien rendu. La dictée n'est pas prête."));
   }
 

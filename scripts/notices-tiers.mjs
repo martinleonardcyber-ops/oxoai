@@ -76,7 +76,7 @@ async function interfaceConstruite() {
     platform: "browser",
     format: "esm",
     jsx: "automatic",
-    define: { __HELIX_VERSION__: '"0"' },
+    define: { __OXOAI_VERSION__: '"0"' },
     loader: { ".css": "empty", ".png": "empty", ".svg": "empty", ".woff2": "empty", ".jpg": "empty", ".webp": "empty" },
     plugins: [alias],
   });

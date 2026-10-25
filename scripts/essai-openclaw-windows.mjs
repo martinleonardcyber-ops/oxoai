@@ -4,7 +4,7 @@
  *   node scripts/essai-openclaw-windows.mjs                 (lancé aussi par npm run securite)
  *   node scripts/essai-openclaw-windows.mjs --installation  (en plus : vraie installation sur ce poste, voir la fin)
  *
- * Écrit le 28/09/2026, quand Helix est passé d'un refus (« sous Windows,
+ * Écrit le 28/09/2026, quand OxoAI est passé d'un refus (« sous Windows,
  * OpenClaw demande WSL ») à un OpenClaw natif. Il n'y a pas de Windows ici :
  * on essaie la logique telle que Windows la verra, en passant `win32` aux
  * fonctions de plateformeOpenClaw.ts (chemins en `path.win32`), et, dans un
@@ -14,7 +14,7 @@
  * lit une ligne de commande) est dit dans PROJET.md § 3.4.
  *
  * Aucun OpenClaw n'est lancé par défaut, ni celui de la personne (port
- * 18789), ni celui de Helix (18800). Avec `--installation`, une instance
+ * 18789), ni celui de OxoAI (18800). Avec `--installation`, une instance
  * jetable : dossier personnel et données dans un dossier temporaire, un port
  * libre, arrêtée par son numéro.
  */
@@ -61,26 +61,26 @@ console.log("A. Node officiel pour Windows");
   const epingle = source.match(/const NODE_EPINGLE = "([\d.]+)"/)?.[1] ?? "?";
   const empreinte = (nom) => new RegExp(`"node-v${epingle.replace(/\./g, "\\.")}-${nom}\\.zip": "[0-9a-f]{64}"`).test(source);
   verifier(`les deux archives Windows de Node ${epingle} ont leur empreinte SHA-256 écrite dans le code`, empreinte("win-x64") && empreinte("win-arm64"), "empreinte manquante");
-  const tar = P.commandeExtraction("C:\\Users\\Jean Dupont\\.helix\\a.zip", "C:\\Users\\Jean Dupont\\.helix\\x", ".zip", W, { SystemRoot: "D:\\WINDOWS" });
-  verifier("extraction : le tar.exe de System32 (lu dans SystemRoot), `-xf` pour un .zip, chemins avec espaces en un seul argument", tar.fichier === "D:\\WINDOWS\\System32\\tar.exe" && tar.args[0] === "-xf" && tar.args[1] === "C:\\Users\\Jean Dupont\\.helix\\a.zip", JSON.stringify(tar));
+  const tar = P.commandeExtraction("C:\\Users\\Jean Dupont\\.oxoai\\a.zip", "C:\\Users\\Jean Dupont\\.oxoai\\x", ".zip", W, { SystemRoot: "D:\\WINDOWS" });
+  verifier("extraction : le tar.exe de System32 (lu dans SystemRoot), `-xf` pour un .zip, chemins avec espaces en un seul argument", tar.fichier === "D:\\WINDOWS\\System32\\tar.exe" && tar.args[0] === "-xf" && tar.args[1] === "C:\\Users\\Jean Dupont\\.oxoai\\a.zip", JSON.stringify(tar));
 }
 
 console.log("B. Disposition du Node privé et installation par npm");
 {
-  const dossier = "C:\\Users\\Hélène Dupont\\.helix\\data\\openclaw-moteur\\node";
+  const dossier = "C:\\Users\\Hélène Dupont\\.oxoai\\data\\openclaw-moteur\\node";
   const d = P.dispositionNode(dossier, W);
   verifier("Windows : node.exe à la racine, npm-cli.js sous node_modules\\npm\\bin, openclaw.cmd à la racine", d.node === `${dossier}\\node.exe` && d.npmCli === `${dossier}\\node_modules\\npm\\bin\\npm-cli.js` && d.lanceurOpenClaw === `${dossier}\\openclaw.cmd` && d.dossierBin === dossier && d.paquets === `${dossier}\\node_modules`, JSON.stringify(d));
-  const m = P.dispositionNode("/u/.helix/data/openclaw-moteur/node", "darwin");
-  verifier("macOS et Linux inchangés : bin/node, lib/node_modules, bin/openclaw", m.node === "/u/.helix/data/openclaw-moteur/node/bin/node" && m.lanceurOpenClaw === "/u/.helix/data/openclaw-moteur/node/bin/openclaw" && m.npmCli === "/u/.helix/data/openclaw-moteur/node/lib/node_modules/npm/bin/npm-cli.js", JSON.stringify(m));
+  const m = P.dispositionNode("/u/.oxoai/data/openclaw-moteur/node", "darwin");
+  verifier("macOS et Linux inchangés : bin/node, lib/node_modules, bin/openclaw", m.node === "/u/.oxoai/data/openclaw-moteur/node/bin/node" && m.lanceurOpenClaw === "/u/.oxoai/data/openclaw-moteur/node/bin/openclaw" && m.npmCli === "/u/.oxoai/data/openclaw-moteur/node/lib/node_modules/npm/bin/npm-cli.js", JSON.stringify(m));
   const env = P.envInstallation(
-    { Path: "C:\\Program Files\\Git\\cmd;C:\\Windows\\system32", SystemRoot: "C:\\Windows", ComSpec: "C:\\Windows\\system32\\cmd.exe", NPM_CONFIG_PREFIX: "D:\\ailleurs", npm_config_registry: "http://registre.piege", HELIX_CONFIG: "x", Electron_Run_As_Node: "1", APPDATA: "C:\\Users\\a\\AppData\\Roaming", TEMP: "C:\\T" },
+    { Path: "C:\\Program Files\\Git\\cmd;C:\\Windows\\system32", SystemRoot: "C:\\Windows", ComSpec: "C:\\Windows\\system32\\cmd.exe", NPM_CONFIG_PREFIX: "D:\\ailleurs", npm_config_registry: "http://registre.piege", OXOAI_CONFIG: "x", Electron_Run_As_Node: "1", APPDATA: "C:\\Users\\a\\AppData\\Roaming", TEMP: "C:\\T" },
     dossier,
     W,
   );
   const cles = Object.keys(env);
   verifier("environnement de npm : un seul PATH (le `Path` d'origine retiré), qui commence par le Node privé", cles.filter((k) => k.toLowerCase() === "path").length === 1 && env.PATH.startsWith(`${dossier};`), JSON.stringify(env.PATH));
   verifier("environnement de npm : System32 et Windows PowerShell dans le PATH (cmd.exe fait tourner les scripts d'installation)", env.PATH.split(";").includes("C:\\Windows\\System32") && env.PATH.includes("WindowsPowerShell\\v1.0"), env.PATH);
-  verifier("environnement de npm : ni NPM_CONFIG_PREFIX ni npm_config_registry, quelle que soit la casse ; ni HELIX_ ni Electron_", !cles.some((k) => /^(npm_|helix_|electron_)/i.test(k)), cles.join(","));
+  verifier("environnement de npm : ni NPM_CONFIG_PREFIX ni npm_config_registry, quelle que soit la casse ; ni OXOAI_ ni Electron_", !cles.some((k) => /^(npm_|oxoai_|electron_)/i.test(k)), cles.join(","));
   verifier("environnement de npm : ComSpec, APPDATA et TEMP gardés", env.ComSpec && env.APPDATA && env.TEMP, cles.join(","));
   const args = P.argumentsInstallation("2026.9.4", dossier, { avant: "2026-09-27T00:00:00.000Z" });
   const i = args.indexOf("--prefix");
@@ -106,14 +106,14 @@ console.log("B. Disposition du Node privé et installation par npm");
   const source = sansCommentaires(lire("gateway", "src", "installationOpenClaw.ts"));
   verifier("installation : npm lancé par node et npm-cli.js (jamais npm.cmd, jamais bin/npm)", /executer\(d\.node, \[d\.npmCli, \.\.\.args\]/.test(source) && !/join\(binNode, "npm"\)/.test(source) && !/npm\.cmd/.test(source), "npm lancé autrement");
   verifier("installation : la vérification lance OpenClaw comme il sera lancé (node.exe openclaw.mjs sous Windows)", /executer\(lancement\.fichier, \[\.\.\.lancement\.prefixe, "--version"\]/.test(source), "vérification autrement");
-  const msg = P.sansChemins("EPERM: operation not permitted, rename 'C:\\Users\\Jean Dupont\\.helix\\data\\x' -> \\\\serveur\\partage\\y (/Users/jean/.npm/_logs) https://registry.npmjs.org/openclaw");
+  const msg = P.sansChemins("EPERM: operation not permitted, rename 'C:\\Users\\Jean Dupont\\.oxoai\\data\\x' -> \\\\serveur\\partage\\y (/Users/jean/.npm/_logs) https://registry.npmjs.org/openclaw");
   verifier("message de npm à l'écran : sans chemin de la machine (Windows, UNC, Unix), l'adresse du registre gardée", !/Users\\|serveur|\/Users\/jean/.test(msg) && /https:\/\/registry\.npmjs\.org\//.test(msg), msg);
 }
 
 console.log("C. Trouver OpenClaw et le lancer sans cmd.exe");
 {
   const existe = (fichiers) => (f) => fichiers.includes(f);
-  const prefixe = "C:\\Users\\Jean Dupont\\.helix\\data\\openclaw-moteur\\node";
+  const prefixe = "C:\\Users\\Jean Dupont\\.oxoai\\data\\openclaw-moteur\\node";
   const gere = `${prefixe}\\openclaw.cmd`;
   const script = `${prefixe}\\node_modules\\openclaw\\openclaw.mjs`;
   const l = P.lancementOpenClaw(gere, W, existe([gere, script, `${prefixe}\\node.exe`]), () => "C:\\autre\\node.exe");
@@ -141,10 +141,10 @@ console.log("C. Trouver OpenClaw et le lancer sans cmd.exe");
 
   const env = { Path: `C:\\Windows\\system32;"C:\\Program Files\\nodejs";C:\\WINDOWS\\SYSTEM32;C:\\Users\\a\\AppData\\Local\\Microsoft\\WindowsApps`, APPDATA: "C:\\Users\\a\\AppData\\Roaming" };
   const c = P.candidatsOpenClaw({ platform: W, env, maison: "C:\\Users\\a", impose: undefined, gere, versionsNvm: () => ["v24.0.0"] });
-  verifier("candidats Windows : celui de Helix d'abord, puis openclaw.cmd de chaque dossier du PATH (guillemets retirés, doublons de casse écartés), puis %APPDATA%\\npm", c[0] === gere && c.includes("C:\\Program Files\\nodejs\\openclaw.cmd") && c.filter((x) => x.toLowerCase() === "c:\\windows\\system32\\openclaw.cmd").length === 1 && c[c.length - 1] === `${npmGlobal}\\openclaw.cmd`, JSON.stringify(c));
+  verifier("candidats Windows : celui de OxoAI d'abord, puis openclaw.cmd de chaque dossier du PATH (guillemets retirés, doublons de casse écartés), puis %APPDATA%\\npm", c[0] === gere && c.includes("C:\\Program Files\\nodejs\\openclaw.cmd") && c.filter((x) => x.toLowerCase() === "c:\\windows\\system32\\openclaw.cmd").length === 1 && c[c.length - 1] === `${npmGlobal}\\openclaw.cmd`, JSON.stringify(c));
   verifier("candidats Windows : ni Homebrew, ni nvm, ni un chemin Unix", !c.some((x) => x.startsWith("/") || x.includes("homebrew") || x.includes(".nvm")), JSON.stringify(c));
   const cm = P.candidatsOpenClaw({ platform: "darwin", env: { PATH: "/usr/bin:/bin" }, maison: "/Users/a", impose: "/opt/oc", gere: "/g/bin/openclaw", versionsNvm: () => ["v24.21.0"] });
-  verifier("candidats macOS inchangés : imposé, celui de Helix, PATH, nvm, Homebrew, ~/.local/bin", JSON.stringify(cm) === JSON.stringify(["/opt/oc", "/g/bin/openclaw", "/usr/bin/openclaw", "/bin/openclaw", "/Users/a/.nvm/versions/node/v24.21.0/bin/openclaw", "/opt/homebrew/bin/openclaw", "/usr/local/bin/openclaw", "/Users/a/.local/bin/openclaw"]), JSON.stringify(cm));
+  verifier("candidats macOS inchangés : imposé, celui de OxoAI, PATH, nvm, Homebrew, ~/.local/bin", JSON.stringify(cm) === JSON.stringify(["/opt/oc", "/g/bin/openclaw", "/usr/bin/openclaw", "/bin/openclaw", "/Users/a/.nvm/versions/node/v24.21.0/bin/openclaw", "/opt/homebrew/bin/openclaw", "/usr/local/bin/openclaw", "/Users/a/.local/bin/openclaw"]), JSON.stringify(cm));
   const n = P.chercherDansPath("node", env, W, existe(["C:\\Users\\a\\AppData\\Local\\Microsoft\\WindowsApps\\node.exe", "C:\\Program Files\\nodejs\\node.exe"]));
   verifier("Node du PATH sous Windows : node.exe, lu dans `Path`, sans l'alias du Microsoft Store", n === "C:\\Program Files\\nodejs\\node.exe", String(n));
 }
@@ -165,11 +165,11 @@ console.log("D. Environnement d'OpenClaw sous Windows");
   verifier("employes.ts : le PATH d'OpenClaw passe par joindrePath (plus de `:` écrit en dur)", /poserPath\(env, joindrePath\(\[\.\.\.dossiersDuLancement\(moteur\.bin, moteur\.lancement, p\)/.test(employes) && !/PATH: `\$\{dirname\(moteur\.bin\)\}:/.test(employes), "PATH écrit en dur");
 }
 
-console.log("E. Lancer, piloter, arrêter l'instance de Helix");
+console.log("E. Lancer, piloter, arrêter l'instance de OxoAI");
 {
   const employes = sansCommentaires(lire("gateway", "src", "employes.ts"));
   verifier("la passerelle OpenClaw est lancée par son lancement (node.exe openclaw.mjs sous Windows)", /spawn\(moteur\.lancement\.fichier, \[\.\.\.moteur\.lancement\.prefixe, "gateway", "run", "--port"/.test(employes), "spawn(moteur.bin)");
-  verifier("les commandes openclaw de Helix passent par le même lancement", /executer\(moteur\.lancement\.fichier, \[\.\.\.moteur\.lancement\.prefixe, \.\.\.args\]/.test(employes), "oc() autrement");
+  verifier("les commandes openclaw de OxoAI passent par le même lancement", /executer\(moteur\.lancement\.fichier, \[\.\.\.moteur\.lancement\.prefixe, \.\.\.args\]/.test(employes), "oc() autrement");
   verifier("la base de l'agent est ouverte par le Node d'OpenClaw (node.exe sous Windows), pas par `<dossier>/node`", /const node = moteur\.lancement\.node;/.test(employes) && !/join\(dirname\(moteur\.bin\), "node"\)/.test(employes), "node en dur");
   verifier("orphelin : plus de /bin/ps ni de process.kill en dur ; arrêt de tout son arbre", !/"\/bin\/ps"/.test(employes) && !/process\.kill\(pid/.test(employes) && /arreterPidArbre\(pid, "SIGTERM"\)/.test(employes), "POSIX en dur");
   verifier("mise à jour annulée : les données remises par un renommage réessayé (Windows), et l'effacement réessayé", /renommerSur\(miseDeCote\(\), dossier\(\)\)/.test(employes) && /maxRetries: 10/.test(employes), "renameSync");
@@ -188,8 +188,8 @@ console.log("E. Lancer, piloter, arrêter l'instance de Helix");
   }
   verifier("un numéro de processus qui n'est pas un entier est refusé avant toute commande", refus, "accepté");
   verifier("macOS : `ps -p <pid> -o command=` comme avant", JSON.stringify(P.commandeLigneDeProcessus(12, "darwin", {})) === JSON.stringify({ fichier: "/bin/ps", args: ["-p", "12", "-o", "command="] }), "autre");
-  const ligne = '"C:\\Users\\Jean Dupont\\.helix\\data\\openclaw-moteur\\node\\node.exe" "C:\\Users\\Jean Dupont\\.helix\\data\\openclaw-moteur\\node\\node_modules\\openclaw\\openclaw.mjs" gateway run --port 18800';
-  verifier("reconnaître l'OpenClaw de Helix sous Windows (node.exe … openclaw.mjs gateway run), pas un autre Node", P.estPasserelleOpenClaw(ligne, W) && !P.estPasserelleOpenClaw('"C:\\nodejs\\node.exe" serveur.js', W) && !P.estPasserelleOpenClaw("node.exe openclaw.mjs doctor", W) && P.estPasserelleOpenClaw("openclaw-gateway", "darwin"), "mauvais verdict");
+  const ligne = '"C:\\Users\\Jean Dupont\\.oxoai\\data\\openclaw-moteur\\node\\node.exe" "C:\\Users\\Jean Dupont\\.oxoai\\data\\openclaw-moteur\\node\\node_modules\\openclaw\\openclaw.mjs" gateway run --port 18800';
+  verifier("reconnaître l'OpenClaw de OxoAI sous Windows (node.exe … openclaw.mjs gateway run), pas un autre Node", P.estPasserelleOpenClaw(ligne, W) && !P.estPasserelleOpenClaw('"C:\\nodejs\\node.exe" serveur.js', W) && !P.estPasserelleOpenClaw("node.exe openclaw.mjs doctor", W) && P.estPasserelleOpenClaw("openclaw-gateway", "darwin"), "mauvais verdict");
   const tk = P.commandeArretArbre(4242, { SystemRoot: "C:\\Windows" });
   verifier("arrêt de l'arbre : taskkill.exe de System32, /PID /T /F, jamais /IM", tk.fichier === "C:\\Windows\\System32\\taskkill.exe" && JSON.stringify(tk.args) === JSON.stringify(["/PID", "4242", "/T", "/F"]) && !tk.args.includes("/IM"), JSON.stringify(tk));
 
@@ -243,7 +243,7 @@ console.log("H. Bibliothèques Visual C++ de Microsoft (29/09/2026)");
     const m = /^https:\/\/download\.visualstudio\.microsoft\.com\/download\/pr\/[0-9a-f-]{36}\/([0-9A-F]{64})\/VC_redist\.(x64|arm64)\.exe$/.exec(p?.adresse ?? "");
     verifier(`${arch} : adresse versionnée de Microsoft (pas le lien permanent), empreinte SHA-256 et taille écrites dans le code, égales au nom de dossier de Microsoft`, m && m[2] === arch && m[1].toLowerCase() === p.sha256 && p.octets > 1_000_000 && /^14\.\d+\.\d+\.\d+$/.test(p.version), JSON.stringify(p));
   }
-  verifier("Windows 32 bits : aucun paquet (Helix n'y pose pas de Node)", V.paquetVisualCpp("ia32") === null, "paquet");
+  verifier("Windows 32 bits : aucun paquet (OxoAI n'y pose pas de Node)", V.paquetVisualCpp("ia32") === null, "paquet");
   const installation = sansCommentaires(lire("gateway", "src", "installationOpenClaw.ts"));
   verifier("installation : les bibliothèques de Microsoft passent avant Node, sous Windows seulement (la détection rend null ailleurs)", installation.indexOf("await assurerVisualCpp(qui)") > 0 && installation.indexOf("await assurerVisualCpp(qui)") < installation.indexOf("const node = await installerNode()") && /if \(process\.platform !== "win32"\) return null;/.test(lire("gateway", "src", "visualCpp.ts")), "ordre");
 }
@@ -254,7 +254,7 @@ console.log("H. Bibliothèques Visual C++ de Microsoft (29/09/2026)");
  * vérification par le lancement) n'a rien cassé. Données et dossier personnel
  * jetables, réseau requis (nodejs.org, registry.npmjs.org), plusieurs minutes.
  * Puis une passerelle OpenClaw jetable sur un port libre, arrêtée par son
- * numéro (sous Windows, par taskkill sur tout l'arbre, comme Helix). Jamais
+ * numéro (sous Windows, par taskkill sur tout l'arbre, comme OxoAI). Jamais
  * lancé par la batterie.
  *
  * Sur un vrai Windows depuis le 29/09/2026 (GitHub Actions,
@@ -276,11 +276,11 @@ if (process.argv.includes("--installation")) {
   const windows = process.platform === "win32";
   const sortieEssai = argument("--sortie") ? join(process.cwd(), argument("--sortie")) : null;
   if (sortieEssai) mkdirSync(sortieEssai, { recursive: true });
-  const racine = mkdtempSync(join(tmpdir(), "helix-oc-win-"));
+  const racine = mkdtempSync(join(tmpdir(), "oxoai-oc-win-"));
   /*
    * `--compte-accentue` : un compte Windows nommé « Hélène Dupont », comme
    * chez une vraie personne (espace et accents dans tout ce qui est rangé sous
-   * son dossier : données de Helix, dossier temporaire, cache de npm). Sur la
+   * son dossier : données de OxoAI, dossier temporaire, cache de npm). Sur la
    * machine de GitHub, le compte est `runneradmin` et le dossier temporaire
    * un nom court sans espace (`RUNNER~1`) : c'est ce qui les distingue le plus
    * d'un poste ordinaire. Le nom est écrit ici plutôt que passé en argument :
@@ -288,11 +288,11 @@ if (process.argv.includes("--installation")) {
    */
   const accentue = process.argv.includes("--compte-accentue");
   const maison = accentue ? join(racine, "Users", "H\u00e9l\u00e8ne Dupont") : join(racine, "maison");
-  const donnees = accentue ? join(maison, ".helix", "data") : join(racine, "donnees");
+  const donnees = accentue ? join(maison, ".oxoai", "data") : join(racine, "donnees");
   mkdirSync(maison, { recursive: true });
   mkdirSync(donnees, { recursive: true });
   writeFileSync(join(racine, "profil.json"), JSON.stringify({ chiffrement: "fichier" }));
-  const env = { ...process.env, HOME: maison, USERPROFILE: maison, HELIX_DATA_DIR: donnees, HELIX_CONFIG: join(racine, "profil.json") };
+  const env = { ...process.env, HOME: maison, USERPROFILE: maison, OXOAI_DATA_DIR: donnees, OXOAI_CONFIG: join(racine, "profil.json") };
   if (accentue && windows) {
     const local = join(maison, "AppData", "Local");
     for (const d of [join(local, "Temp"), join(maison, "AppData", "Roaming")]) mkdirSync(d, { recursive: true });
@@ -309,7 +309,7 @@ if (process.argv.includes("--installation")) {
   const V = await import(pathToFileURL(join(RACINE, "gateway", "src", "visualCpp.ts")).href);
   /*
    * Windows : le relevé des bibliothèques Visual C++ (29/09/2026). Ce que la
-   * détection de Helix lit sur cette machine (registre, DLL de System32), puis
+   * détection de OxoAI lit sur cette machine (registre, DLL de System32), puis
    * chaque paquet épinglé (x64 et arm64) téléchargé à son adresse, son
    * empreinte, sa taille, sa version et sa signature Authenticode, lues ici,
    * par les scripts PowerShell de visualCpp.ts. Gardé en artefact
@@ -323,13 +323,13 @@ if (process.argv.includes("--installation")) {
   };
   if (windows) {
     const releve = { machine: process.arch, paquets: {} };
-    const brut = ps(V.SCRIPT_RELEVE, { HELIX_VC_ARCH: process.arch, HELIX_VC_DLL: V.DLL_VISUAL_CPP.join(";") });
+    const brut = ps(V.SCRIPT_RELEVE, { OXOAI_VC_ARCH: process.arch, OXOAI_VC_DLL: V.DLL_VISUAL_CPP.join(";") });
     releve.detection = { brut: brut.sortie, erreur: brut.erreur.slice(0, 500), verdict: V.lireReleve(brut.sortie) ? V.verdictVisualCpp(V.lireReleve(brut.sortie), process.arch) : null };
     // Les autres DLL du Visual C++ que l'on aurait pu attendre : présentes ou non sur cette machine, pour mémoire.
-    releve.autres = V.lireReleve(ps(V.SCRIPT_RELEVE, { HELIX_VC_ARCH: process.arch, HELIX_VC_DLL: "VCRUNTIME140_1.dll;MSVCP140.dll;ucrtbase.dll" }).sortie);
+    releve.autres = V.lireReleve(ps(V.SCRIPT_RELEVE, { OXOAI_VC_ARCH: process.arch, OXOAI_VC_DLL: "VCRUNTIME140_1.dll;MSVCP140.dll;ucrtbase.dll" }).sortie);
     verifier(`relevé de cette machine (${process.arch}) : lisible, bibliothèques présentes (machine de GitHub)`, releve.detection.verdict?.etat === "present", JSON.stringify(releve.detection));
     const { createHash } = await import("node:crypto");
-    const dossierVc = mkdtempSync(join(tmpdir(), "helix-vc-"));
+    const dossierVc = mkdtempSync(join(tmpdir(), "oxoai-vc-"));
     for (const arch of ["x64", "arm64"]) {
       const p = V.PAQUETS_VISUAL_CPP[arch];
       const r = await fetch(p.adresse, { redirect: "error" });
@@ -337,7 +337,7 @@ if (process.argv.includes("--installation")) {
       const f = join(dossierVc, `VC_redist.${arch}.exe`);
       writeFileSync(f, octets);
       const sha256 = createHash("sha256").update(octets).digest("hex");
-      const s = ps(V.SCRIPT_SIGNATURE, { HELIX_VC_FICHIER: f });
+      const s = ps(V.SCRIPT_SIGNATURE, { OXOAI_VC_FICHIER: f });
       let signature = null;
       try {
         signature = JSON.parse(s.sortie.trim());
@@ -360,7 +360,7 @@ if (process.argv.includes("--installation")) {
    * OpenClaw qui s'installe et démarre.
    */
   const vcAbsent = windows && process.argv.includes("--visual-cpp-absent");
-  if (vcAbsent) env.HELIX_ESSAI_VISUAL_CPP = "absent";
+  if (vcAbsent) env.OXOAI_ESSAI_VISUAL_CPP = "absent";
   const code = `const i = await import("./gateway/src/installationOpenClaw.ts");
     for (let k = 0; k < ${passes}; k++) {
       i.installerOpenClaw("essai", { apres: async () => {} });
@@ -403,7 +403,7 @@ if (process.argv.includes("--installation")) {
      * Le plus long chemin posé, compté depuis le dossier de données : sans
      * « chemins longs » activés (réglage de Windows, éteint d'office), un
      * chemin de plus de 260 caractères ne s'ouvre pas. Chez une personne, le
-     * dossier de données est `C:\Users\<nom>\.helix\data`.
+     * dossier de données est `C:\Users\<nom>\.oxoai\data`.
      */
     let plusLong = "";
     const parcourir = (d) => {
@@ -422,8 +422,8 @@ if (process.argv.includes("--installation")) {
     // Par la jonction `node`, comme npm y écrit (le dossier réel porte la version, 17 caractères de plus).
     parcourir(prefixe);
     const relatif = plusLong.slice(donnees.length);
-    const chezUnePersonne = "C:\\Users\\Jean-Baptiste Dupont\\.helix\\data".length + relatif.length;
-    const mesure = `plus long chemin posé : ${plusLong.length} caractères ici, ${relatif.length} sous le dossier de données, soit ${chezUnePersonne} pour « C:\\Users\\Jean-Baptiste Dupont\\.helix\\data »\n${relatif}`;
+    const chezUnePersonne = "C:\\Users\\Jean-Baptiste Dupont\\.oxoai\\data".length + relatif.length;
+    const mesure = `plus long chemin posé : ${plusLong.length} caractères ici, ${relatif.length} sous le dossier de données, soit ${chezUnePersonne} pour « C:\\Users\\Jean-Baptiste Dupont\\.oxoai\\data »\n${relatif}`;
     console.log(`  (${mesure.split("\n")[0]})`);
     writeFileSync(join(sortieEssai, "chemins.txt"), mesure);
     const scripts = join(prefixe, "node_modules", "openclaw", "scripts");
@@ -489,7 +489,7 @@ if (process.argv.includes("--installation")) {
     const etatOc = join(racine, "etat-openclaw");
     mkdirSync(etatOc, { recursive: true });
     writeFileSync(join(etatOc, "openclaw.json"), JSON.stringify({ gateway: { mode: "local", bind: "loopback", port, auth: { mode: "token", token: "jeton-" + "essai-" + port } }, discovery: { mdns: { mode: "off" } }, telemetry: { enabled: false }, update: { checkOnStart: false } }));
-    // L'environnement que Helix donne à OpenClaw (employes.ts, envOpenClaw), en plus court : sous Windows, SystemRoot, ComSpec, TEMP et le PATH en `;`.
+    // L'environnement que OxoAI donne à OpenClaw (employes.ts, envOpenClaw), en plus court : sous Windows, SystemRoot, ComSpec, TEMP et le PATH en `;`.
     const plateforme = process.platform;
     const envOc = windows
       ? P.garderVariables(process.env, ["SystemRoot", "windir", "ComSpec", "PATHEXT", "TEMP", "TMP", "APPDATA", "LOCALAPPDATA", "ProgramFiles", "ProgramFiles(x86)", "ProgramW6432", "ProgramData", "SystemDrive", "PSModulePath", "USERNAME", "COMPUTERNAME", "OS", "PROCESSOR_ARCHITECTURE", "NUMBER_OF_PROCESSORS"], [], plateforme)
@@ -497,7 +497,7 @@ if (process.argv.includes("--installation")) {
     P.poserPath(envOc, P.joindrePath([dirname(lancement.node), P.pathSysteme(plateforme, process.env)], plateforme), plateforme);
     Object.assign(envOc, { HOME: maison, USERPROFILE: maison, OPENCLAW_STATE_DIR: etatOc, OPENCLAW_CONFIG_PATH: join(etatOc, "openclaw.json") });
     const version = spawnSync(lancement.fichier, [...lancement.prefixe, "--version"], { env: envOc, encoding: "utf8", timeout: 120_000, windowsHide: true });
-    verifier("OpenClaw installé répond à --version, lancé comme Helix le lance (node.exe openclaw.mjs sous Windows)", /2026\.9\.4/.test(version.stdout ?? ""), `${version.status} ${version.stdout} ${version.stderr}`);
+    verifier("OpenClaw installé répond à --version, lancé comme OxoAI le lance (node.exe openclaw.mjs sous Windows)", /2026\.9\.4/.test(version.stdout ?? ""), `${version.status} ${version.stdout} ${version.stderr}`);
     const p = spawn(lancement.fichier, [...lancement.prefixe, "gateway", "run", "--port", String(port)], { env: envOc, stdio: ["ignore", "pipe", "pipe"], windowsHide: true });
     let journal = "";
     p.stdout.on("data", (b) => (journal += b));
@@ -512,8 +512,8 @@ if (process.argv.includes("--installation")) {
         await new Promise((ok) => setTimeout(ok, 500));
       }
     }
-    verifier(`OpenClaw jetable lancé comme Helix le lance (port ${port}, jamais 18789 ni 18800) : il ouvre son port`, ouvert, journal.slice(-600));
-    // Mesuré pour régler l'attente de Helix (employes.ts, OUVERTURE_ESSAIS) : 45 s ne suffisaient pas sur un vrai PC.
+    verifier(`OpenClaw jetable lancé comme OxoAI le lance (port ${port}, jamais 18789 ni 18800) : il ouvre son port`, ouvert, journal.slice(-600));
+    // Mesuré pour régler l'attente de OxoAI (employes.ts, OUVERTURE_ESSAIS) : 45 s ne suffisaient pas sur un vrai PC.
     console.log(`   port ouvert en ${Math.round((Date.now() - debutOuverture) / 1000)} s (premier démarrage)`);
     // Arrêt par son numéro : sous Windows, taskkill de System32 sur tout l'arbre, comme processus.ts.
     if (windows) {
@@ -536,14 +536,14 @@ if (process.argv.includes("--installation")) {
      * `--sans-vcruntime` (machine jetable seulement) : `VCRUNTIME140.dll`
      * retirée de System32 le temps de l'essai (renommée, puis remise), pour
      * voir de nos yeux ce qu'un PC sans Visual C++ ferait : la détection de
-     * Helix doit dire « absentes », les deux modules qui l'importent ne se
+     * OxoAI doit dire « absentes », les deux modules qui l'importent ne se
      * chargent plus, et l'on note si OpenClaw démarre quand même. Un Windows
      * où le renommage est refusé passe l'essai sans le faire (dit).
      */
     if (windows && process.argv.includes("--sans-vcruntime")) {
       const { renameSync } = await import("node:fs");
       const dll = join(process.env.SystemRoot ?? "C:\\Windows", "System32", "vcruntime140.dll");
-      const mise = `${dll}.helix-essai`;
+      const mise = `${dll}.oxoai-essai`;
       let retiree = false;
       try {
         renameSync(dll, mise);
@@ -554,10 +554,10 @@ if (process.argv.includes("--installation")) {
       if (retiree) {
         const rapport = [];
         try {
-          const r = V.lireReleve(ps(V.SCRIPT_RELEVE, { HELIX_VC_ARCH: process.arch, HELIX_VC_DLL: V.DLL_VISUAL_CPP.join(";") }).sortie);
+          const r = V.lireReleve(ps(V.SCRIPT_RELEVE, { OXOAI_VC_ARCH: process.arch, OXOAI_VC_DLL: V.DLL_VISUAL_CPP.join(";") }).sortie);
           const verdict = r ? V.verdictVisualCpp(r, process.arch) : null;
           rapport.push(`détection : ${JSON.stringify(verdict)}`);
-          verifier("sans VCRUNTIME140.dll : la détection de Helix dit « absentes » (registre ignoré : c'est la DLL que Windows charge)", verdict?.etat === "absent", JSON.stringify(verdict));
+          verifier("sans VCRUNTIME140.dll : la détection de OxoAI dit « absentes » (registre ignoré : c'est la DLL que Windows charge)", verdict?.etat === "absent", JSON.stringify(verdict));
           const nodePrive = lancement.node;
           const dependances = join(donnees, "openclaw-moteur", "node", "node_modules", "openclaw", "node_modules");
           const modulesVc = [join("@openclaw", `fs-safe-win32-${process.arch}-msvc`, "fs-safe-native.node"), join("@ubjs", `node-win32-${process.arch}-msvc`, `uniffi-runtime-napi.win32-${process.arch}-msvc.node`)]
@@ -568,7 +568,7 @@ if (process.argv.includes("--installation")) {
            * chaque dossier du PATH : sur la machine de GitHub, bien des
            * programmes (Python, Git, outils) en posent une copie (premier essai
            * du 29/09/2026 : les modules se chargeaient encore). On les liste, et
-           * les modules sont chargés avec le PATH que Helix donne à OpenClaw
+           * les modules sont chargés avec le PATH que OxoAI donne à OpenClaw
            * (le Node privé, puis System32 et Windows PowerShell).
            */
           const copies = [...new Set([dirname(nodePrive), process.env.SystemRoot ?? "C:\\Windows", ...(process.env.PATH ?? "").split(";")].filter(Boolean))].filter((d) => existsSync(join(d, "vcruntime140.dll")));
@@ -605,7 +605,7 @@ if (process.argv.includes("--installation")) {
         } finally {
           renameSync(mise, dll);
         }
-        const apres = V.lireReleve(ps(V.SCRIPT_RELEVE, { HELIX_VC_ARCH: process.arch, HELIX_VC_DLL: V.DLL_VISUAL_CPP.join(";") }).sortie);
+        const apres = V.lireReleve(ps(V.SCRIPT_RELEVE, { OXOAI_VC_ARCH: process.arch, OXOAI_VC_DLL: V.DLL_VISUAL_CPP.join(";") }).sortie);
         verifier("VCRUNTIME140.dll remise : la détection redit « présentes »", apres && V.verdictVisualCpp(apres, process.arch).etat === "present", JSON.stringify(apres));
         console.log(`  (sans VCRUNTIME140.dll : ${rapport.map((l) => l.split("\n")[0]).join(" ; ")})`);
         if (sortieEssai) writeFileSync(join(sortieEssai, "sans-vcruntime.txt"), rapport.join("\n"));

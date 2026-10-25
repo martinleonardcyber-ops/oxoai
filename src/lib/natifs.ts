@@ -57,7 +57,7 @@ export interface ResultatNatif {
 
 export async function etatNatifs(): Promise<EtatNatifs | null> {
   try {
-    const res = await apiFetch("/helix/natifs");
+    const res = await apiFetch("/oxoai/natifs");
     if (!res.ok) return null;
     return (await res.json()) as EtatNatifs;
   } catch {
@@ -67,7 +67,7 @@ export async function etatNatifs(): Promise<EtatNatifs | null> {
 
 async function poster(suite: string, corps: Record<string, unknown>): Promise<ResultatNatif> {
   try {
-    const res = await apiFetch(`/helix/natifs${suite}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(corps) });
+    const res = await apiFetch(`/oxoai/natifs${suite}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(corps) });
     const json = (await res.json().catch(() => ({}))) as Partial<ResultatNatif> & Partial<EtatNatifs> & { error?: { message?: string } };
     if (json.error?.message) return { ok: false, message: json.error.message };
     return {

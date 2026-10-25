@@ -45,11 +45,11 @@ import { tarDuSysteme } from "./pythonPrive.ts";
  * OpenCode (`tool.execute.before`) réécrivant `git status` en `rtk git status`
  * **avant** que l'outil `bash` demande l'autorisation : lu dans OpenCode
  * 1.18.32 (`ShellTool`, la demande `permission: "bash"` est faite dans
- * `execute`, après le crochet). La carte d'accord de Helix aurait montré
+ * `execute`, après le crochet). La carte d'accord de OxoAI aurait montré
  * `rtk git status`, et la barrière aurait jugé l'enveloppe au lieu de la
  * commande. Écarté.
  *
- * Helix place RTK **après** la barrière, au moment où la commande part :
+ * OxoAI place RTK **après** la barrière, au moment où la commande part :
  * OpenCode lance chaque commande par `spawn(commande, { shell })` (lu dans
  * `ShellTool.run`), et son réglage `shell` accepte n'importe quel exécutable
  * (hors fish et nu). Ce réglage désigne `enveloppe` (écrite ici), qui reçoit
@@ -61,9 +61,9 @@ import { tarDuSysteme } from "./pythonPrive.ts";
  *  - RTK absent, ou `rtk rewrite` en échec : la commande d'origine, et une
  *    ligne dans `replis.log`, relayée au journal de la passerelle.
  *
- * Par session : le greffon d'environnement de Helix (opencode.ts) reçoit
+ * Par session : le greffon d'environnement de OxoAI (opencode.ts) reçoit
  * `sessionID` à chaque commande (crochet `shell.env`, OpenCode 1.18.32) et ne
- * donne `HELIX_RTK_DB` qu'aux sessions notées ici ; sans elle, l'enveloppe
+ * donne `OXOAI_RTK_DB` qu'aux sessions notées ici ; sans elle, l'enveloppe
  * passe la main au vrai shell sans appeler RTK. Réglage de l'écran Code :
  * « cloud » (défaut, demandé par Medhi), « toujours » (aide aussi les petits
  * modèles locaux, qui ont peu de place), « jamais ».
@@ -114,11 +114,11 @@ const ARCHIVES: Record<string, { fichier: string; sha256: string; octets: number
   "win32-x64": { fichier: "rtk-x86_64-pc-windows-msvc.zip", sha256: "cb03399305135dd59ee23eb59a3260ccdeea5a8e08fbc7a271b115b85583a6c9", octets: 4_511_565 },
 };
 
-/** Ce que Helix passe à chaque appel de RTK : pas de télémétrie, pas de copie des sorties complètes. */
+/** Ce que OxoAI passe à chaque appel de RTK : pas de télémétrie, pas de copie des sorties complètes. */
 export const ENV_RTK = { RTK_TELEMETRY_DISABLED: "1", RTK_RECALL: "0" } as const;
 
 const cible = () => `${process.platform}-${process.arch}`;
-const racine = () => join(process.env.HELIX_DATA_DIR ?? join(homedir(), ".helix", "data"), "rtk");
+const racine = () => join(process.env.OXOAI_DATA_DIR ?? join(homedir(), ".oxoai", "data"), "rtk");
 const dossierVersion = () => join(racine(), VERSION);
 const nomExecutable = () => (process.platform === "win32" ? "rtk.exe" : "rtk");
 /** Une base d'historique par session racine (ses sous-agents compris). */
@@ -127,21 +127,21 @@ export const dossierBases = (): string => join(racine(), "sessions");
 export const fichierSessions = (): string => join(racine(), "sessions.json");
 const fichierReplis = () => join(racine(), "replis.log");
 const cheminEnveloppe = () => join(racine(), "shell-code");
-/** Le dossier mis en tête du PATH d'une commande réécrite : il n'y a là que le `rtk` de Helix (`ecrireRtkDesCommandes`). */
+/** Le dossier mis en tête du PATH d'une commande réécrite : il n'y a là que le `rtk` de OxoAI (`ecrireRtkDesCommandes`). */
 const dossierChemin = () => join(racine(), "chemin");
 
 /** Même forme que les identifiants de session acceptés par la passerelle : aucun `.` ni `/`, donc un nom de fichier sûr. */
 const SESSION = /^[A-Za-z0-9_-]{1,64}$/;
 
-/** Le RTK posé par Helix (chemin, qu'il existe ou non). */
-export const rtkDeHelix = (): string => join(dossierVersion(), nomExecutable());
-/** Celui qui sert : `HELIX_RTK_BIN` (intégrateur, batterie de sécurité), sinon celui de Helix. */
-export const rtkUtilise = (): string => process.env.HELIX_RTK_BIN || rtkDeHelix();
+/** Le RTK posé par OxoAI (chemin, qu'il existe ou non). */
+export const rtkDeOxoAI = (): string => join(dossierVersion(), nomExecutable());
+/** Celui qui sert : `OXOAI_RTK_BIN` (intégrateur, batterie de sécurité), sinon celui de OxoAI. */
+export const rtkUtilise = (): string => process.env.OXOAI_RTK_BIN || rtkDeOxoAI();
 
 /** RTK peut-il être branché sur l'agent de code ici ? La raison sinon. */
 export function rtkBranchable(): string | null {
   if (process.platform === "win32") return t("Sous Windows, les commandes de l'agent de code partent sans RTK.");
-  if (!ARCHIVES[cible()] && !process.env.HELIX_RTK_BIN) return tf("RTK n'est pas publié pour ce système ({0}).", cible());
+  if (!ARCHIVES[cible()] && !process.env.OXOAI_RTK_BIN) return tf("RTK n'est pas publié pour ce système ({0}).", cible());
   return null;
 }
 
@@ -158,7 +158,7 @@ let enCours: Promise<string> | null = null;
 
 /** Pose RTK s'il ne l'est pas ; une installation à la fois. Rend l'exécutable. */
 export function installerRtk(): Promise<string> {
-  if (existsSync(rtkDeHelix())) return Promise.resolve(rtkDeHelix());
+  if (existsSync(rtkDeOxoAI())) return Promise.resolve(rtkDeOxoAI());
   if (!enCours) {
     Object.assign(etat, { enCours: true, pourcent: 0, erreur: null });
     enCours = installer()
@@ -231,8 +231,8 @@ async function installer(): Promise<string> {
     mkdirSync(racine(), { recursive: true, mode: 0o700 });
     renommer(extrait, dossierVersion());
     etat.pourcent = 100;
-    console.log(`[helix] RTK ${VERSION} posé dans ${dossierVersion()}.`);
-    return rtkDeHelix();
+    console.log(`[oxoai] RTK ${VERSION} posé dans ${dossierVersion()}.`);
+    return rtkDeOxoAI();
   } finally {
     rmSync(travail, { recursive: true, force: true });
   }
@@ -252,8 +252,8 @@ export function rtkEnFond(): VerdictRtkEnFond {
   if (rtkBranchable() !== null) return "non-branchable";
   if (etat.enCours) return "en-cours";
   if (existsSync(rtkUtilise())) return "present";
-  console.log("[helix] Installation de RTK en arrière-plan.");
-  void installerRtk().catch((err: unknown) => console.warn(`[helix] RTK non installé : ${err instanceof Error ? err.message : String(err)}`));
+  console.log("[oxoai] Installation de RTK en arrière-plan.");
+  void installerRtk().catch((err: unknown) => console.warn(`[oxoai] RTK non installé : ${err instanceof Error ? err.message : String(err)}`));
   return "lancee";
 }
 
@@ -287,7 +287,7 @@ const litteral = (v: string) => `'${v.replaceAll("'", `'\\''`)}'`;
  * propre choix, comme avant.
  *
  * Réécrite à chaque démarrage d'OpenCode : une modification par une commande
- * de l'agent ne survit pas au suivant. Sans `HELIX_RTK_DB` (session sans RTK,
+ * de l'agent ne survit pas au suivant. Sans `OXOAI_RTK_DB` (session sans RTK,
  * ou tout autre usage d'OpenCode), elle ne fait que passer la main au vrai
  * shell, avec les mêmes arguments.
  */
@@ -299,20 +299,20 @@ export function ecrireEnveloppe(): string | null {
   ecrireRtkDesCommandes(rtk);
   const script = [
     "#!/bin/sh",
-    "# Écrit par la passerelle Helix (gateway/src/rtk.ts) : ne pas modifier, réécrit à chaque démarrage de l'agent de code.",
+    "# Écrit par la passerelle OxoAI (gateway/src/rtk.ts) : ne pas modifier, réécrit à chaque démarrage de l'agent de code.",
     "# OpenCode lance ici chaque commande, déjà approuvée, sous la forme « -c <commande> ».",
     `REEL=${litteral(shellReel())}`,
     `RTK=${litteral(rtk)}`,
     `JOURNAL=${litteral(fichierReplis())}`,
     `CHEMIN=${litteral(dossierChemin())}`,
-    'if [ "$#" -eq 2 ] && [ "$1" = "-c" ] && [ -n "${HELIX_RTK_DB:-}" ]; then',
+    'if [ "$#" -eq 2 ] && [ "$1" = "-c" ] && [ -n "${OXOAI_RTK_DB:-}" ]; then',
     '  if [ -x "$RTK" ]; then',
-    '    REECRITE=$(RTK_TELEMETRY_DISABLED=1 RTK_RECALL=0 RTK_DB_PATH="$HELIX_RTK_DB" "$RTK" rewrite "$2" 2>/dev/null)',
+    '    REECRITE=$(RTK_TELEMETRY_DISABLED=1 RTK_RECALL=0 RTK_DB_PATH="$OXOAI_RTK_DB" "$RTK" rewrite "$2" 2>/dev/null)',
     "    CODE=$?",
     '    case "$CODE" in',
     "      0|3)",
     '        if [ -n "$REECRITE" ]; then',
-    '          RTK_TELEMETRY_DISABLED=1; RTK_RECALL=0; RTK_DB_PATH="$HELIX_RTK_DB"; PATH="$CHEMIN:$PATH"',
+    '          RTK_TELEMETRY_DISABLED=1; RTK_RECALL=0; RTK_DB_PATH="$OXOAI_RTK_DB"; PATH="$CHEMIN:$PATH"',
     "          export RTK_TELEMETRY_DISABLED RTK_RECALL RTK_DB_PATH PATH",
     '          exec "$REEL" -c "$REECRITE"',
     "        fi",
@@ -352,7 +352,7 @@ const SOUS_COMMANDES_REFUSEES = ["trust", "untrust", "init", "config", "telemetr
  * (`GITHUB_ACTIONS`, `GITLAB_CI`, `JENKINS_URL`, `BUILDKITE`), et une commande
  * réécrite avait le vrai `rtk` dans son PATH : `rtk trust --yes` y marchait,
  * pour de bon (la confiance est gardée dans les réglages de RTK de la
- * personne, hors de Helix). Essayé avec le vrai RTK : un dépôt dont le filtre
+ * personne, hors de OxoAI). Essayé avec le vrai RTK : un dépôt dont le filtre
  * retire tout et écrit « tous les tests passent » faisait lire cette phrase au
  * modèle à la place d'un échec, après `GITHUB_ACTIONS=true
  * RTK_TRUST_PROJECT_FILTERS=1 make test`.
@@ -361,13 +361,13 @@ const SOUS_COMMANDES_REFUSEES = ["trust", "untrust", "init", "config", "telemetr
  * copie des sorties coupées (une commande pouvait les rallumer en les
  * écrivant devant `rtk`), refuse les sous-commandes ci-dessus, puis passe la
  * main au vrai. Une commande qui nommerait le vrai par son chemin, dans les
- * données de Helix, le montre en entier sur sa carte.
+ * données de OxoAI, le montre en entier sur sa carte.
  */
 function ecrireRtkDesCommandes(rtk: string): void {
   mkdirSync(dossierChemin(), { recursive: true, mode: 0o700 });
   const script = [
     "#!/bin/sh",
-    "# Écrit par la passerelle Helix (gateway/src/rtk.ts) : le rtk que trouvent les commandes réécrites de l'agent de code.",
+    "# Écrit par la passerelle OxoAI (gateway/src/rtk.ts) : le rtk que trouvent les commandes réécrites de l'agent de code.",
     `VRAI=${litteral(rtk)}`,
     "unset RTK_TRUST_PROJECT_FILTERS",
     "RTK_TELEMETRY_DISABLED=1; RTK_RECALL=0",
@@ -376,7 +376,7 @@ function ecrireRtkDesCommandes(rtk: string): void {
     '  case "$ARG" in',
     "    -*) continue ;;",
     `    ${SOUS_COMMANDES_REFUSEES.join("|")})`,
-    "      printf 'rtk %s : refusé dans Helix Code (réglages et confiance de RTK, historique de la personne).\\n' \"$ARG\" >&2",
+    "      printf 'rtk %s : refusé dans OxoAI Code (réglages et confiance de RTK, historique de la personne).\\n' \"$ARG\" >&2",
     "      exit 126 ;;",
     "  esac",
     "  break",
@@ -464,7 +464,7 @@ export const rtkActifDans = (sessionID: string): boolean => chargerSessions().ha
 
 /**
  * Le morceau du greffon d'environnement d'OpenCode (opencode.ts) qui donne
- * `HELIX_RTK_DB` aux commandes des sessions notées, et une valeur vide aux
+ * `OXOAI_RTK_DB` aux commandes des sessions notées, et une valeur vide aux
  * autres. Relu à chaque commande : un changement de réglage vaut dès la
  * commande suivante, sans redémarrer OpenCode.
  */

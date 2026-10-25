@@ -6,7 +6,7 @@ import { delimiter, dirname, join, relative, sep } from "node:path";
 /**
  * Les tests du projet, lancés pour de vrai, mais dans une cage.
  *
- * Ajouté le 26/09/2026 (« Helix Code doit être bon sur tous les domaines de
+ * Ajouté le 26/09/2026 (« OxoAI Code doit être bon sur tous les domaines de
  * code ») : un contrôle qui lit le texte ne voit pas qu'un programme se trompe.
  * Mesuré le jour même sur un script Python fait par Qwen3 8B : syntaxe juste,
  * imports justes, et pourtant un test sur deux échouait (`import app` ne lance
@@ -19,7 +19,7 @@ import { delimiter, dirname, join, relative, sep } from "node:path";
  *  - le bac à sable de macOS (`sandbox-exec`), avec un profil qui refuse tout
  *    par défaut : lecture limitée au système, aux outils (Homebrew, Node,
  *    Xcode) et à la copie ; écriture dans la copie seulement ; aucun accès au
- *    réseau. Vérifié le 26/09/2026 : lire ~/.helix, écrire dans ~/Documents et
+ *    réseau. Vérifié le 26/09/2026 : lire ~/.oxoai, écrire dans ~/Documents et
  *    joindre la passerelle sur 127.0.0.1 sont tous refusés ;
  *  - un environnement vide (seulement PATH, HOME dans la copie, la langue),
  *    une limite de temps, une sortie tronquée.
@@ -256,7 +256,7 @@ export async function essayerTests(dossier: string): Promise<ResultatEssai | { s
   const commande = commandeDEssai(dossier);
   if (!commande) return null;
   if (!cageDisponible()) return { sans: "pas de bac à sable sur ce système" };
-  const copie = realpathSync(mkdtempSync(join(tmpdir(), "helix-essai-")));
+  const copie = realpathSync(mkdtempSync(join(tmpdir(), "oxoai-essai-")));
   const debut = Date.now();
   try {
     const { lectures } = copier(dossier, copie);

@@ -11,7 +11,7 @@ import { cleRelaisValide } from "./opencode.ts";
 const exec = promisify(execFile);
 
 /**
- * Pendant qu'un modèle lit une demande de Helix Code, le dire aux clients.
+ * Pendant qu'un modèle lit une demande de OxoAI Code, le dire aux clients.
  *
  * ── Pourquoi ────────────────────────────────────────────────────────────────
  *
@@ -27,7 +27,7 @@ const exec = promisify(execFile);
  * `x-session-affinity`, et `x-parent-session-id` pour un sous-agent : lu dans
  * OpenCode 1.18.32, pour tout fournisseur qui n'est pas le sien). Tant qu'un
  * appel attend son premier morceau, la passerelle envoie à la session un
- * `helix.statut` toutes les dix secondes : les clients l'affichent, et leur
+ * `oxoai.statut` toutes les dix secondes : les clients l'affichent, et leur
  * guet de silence reste au repos.
  *
  * ── Ce qu'on dit, et d'où on le tient ───────────────────────────────────────
@@ -106,7 +106,7 @@ function surCePoste(adresse: string): boolean {
 /**
  * Un appel au modèle part, relayé par la passerelle. Rend de quoi signaler le
  * premier morceau et la fin, ou `null` si l'appel ne vient pas d'une session
- * de Helix Code suivie (autre client de l'API compatible, titre de session).
+ * de OxoAI Code suivie (autre client de l'API compatible, titre de session).
  */
 export function suivreAppelModele(
   entetes: http.IncomingHttpHeaders,
@@ -116,12 +116,12 @@ export function suivreAppelModele(
 ): { premierMorceau: () => void; fin: () => void; chargement: (oui: boolean) => void; taille: (caracteres: number) => void } | null {
   /*
    * Seulement un appel d'OpenCode lui-même : il joint la clé que la
-   * passerelle lui a remise (`X-Helix-Relais`, opencode.ts). Revue du
+   * passerelle lui a remise (`X-OxoAI-Relais`, opencode.ts). Revue du
    * 25/09/2026 : sans ce contrôle, n'importe quel porteur du jeton d'instance
    * nommait la session d'un collègue dans `X-Session-Id` et y faisait
    * afficher ses propres statuts.
    */
-  const relais = entetes["x-helix-relais"];
+  const relais = entetes["x-oxoai-relais"];
   if (!cleRelaisValide(Array.isArray(relais) ? relais[0] : relais)) return null;
   const session = entete(entetes, "x-session-id") ?? entete(entetes, "x-session-affinity");
   const parent = entete(entetes, "x-parent-session-id");

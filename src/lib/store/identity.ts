@@ -78,7 +78,7 @@ export function currentUser(): User {
 }
 
 /** Émis quand l'utilisateur connecté change, ou que son nom ou son adresse change. */
-export const IDENTITE_CHANGEE = "helix:identite-changee";
+export const IDENTITE_CHANGEE = "oxoai:identite-changee";
 
 export function setCurrentUser(user: User): void {
   storage.set(KEY, user);

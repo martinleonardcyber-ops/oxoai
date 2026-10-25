@@ -1,5 +1,5 @@
 /**
- * Client de l'écran Code : pilote OpenCode à travers la passerelle Helix
+ * Client de l'écran Code : pilote OpenCode à travers la passerelle OxoAI
  * (ARCHITECTURE.md, ADR-003). Le front ne connaît ni OpenCode ni le modèle :
  * il parle à la passerelle, qui choisit le moteur et le fournisseur.
  */
@@ -15,10 +15,10 @@ export interface CodeStatus {
   /** Dossier proposé pour une nouvelle session : celui de la personne connectée. */
   projectDir: string;
   error?: string;
-  /** Helix sait-il poser OpenCode sur cette machine ? */
+  /** OxoAI sait-il poser OpenCode sur cette machine ? */
   installable?: boolean;
   raisonNonInstallable?: string;
-  /** Installation d'OpenCode par Helix (opencodePrive.ts). */
+  /** Installation d'OpenCode par OxoAI (opencodePrive.ts). */
   installation?: { enCours: boolean; pourcent: number | null; erreur: string | null };
   /** Faux quand le profil de déploiement réserve les installations à l'intégrateur. */
   installationAuto?: boolean;
@@ -31,7 +31,7 @@ export interface CodeStatus {
  * `ouverture` : lancée d'office à l'ouverture de l'écran, pas par un clic (le journal le distingue).
  */
 export async function installerOpencode(ouverture = false): Promise<string | null> {
-  const res = await apiFetch(`/helix/code/installer`, {
+  const res = await apiFetch(`/oxoai/code/installer`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ ouverture }),
@@ -42,7 +42,7 @@ export async function installerOpencode(ouverture = false): Promise<string | nul
 }
 
 export async function fetchCodeStatus(): Promise<CodeStatus> {
-  const res = await apiFetch(`/helix/code`);
+  const res = await apiFetch(`/oxoai/code`);
   if (!res.ok) throw new Error(`Passerelle injoignable (${res.status})`);
   return res.json();
 }
@@ -55,7 +55,7 @@ export interface ReglagesCode {
   rtk?: string;
 }
 
-/** Ce que l'instance dit de RTK, et ce qu'il a épargné dans une session (GET /helix/code/rtk). */
+/** Ce que l'instance dit de RTK, et ce qu'il a épargné dans une session (GET /oxoai/code/rtk). */
 export interface EtatRtk {
   etat: {
     version: string;
@@ -68,7 +68,7 @@ export interface EtatRtk {
 }
 
 export async function fetchRtk(sessionID?: string | null): Promise<EtatRtk | null> {
-  const res = await apiFetch(`/helix/code/rtk${sessionID ? `?sessionID=${encodeURIComponent(sessionID)}` : ""}`).catch(() => null);
+  const res = await apiFetch(`/oxoai/code/rtk${sessionID ? `?sessionID=${encodeURIComponent(sessionID)}` : ""}`).catch(() => null);
   if (!res?.ok) return null;
   return (await res.json().catch(() => null)) as EtatRtk | null;
 }
@@ -78,7 +78,7 @@ export async function createCodeSession(
   /** Dossier de travail ; l'instance le valide avant de l'accepter. */
   dossier?: string,
 ): Promise<string> {
-  const res = await apiFetch(`/helix/code/session`, {
+  const res = await apiFetch(`/oxoai/code/session`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ model: reglages.model, effort: reglages.effort, dossier }),
@@ -105,7 +105,7 @@ export async function sendCodePrompt(
   text: string,
   reglages: ReglagesCode,
 ): Promise<{ relance?: string; messageID?: string }> {
-  const res = await apiFetch(`/helix/code/prompt`, {
+  const res = await apiFetch(`/oxoai/code/prompt`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ sessionID, text, model: reglages.model, effort: reglages.effort, rtk: reglages.rtk }),
@@ -113,10 +113,10 @@ export async function sendCodePrompt(
   const body = (await res.json().catch(() => ({}))) as {
     error?: { message?: string };
     data?: { id?: string };
-    helixRelance?: { sessionID?: string };
+    oxoaiRelance?: { sessionID?: string };
   };
   if (!res.ok) throw new Error(body?.error?.message ?? tf("Envoi refusé ({0})", res.status));
-  return { relance: body.helixRelance?.sessionID, messageID: body.data?.id };
+  return { relance: body.oxoaiRelance?.sessionID, messageID: body.data?.id };
 }
 
 /** Une session de Code dans la liste de la personne (gateway/src/sessionsCode.ts). */
@@ -126,7 +126,7 @@ export interface SessionCodeResume {
   dossier: string;
   creee: string;
   maj: string;
-  /** L'agent ou Helix y travaille encore, d'après l'instance (27/09/2026). */
+  /** L'agent ou OxoAI y travaille encore, d'après l'instance (27/09/2026). */
   enCours?: boolean;
 }
 
@@ -150,18 +150,18 @@ export interface HistoriqueCode {
  * ouverte, une demande envoyée, une session retirée). La barre latérale et
  * l'accueil de Code s'y rafraîchissent.
  */
-export const SESSIONS_CODE_CHANGEES = "helix:sessions-code";
+export const SESSIONS_CODE_CHANGEES = "oxoai:sessions-code";
 export const signalerSessionsCode = () => window.dispatchEvent(new Event(SESSIONS_CODE_CHANGEES));
 
 export async function listerSessionsCode(): Promise<SessionCodeResume[]> {
-  const res = await apiFetch(`/helix/code/sessions`);
+  const res = await apiFetch(`/oxoai/code/sessions`);
   if (!res.ok) throw new Error(tf("Sessions de code indisponibles ({0})", res.status));
   const corps = (await res.json()) as { sessions?: SessionCodeResume[] };
   return Array.isArray(corps.sessions) ? corps.sessions : [];
 }
 
 export async function historiqueSessionCode(id: string): Promise<HistoriqueCode> {
-  const res = await apiFetch(`/helix/code/sessions/${encodeURIComponent(id)}`);
+  const res = await apiFetch(`/oxoai/code/sessions/${encodeURIComponent(id)}`);
   const corps = (await res.json().catch(() => ({}))) as HistoriqueCode & { error?: { message?: string } };
   if (!res.ok) throw new Error(corps?.error?.message ?? tf("Session introuvable ({0})", res.status));
   return corps;
@@ -169,14 +169,14 @@ export async function historiqueSessionCode(id: string): Promise<HistoriqueCode>
 
 /** Retire une session de la liste. Sa conversation reste chez l'agent de code. */
 export async function retirerSessionCode(id: string): Promise<boolean> {
-  const res = await apiFetch(`/helix/code/sessions/${encodeURIComponent(id)}`, { method: "DELETE" });
+  const res = await apiFetch(`/oxoai/code/sessions/${encodeURIComponent(id)}`, { method: "DELETE" });
   return res.ok;
 }
 
 /** Demande l'arrêt. Rend `false` si l'instance ne l'a pas confirmé. */
 export async function interruptCode(sessionID: string): Promise<boolean> {
   try {
-    const res = await apiFetch(`/helix/code/interrupt`, {
+    const res = await apiFetch(`/oxoai/code/interrupt`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ sessionID }),
@@ -187,10 +187,10 @@ export async function interruptCode(sessionID: string): Promise<boolean> {
   }
 }
 
-/** Événement OpenCode traduit en langage Helix. */
+/** Événement OpenCode traduit en langage OxoAI. */
 export type CodeEvent =
   /** Une demande commence à être traitée : `messageID` dit laquelle. */
-  /** `relance` : envoyée par Helix lui-même (contrôle automatique), la suite du même tour. */
+  /** `relance` : envoyée par OxoAI lui-même (contrôle automatique), la suite du même tour. */
   | { kind: "demande"; messageID: string; relance?: boolean }
   /** Une étape du modèle commence : l'agent travaille (encore). */
   | { kind: "etape" }
@@ -202,7 +202,7 @@ export type CodeEvent =
   | { kind: "statut"; text: string; controle?: boolean; preparation?: boolean }
   /**
    * Le modèle n'a encore rien rendu : il lit la demande, attend son tour ou se
-   * charge (`helix.statut`, envoyé par l'instance toutes les dix secondes,
+   * charge (`oxoai.statut`, envoyé par l'instance toutes les dix secondes,
    * voir gateway/src/attenteModele.ts). « fin » : il commence à répondre.
    * `depuis` est déjà ramené à l'horloge de cet écran.
    */
@@ -272,9 +272,9 @@ export function translate(raw: unknown): CodeEvent | null {
   const data = event.data ?? {};
 
   if (type === "session.next.prompted" && typeof data.messageID === "string") {
-    return { kind: "demande", messageID: data.messageID, ...(data.relanceHelix === true ? { relance: true } : {}) };
+    return { kind: "demande", messageID: data.messageID, ...(data.relanceOxoAI === true ? { relance: true } : {}) };
   }
-  if (type === "helix.statut") {
+  if (type === "oxoai.statut") {
     const etat = data.etat;
     // Contrôle automatique de fin de tour (gateway/src/controleCode.ts) : une ligne d'état, texte déjà traduit.
     if (etat === "controle") return typeof data.message === "string" ? { kind: "statut", text: data.message, controle: true } : null;
@@ -298,11 +298,11 @@ export function translate(raw: unknown): CodeEvent | null {
       sousTache: data.sousTache === true,
     };
   }
-  if (type === "helix.activite") {
+  if (type === "oxoai.activite") {
     const phase = data.phase === "reflexion" || data.phase === "ecriture" || data.phase === "outil" ? data.phase : undefined;
     return { kind: "activite", phase, tool: typeof data.tool === "string" ? data.tool : undefined, sousTache: data.sousTache === true };
   }
-  if (type === "helix.soustache") {
+  if (type === "oxoai.soustache") {
     const etat = data.etat === "fini" || data.etat === "echec" ? data.etat : "encours";
     return {
       kind: "sous_outil",
@@ -434,10 +434,10 @@ const OUTILS_CONNUS: Record<string, string> = {
 export function nomOutil(tool: string): string {
   /*
    * Connecteurs de l'instance servis à l'agent de code (outilsCode.ts) :
-   * OpenCode les nomme « helix_<serveur>__<outil> ». Sans le préfixe, c'est le
+   * OpenCode les nomme « oxoai_<serveur>__<outil> ». Sans le préfixe, c'est le
    * nom que l'affichage connaît déjà depuis le Chat (« drive__chercher »…).
    */
-  if (tool.startsWith("helix_") && tool.includes("__")) return tool.slice("helix_".length);
+  if (tool.startsWith("oxoai_") && tool.includes("__")) return tool.slice("oxoai_".length);
   return OUTILS_CONNUS[tool] ? `fichiers__${OUTILS_CONNUS[tool]}` : `code__${tool}`;
 }
 
@@ -535,9 +535,9 @@ export function actionOutil(tool: string, input: Record<string, unknown> = {}, d
     case "skill":
       return { libelle: t("Chargement d'une procédure") };
   }
-  // Connecteurs de l'instance (« helix_drive__chercher ») : le libellé déjà connu du Chat.
-  if (tool.startsWith("helix_") && tool.includes("__")) {
-    return { libelle: libelleOutil(tool.slice("helix_".length)), cible: texte("query") ?? texte("texte") ?? cible };
+  // Connecteurs de l'instance (« oxoai_drive__chercher ») : le libellé déjà connu du Chat.
+  if (tool.startsWith("oxoai_") && tool.includes("__")) {
+    return { libelle: libelleOutil(tool.slice("oxoai_".length)), cible: texte("query") ?? texte("texte") ?? cible };
   }
   return { libelle: tool.replace(/_/g, " "), cible };
 }

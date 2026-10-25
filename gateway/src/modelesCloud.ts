@@ -8,7 +8,7 @@ import { echapperRegex } from "./texteBrut.ts";
  * (fournisseurs.ts) et ceux du prestataire (profil de déploiement).
  *
  * Écrit le 27/09/2026, à la demande de Medhi : « si quelqu'un met sa clé d'API,
- * tout fonctionne, et les modèles de la clé aussi ». Helix parle à tous par leur
+ * tout fonctionne, et les modèles de la clé aussi ». OxoAI parle à tous par leur
  * point d'accès compatible OpenAI (Anthropic et Google compris) ; chacun a
  * pourtant son dialecte, relevé dans sa documentation et imité par
  * scripts/essai-fournisseurs.mjs :
@@ -480,7 +480,7 @@ export function depasseLeContexte(statut: number, detail: string): boolean {
  * pas dans sa liste (OpenAI, Anthropic, Google, DeepSeek, xAI) : sans elle, la
  * conversation n'était jamais mesurée (chat.ts, `tailleConnue`), et un long
  * Chat finissait refusé par le fournisseur (16/10/2026). Chiffres bas de chaque
- * famille, relevés dans les fiches des fournisseurs : trop bas, Helix retire un
+ * famille, relevés dans les fiches des fournisseurs : trop bas, OxoAI retire un
  * peu tôt les plus anciens messages ; trop haut, le refus du fournisseur est
  * rattrapé par un nouvel essai raccourci (chat.ts).
  */

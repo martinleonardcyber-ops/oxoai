@@ -64,7 +64,7 @@ function verifier(nom, condition, obtenu) {
   }
 }
 
-const ICI = mkdtempSync(join(tmpdir(), "helix-essai-competences-"));
+const ICI = mkdtempSync(join(tmpdir(), "oxoai-essai-competences-"));
 const BIN = join(ICI, "bin");
 mkdirSync(BIN);
 const INTERNE = join(ICI, "maison", ".lmstudio", ".internal");
@@ -138,15 +138,15 @@ const passerelle = spawn(process.execPath, ["--experimental-strip-types", "--no-
     HOME: join(ICI, "maison"),
     TMPDIR: tmpdir(),
     FAUX_LMS_DIR: ICI,
-    HELIX_CONFIG: join(ICI, "profil.json"),
-    HELIX_DATA_DIR: DONNEES,
-    HELIX_WORKSPACE: join(ICI, "espace"),
-    HELIX_GATEWAY_HOST: "127.0.0.1",
-    HELIX_GATEWAY_PORT: String(PORT),
-    HELIX_LMSTUDIO_URL: `http://127.0.0.1:${PORT_LM}/v1`,
-    HELIX_EXO_URL: "http://127.0.0.1:9/v1",
-    HELIX_OPENCODE_BIN: "/usr/bin/true",
-    HELIX_MEMOIRE_RESUME: "non",
+    OXOAI_CONFIG: join(ICI, "profil.json"),
+    OXOAI_DATA_DIR: DONNEES,
+    OXOAI_WORKSPACE: join(ICI, "espace"),
+    OXOAI_GATEWAY_HOST: "127.0.0.1",
+    OXOAI_GATEWAY_PORT: String(PORT),
+    OXOAI_LMSTUDIO_URL: `http://127.0.0.1:${PORT_LM}/v1`,
+    OXOAI_EXO_URL: "http://127.0.0.1:9/v1",
+    OXOAI_OPENCODE_BIN: "/usr/bin/true",
+    OXOAI_MEMOIRE_RESUME: "non",
   },
   stdio: ["ignore", "pipe", "pipe"],
   // Son propre groupe : à la fin, ses enfants (serveur d'outils de fichiers lancé par npm) partent avec elle.
@@ -170,31 +170,31 @@ try {
 } catch {
   /* passerelle muette : les contrôles le diront */
 }
-const avecJeton = { "Content-Type": "application/json", Authorization: `Bearer ${JETON}`, "X-Helix-Langue": "fr" };
+const avecJeton = { "Content-Type": "application/json", Authorization: `Bearer ${JETON}`, "X-OxoAI-Langue": "fr" };
 const appel = (chemin, init = {}) => fetch(`${G}${chemin}`, init).catch(() => ({ ok: false, status: 0, json: async () => ({}), text: async () => "" }));
 
 // Deux personnes : l'administratrice (A), puis une collègue (B), qui choisit son mot de passe.
 const MDP_A = `Ess-${randomBytes(12).toString("hex")}!9`;
 const MDP_B = `Col-${randomBytes(12).toString("hex")}!7`;
-const creeA = await (await appel("/helix/auth/create", { method: "POST", headers: avecJeton, body: JSON.stringify({ fullName: "Essai", email: "essai@example.test", password: MDP_A }) })).json().catch(() => ({}));
+const creeA = await (await appel("/oxoai/auth/create", { method: "POST", headers: avecJeton, body: JSON.stringify({ fullName: "Essai", email: "essai@example.test", password: MDP_A }) })).json().catch(() => ({}));
 const SEANCE_A = creeA.session?.token ?? "";
 const ID_A = creeA.account?.id ?? "";
-const avecA = { ...avecJeton, "X-Helix-Session": SEANCE_A };
+const avecA = { ...avecJeton, "X-OxoAI-Session": SEANCE_A };
 const PROVISOIRE = `Prov-${randomBytes(8).toString("hex")}!3`;
-const creeB = await (await appel("/helix/auth/create", { method: "POST", headers: avecA, body: JSON.stringify({ fullName: "Collègue", email: "collegue@example.test", password: PROVISOIRE }) })).json().catch(() => ({}));
+const creeB = await (await appel("/oxoai/auth/create", { method: "POST", headers: avecA, body: JSON.stringify({ fullName: "Collègue", email: "collegue@example.test", password: PROVISOIRE }) })).json().catch(() => ({}));
 const ID_B = creeB.account?.id ?? "";
 const connexionB = await (
-  await appel("/helix/auth/mot-de-passe-provisoire", { method: "POST", headers: avecJeton, body: JSON.stringify({ accountId: ID_B, password: PROVISOIRE, nouveau: MDP_B }) })
+  await appel("/oxoai/auth/mot-de-passe-provisoire", { method: "POST", headers: avecJeton, body: JSON.stringify({ accountId: ID_B, password: PROVISOIRE, nouveau: MDP_B }) })
 ).json().catch(() => ({}));
 const SEANCE_B = connexionB.session?.token ?? "";
-const avecB = { ...avecJeton, "X-Helix-Session": SEANCE_B };
+const avecB = { ...avecJeton, "X-OxoAI-Session": SEANCE_B };
 
 /** Ce qu'un poste pousse : la liste entière de ce qu'il voit (sync.ts). */
 const pousser = async (seance, liste) => {
-  const r = await appel("/helix/data/competences", { method: "PUT", headers: { ...avecJeton, "X-Helix-Session": seance }, body: JSON.stringify({ value: liste }) });
+  const r = await appel("/oxoai/data/competences", { method: "PUT", headers: { ...avecJeton, "X-OxoAI-Session": seance }, body: JSON.stringify({ value: liste }) });
   return { statut: r.status, corps: await r.json().catch(() => ({})) };
 };
-const relire = async (seance) => (await (await appel("/helix/data/competences", { headers: { ...avecJeton, "X-Helix-Session": seance } })).json().catch(() => ({}))).value ?? [];
+const relire = async (seance) => (await (await appel("/oxoai/data/competences", { headers: { ...avecJeton, "X-OxoAI-Session": seance } })).json().catch(() => ({}))).value ?? [];
 const maintenant = new Date().toISOString();
 const competence = (id, ownerId, champs) => ({ id, ownerId, organisationId: "org", active: true, visibilite: "personnel", createdAt: maintenant, updatedAt: maintenant, ...champs });
 
@@ -203,7 +203,7 @@ const envoyer = async (seance, question, options = { competences: true }) => {
   const texte = await (
     await appel("/v1/chat/completions", {
       method: "POST",
-      headers: { ...avecJeton, "X-Helix-Session": seance },
+      headers: { ...avecJeton, "X-OxoAI-Session": seance },
       body: JSON.stringify({ stream: true, effort: "moyen", model: MODELE, tools: false, messages: [{ role: "system", content: "Tu es l'assistant de l'entreprise." }, { role: "user", content: question }], ...options }),
     })
   ).text();
@@ -212,7 +212,7 @@ const envoyer = async (seance, question, options = { competences: true }) => {
     if (!ligne.startsWith("data:")) continue;
     try {
       const j = JSON.parse(ligne.slice(5));
-      if (j.helix) evenements.push(j.helix);
+      if (j.oxoai) evenements.push(j.oxoai);
     } catch {
       /* [DONE] */
     }
@@ -282,7 +282,7 @@ verifier("elle sert à B quand sa demande s'y prête", /MARQUE-CR-3/.test(rB2.sy
 const pB = await pousser(SEANCE_B, [{ ...vuesB2[0], instructions: "Réécrite par B : MARQUE-PIRATE." }]);
 const apresB = await relire(SEANCE_A);
 verifier("B ne peut pas la modifier (refusé, l'original reste)", pB.corps.refuses >= 1 && apresB.find((c) => c.id === "c-cr")?.instructions.includes("MARQUE-CR-3"), JSON.stringify(pB));
-const profilB = await appel("/helix/data/profiles", { method: "PUT", headers: avecB, body: JSON.stringify({ value: { [`profile:${ID_B}`]: { userId: ID_B, customInstructions: "", personalInfo: "", memoryEnabled: true, memories: [], competencesEteintes: ["c-cr"] } } }) });
+const profilB = await appel("/oxoai/data/profiles", { method: "PUT", headers: avecB, body: JSON.stringify({ value: { [`profile:${ID_B}`]: { userId: ID_B, customInstructions: "", personalInfo: "", memoryEnabled: true, memories: [], competencesEteintes: ["c-cr"] } } }) });
 const rB3 = await envoyer(SEANCE_B, "Fais le compte rendu de la réunion d'hier.");
 verifier("B l'éteint pour elle seule (profil) : elle ne lui sert plus", profilB.status === 200 && !/MARQUE-CR-3/.test(rB3.systeme) && nomsDe(rB3).length === 0, rB3.systeme.slice(-300));
 const rA6 = await envoyer(SEANCE_A, "Fais le compte rendu de la réunion d'hier.");
@@ -319,11 +319,11 @@ await build({
   platform: "browser",
   outfile: join(TMP, "lecteur.mjs"),
   alias: { "@": join(RACINE, "src") },
-  define: { "import.meta.env": "{}", __HELIX_VERSION__: '"essai"' },
+  define: { "import.meta.env": "{}", __OXOAI_VERSION__: '"essai"' },
   loader: { ".png": "empty", ".svg": "empty", ".css": "empty" },
   logLevel: "error",
 });
-const magasin = new Map([["helix:langue", "fr"]]);
+const magasin = new Map([["oxoai:langue", "fr"]]);
 globalThis.localStorage = {
   getItem: (k) => (magasin.has(k) ? magasin.get(k) : null),
   setItem: (k, v) => void magasin.set(k, String(v)),
@@ -451,7 +451,7 @@ await Promise.race([partie, attendre(5000)]);
 await attendre(500);
 lm.close();
 verifier("aucun appel au trousseau macOS (dossier personnel jetable, clé par fichier)", !existsSync(join(ICI, "security.log")), "security appelé");
-if (echecs.length > 0 || process.env.ESSAI_JOURNAL) console.log(journal.split("\n").filter((l) => /^\[(chat|helix|competences)\]/.test(l)).join("\n").slice(-4000));
+if (echecs.length > 0 || process.env.ESSAI_JOURNAL) console.log(journal.split("\n").filter((l) => /^\[(chat|oxoai|competences)\]/.test(l)).join("\n").slice(-4000));
 rmSync(ICI, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 });
 console.log(`\n${reussis} réussi(s), ${echecs.length} échec(s)`);
 process.exit(echecs.length > 0 ? 1 : 0);

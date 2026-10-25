@@ -1,5 +1,5 @@
 /**
- * L'analyse des fichiers Python écrits par Helix Code (controleCode.ts), sans
+ * L'analyse des fichiers Python écrits par OxoAI Code (controleCode.ts), sans
  * rien exécuter : le programme ci-dessous lit le texte (`ast.parse`) et
  * cherche les modules avec `importlib.util.find_spec` sur le seul nom de tête,
  * qui consulte les dossiers sans importer le module. Il est lancé en mode isolé

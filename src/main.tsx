@@ -27,7 +27,7 @@ suivreModaliteSaisie();
  * laissé en clair dans le stockage du navigateur. Fait avant tout le reste :
  * la suite lit ces valeurs.
  */
-reprendreAnciensSecrets(["helix:session-token", "helix:instance", "helix:identity:current"]);
+reprendreAnciensSecrets(["oxoai:session-token", "oxoai:instance", "oxoai:identity:current"]);
 
 /*
  * Et les préférences de l'ancienne origine `file://`, une seule fois : sans

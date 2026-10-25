@@ -5,8 +5,8 @@ const { app, BrowserWindow, clipboard, dialog, ipcMain, nativeTheme, net, protoc
  * l'application démarrait en mode Node et se fermait aussitôt (signalé le
  * 28/09/2026). Le fusible RunAsNode est fermé : Electron ignore désormais la
  * variable. On la retire quand même de l'environnement, pour qu'elle ne passe
- * pas à tout ce que Helix lance (un éditeur construit sur Electron, ouvert
- * depuis Helix, démarrerait sinon en mode Node).
+ * pas à tout ce que OxoAI lance (un éditeur construit sur Electron, ouvert
+ * depuis OxoAI, démarrerait sinon en mode Node).
  */
 delete process.env.ELECTRON_RUN_AS_NODE;
 const { demarrerMiseAJour, changerLangue: changerLangueMaj, releverLancement } = require("./miseAJour.cjs");
@@ -26,7 +26,7 @@ const repartirDeZero = require("./repartirDeZero.cjs");
  * doit ni lire ni écrire le profil de l'application réellement utilisée
  * (séance, préférences). Sans la variable, rien ne change.
  */
-if (process.env.HELIX_PROFIL_ESSAI) app.setPath("userData", process.env.HELIX_PROFIL_ESSAI);
+if (process.env.OXOAI_PROFIL_ESSAI) app.setPath("userData", process.env.OXOAI_PROFIL_ESSAI);
 const path = require("node:path");
 const http = require("node:http");
 const fs = require("node:fs");
@@ -36,7 +36,7 @@ const { pathToFileURL } = require("node:url");
 const { lancerPasserelle, envoyerALaPasserelle, arreterPasserelle } = require("./passerelle.cjs");
 
 /**
- * Processus principal Helix.
+ * Processus principal OxoAI.
  *
  * L'application embarque son propre moteur : au démarrage elle lance la
  * passerelle modèles, attend qu'elle réponde, puis ouvre la fenêtre. À la
@@ -44,8 +44,8 @@ const { lancerPasserelle, envoyerALaPasserelle, arreterPasserelle } = require(".
  * terminaux à gérer.
  */
 
-const GATEWAY_PORT = Number(process.env.HELIX_GATEWAY_PORT ?? 8787);
-const DEV_URL = process.env.HELIX_DEV_URL ?? "http://localhost:5173";
+const GATEWAY_PORT = Number(process.env.OXOAI_GATEWAY_PORT ?? 8787);
+const DEV_URL = process.env.OXOAI_DEV_URL ?? "http://localhost:5173";
 const isDev = !app.isPackaged;
 
 /**
@@ -55,19 +55,19 @@ const isDev = !app.isPackaged;
  * venaient de là :
  *
  *  - **toutes** les pages `file:` partagent la même origine, dont la chaîne
- *    vaut « null » : le stockage local de Helix — jetons compris avant 0.22.0 —
+ *    vaut « null » : le stockage local de OxoAI — jetons compris avant 0.22.0 —
  *    était atteignable par n'importe quelle page HTML du poste ;
  *  - `webRequest` n'intercepte pas `file:`, donc l'en-tête de politique de
  *    sécurité ne s'appliquait à rien dans l'application livrée ;
  *  - une origine « null » n'est pas un contexte sécurisé, ce qui ferme des
  *    interfaces du navigateur sans raison.
  *
- * `helix://app/…` est une vraie origine, déclarée sûre, servie depuis le même
+ * `oxoai://app/…` est une vraie origine, déclarée sûre, servie depuis le même
  * dossier `dist`. La politique de sécurité est posée par la réponse elle-même,
  * et peut donc être **calculée** : quand l'instance est connue, elle nomme son
  * adresse au lieu d'ouvrir tout le HTTPS.
  */
-const SCHEMA = "helix";
+const SCHEMA = "oxoai";
 const ORIGINE_APP = `${SCHEMA}://app`;
 
 protocol.registerSchemesAsPrivileged([
@@ -80,39 +80,39 @@ protocol.registerSchemesAsPrivileged([
 /**
  * Une seule application à la fois, et pourquoi.
  *
- * Ce n'est pas du confort : un lien `helix://rejoindre` cliqué sous Windows ou
+ * Ce n'est pas du confort : un lien `oxoai://rejoindre` cliqué sous Windows ou
  * Linux arrive en argument d'un **second** lancement, et c'est le verrou qui
  * le renvoie à l'application déjà ouverte. Sans lui, le lien ouvrirait une
  * deuxième copie, avec une deuxième passerelle sur le même port et les mêmes
  * données.
  *
- * `HELIX_INSTANCES_MULTIPLES=1` lève le verrou : c'est ainsi qu'on fait
+ * `OXOAI_INSTANCES_MULTIPLES=1` lève le verrou : c'est ainsi qu'on fait
  * tourner deux postes sur une même machine pour éprouver le rattachement.
  */
 /*
- * macOS : la clé du trousseau au nom de « Helix », avec le transfert des
+ * macOS : la clé du trousseau au nom de « OxoAI », avec le transfert des
  * données chiffrées sous l'ancien nom (nomTrousseau.cjs). Avant le verrou
  * d'instance unique : il dépend du dossier du profil, que ceci fixe.
  */
-const DONNEES_POSTE = process.env.HELIX_DATA_DIR ?? path.join(os.homedir(), ".helix");
+const DONNEES_POSTE = process.env.OXOAI_DATA_DIR ?? path.join(os.homedir(), ".oxoai");
 /*
  * « Repartir de zéro sur cet ordinateur », demandé au lancement précédent
- * (electron/repartirDeZero.cjs) : `~/.helix` est mis de côté ici, avant que
+ * (electron/repartirDeZero.cjs) : `~/.oxoai` est mis de côté ici, avant que
  * quoi que ce soit ne l'ouvre (nomTrousseau le lit juste après), et le profil
  * de l'application juste après, quand son chemin est fixé. Rien n'est effacé.
  */
 try {
   repartirDeZero.appliquer(DONNEES_POSTE, "donnees");
 } catch (err) {
-  console.error("[helix] repartir de zéro :", err?.message ?? err);
+  console.error("[oxoai] repartir de zéro :", err?.message ?? err);
 }
 const etapeTrousseau = preparerNom(app, {
-  nomHistorique: "helix-plateforme",
+  nomHistorique: "oxoai-plateforme",
   nom: (() => {
     try {
-      return require("../package.json").nomAffiche || "Helix";
+      return require("../package.json").nomAffiche || "OxoAI";
     } catch {
-      return "Helix";
+      return "OxoAI";
     }
   })(),
   dossier: DONNEES_POSTE,
@@ -121,11 +121,11 @@ const etapeTrousseau = preparerNom(app, {
 try {
   repartirDeZero.appliquer(DONNEES_POSTE, "profil", app.getPath("userData"));
 } catch (err) {
-  console.error("[helix] repartir de zéro :", err?.message ?? err);
+  console.error("[oxoai] repartir de zéro :", err?.message ?? err);
 }
 
 const instanceUnique =
-  isDev || process.env.HELIX_INSTANCES_MULTIPLES === "1" || app.requestSingleInstanceLock();
+  isDev || process.env.OXOAI_INSTANCES_MULTIPLES === "1" || app.requestSingleInstanceLock();
 if (!instanceUnique) app.quit();
 
 let gateway = null;
@@ -142,7 +142,7 @@ let langueEcran = "en";
 // Les langues de l'interface (src/lib/i18n.ts) ; l'espagnol, l'allemand et l'arabe depuis le 30/09/2026.
 const LANGUES = ["fr", "en", "zh", "ja", "es", "de", "ar"];
 /*
- * Le nom affiché : `app.getName()` vaut « helix-plateforme » sous Windows et
+ * Le nom affiché : `app.getName()` vaut « oxoai-plateforme » sous Windows et
  * Linux (le nom du paquet npm ; sur macOS, celui du paquet de l'application).
  * Le nom du produit est lu dans le package.json livré (`nomAffiche`) ; le
  * nom interne reste, lui, celui du dossier du profil (revue Linux du 27/09/2026).
@@ -188,7 +188,7 @@ function ping(port) {
  */
 const ATTENTE_MAX_MS = 30_000;
 
-/** Banc d'essai des pages de Helix Code (electron/rendu.cjs), démarré une fois, prêté à la passerelle. */
+/** Banc d'essai des pages de OxoAI Code (electron/rendu.cjs), démarré une fois, prêté à la passerelle. */
 let rendu = null;
 /** Le journal de la passerelle (passerelle.log, dossier des journaux de l'application). */
 let journalPasserelle = null;
@@ -202,7 +202,7 @@ async function startGateway() {
    * enverrait les données de l'entreprise.
    */
   if (isDev && (await ping(GATEWAY_PORT))) {
-    console.log("[helix] passerelle déjà active, réutilisée (développement).");
+    console.log("[oxoai] passerelle déjà active, réutilisée (développement).");
     return;
   }
 
@@ -225,17 +225,17 @@ async function startGateway() {
     nom: NOM_AFFICHE,
     env: {
       ...process.env,
-      HELIX_GATEWAY_PORT: String(GATEWAY_PORT),
+      OXOAI_GATEWAY_PORT: String(GATEWAY_PORT),
       // Marque blanche : les messages de la passerelle disent le nom du produit livré.
-      HELIX_NOM_PRODUIT: NOM_AFFICHE,
+      OXOAI_NOM_PRODUIT: NOM_AFFICHE,
       // Installation de bureau : Codex n'est proposé qu'ici, au propriétaire du poste (gateway/src/codex.ts, 27/09/2026).
-      HELIX_BUREAU: "1",
+      OXOAI_BUREAU: "1",
       // Le banc d'essai des pages : adresse sur la boucle locale et clé, pour la passerelle seule.
-      ...(rendu ? { HELIX_RENDU_URL: rendu.url, HELIX_RENDU_CLE: rendu.cle } : {}),
+      ...(rendu ? { OXOAI_RENDU_URL: rendu.url, OXOAI_RENDU_CLE: rendu.cle } : {}),
     },
   });
   // Erreur fatale du processus (plantage) : notée ; `exit` suit toujours, et le superviseur relance.
-  enfant.on("error", (type, lieu) => console.error("[helix] passerelle :", type, lieu ?? ""));
+  enfant.on("error", (type, lieu) => console.error("[oxoai] passerelle :", type, lieu ?? ""));
   /*
    * macOS : l'autorisation d'enregistrer l'écran, lue sans la demander. La
    * passerelle prenait une vraie capture pour la connaître, et macOS ouvrait
@@ -243,7 +243,7 @@ async function startGateway() {
    * l'écran (vu le 27/09/2026). Seul ce processus sait la lire sans capture.
    */
   enfant.on("message", (m) => {
-    if (!m || typeof m !== "object" || enfant.helixArretee) return;
+    if (!m || typeof m !== "object" || enfant.oxoaiArretee) return;
     if (m.type === "node-prive") {
       reponsesPasserelle.get(m.id)?.(m);
       return;
@@ -282,12 +282,12 @@ async function startGateway() {
     noter(b);
     /*
      * Port déjà pris : le diagnostic doit être explicite. C'est le cas d'un
-     * second Helix ouvert, ou d'un serveur de développement laissé en marche.
+     * second OxoAI ouvert, ou d'un serveur de développement laissé en marche.
      */
     if (texte.includes("EADDRINUSE")) {
       console.error(
-        `[helix] le port ${GATEWAY_PORT} est occupé par un autre programme. ` +
-          "Helix réessaiera ; fermez l'autre instance pour reprendre la main.",
+        `[oxoai] le port ${GATEWAY_PORT} est occupé par un autre programme. ` +
+          "OxoAI réessaiera ; fermez l'autre instance pour reprendre la main.",
       );
     }
   });
@@ -310,10 +310,10 @@ async function startGateway() {
     gateway = null;
     if (arretDemande) return;
 
-    console.error(`[helix] passerelle arrêtée (code ${code}).`);
+    console.error(`[oxoai] passerelle arrêtée (code ${code}).`);
     redemarrages += 1;
     const attente = Math.min(1000 * 2 ** (redemarrages - 1), ATTENTE_MAX_MS);
-    console.error(`[helix] nouvelle tentative dans ${attente} ms (${redemarrages}).`);
+    console.error(`[oxoai] nouvelle tentative dans ${attente} ms (${redemarrages}).`);
     setTimeout(() => {
       void startGateway();
     }, attente);
@@ -327,7 +327,7 @@ async function startGateway() {
     }
     await new Promise((r) => setTimeout(r, 400));
   }
-  console.error("[helix] la passerelle n'a pas démarré à temps.");
+  console.error("[oxoai] la passerelle n'a pas démarré à temps.");
 }
 
 /** Réponses attendues de la passerelle, par numéro de demande. */
@@ -335,14 +335,14 @@ const reponsesPasserelle = new Map();
 let numeroDemande = 0;
 
 /**
- * Le Node de Helix, posé par la passerelle (gateway/src/installationOpenClaw.ts :
- * version épinglée, empreinte vérifiée), pour la commande `helix`. Par le
+ * Le Node de OxoAI, posé par la passerelle (gateway/src/installationOpenClaw.ts :
+ * version épinglée, empreinte vérifiée), pour la commande `oxoai`. Par le
  * canal de la passerelle : ce processus n'a pas à refaire le téléchargement,
  * et aucune route HTTP n'y mène. Rend `{ ok, erreur? }`.
  */
 function demanderNodePrive() {
   const enfant = gateway;
-  if (!enfant || enfant.helixArretee) return Promise.resolve({ ok: false, erreur: "passerelle" });
+  if (!enfant || enfant.oxoaiArretee) return Promise.resolve({ ok: false, erreur: "passerelle" });
   const id = ++numeroDemande;
   return new Promise((resolve) => {
     const repondre = (m) => {
@@ -383,7 +383,7 @@ function stopGateway() {
  */
 function posteRattache() {
   try {
-    const brut = coffre.lire()["helix:instance"];
+    const brut = coffre.lire()["oxoai:instance"];
     if (!brut) return false;
     const config = JSON.parse(brut);
     return Boolean(config && config.remote === true && typeof config.url === "string");
@@ -395,8 +395,8 @@ function posteRattache() {
 /** Jeton de l'instance locale, écrit par la passerelle à son premier démarrage. */
 function readInstanceToken() {
   const file =
-    process.env.HELIX_TOKEN_FILE ??
-    path.join(os.homedir(), ".helix", "data", "instance-token");
+    process.env.OXOAI_TOKEN_FILE ??
+    path.join(os.homedir(), ".oxoai", "data", "instance-token");
   try {
     return fs.readFileSync(file, "utf8").trim() || null;
   } catch {
@@ -413,7 +413,7 @@ const FOND_FENETRE = { clair: "#F9F6EF", sombre: "#161413" };
 
 /** Fichier où l'on retient le dernier thème réellement affiché. */
 function fichierTheme() {
-  return path.join(os.homedir(), ".helix", "theme");
+  return path.join(os.homedir(), ".oxoai", "theme");
 }
 
 /**
@@ -486,7 +486,7 @@ const motDePasseOublie = installerMotDePasseOublie({
   shell,
   dossier: () => app.getPath("userData"),
   depuisLaFenetre,
-  disponible: () => !posteRattache() && Boolean(gateway && !gateway.helixArretee),
+  disponible: () => !posteRattache() && Boolean(gateway && !gateway.oxoaiArretee),
   envoyer: (message) => envoyerALaPasserelle(gateway, message),
   langue: () => langueEcran,
   nom: NOM_AFFICHE,
@@ -505,14 +505,14 @@ const motDePasseOublie = installerMotDePasseOublie({
 /**
  * Rejoindre une instance en un clic.
  *
- * Le mail d'invitation porte un lien `helix://rejoindre#a=…&c=…`. Le système
+ * Le mail d'invitation porte un lien `oxoai://rejoindre#a=…&c=…`. Le système
  * réveille l'application, qui remplit elle-même l'adresse et le code : le
  * collègue n'a plus rien à recopier. C'est la marche que les gens ratent, et
  * la seule façon de ne plus la rater est de l'enlever.
  *
  * Trois précautions, parce qu'un lien vient de l'extérieur :
  *
- *  1. seul l'hôte `rejoindre` est accepté — `helix://app/…` sert l'interface
+ *  1. seul l'hôte `rejoindre` est accepté — `oxoai://app/…` sert l'interface
  *     et n'a rien à faire ici ;
  *  2. l'adresse doit être en `http`/`https`, et rien d'autre : un lien ne
  *     choisit pas le protocole que l'application ira parler ;
@@ -545,7 +545,7 @@ let interfacePrete = false;
 function transmettreInvitation() {
   if (!invitationEnAttente || !interfacePrete) return;
   if (!mainWindow || mainWindow.isDestroyed()) return;
-  mainWindow.webContents.send("helix:invitation", invitationEnAttente);
+  mainWindow.webContents.send("oxoai:invitation", invitationEnAttente);
   invitationEnAttente = null;
 }
 
@@ -563,7 +563,7 @@ function recevoirLien(lien) {
 }
 
 /** La page s'abonne : on lui remet ce qui attendait. */
-ipcMain.on("helix:invitation-prete", (event) => {
+ipcMain.on("oxoai:invitation-prete", (event) => {
   if (!depuisLaFenetre(event)) return;
   interfacePrete = true;
   transmettreInvitation();
@@ -586,7 +586,7 @@ app.on("second-instance", (_evenement, argv) => {
   else montrerFenetre();
 });
 
-ipcMain.on("helix:langue", (evenement, code) => {
+ipcMain.on("oxoai:langue", (evenement, code) => {
   // Comme les autres canaux : la fenêtre principale seulement, pas celle d'un bot de réunion qui partage le monde de Google Meet (28/09/2026).
   if (!depuisLaFenetre(evenement)) return;
   if (!LANGUES.includes(code)) return;
@@ -604,7 +604,7 @@ ipcMain.on("helix:langue", (evenement, code) => {
  * jetons là où elle les cherche aujourd'hui, sans réécrire chaque appel. Un
  * seul aller-retour au démarrage.
  */
-ipcMain.on("helix:coffre-initial", (event) => {
+ipcMain.on("oxoai:coffre-initial", (event) => {
   if (!depuisLaFenetre(event)) {
     event.returnValue = { disponible: false, valeurs: {} };
     return;
@@ -617,7 +617,7 @@ ipcMain.on("helix:coffre-initial", (event) => {
   };
 });
 
-ipcMain.handle("helix:coffre-poser", (event, cle, valeur) => {
+ipcMain.handle("oxoai:coffre-poser", (event, cle, valeur) => {
   if (!depuisLaFenetre(event)) throw new Error("Refusé.");
   return coffre.poser(cle, valeur);
 });
@@ -627,7 +627,7 @@ ipcMain.handle("helix:coffre-poser", (event, cle, valeur) => {
  * stockage local du navigateur. Même principe que le coffre : une lecture
  * synchrone au démarrage, des écritures asynchrones.
  */
-ipcMain.on("helix:grand-initial", (event) => {
+ipcMain.on("oxoai:grand-initial", (event) => {
   if (!depuisLaFenetre(event)) {
     event.returnValue = { disponible: false, cles: [], valeurs: {} };
     return;
@@ -644,18 +644,18 @@ ipcMain.on("helix:grand-initial", (event) => {
   };
 });
 
-ipcMain.handle("helix:grand-poser", (event, cle, valeur) => {
+ipcMain.handle("oxoai:grand-poser", (event, cle, valeur) => {
   if (!depuisLaFenetre(event)) throw new Error("Refusé.");
   return grandStockage.poser(cle, valeur);
 });
 
-ipcMain.handle("helix:grand-relu", (event, cle) => {
+ipcMain.handle("oxoai:grand-relu", (event, cle) => {
   if (!depuisLaFenetre(event)) throw new Error("Refusé.");
   grandStockage.relu(String(cle));
   return true;
 });
 
-ipcMain.handle("helix:coffre-vider", (event) => {
+ipcMain.handle("oxoai:coffre-vider", (event) => {
   if (!depuisLaFenetre(event)) throw new Error("Refusé.");
   return coffre.vider();
 });
@@ -668,7 +668,7 @@ ipcMain.handle("helix:coffre-vider", (event) => {
  * relancer, et c'est l'application qui en est responsable, pas la passerelle
  * elle-même. Sans effet sur un poste rattaché, qui n'en a pas.
  */
-ipcMain.handle("helix:passerelle-redemarrer", async (event) => {
+ipcMain.handle("oxoai:passerelle-redemarrer", async (event) => {
   if (!depuisLaFenetre(event)) throw new Error("Refusé.");
   if (posteRattache()) return { ok: false, motif: "poste rattaché" };
   // L'ancienne libère d'abord le port : sans cela la nouvelle échouait dessus.
@@ -679,22 +679,22 @@ ipcMain.handle("helix:passerelle-redemarrer", async (event) => {
   return { ok: vivante !== false };
 });
 
-/** La ligne de commande `helix` dans le PATH (electron/ligneDeCommande.cjs). */
-ipcMain.handle("helix:cli-etat", (event) => {
+/** La ligne de commande `oxoai` dans le PATH (electron/ligneDeCommande.cjs). */
+ipcMain.handle("oxoai:cli-etat", (event) => {
   if (!depuisLaFenetre(event)) throw new Error("Refusé.");
   return ligneDeCommande.etat();
 });
-ipcMain.handle("helix:cli-installer", (event) => {
+ipcMain.handle("oxoai:cli-installer", (event) => {
   if (!depuisLaFenetre(event)) throw new Error("Refusé.");
-  // Sans Node sur le poste, la passerelle pose celui de Helix (demanderNodePrive).
+  // Sans Node sur le poste, la passerelle pose celui de OxoAI (demanderNodePrive).
   return ligneDeCommande.installer({ demanderNodePrive });
 });
-ipcMain.handle("helix:cli-retirer", (event) => {
+ipcMain.handle("oxoai:cli-retirer", (event) => {
   if (!depuisLaFenetre(event)) throw new Error("Refusé.");
   return ligneDeCommande.retirer();
 });
 
-ipcMain.handle("helix:choisir-dossier", async (event, options) => {
+ipcMain.handle("oxoai:choisir-dossier", async (event, options) => {
   if (!depuisLaFenetre(event)) throw new Error("Refusé.");
   if (!mainWindow || mainWindow.isDestroyed()) return null;
   /*
@@ -725,7 +725,7 @@ ipcMain.handle("helix:choisir-dossier", async (event, options) => {
  */
 function origineInstance() {
   try {
-    const brut = coffre.lire()["helix:instance"];
+    const brut = coffre.lire()["oxoai:instance"];
     if (!brut) return null;
     const config = JSON.parse(brut);
     if (!config || typeof config.url !== "string") return null;
@@ -760,7 +760,7 @@ function politiqueDeContenu() {
 }
 
 /**
- * Sert l'interface sous `helix://app/…`, depuis le dossier `dist`.
+ * Sert l'interface sous `oxoai://app/…`, depuis le dossier `dist`.
  *
  * Deux règles, et elles suffisent : on ne sort jamais de `dist` (le chemin est
  * résolu puis comparé à la racine réelle), et tout chemin inconnu rend
@@ -800,7 +800,7 @@ function servirInterface() {
 /**
  * Reprise unique de l'ancien stockage « file:// ».
  *
- * L'interface change d'origine en 0.22.0 : `helix://app` au lieu du disque.
+ * L'interface change d'origine en 0.22.0 : `oxoai://app` au lieu du disque.
  * Une origine, c'est un stockage — le nouveau est vide. Sans cette reprise, la
  * personne retrouverait l'écran de mise en route, devrait se reconnecter, et
  * perdrait ses préférences, alors que rien de tout cela n'a disparu : c'est
@@ -815,7 +815,7 @@ function servirInterface() {
 let valeursReprises = {};
 
 function temoinDeReprise() {
-  return path.join(process.env.HELIX_DATA_DIR ?? path.join(os.homedir(), ".helix"), "reprise-origine");
+  return path.join(process.env.OXOAI_DATA_DIR ?? path.join(os.homedir(), ".oxoai"), "reprise-origine");
 }
 
 async function reprendreAncienStockage() {
@@ -842,7 +842,7 @@ async function reprendreAncienStockage() {
     try {
       for (let i = 0; i < localStorage.length; i++) {
         const cle = localStorage.key(i);
-        if (!cle || cle.indexOf("helix:") !== 0) continue;
+        if (!cle || cle.indexOf("oxoai:") !== 0) continue;
         const v = localStorage.getItem(cle);
         if (typeof v === "string" && v.length < 2000000) valeurs[cle] = v;
       }
@@ -865,7 +865,7 @@ async function reprendreAncienStockage() {
    * nouvelle origine ne doit jamais les revoir en clair, même le temps d'un
    * démarrage.
    */
-  for (const cle of ["helix:session-token", "helix:instance", "helix:identity:current"]) {
+  for (const cle of ["oxoai:session-token", "oxoai:instance", "oxoai:identity:current"]) {
     if (typeof valeursReprises[cle] === "string") {
       coffre.poser(cle, valeursReprises[cle]);
       delete valeursReprises[cle];
@@ -879,7 +879,7 @@ async function reprendreAncienStockage() {
     /* témoin non écrit : la reprise se refera, sans dommage */
   }
   const reste = Object.keys(valeursReprises).length;
-  if (reste > 0) console.log(`[helix] ${reste} préférence(s) reprises de l'ancienne origine.`);
+  if (reste > 0) console.log(`[oxoai] ${reste} préférence(s) reprises de l'ancienne origine.`);
 }
 
 function createWindow() {
@@ -905,7 +905,7 @@ function createWindow() {
       process.platform === "win32" ? "icon.ico" : process.platform === "linux" ? path.join("icons", "512x512.png") : "icon.png",
     ),
     // Barre de titre native discrète : les commandes de fenêtre restent celles
-    // du système, l'interface Helix occupe toute la surface.
+    // du système, l'interface OxoAI occupe toute la surface.
     titleBarStyle: process.platform === "darwin" ? "hiddenInset" : "default",
     // Windows et Linux : le menu (zoneNotification.cjs) se cache ; la touche Alt l'affiche.
     autoHideMenuBar: true,
@@ -998,7 +998,7 @@ function createWindow() {
    *    contenu qu'elle afficherait ;
    *  - elle porte sur `media`, et ne demande QUE de l'audio : une demande qui
    *    réclame aussi la vidéo est refusée en entier, pas accordée à moitié ;
-   *  - la page qui la fait est celle de Helix (`file://` une fois empaqueté,
+   *  - la page qui la fait est celle de OxoAI (`file://` une fois empaqueté,
    *    la boucle locale en développement).
    *
    * Le son capté ne quitte pas le poste : il part vers la passerelle locale,
@@ -1006,15 +1006,15 @@ function createWindow() {
    * navigateur, elle, n'est jamais utilisée : dans Chromium, elle envoie
    * l'audio aux serveurs de Google.
    */
-  const pageDeHelix = (url) => {
+  const pageDeOxoAI = (url) => {
     try {
       const { protocol, hostname } = new URL(url);
       /*
-       * `helix://app` : l'origine de l'interface livrée depuis la 0.23.0. Elle
+       * `oxoai://app` : l'origine de l'interface livrée depuis la 0.23.0. Elle
        * manquait ici (revue du 26/09/2026) : la dictée et l'enregistrement
        * d'une réunion au micro étaient refusés dans l'application empaquetée.
        */
-      if (protocol === "helix:") return hostname === "app";
+      if (protocol === "oxoai:") return hostname === "app";
       return protocol === "file:" || hostname === "localhost" || hostname === "127.0.0.1";
     } catch {
       return false;
@@ -1028,9 +1028,9 @@ function createWindow() {
         Array.isArray(details?.mediaTypes) &&
         details.mediaTypes.length > 0 &&
         details.mediaTypes.every((t) => t === "audio");
-      const depuisHelix =
-        wc === mainWindow.webContents && pageDeHelix(details?.requestingUrl ?? wc.getURL());
-      callback(audioSeul && depuisHelix);
+      const depuisOxoAI =
+        wc === mainWindow.webContents && pageDeOxoAI(details?.requestingUrl ?? wc.getURL());
+      callback(audioSeul && depuisOxoAI);
     },
   );
 
@@ -1040,7 +1040,7 @@ function createWindow() {
       permission === "media" &&
       details?.mediaType === "audio" &&
       wc === mainWindow.webContents &&
-      pageDeHelix(origine),
+      pageDeOxoAI(origine),
   );
 
   mainWindow.once("ready-to-show", () => mainWindow.show());
@@ -1060,7 +1060,7 @@ function createWindow() {
     if (!mainWindow || mainWindow.isDestroyed()) return;
     try {
       const applique = await mainWindow.webContents.executeJavaScript(
-        'localStorage.getItem("helix:apparence-resolue")',
+        'localStorage.getItem("oxoai:apparence-resolue")',
         true,
       );
       if (applique !== "clair" && applique !== "sombre") return;
@@ -1099,7 +1099,7 @@ function createWindow() {
    * Comparer les origines ne suffisait pas : sous `file:`, l'origine d'une
    * page vaut la chaîne « null », et toutes les pages du disque la partagent.
    * Une navigation vers un fichier HTML quelconque du poste passait donc, et
-   * cette page héritait du préchargement et du stockage local de Helix,
+   * cette page héritait du préchargement et du stockage local de OxoAI,
    * jetons compris. On compare maintenant l'adresse elle-même : seule la page
    * en place, rechargée, est admise.
    */
@@ -1200,7 +1200,7 @@ function montrerFenetre() {
  * cela rend visible toute interposition ultérieure.
  */
 function fichierInstancesConnues() {
-  return path.join(os.homedir(), ".helix", "data", "instances-connues.json");
+  return path.join(os.homedir(), ".oxoai", "data", "instances-connues.json");
 }
 
 function lireInstancesConnues() {
@@ -1287,7 +1287,7 @@ function installerVerificationCertificats() {
     // quelqu'un s'interpose. Dans les deux cas ce n'est pas au logiciel de
     // trancher silencieusement.
     console.error(
-      `[helix] certificat différent pour ${origine} (${error}). Connexion refusée.\n` +
+      `[oxoai] certificat différent pour ${origine} (${error}). Connexion refusée.\n` +
         `        Si l'instance a été réinstallée, supprimez ${fichierInstancesConnues()}.`,
     );
     callback(false);
@@ -1310,10 +1310,10 @@ app.whenReady().then(async () => {
    * sans quoi les notifications ne s'affichent pas et l'icône épinglée se
    * sépare de celle de l'application ouverte (audit du 27/09/2026).
    */
-  if (process.platform === "win32") app.setAppUserModelId("fr.helix.plateforme");
+  if (process.platform === "win32") app.setAppUserModelId("com.oxoria.oxoai");
   /*
    * L'application se déclare auprès du système comme ouvrant les liens
-   * `helix:`. Sur macOS c'est le paquet livré qui le déclare (CFBundleURLTypes,
+   * `oxoai:`. Sur macOS c'est le paquet livré qui le déclare (CFBundleURLTypes,
    * voir `build.protocols` dans package.json) ; ailleurs, c'est cet appel. On
    * s'abstient en développement : l'exécutable Electron s'y enregistrerait à
    * la place de l'application installée.
@@ -1362,13 +1362,13 @@ app.whenReady().then(async () => {
    * de ses données.
    */
   if (posteRattache()) {
-    console.log("[helix] poste rattaché à une instance : aucune passerelle locale n'est lancée.");
+    console.log("[oxoai] poste rattaché à une instance : aucune passerelle locale n'est lancée.");
   } else {
     await startGateway();
   }
   createWindow();
-  // Un lanceur `helix` d'avant le 28/09/2026 visait ce binaire en mode Node, qui n'existe plus (ligneDeCommande.cjs).
-  if (!isDev && ligneDeCommande.remplacerAncienLanceur()) console.log("[helix] lanceur de la commande helix remis à jour (Node au lieu du mode Node de l'application).");
+  // Un lanceur `oxoai` d'avant le 28/09/2026 visait ce binaire en mode Node, qui n'existe plus (ligneDeCommande.cjs).
+  if (!isDev && ligneDeCommande.remplacerAncienLanceur()) console.log("[oxoai] lanceur de la commande oxoai remis à jour (Node au lieu du mode Node de l'application).");
   void demarrerMiseAJour(depuisLaFenetre);
 
   app.on("activate", () => {

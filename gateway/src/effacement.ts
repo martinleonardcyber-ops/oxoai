@@ -238,7 +238,7 @@ export async function effacerCompte(
   const entrainement = await oublierPersonneEntrainement(userId);
   const reunionsEffacees = await oublierPersonneReunions(userId);
   /*
-   * Ses sessions de Helix Code : hors de la liste, et leur conversation
+   * Ses sessions de OxoAI Code : hors de la liste, et leur conversation
    * effacée chez OpenCode si son serveur tourne (sinon elle y reste, et le
    * journal le dit par le nombre).
    */

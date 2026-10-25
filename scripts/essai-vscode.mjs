@@ -6,14 +6,14 @@
  * Un faux module `vscode` (commandes, coffre, vue du Chat, saisies répondues
  * d'avance) charge la vraie extension, contre une passerelle jetable et un
  * faux modèle compatible OpenAI : Chat en flux, fichier joint, connexion et
- * séance, un tour de Helix Code, déconnexion, adresse refusée. Rien ne touche
- * ~/.helix ni LM Studio. Ce que l'essai ne voit pas : l'affichage de la vue
+ * séance, un tour de OxoAI Code, déconnexion, adresse refusée. Rien ne touche
+ * ~/.oxoai ni LM Studio. Ce que l'essai ne voit pas : l'affichage de la vue
  * dans un vrai VS Code.
  *
  *   npm run essai:vscode -- --modele
  *
  * Avec le modèle de LM Studio (http://127.0.0.1:1234) au lieu du faux : une
- * vraie réponse au Chat, et Helix Code qui crée un fichier dans le projet,
+ * vraie réponse au Chat, et OxoAI Code qui crée un fichier dans le projet,
  * carte d'accord comprise. Compter quelques minutes.
  */
 import { spawn } from "node:child_process";
@@ -73,20 +73,20 @@ createServer((req, res) => {
 }).listen(PORT_MODELE, "127.0.0.1");
 
 const PORT = await libre();
-const BANC = mkdtempSync(join(tmpdir(), "helix-essai-vscode-"));
+const BANC = mkdtempSync(join(tmpdir(), "oxoai-essai-vscode-"));
 const DONNEES = join(BANC, "donnees"), PROJET = join(BANC, "projet"), ESPACE = join(BANC, "espace");
 for (const d of [DONNEES, PROJET, ESPACE, join(BANC, "lume")]) mkdirSync(d, { recursive: true });
 const G = `http://127.0.0.1:${PORT}`;
 const passerelle = spawn(process.execPath, [join(RACINE, "gateway", "src", "index.ts")], {
   env: {
     ...process.env,
-    HELIX_GATEWAY_PORT: String(PORT), HELIX_DATA_DIR: DONNEES, HELIX_CODE_DIR: PROJET, HELIX_WORKSPACE: ESPACE,
-    HELIX_LUME_DIR: join(BANC, "lume"), HELIX_EXO_URL: "http://127.0.0.1:9/v1",
-    ...(AVEC_MODELE ? {} : { HELIX_LMSTUDIO_URL: `http://127.0.0.1:${PORT_MODELE}/v1` }), HELIX_CONFIG: join(BANC, "helix.config.json"), HELIX_GATEWAY_HOST: "",
+    OXOAI_GATEWAY_PORT: String(PORT), OXOAI_DATA_DIR: DONNEES, OXOAI_CODE_DIR: PROJET, OXOAI_WORKSPACE: ESPACE,
+    OXOAI_LUME_DIR: join(BANC, "lume"), OXOAI_EXO_URL: "http://127.0.0.1:9/v1",
+    ...(AVEC_MODELE ? {} : { OXOAI_LMSTUDIO_URL: `http://127.0.0.1:${PORT_MODELE}/v1` }), OXOAI_CONFIG: join(BANC, "oxoai.config.json"), OXOAI_GATEWAY_HOST: "",
   },
   stdio: ["ignore", "pipe", "pipe"], detached: true,
 });
-writeFileSync(join(BANC, "helix.config.json"), "{}");
+writeFileSync(join(BANC, "oxoai.config.json"), "{}");
 let journal = "";
 passerelle.stdout.on("data", (b) => (journal += b));
 passerelle.stderr.on("data", (b) => (journal += b));
@@ -98,7 +98,7 @@ const verifier = (nom, c, obtenu) => { if (c) { reussis++; console.log(`  ✓ ${
 
 const JETON = readFileSync(join(DONNEES, "instance-token"), "utf8").trim();
 const MDP = "Essai-VSCode-2026!";
-await fetch(`${G}/helix/auth/create`, { method: "POST", headers: { Authorization: `Bearer ${JETON}`, "Content-Type": "application/json" }, body: JSON.stringify({ fullName: "Essai VS Code", email: "vscode@example.test", password: MDP }) });
+await fetch(`${G}/oxoai/auth/create`, { method: "POST", headers: { Authorization: `Bearer ${JETON}`, "Content-Type": "application/json" }, body: JSON.stringify({ fullName: "Essai VS Code", email: "vscode@example.test", password: MDP }) });
 
 // Faux module vscode.
 const messages = { info: [], erreur: [], avert: [] };
@@ -120,10 +120,10 @@ const vscode = {
     activeTextEditor: null,
     showInformationMessage: (m) => messages.info.push(m),
     showErrorMessage: (m) => messages.erreur.push(m),
-    // Une carte d'accord de Helix Code : « Autoriser », comme la personne qui clique.
+    // Une carte d'accord de OxoAI Code : « Autoriser », comme la personne qui clique.
     showWarningMessage: (m) => {
       messages.avert.push(m);
-      return Promise.resolve(/^Helix Code veut/.test(m) ? "Autoriser" : undefined);
+      return Promise.resolve(/^OxoAI Code veut/.test(m) ? "Autoriser" : undefined);
     },
     showQuickPick: async (items) => items[0],
     showInputBox: async () => reponsesSaisie.shift(),
@@ -136,7 +136,7 @@ const vscode = {
 };
 const charger = Module._load;
 Module._load = function (demande, ...reste) { return demande === "vscode" ? vscode : charger.call(this, demande, ...reste); };
-process.env.HELIX_DATA_DIR = DONNEES; // le jeton du poste, lu seulement pour le port que l'application a ouvert
+process.env.OXOAI_DATA_DIR = DONNEES; // le jeton du poste, lu seulement pour le port que l'application a ouvert
 const extension = Module.createRequire(import.meta.url)(join(RACINE, "extensions", "vscode", "extension.js"));
 const contexte = { subscriptions: [], extensionUri: { p: "ext" }, secrets: { get: async (k) => secrets.get(k), store: async (k, v) => void secrets.set(k, v), delete: async (k) => void secrets.delete(k) } };
 extension.activate(contexte);
@@ -150,7 +150,7 @@ const attendreFin = async (depuis, ms = 120_000) => {
 };
 
 console.log("1. Activation et page");
-verifier("commandes enregistrées", ["helix.expliquer", "helix.ameliorer", "helix.nouveau", "helix.seConnecter", "helix.seDeconnecter"].every((c) => commandes.has(c)), [...commandes.keys()]);
+verifier("commandes enregistrées", ["oxoai.expliquer", "oxoai.ameliorer", "oxoai.nouveau", "oxoai.seConnecter", "oxoai.seDeconnecter"].every((c) => commandes.has(c)), [...commandes.keys()]);
 verifier("page avec CSP à nonce et onglets Chat/Code", /script-src 'nonce-/.test(vue.webview.html) && /onglet-code/.test(vue.webview.html), vue.webview.html.slice(0, 200));
 
 console.log("2. Chat (jeton du poste, faux modèle)");
@@ -197,7 +197,7 @@ if (!AVEC_MODELE) {
 {
   vscode.window.activeTextEditor = { document: { getText: (sel) => (sel ? "" : "const a = 1;"), languageId: "javascript", uri: {} }, selection: { isEmpty: true } };
   const d = postes.length;
-  await commandes.get("helix.expliquer")();
+  await commandes.get("oxoai.expliquer")();
   verifier("« Expliquer » sans sélection : le dit", messages.info.some((m) => /Sélectionnez d'abord/.test(m)), messages.info);
   surMessage({ type: "question", texte: "Relis ce fichier", joindre: true });
   await attendreFin(d);
@@ -212,18 +212,18 @@ if (!AVEC_MODELE) {
 console.log("3. Connexion (compte, mot de passe, séance dans le coffre)");
 {
   reponsesSaisie.push("mauvais-mot-de-passe");
-  await commandes.get("helix.seConnecter")();
+  await commandes.get("oxoai.seConnecter")();
   verifier("mauvais mot de passe : refusé, rien dans le coffre", messages.erreur.length > 0 && secrets.size === 0, JSON.stringify([messages.erreur, [...secrets.keys()]]));
   reponsesSaisie.push(MDP);
-  await commandes.get("helix.seConnecter")();
-  const cle = `helix.seance:${G}`;
-  verifier("bon mot de passe : séance gardée pour cette adresse", secrets.has(cle) && messages.info.some((m) => /Connecté à Helix/.test(m)), JSON.stringify([...secrets.keys(), messages.info]));
-  const r = await fetch(`${G}/helix/auth/sessions`, { headers: { Authorization: `Bearer ${JETON}`, "X-Helix-Session": secrets.get(cle) } });
+  await commandes.get("oxoai.seConnecter")();
+  const cle = `oxoai.seance:${G}`;
+  verifier("bon mot de passe : séance gardée pour cette adresse", secrets.has(cle) && messages.info.some((m) => /Connecté à OxoAI/.test(m)), JSON.stringify([...secrets.keys(), messages.info]));
+  const r = await fetch(`${G}/oxoai/auth/sessions`, { headers: { Authorization: `Bearer ${JETON}`, "X-OxoAI-Session": secrets.get(cle) } });
   const corps = await r.json().catch(() => ({}));
   verifier("la séance est valide et dite « VS Code »", r.ok && JSON.stringify(corps).includes("VS Code"), `${r.status} ${JSON.stringify(corps).slice(0, 300)}`);
 }
 
-console.log("4. Code (Helix Code sur le dossier ouvert)");
+console.log("4. Code (OxoAI Code sur le dossier ouvert)");
 {
   const d = postes.length;
   surMessage({ type: "code", texte: AVEC_MODELE ? "Crée le fichier bonjour.txt contenant exactement le mot bonjour. Rien d'autre." : "Réponds juste bonjour, sans toucher aux fichiers." });
@@ -235,13 +235,13 @@ console.log("4. Code (Helix Code sur le dossier ouvert)");
     const { existsSync } = await import("node:fs");
     const f = join(PROJET, "bonjour.txt");
     console.log(`    actions : ${JSON.stringify(suite.filter((m) => m.outil).map((m) => m.outil))} ; cartes : ${JSON.stringify(messages.avert)}`);
-    verifier("Helix Code a créé bonjour.txt dans le dossier ouvert", existsSync(f) && /bonjour/i.test(readFileSync(f, "utf8")), existsSync(f) ? readFileSync(f, "utf8") : "absent");
+    verifier("OxoAI Code a créé bonjour.txt dans le dossier ouvert", existsSync(f) && /bonjour/i.test(readFileSync(f, "utf8")), existsSync(f) ? readFileSync(f, "utf8") : "absent");
   }
 }
 
 console.log("5. Déconnexion");
 {
-  await commandes.get("helix.seDeconnecter")();
+  await commandes.get("oxoai.seDeconnecter")();
   verifier("séance retirée du coffre", secrets.size === 0, [...secrets.keys()]);
   const d = postes.length;
   surMessage({ type: "code", texte: "écris un fichier" });

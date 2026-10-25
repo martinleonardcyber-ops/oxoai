@@ -31,7 +31,7 @@ const { contextBridge, ipcRenderer } = require("electron");
  */
 const coffreInitial = (() => {
   try {
-    return ipcRenderer.sendSync("helix:coffre-initial");
+    return ipcRenderer.sendSync("oxoai:coffre-initial");
   } catch {
     return { disponible: false, valeurs: {} };
   }
@@ -44,16 +44,16 @@ const coffreInitial = (() => {
  */
 const grandInitial = (() => {
   try {
-    const r = ipcRenderer.sendSync("helix:grand-initial");
+    const r = ipcRenderer.sendSync("oxoai:grand-initial");
     return r && typeof r === "object" ? r : { disponible: false, cles: [], valeurs: {} };
   } catch {
     return { disponible: false, cles: [], valeurs: {} };
   }
 })();
 
-contextBridge.exposeInMainWorld("helix", {
+contextBridge.exposeInMainWorld("oxoai", {
   /** La langue de l'écran, pour les textes de l'application elle-même (zone de notification, menu). */
-  langue: (code) => ipcRenderer.send("helix:langue", String(code)),
+  langue: (code) => ipcRenderer.send("oxoai:langue", String(code)),
   /**
    * « Mot de passe oublié ? » sur la machine de l'instance (electron/motDePasseOublie.cjs) :
    * l'ordinateur reconnaît la session (macOS), ou un code écrit dans un fichier
@@ -61,14 +61,14 @@ contextBridge.exposeInMainWorld("helix", {
    * à sa passerelle. La page ne voit jamais le code du fichier.
    */
   motDePasseOublie: {
-    etat: () => ipcRenderer.invoke("helix:mdp-oublie-etat"),
-    ecrireCode: (demande) => ipcRenderer.invoke("helix:mdp-oublie-fichier", demande),
-    redefinir: (demande) => ipcRenderer.invoke("helix:mdp-oublie", demande),
+    etat: () => ipcRenderer.invoke("oxoai:mdp-oublie-etat"),
+    ecrireCode: (demande) => ipcRenderer.invoke("oxoai:mdp-oublie-fichier", demande),
+    redefinir: (demande) => ipcRenderer.invoke("oxoai:mdp-oublie", demande),
     /** Repartir de zéro sur cet ordinateur (electron/repartirDeZero.cjs) : rien n'est supprimé, tout est mis de côté. */
-    apercuRepartir: () => ipcRenderer.invoke("helix:repartir-apercu"),
-    repartir: (demande) => ipcRenderer.invoke("helix:repartir", demande),
-    bilanRepartir: () => ipcRenderer.invoke("helix:repartir-bilan"),
-    oublierBilanRepartir: () => ipcRenderer.invoke("helix:repartir-oublier"),
+    apercuRepartir: () => ipcRenderer.invoke("oxoai:repartir-apercu"),
+    repartir: (demande) => ipcRenderer.invoke("oxoai:repartir", demande),
+    bilanRepartir: () => ipcRenderer.invoke("oxoai:repartir-bilan"),
+    oublierBilanRepartir: () => ipcRenderer.invoke("oxoai:repartir-oublier"),
   },
   /** Le système du poste (`darwin`, `win32`, `linux`) : l'écran dit ce qui vaut ici. */
   plateforme: process.platform,
@@ -79,27 +79,27 @@ contextBridge.exposeInMainWorld("helix", {
    * `options` (titre, message, bouton), déjà traduits par l'écran : sans eux,
    * ceux du dossier de travail (l'emplacement des modèles a les siens, 28/09/2026).
    */
-  choisirDossier: (options) => ipcRenderer.invoke("helix:choisir-dossier", options),
+  choisirDossier: (options) => ipcRenderer.invoke("oxoai:choisir-dossier", options),
   /**
    * Copier du texte (electron/pressePapiers.cjs, 27/09/2026) : la permission
    * du presse-papiers est refusée à la page, les boutons « Copier » passent
    * donc par ici. Écrire seulement, jamais lire ; `vider` n'efface que la
-   * dernière copie faite par Helix, si elle y est encore.
+   * dernière copie faite par OxoAI, si elle y est encore.
    */
   pressePapiers: {
-    ecrire: (texte) => ipcRenderer.invoke("helix:presse-papiers-ecrire", texte),
-    vider: (texte) => ipcRenderer.invoke("helix:presse-papiers-vider", texte),
+    ecrire: (texte) => ipcRenderer.invoke("oxoai:presse-papiers-ecrire", texte),
+    vider: (texte) => ipcRenderer.invoke("oxoai:presse-papiers-vider", texte),
   },
   /**
    * Relance la passerelle de cette machine. Sert quand l'instance vient d'être
    * ouverte aux collègues : l'adresse d'écoute se choisit au démarrage.
    */
-  redemarrerPasserelle: () => ipcRenderer.invoke("helix:passerelle-redemarrer"),
-  /** La ligne de commande `helix` : état, pose du lanceur dans ~/.local/bin (helix.cmd dans ~\.helix\bin sous Windows), retrait. */
+  redemarrerPasserelle: () => ipcRenderer.invoke("oxoai:passerelle-redemarrer"),
+  /** La ligne de commande `oxoai` : état, pose du lanceur dans ~/.local/bin (oxoai.cmd dans ~\.oxoai\bin sous Windows), retrait. */
   ligneDeCommande: {
-    etat: () => ipcRenderer.invoke("helix:cli-etat"),
-    installer: () => ipcRenderer.invoke("helix:cli-installer"),
-    retirer: () => ipcRenderer.invoke("helix:cli-retirer"),
+    etat: () => ipcRenderer.invoke("oxoai:cli-etat"),
+    installer: () => ipcRenderer.invoke("oxoai:cli-installer"),
+    retirer: () => ipcRenderer.invoke("oxoai:cli-retirer"),
   },
   coffre: {
     /** Le système sait-il chiffrer ? Sinon l'interface garde son repli. */
@@ -111,8 +111,8 @@ contextBridge.exposeInMainWorld("helix", {
      * (electron/reprise.cjs). Vide ensuite, et pour toujours.
      */
     reprise: coffreInitial.reprise ?? {},
-    poser: (cle, valeur) => ipcRenderer.invoke("helix:coffre-poser", cle, valeur),
-    vider: () => ipcRenderer.invoke("helix:coffre-vider"),
+    poser: (cle, valeur) => ipcRenderer.invoke("oxoai:coffre-poser", cle, valeur),
+    vider: () => ipcRenderer.invoke("oxoai:coffre-vider"),
   },
   /** Grand stockage des Chats (electron/grandStockage.cjs), sans la limite du navigateur. */
   grand: {
@@ -122,25 +122,25 @@ contextBridge.exposeInMainWorld("helix", {
     illisibles: Array.isArray(grandInitial.illisibles) ? grandInitial.illisibles : [],
     /** Fichiers trouvés illisibles pendant cette séance : pourquoi, et où la copie a été gardée (bandeau de l'interface). */
     incidents: grandInitial.incidents && typeof grandInitial.incidents === "object" ? grandInitial.incidents : {},
-    poser: (cle, valeur) => ipcRenderer.invoke("helix:grand-poser", cle, valeur),
+    poser: (cle, valeur) => ipcRenderer.invoke("oxoai:grand-poser", cle, valeur),
     /** L'instance a rendu cette collection : le processus principal cesse de la tenir pour illisible. */
-    relu: (cle) => ipcRenderer.invoke("helix:grand-relu", cle),
+    relu: (cle) => ipcRenderer.invoke("oxoai:grand-relu", cle),
   },
   miseAJour: {
-    etat: () => ipcRenderer.invoke("helix:maj-etat"),
-    verifier: () => ipcRenderer.invoke("helix:maj-verifier"),
-    installer: () => ipcRenderer.invoke("helix:maj-installer"),
-    ouvrirPaquet: () => ipcRenderer.invoke("helix:maj-ouvrir-paquet"),
+    etat: () => ipcRenderer.invoke("oxoai:maj-etat"),
+    verifier: () => ipcRenderer.invoke("oxoai:maj-verifier"),
+    installer: () => ipcRenderer.invoke("oxoai:maj-installer"),
+    ouvrirPaquet: () => ipcRenderer.invoke("oxoai:maj-ouvrir-paquet"),
     /** Nouveautés des versions (23/10/2026) : `{ depuis?, jusqua, langue }`, lues par le processus principal dans les publications GitHub. */
-    nouveautes: (demande) => ipcRenderer.invoke("helix:maj-nouveautes", demande),
+    nouveautes: (demande) => ipcRenderer.invoke("oxoai:maj-nouveautes", demande),
     /** Version d'avant ce lancement, si l'application vient d'être mise à jour. */
-    lancement: () => ipcRenderer.invoke("helix:maj-lancement"),
-    nouveautesVues: (reglage) => ipcRenderer.invoke("helix:maj-nouveautes-vues", reglage),
+    lancement: () => ipcRenderer.invoke("oxoai:maj-lancement"),
+    nouveautesVues: (reglage) => ipcRenderer.invoke("oxoai:maj-nouveautes-vues", reglage),
     /** Abonnement aux changements ; renvoie la fonction de désabonnement. */
     surChangement: (rappel) => {
       const ecouteur = (_evenement, etat) => rappel(etat);
-      ipcRenderer.on("helix:maj-etat", ecouteur);
-      return () => ipcRenderer.removeListener("helix:maj-etat", ecouteur);
+      ipcRenderer.on("oxoai:maj-etat", ecouteur);
+      return () => ipcRenderer.removeListener("oxoai:maj-etat", ecouteur);
     },
   },
   /*
@@ -150,7 +150,7 @@ contextBridge.exposeInMainWorld("helix", {
    * vérifie le lien et n'ouvre que Google Meet.
    */
   /**
-   * Invitation arrivée par lien `helix://rejoindre` : le collègue a cliqué
+   * Invitation arrivée par lien `oxoai://rejoindre` : le collègue a cliqué
    * dans son mail, le système a réveillé l'application, et l'écran de
    * rattachement se remplit tout seul. Le rappel peut arriver avant que la
    * page soit prête : le processus principal garde alors le lien et le
@@ -158,21 +158,21 @@ contextBridge.exposeInMainWorld("helix", {
    */
   surInvitation: (rappel) => {
     const ecouteur = (_evenement, invitation) => rappel(invitation);
-    ipcRenderer.on("helix:invitation", ecouteur);
-    ipcRenderer.send("helix:invitation-prete");
-    return () => ipcRenderer.removeListener("helix:invitation", ecouteur);
+    ipcRenderer.on("oxoai:invitation", ecouteur);
+    ipcRenderer.send("oxoai:invitation-prete");
+    return () => ipcRenderer.removeListener("oxoai:invitation", ecouteur);
   },
   bot: {
-    envoyer: (demande) => ipcRenderer.invoke("helix:bot-envoyer", demande),
-    arreter: (reunionId) => ipcRenderer.invoke("helix:bot-arreter", reunionId),
-    afficher: (reunionId) => ipcRenderer.invoke("helix:bot-afficher", reunionId),
-    liste: () => ipcRenderer.invoke("helix:bot-liste"),
-    automatique: (autorisation) => ipcRenderer.invoke("helix:bot-auto", autorisation),
-    compte: (action) => ipcRenderer.invoke("helix:bot-compte", action),
+    envoyer: (demande) => ipcRenderer.invoke("oxoai:bot-envoyer", demande),
+    arreter: (reunionId) => ipcRenderer.invoke("oxoai:bot-arreter", reunionId),
+    afficher: (reunionId) => ipcRenderer.invoke("oxoai:bot-afficher", reunionId),
+    liste: () => ipcRenderer.invoke("oxoai:bot-liste"),
+    automatique: (autorisation) => ipcRenderer.invoke("oxoai:bot-auto", autorisation),
+    compte: (action) => ipcRenderer.invoke("oxoai:bot-compte", action),
     surChangement: (rappel) => {
       const ecouteur = (_evenement, bots) => rappel(bots);
-      ipcRenderer.on("helix:bot-etat", ecouteur);
-      return () => ipcRenderer.removeListener("helix:bot-etat", ecouteur);
+      ipcRenderer.on("oxoai:bot-etat", ecouteur);
+      return () => ipcRenderer.removeListener("oxoai:bot-etat", ecouteur);
     },
   },
 });

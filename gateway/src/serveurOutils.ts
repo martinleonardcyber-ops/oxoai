@@ -25,16 +25,16 @@ import { OUTIL_EMPLOYE, chercherPourEmploye, outilEmploye } from "./connaissance
 import * as webGarde from "./webGarde.ts";
 
 /**
- * Serveur d'outils des employés : les outils d'Helix, servis par MCP à
+ * Serveur d'outils des employés : les outils d'OxoAI, servis par MCP à
  * l'instance OpenClaw dédiée (voir employes.ts).
  *
- * Chaque employé a son adresse, `/helix/employes/<id>/outils`, et n'y trouve
+ * Chaque employé a son adresse, `/oxoai/employes/<id>/outils`, et n'y trouve
  * que les familles d'outils qu'on lui a données. Un appel passe par les mêmes
  * points que dans le Chat : la barrière d'approbation, puis `executerOutil`,
  * puis le journal, au nom de l'employé.
  *
  * Le jeton d'instance ne suffit pas : il est sur tous les postes du parc. La
- * clé `X-Helix-Cle` n'est connue que de la passerelle et de l'instance
+ * clé `X-OxoAI-Cle` n'est connue que de la passerelle et de l'instance
  * OpenClaw qu'elle a lancée (fichier 0600 dans le dossier de données).
  *
  * Sans état : un transport par requête, réponses JSON. OpenClaw n'a pas
@@ -74,7 +74,7 @@ export async function servirOutils(
   id: string,
   corps: unknown,
 ): Promise<boolean> {
-  const cle = req.headers["x-helix-cle"];
+  const cle = req.headers["x-oxoai-cle"];
   // La clé de **cet** employé (celui de l'adresse) : celle d'un autre ne l'ouvre pas.
   if (!cleValide(typeof cle === "string" ? cle : undefined, id)) return false;
   const e = await employe(id);

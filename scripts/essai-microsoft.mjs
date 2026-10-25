@@ -279,9 +279,9 @@ const regler = (params) => fetch(`http://127.0.0.1:${PORT_FAUX}/__controle?${par
 /* Passerelle jetable, transport remplacé par le module préalable            */
 /* ------------------------------------------------------------------------- */
 
-const AUX = mkdtempSync(join(tmpdir(), "helix-microsoft-aux-"));
-const DONNEES = mkdtempSync(join(tmpdir(), "helix-microsoft-donnees-"));
-const ESPACE = mkdtempSync(join(tmpdir(), "helix-microsoft-espace-"));
+const AUX = mkdtempSync(join(tmpdir(), "oxoai-microsoft-aux-"));
+const DONNEES = mkdtempSync(join(tmpdir(), "oxoai-microsoft-donnees-"));
+const ESPACE = mkdtempSync(join(tmpdir(), "oxoai-microsoft-espace-"));
 const PREALABLE = join(AUX, "prealable.mjs");
 writeFileSync(
   PREALABLE,
@@ -309,14 +309,14 @@ const PORT = await portLibre();
 const G = `http://127.0.0.1:${PORT}`;
 const ENV = {
   ...process.env,
-  HELIX_CONFIG: join(AUX, "profil.json"),
-  HELIX_GATEWAY_PORT: String(PORT),
-  HELIX_DATA_DIR: DONNEES,
-  HELIX_WORKSPACE: ESPACE,
-  HELIX_CODE_DIR: ESPACE,
-  HELIX_LMSTUDIO_URL: "http://127.0.0.1:9/v1",
-  HELIX_EXO_URL: "http://127.0.0.1:9/v1",
-  HELIX_GATEWAY_HOST: "127.0.0.1",
+  OXOAI_CONFIG: join(AUX, "profil.json"),
+  OXOAI_GATEWAY_PORT: String(PORT),
+  OXOAI_DATA_DIR: DONNEES,
+  OXOAI_WORKSPACE: ESPACE,
+  OXOAI_CODE_DIR: ESPACE,
+  OXOAI_LMSTUDIO_URL: "http://127.0.0.1:9/v1",
+  OXOAI_EXO_URL: "http://127.0.0.1:9/v1",
+  OXOAI_GATEWAY_HOST: "127.0.0.1",
 };
 const passerelle = spawn(process.execPath, ["--import", PREALABLE, join(RACINE, "gateway", "src", "index.ts")], { env: ENV, stdio: ["ignore", "pipe", "pipe"] });
 let journal = "";
@@ -339,32 +339,32 @@ if (!demarree) {
 }
 
 const JETON = readFileSync(join(DONNEES, "instance-token"), "utf8").trim();
-const avecJeton = { "Content-Type": "application/json", Authorization: `Bearer ${JETON}`, "X-Helix-Langue": "fr" };
+const avecJeton = { "Content-Type": "application/json", Authorization: `Bearer ${JETON}`, "X-OxoAI-Langue": "fr" };
 const appel = (chemin, options = {}) => fetch(`${G}${chemin}`, { redirect: "manual", ...options });
 const poster = (chemin, entetes, corps) => appel(chemin, { method: "POST", headers: entetes, body: JSON.stringify(corps ?? {}) });
-const premier = await (await poster("/helix/auth/create", avecJeton, { fullName: "Alice Essai", email: "alice@example.test", password: "Mot2PasseSolide!42" })).json();
-const A = { ...avecJeton, "X-Helix-Session": premier.session?.token };
+const premier = await (await poster("/oxoai/auth/create", avecJeton, { fullName: "Alice Essai", email: "alice@example.test", password: "Mot2PasseSolide!42" })).json();
+const A = { ...avecJeton, "X-OxoAI-Session": premier.session?.token };
 const idA = premier.account?.id;
-const creeB = await (await poster("/helix/auth/create", A, { fullName: "Bruno Essai", email: "bruno@example.test", password: "Provisoire2Passe!11" })).json();
-const connB = await (await poster("/helix/auth/mot-de-passe-provisoire", avecJeton, { accountId: creeB.account?.id, password: "Provisoire2Passe!11", nouveau: "Bruno2PasseSolide!57" })).json();
-const B = { ...avecJeton, "X-Helix-Session": connB.session?.token };
+const creeB = await (await poster("/oxoai/auth/create", A, { fullName: "Bruno Essai", email: "bruno@example.test", password: "Provisoire2Passe!11" })).json();
+const connB = await (await poster("/oxoai/auth/mot-de-passe-provisoire", avecJeton, { accountId: creeB.account?.id, password: "Provisoire2Passe!11", nouveau: "Bruno2PasseSolide!57" })).json();
+const B = { ...avecJeton, "X-OxoAI-Session": connB.session?.token };
 const idB = creeB.account?.id;
-const etatMs = async (entetes = A) => ((await (await appel("/helix/natifs", { headers: entetes })).json()).services ?? []).find((s) => s.id === "microsoft");
+const etatMs = async (entetes = A) => ((await (await appel("/oxoai/natifs", { headers: entetes })).json()).services ?? []).find((s) => s.id === "microsoft");
 
 /* ------------------------------------------------------------------------- */
 console.log("\nA. Qui a le droit");
 {
-  const sans = await appel("/helix/natifs", { headers: avecJeton });
+  const sans = await appel("/oxoai/natifs", { headers: avecJeton });
   verifier("état des connexions : sans séance → 401", sans.status === 401, sans.status);
-  const vueB = await (await appel("/helix/natifs", { headers: B })).json();
+  const vueB = await (await appel("/oxoai/natifs", { headers: B })).json();
   const msB = (vueB.services ?? []).find((s) => s.id === "microsoft");
   verifier("un membre voit Microsoft 365 dans l'état, et l'écran sait qu'il n'administre pas", Boolean(msB) && vueB.administrateur === false && msB.retour === "http://localhost/microsoft", JSON.stringify(msB).slice(0, 200));
   for (const [suite, corps] of [["/application", { service: "microsoft", clientId: APP.id, annuaire: TENANT }], ["/connecter", { service: "microsoft", choix: ["outlook"] }], ["/oublier", { service: "microsoft" }]]) {
-    const r = await poster(`/helix/natifs${suite}`, B, corps);
+    const r = await poster(`/oxoai/natifs${suite}`, B, corps);
     verifier(`un membre qui n'administre pas : ${suite} refusé (403)`, r.status === 403, r.status);
   }
   for (const id of ["outlook", "teams", "microsoft"]) {
-    const r = await poster("/helix/connecteurs/ajouter", A, { id, command: "/bin/sh" });
+    const r = await poster("/oxoai/connecteurs/ajouter", A, { id, command: "/bin/sh" });
     const j = await r.json().catch(() => ({}));
     verifier(`un connecteur MCP ne peut pas prendre le préfixe « ${id} » (réservé)`, r.status === 400 && /intégré/.test(j.message ?? ""), JSON.stringify(j).slice(0, 160));
   }
@@ -372,13 +372,13 @@ console.log("\nA. Qui a le droit");
 
 console.log("\nB. Application Entra : identifiant, annuaire, secret facultatif");
 {
-  const mal = await poster("/helix/natifs/application", A, { service: "microsoft", clientId: "pas-un-guid", annuaire: TENANT });
+  const mal = await poster("/oxoai/natifs/application", A, { service: "microsoft", clientId: "pas-un-guid", annuaire: TENANT });
   verifier("un identifiant d'application qui n'est pas un GUID est refusé (400)", mal.status === 400, mal.status);
   for (const annuaire of ["", "../evil", "evil.example/x", "consumers", "a b.fr", `${TENANT}/oauth2`]) {
-    const r = await poster("/helix/natifs/application", A, { service: "microsoft", clientId: APP.id, annuaire });
+    const r = await poster("/oxoai/natifs/application", A, { service: "microsoft", clientId: APP.id, annuaire });
     verifier(`annuaire illisible « ${annuaire} » : refusé (400), rien n'entre dans un chemin`, r.status === 400, r.status);
   }
-  const pub = await poster("/helix/natifs/application", A, { service: "microsoft", clientId: APP.id, annuaire: TENANT.toUpperCase() });
+  const pub = await poster("/oxoai/natifs/application", A, { service: "microsoft", clientId: APP.id, annuaire: TENANT.toUpperCase() });
   const ms = await etatMs();
   verifier("application publique (sans secret) enregistrée avec son annuaire", pub.status === 200 && ms?.application?.disponible === true && ms?.application?.avecSecret === false && ms?.application?.annuaire === TENANT, `${pub.status} ${JSON.stringify(ms?.application)}`);
   verifier("l'état dit quelles portées chaque case demande, et lesquelles attendent l'administrateur de l'annuaire", ms?.choix?.find((c) => c.id === "sharepoint")?.admin === true && ms?.choix?.find((c) => c.id === "teams")?.admin === true && !ms?.choix?.find((c) => c.id === "outlook")?.admin && ms?.choix?.find((c) => c.id === "excel")?.ecriture?.join() === "Files.ReadWrite", JSON.stringify(ms?.choix).slice(0, 300));
@@ -386,7 +386,7 @@ console.log("\nB. Application Entra : identifiant, annuaire, secret facultatif")
 
 /** L'adresse d'autorisation, décortiquée. */
 async function depart(choix) {
-  const r = await poster("/helix/natifs/connecter", A, { service: "microsoft", choix });
+  const r = await poster("/oxoai/natifs/connecter", A, { service: "microsoft", choix });
   const j = await r.json().catch(() => ({}));
   const u = typeof j.url === "string" ? new URL(j.url) : null;
   return { statut: r.status, j, u, p: u?.searchParams ?? new URLSearchParams() };
@@ -425,7 +425,7 @@ console.log("\nC. Autorisation : portées minimales, PKCE, `state`, retour sur l
   const port = new URL(tout.p.get("redirect_uri") ?? "http://x").port;
   const v4 = await fetch(`http://127.0.0.1:${port}/microsoft?state=natif.faux&code=CODE-ms`).catch(() => null);
   const v6 = await fetch(`http://[::1]:${port}/microsoft?state=natif.faux&code=CODE-ms`).catch(() => null);
-  const colle = await poster("/helix/natifs/code", A, { service: "microsoft", adresse: `http://localhost:${port}/microsoft?state=natif.autre&code=CODE-ms` });
+  const colle = await poster("/oxoai/natifs/code", A, { service: "microsoft", adresse: `http://localhost:${port}/microsoft?state=natif.autre&code=CODE-ms` });
   const apres = await etatMs();
   verifier("un `state` faux (boucle locale en 127.0.0.1 et en ::1, adresse recopiée à l'écran) : refusé, rien n'est échangé, la demande reste en attente", v4?.status === 400 && v6?.status === 400 && colle.status === 400 && apres?.attente === true && apres?.configure === false && echanges().length === 0, `${v4?.status} ${v6?.status} ${colle.status} ${JSON.stringify(apres).slice(0, 120)}`);
   const autre = await fetch(`http://127.0.0.1:${port}/ailleurs?state=${encodeURIComponent(tout.p.get("state") ?? "")}&code=CODE-ms`).catch(() => null);
@@ -465,14 +465,14 @@ console.log("\nD. Retour : portées relues, compte lu, puis seulement enregistr�
   );
   const lu = await etatMs();
   verifier("l'écran nomme le compte (lu avec le jeton avant tout enregistrement), les services cochés, sans écriture", lu?.configure === true && lu?.compte === "orga@contoso.example" && lu?.accordes?.join() === "outlook,onedrive" && !SECRETS.test(JSON.stringify(lu)), JSON.stringify(lu).slice(0, 200));
-  const outils = await (await appel("/helix/outils", { headers: A })).text();
+  const outils = await (await appel("/oxoai/outils", { headers: A })).text();
   verifier("la puce « Outils » : Outlook et OneDrive, en lecture seule ; ni Teams ni Excel", /Outlook/.test(outils) && /OneDrive/.test(outils) && !/Microsoft Teams|"excel"/.test(outils) && !/écrire ou publier après/.test(outils.slice(outils.indexOf("Outlook"), outils.indexOf("Outlook") + 300)), outils.slice(0, 300));
   const rejoue = await fetch(`${d.p.get("redirect_uri")}?state=${encodeURIComponent(d.p.get("state") ?? "")}&code=CODE-ms`).catch(() => null);
-  const rejoue2 = await appel(`/helix/oauth/retour?state=${encodeURIComponent(d.p.get("state") ?? "")}&code=CODE-ms`);
+  const rejoue2 = await appel(`/oxoai/oauth/retour?state=${encodeURIComponent(d.p.get("state") ?? "")}&code=CODE-ms`);
   verifier("le même retour rejoué (boucle fermée, route publique) ne vaut plus rien", (rejoue?.status ?? 400) >= 400 && rejoue2.status === 400, `${rejoue?.status} ${rejoue2.status}`);
 
   // Puis l'application devient confidentielle (plateforme « Web », avec un secret), et l'on branche tout, écriture comprise.
-  const conf = await poster("/helix/natifs/application", A, { service: "microsoft", clientId: APP.id, clientSecret: APP.secret, annuaire: TENANT });
+  const conf = await poster("/oxoai/natifs/application", A, { service: "microsoft", clientId: APP.id, clientSecret: APP.secret, annuaire: TENANT });
   const confTexte = await conf.text();
   verifier("secret de l'application enregistré, et il ne ressort pas", conf.status === 200 && !SECRETS.test(confTexte), `${conf.status} ${confTexte.slice(0, 160)}`);
   await regler(`confidentiel=1&encode=0&scope=${encodeURIComponent(TOUT)}`);
@@ -488,7 +488,7 @@ console.log("\nD. Retour : portées relues, compte lu, puis seulement enregistr�
 console.log("\nE. Jetons et secrets : jamais à l'écran, jamais en clair sur le disque, jamais au journal");
 {
   for (const [nom, entetes] of [["administrateur", A], ["membre", B]]) {
-    const brut = await (await appel("/helix/natifs", { headers: entetes })).text();
+    const brut = await (await appel("/oxoai/natifs", { headers: entetes })).text();
     verifier(`état (${nom}) : aucun jeton ni secret`, !SECRETS.test(brut) && brut.includes('"microsoft"'), brut.match(SECRETS)?.[0]);
   }
   const fichiers = [];
@@ -514,11 +514,11 @@ console.log("\nG. Un appel recopié d'un contenu lu n'est pas un appel du modèl
   const guetter = async (enCours, outil) => {
     let carte;
     for (let t = 0; t < 8000 && !carte; t += 200) {
-      const e = await (await appel("/helix/approbation", { headers: A })).json().catch(() => ({}));
+      const e = await (await appel("/oxoai/approbation", { headers: A })).json().catch(() => ({}));
       carte = (e.enAttente ?? []).find((x) => x.detail?.outil === outil);
       if (!carte && (await Promise.race([enCours.then(() => true), attendre(200).then(() => false)]))) break;
     }
-    if (carte) await poster("/helix/approbation/repondre", A, { id: carte.id, accord: false });
+    if (carte) await poster("/oxoai/approbation/repondre", A, { id: carte.id, accord: false });
     return { carte, flux: await enCours };
   };
   for (const [question, lecture, ecriture, motif, glisse] of [
@@ -634,7 +634,7 @@ sortie.carteBrouillon = await carteDe("outlook__brouillon", { a: ["x@exemple.tes
 const lecture = await Promise.race([ap.verifierOutil(null, "outlook__lire", { mail: "x" }, A.userId), new Promise((r) => setTimeout(() => r("attente"), 300))]);
 sortie.lectureLibre = lecture !== "attente" && lecture.autorise === true;
 const { avecLangueDe } = await import(${src("langue.ts")});
-await avecLangueDe({ "x-helix-langue": "fr" }, new URL("http://essai/"), async () => {
+await avecLangueDe({ "x-oxoai-langue": "fr" }, new URL("http://essai/"), async () => {
   sortie.oubli = await n.oublier("microsoft", A.userId);
 });
 sortie.apres = (await n.etat("http://127.0.0.1")).find((s) => s.id === "microsoft");

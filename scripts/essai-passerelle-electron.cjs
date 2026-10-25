@@ -9,7 +9,7 @@
  * Ce qui est mesuré :
  *  - la passerelle démarre et répond sur /health ;
  *  - le canal marche dans les deux sens : la demande `node-prive` reçoit sa
- *    réponse (un faux Node de Helix est déjà posé dans le dossier jetable,
+ *    réponse (un faux Node de OxoAI est déjà posé dans le dossier jetable,
  *    rien n'est téléchargé) ;
  *  - SIGUSR1 n'ouvre pas le débogueur (port 9229), alors que le binaire
  *    d'Electron du projet a le fusible --inspect ouvert : c'est l'écoute du
@@ -25,7 +25,7 @@ const os = require("node:os");
 const path = require("node:path");
 
 const [RACINE, ENTREE, DONNEES, PORT, PROFIL] = process.argv.slice(-5);
-const profilElectron = fs.mkdtempSync(path.join(os.tmpdir(), "helix-passerelle-profil-"));
+const profilElectron = fs.mkdtempSync(path.join(os.tmpdir(), "oxoai-passerelle-profil-"));
 app.setPath("userData", profilElectron);
 if (app.dock) app.dock.hide();
 
@@ -71,12 +71,12 @@ app.whenReady().then(async () => {
         ...process.env,
         // Comme depuis le terminal de VS Code : la variable ne doit rien changer.
         ELECTRON_RUN_AS_NODE: "1",
-        HELIX_CONFIG: PROFIL,
-        HELIX_DATA_DIR: DONNEES,
-        HELIX_GATEWAY_PORT: PORT,
-        HELIX_GATEWAY_HOST: "127.0.0.1",
-        HELIX_LMSTUDIO_URL: "http://127.0.0.1:9/v1",
-        HELIX_EXO_URL: "http://127.0.0.1:9/v1",
+        OXOAI_CONFIG: PROFIL,
+        OXOAI_DATA_DIR: DONNEES,
+        OXOAI_GATEWAY_PORT: PORT,
+        OXOAI_GATEWAY_HOST: "127.0.0.1",
+        OXOAI_LMSTUDIO_URL: "http://127.0.0.1:9/v1",
+        OXOAI_EXO_URL: "http://127.0.0.1:9/v1",
       },
     });
     let journal = "";

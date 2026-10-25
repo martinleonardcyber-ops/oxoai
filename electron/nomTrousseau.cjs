@@ -1,10 +1,10 @@
 /**
- * macOS : la clé du trousseau au nom de « Helix ».
+ * macOS : la clé du trousseau au nom de « OxoAI ».
  *
  * Pourquoi (27/09/2026) : Electron nomme la clé qui chiffre le coffre et les
  * Chats du poste d'après le nom interne de l'application, celui du
- * package.json (« helix-plateforme »). Le trousseau demandait donc l'accès à
- * « helix-plateforme Safe Storage », un nom que la personne ne reconnaît pas
+ * package.json (« oxoai-plateforme »). Le trousseau demandait donc l'accès à
+ * « oxoai-plateforme Safe Storage », un nom que la personne ne reconnaît pas
  * (vu sur un MacBook). `app.setName` avant le démarrage change ce nom (essai du
  * 27/09/2026 : la clé « <nom> Safe Storage » est créée sous le nouveau nom),
  * mais c'est une **autre clé** : ce qui était chiffré avec l'ancienne ne se lit
@@ -16,7 +16,7 @@
  *     hasard, qui ne passe que par l'environnement du processus relancé (jamais
  *     sur le disque) ;
  *  2. sous le nouveau nom, chacun est rechiffré avec la nouvelle clé. L'original
- *     est gardé à côté (`.cle-helix-plateforme`), toujours lisible par
+ *     est gardé à côté (`.cle-oxoai-plateforme`), toujours lisible par
  *     l'ancienne clé, qui reste dans le trousseau.
  * Un fichier que l'ancienne clé ne lit pas n'est pas touché. Si le transfert
  * échoue deux fois, l'application garde l'ancien nom : un nom peu parlant vaut
@@ -24,7 +24,7 @@
  *
  * Seulement l'application installée, sur macOS : sous Windows la clé ne dépend
  * pas du nom (DPAPI, rangée dans le profil), sous Linux personne ne voit ce
- * nom, et en développement l'exécutable d'Electron créerait une clé « Helix »
+ * nom, et en développement l'exécutable d'Electron créerait une clé « OxoAI »
  * que l'application installée devrait ensuite demander.
  */
 
@@ -36,7 +36,7 @@ const ESSAIS_MAX = 2;
 
 /**
  * Le dossier des données du poste, le fichier témoin, le fichier de transfert.
- * `dossier` : `HELIX_DATA_DIR`, ou `~/.helix` (comme coffre.cjs et grandStockage.cjs).
+ * `dossier` : `OXOAI_DATA_DIR`, ou `~/.oxoai` (comme coffre.cjs et grandStockage.cjs).
  */
 function emplacements(dossier) {
   const poste = path.join(dossier, "poste");
@@ -60,7 +60,7 @@ function fichiersChiffres(dossier) {
       return;
     }
     for (const nom of noms) {
-      if (nom.startsWith(".") || nom.endsWith(".cle-helix-plateforme") || nom.endsWith(".tmp")) continue;
+      if (nom.startsWith(".") || nom.endsWith(".cle-oxoai-plateforme") || nom.endsWith(".tmp")) continue;
       // `x.enc`, `x.<date>.copie.enc`, `x.enc.illisible-<date>` : ce que coffre.cjs et grandStockage.cjs écrivent.
       if (!/\.enc($|\.illisible-)/.test(nom)) continue;
       const chemin = path.join(base, nom);
@@ -102,10 +102,10 @@ let cleTransfert = null;
 function preparerNom(app, { nomHistorique, nom, dossier }) {
   if (process.platform !== "darwin" || !app.isPackaged) return null;
   // Le profil (préférences, stockage local) reste où il était : il suit sinon le nom.
-  if (!process.env.HELIX_PROFIL_ESSAI) app.setPath("userData", path.join(app.getPath("appData"), nomHistorique));
-  cleTransfert = process.env.HELIX_CLE_TRANSFERT || null;
+  if (!process.env.OXOAI_PROFIL_ESSAI) app.setPath("userData", path.join(app.getPath("appData"), nomHistorique));
+  cleTransfert = process.env.OXOAI_CLE_TRANSFERT || null;
   // La passerelle et les outils lancés ensuite n'ont pas à la recevoir.
-  delete process.env.HELIX_CLE_TRANSFERT;
+  delete process.env.OXOAI_CLE_TRANSFERT;
 
   const e = emplacements(dossier);
   const temoin = lireTexte(e.temoin);
@@ -142,7 +142,7 @@ function preparerNom(app, { nomHistorique, nom, dossier }) {
     } catch {
       /* on réessaiera au prochain lancement */
     }
-    console.error("[helix] transfert de la clé du trousseau abandonné : l'ancien nom est gardé, les données restent lisibles.");
+    console.error("[oxoai] transfert de la clé du trousseau abandonné : l'ancien nom est gardé, les données restent lisibles.");
     return null;
   }
   return "lire";
@@ -182,12 +182,12 @@ function transfererCle(app, safeStorage, etape, { dossier }) {
       const chiffreur = crypto.createCipheriv("aes-256-gcm", cle, iv);
       const corps = Buffer.concat([chiffreur.update(JSON.stringify(contenus), "utf8"), chiffreur.final()]);
       ecrireAtomique(e.transfert, Buffer.concat([iv, chiffreur.getAuthTag(), corps]));
-      process.env.HELIX_CLE_TRANSFERT = cle.toString("hex");
+      process.env.OXOAI_CLE_TRANSFERT = cle.toString("hex");
     } catch (err) {
-      console.error("[helix] transfert de la clé du trousseau impossible :", err instanceof Error ? err.message : err);
+      console.error("[oxoai] transfert de la clé du trousseau impossible :", err instanceof Error ? err.message : err);
       return false;
     }
-    console.log(`[helix] clé du trousseau : ${Object.keys(contenus).length} fichier(s) à rechiffrer, relancement.`);
+    console.log(`[oxoai] clé du trousseau : ${Object.keys(contenus).length} fichier(s) à rechiffrer, relancement.`);
     app.relaunch();
     app.exit(0);
     return true;
@@ -216,7 +216,7 @@ function transfererCle(app, safeStorage, etape, { dossier }) {
       if (typeof texte !== "string" || (path.dirname(chemin) !== e.poste && path.dirname(chemin) !== dossier)) continue;
       try {
         const nouveau = safeStorage.encryptString(texte);
-        const garde = `${chemin}.cle-helix-plateforme`;
+        const garde = `${chemin}.cle-oxoai-plateforme`;
         if (!fs.existsSync(garde)) {
           fs.copyFileSync(chemin, garde);
           fs.chmodSync(garde, 0o600);
@@ -224,7 +224,7 @@ function transfererCle(app, safeStorage, etape, { dossier }) {
         ecrireAtomique(chemin, nouveau);
       } catch (err) {
         echecs++;
-        console.error("[helix] rechiffrement impossible :", path.basename(chemin), err instanceof Error ? err.message : err);
+        console.error("[oxoai] rechiffrement impossible :", path.basename(chemin), err instanceof Error ? err.message : err);
       }
     }
     fs.rmSync(e.transfert, { force: true });
@@ -254,7 +254,7 @@ function transfererCle(app, safeStorage, etape, { dossier }) {
     } catch {
       /* le prochain lancement reprendra sous l'ancien nom, et les copies gardées se relisent */
     }
-    console.log(`[helix] clé du trousseau : ${Object.keys(contenus).length} fichier(s) rechiffré(s) sous le nom ${app.getName()}.`);
+    console.log(`[oxoai] clé du trousseau : ${Object.keys(contenus).length} fichier(s) rechiffré(s) sous le nom ${app.getName()}.`);
   }
   return false;
 }

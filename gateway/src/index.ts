@@ -227,14 +227,14 @@ import {
   abonner as abonnerCode,
   dernierNumero as dernierNumeroCode,
   surFinDeTour as surFinDeTourCode,
-  noterRelanceHelix,
+  noterRelanceOxoAI,
   publierStatut as publierStatutCode,
-  travailHelix as travailHelixCode,
+  travailOxoAI as travailOxoAICode,
   ouvrirTour as ouvrirTourCode,
   fermerTour as fermerTourCode,
   reposConfirme as reposConfirmeCode,
   auTravail as auTravailCode,
-  helixAuTravail as helixAuTravailCode,
+  oxoaiAuTravail as oxoaiAuTravailCode,
   type EvenementCode,
 } from "./fluxCode.ts";
 import {
@@ -349,7 +349,7 @@ async function handleHealth(res: http.ServerResponse, authorised: boolean): Prom
   if (!authorised) {
     return send(res, 200, {
       ok: online,
-      helix: true,
+      oxoai: true,
       modelCount: found.length,
       requiresToken: true,
     });
@@ -385,7 +385,7 @@ async function handleModels(
         id: m.uid,
         object: "model",
         owned_by: m.backendLabel,
-        helix: {
+        oxoai: {
           name: m.id,
           backend: m.backendId,
           roles: m.roles,
@@ -415,7 +415,7 @@ async function handleModels(
 /**
  * /v1/chat/completions — routage par rôle + boucle d'outils MCP.
  * Le canal `reasoning_content` (modèles à raisonnement) est préservé, et
- * l'activité des outils est relayée par des événements `helix`.
+ * l'activité des outils est relayée par des événements `oxoai`.
  */
 async function handleChat(
   req: http.IncomingMessage,
@@ -477,8 +477,8 @@ async function handleChat(
    * elle-même, depuis la boucle locale, avec la clé tirée au sort à ce
    * démarrage. L'agent agit alors au nom de la propriétaire de la tâche.
    */
-  const tacheDe = req.headers["x-helix-tache"];
-  const cleTache = req.headers["x-helix-cle-tache"];
+  const tacheDe = req.headers["x-oxoai-tache"];
+  const cleTache = req.headers["x-oxoai-cle-tache"];
   const parTache =
     typeof tacheDe === "string" &&
     typeof cleTache === "string" &&
@@ -492,7 +492,7 @@ async function handleChat(
       : null;
   const qui = parTache ?? (await demandeur(req, url));
   const titreDeTache = (r: http.IncomingMessage) => {
-    const brut = r.headers["x-helix-tache-titre"];
+    const brut = r.headers["x-oxoai-tache-titre"];
     try {
       return typeof brut === "string" ? decodeURIComponent(brut).slice(0, 120) : undefined;
     } catch {
@@ -531,22 +531,22 @@ async function handleChat(
    * pas (n'importe quel poste pourrait l'écrire) : il faut aussi la clé que
    * seule l'instance OpenClaw lancée par la passerelle connaît.
    */
-  const employe = req.headers["x-helix-employe"];
-  const cle = req.headers["x-helix-cle"];
+  const employe = req.headers["x-oxoai-employe"];
+  const cle = req.headers["x-oxoai-cle"];
   const parEmploye =
     !qui && typeof employe === "string" && employes.cleValide(typeof cle === "string" ? cle : undefined, employe)
       ? auteurEmploye(employe)
       : undefined;
 
   /*
-   * Un appel d'OpenCode pour une session de Helix Code : il joint la clé que la
-   * passerelle lui a remise (`X-Helix-Relais`) et l'identifiant de sa session.
+   * Un appel d'OpenCode pour une session de OxoAI Code : il joint la clé que la
+   * passerelle lui a remise (`X-OxoAI-Relais`) et l'identifiant de sa session.
    * La session a une propriétaire (sessionsCode.ts) ; ses modèles branchés par
    * clé personnelle lui sont servis, comme dans le Chat. Avant le 27/09/2026,
    * OpenCode n'avait que le jeton d'instance, et un modèle de clé personnelle
    * choisi dans Code était refusé à sa propre titulaire.
    */
-  const relais = req.headers["x-helix-relais"];
+  const relais = req.headers["x-oxoai-relais"];
   let titulaireCode: string | undefined;
   if (!qui && !parEmploye && cleRelaisValide(Array.isArray(relais) ? relais[0] : relais)) {
     for (const nom of ["x-session-id", "x-session-affinity", "x-parent-session-id"]) {
@@ -560,7 +560,7 @@ async function handleChat(
 
   const fiche = parEmploye && typeof employe === "string" ? await employes.employe(employe) : undefined;
   /*
-   * Le modèle d'un employé est celui que Helix a enregistré pour lui
+   * Le modèle d'un employé est celui que OxoAI a enregistré pour lui
    * (27/09/2026, demandé par Medhi : « pas tous le même »), et non celui que
    * la requête nomme. La configuration d'OpenClaw le nomme déjà (un
    * fournisseur par employé, employes.ts) ; la passerelle le tient en plus,
@@ -645,7 +645,7 @@ async function handleProvisionStatus(res: http.ServerResponse): Promise<void> {
     ? llamaCppInstalle()
     : lmStudioActif && ((await applicationEnAttenteDeChoix()) || (await findLms()) !== null) && !moteurAPoser() && !llmsterPoseAilleurs();
   /*
-   * L'application LM Studio de la personne est là mais fermée, et Helix ne la
+   * L'application LM Studio de la personne est là mais fermée, et OxoAI ne la
    * démarre pas sans son accord (23/10/2026, engine.ts) : l'écran de mise en
    * route demande, une fois, plutôt que de proposer un modèle à installer.
    */
@@ -671,7 +671,7 @@ async function handleProvisionStatus(res: http.ServerResponse): Promise<void> {
     moteur: ouvert ? "llamacpp" : "lmstudio",
     hasChatModel: chatModels.length > 0,
     /*
-     * Helix a besoin d'un moteur pour faire tourner les modèles. Sans lui, il
+     * OxoAI a besoin d'un moteur pour faire tourner les modèles. Sans lui, il
      * n'y a rien à télécharger ni à charger : l'écran de mise en route doit le
      * dire et guider, au lieu de proposer une installation qui échouera.
      */
@@ -693,7 +693,7 @@ async function handleProvisionStatus(res: http.ServerResponse): Promise<void> {
     /*
      * Tout le catalogue, pour la page « Modèles » (28/09/2026) : installé ou
      * non, et, pour ceux qui ne tiennent pas, la raison chiffrée. La page ne
-     * propose d'installer que ceux qui tiennent ; `/helix/provision/start`
+     * propose d'installer que ceux qui tiennent ; `/oxoai/provision/start`
      * refuse les autres (`refusTropLourd`).
      */
     modeles: catalogueComplet(hardware).map((e) => ({ ...e, installe: presents.has(nomSansEditeur(e.key)) })),
@@ -710,7 +710,7 @@ async function handleProvisionStatus(res: http.ServerResponse): Promise<void> {
  * l'installant. LM Studio est un logiciel fermé d'Element Labs, Inc. : ses
  * conditions (version du 23/08/2026) le réservent à un usage « personnel et / ou
  * interne à l'entreprise » et interdisent l'usage « as an application service
- * provider, or a software-as-a-service ». Helix l'installait sans le nommer ;
+ * provider, or a software-as-a-service ». OxoAI l'installait sans le nommer ;
  * c'est désormais l'entreprise, qui en est le licencié, qui dit oui.
  */
 const CONDITIONS_MOTEUR = {
@@ -826,7 +826,7 @@ async function handleEngineInstall(
 
       /*
        * On enchaîne sur le modèle sans rendre la main : du point de vue de
-       * l'utilisateur, « installer Helix » est une seule opération, pas deux
+       * l'utilisateur, « installer OxoAI » est une seule opération, pas deux
        * étapes techniques dont il devrait comprendre l'ordre.
        */
       setProvisionState({ phase: "checking", message: t("Choix du modèle adapté à votre machine..."), percent: undefined });
@@ -850,7 +850,7 @@ async function handleEngineInstall(
 /**
  * Mac Intel : llama.cpp, logiciel libre (MIT), sans conditions à accepter
  * pour s'en servir. Puis, comme pour LM Studio, le modèle adapté à la machine
- * dans la foulée : « installer Helix » reste une seule opération.
+ * dans la foulée : « installer OxoAI » reste une seule opération.
  */
 function installerMoteurOuvert(userId: string, res: http.ServerResponse, modeleChoisi?: string): void {
   journaliser("moteur.llamacpp_installation", userId, {});
@@ -940,7 +940,7 @@ async function handleEmplacementVerifier(req: http.IncomingMessage, res: http.Se
   send(res, issue.statut, issue.corps);
 }
 
-/* --------------- le moteur de LM Studio que Helix démarre (23/10/2026) --------------- */
+/* --------------- le moteur de LM Studio que OxoAI démarre (23/10/2026) --------------- */
 
 /**
  * L'application LM Studio (ou Bionic) qui s'ouvrait toute seule (engine.ts) :
@@ -958,7 +958,7 @@ async function handleMoteurLmStudioEtat(req: http.IncomingMessage, res: http.Ser
 /**
  * `{ choix: "application" | "sansFenetre" }`. « sansFenetre » ne fait que
  * retenir le choix : la pose du moteur passe ensuite par la route
- * d'installation, conditions de LM Studio acceptées (`/helix/provision/moteur`).
+ * d'installation, conditions de LM Studio acceptées (`/oxoai/provision/moteur`).
  */
 async function handleMoteurLmStudioChoix(req: http.IncomingMessage, res: http.ServerResponse, url: URL): Promise<void> {
   const qui = await demandeur(req, url);
@@ -977,7 +977,7 @@ async function handleMoteurLmStudioChoix(req: http.IncomingMessage, res: http.Se
 /**
  * La dictée (Whisper) s'installe d'elle-même, juste après le modèle.
  *
- * Demandé par le client : installer Helix, c'est avoir le modèle adapté à la
+ * Demandé par le client : installer OxoAI, c'est avoir le modèle adapté à la
  * machine ET le micro qui marche, sans aller chercher une installation de
  * plus au premier clic sur le micro. En arrière-plan et en silence : un échec
  * (Python absent, pas de réseau) ne bloque rien, le micro proposera alors
@@ -987,12 +987,12 @@ function dicteeEnFond(): void {
   void diagnosticDictee()
     .then((etat) => {
       if (etat.installee || etat.installationEnCours || !etat.installable) return;
-      console.log("[helix] Installation de la dictée en arrière-plan.");
+      console.log("[oxoai] Installation de la dictée en arrière-plan.");
       return preparerDictee(() => {}).then((bilan) =>
-        console.log(`[helix] Dictée : ${bilan.ok ? "installée" : "non installée"}.`),
+        console.log(`[oxoai] Dictée : ${bilan.ok ? "installée" : "non installée"}.`),
       );
     })
-    .catch((err: unknown) => console.error("[helix] dictée en arrière-plan", err));
+    .catch((err: unknown) => console.error("[oxoai] dictée en arrière-plan", err));
 }
 
 /**
@@ -1007,7 +1007,7 @@ function codeEnFond(): void {
     .then((verdict) => {
       if (verdict === "lancee") journaliser("code.opencode_installe", "instance", { automatique: true });
     })
-    .catch((err: unknown) => console.error("[helix] OpenCode en arrière-plan", err));
+    .catch((err: unknown) => console.error("[oxoai] OpenCode en arrière-plan", err));
 }
 
 /**
@@ -1036,7 +1036,7 @@ function handleProvisionStart(req: http.IncomingMessage, res: http.ServerRespons
       // Trop lourd pour la machine : refusé avant de rien télécharger (28/09/2026, `refusTropLourd`).
       const refus = typeof model === "string" ? refusTropLourd(detectHardware(), model, role === "gui" ? "gui" : "chat") : null;
       if (refus) return send(res, 409, { error: { message: refus } });
-      // Non bloquant : la progression se suit sur /helix/provision/stream.
+      // Non bloquant : la progression se suit sur /oxoai/provision/stream.
       void ensureLocalModel(model, catalogue)
         .then((etat) => {
           if (role !== "gui") apresMiseEnRoute(etat);
@@ -1095,7 +1095,7 @@ async function handleAtelierDiagnostic(res: http.ServerResponse): Promise<void> 
 /**
  * Préparation de l'atelier, en flux d'événements.
  *
- * `/helix/provision/moteur` répond 202 et publie sa progression sur un flux
+ * `/oxoai/provision/moteur` répond 202 et publie sa progression sur un flux
  * séparé, parce que plusieurs écrans suivent la même installation. Ici, une
  * seule fenêtre demande et une seule attend : la réponse elle-même porte le
  * flux, ce qui évite une route de plus et une corrélation à tenir.
@@ -1148,7 +1148,7 @@ async function handleAtelierVerifier(res: http.ServerResponse): Promise<void> {
 
 /**
  * État de la dictée : installée ou non, et ce qu'il faudrait télécharger.
- * Lecture seule, comme `GET /helix/atelier` : le composeur la lit à l'ouverture
+ * Lecture seule, comme `GET /oxoai/atelier` : le composeur la lit à l'ouverture
  * pour savoir si le bouton micro enregistre ou propose l'installation.
  */
 async function handleDicteeEtat(res: http.ServerResponse): Promise<void> {
@@ -1331,7 +1331,7 @@ async function handleCourrierEtat(req: http.IncomingMessage, res: http.ServerRes
  *
  * L'instance ne va nulle part elle-même : elle rend l'adresse, et c'est
  * l'écran qui l'ouvre dans le navigateur de la personne. C'est chez son
- * fournisseur, et là seulement, qu'elle s'authentifie — Helix ne voit jamais
+ * fournisseur, et là seulement, qu'elle s'authentifie — OxoAI ne voit jamais
  * son mot de passe, ce qui est tout l'intérêt de la manoeuvre.
  */
 async function handleCourrierOauth(
@@ -1854,7 +1854,7 @@ async function resoudreDemandeur(req: http.IncomingMessage, url: URL): Promise<D
     return compteDuBillet ? await profilDe(compteDuBillet) : null;
   }
 
-  const entete = req.headers["x-helix-session"];
+  const entete = req.headers["x-oxoai-session"];
   const token =
     (typeof entete === "string" ? entete : entete?.[0]) ?? url.searchParams.get("session") ?? undefined;
 
@@ -1893,21 +1893,21 @@ async function profilDe(accountId: string): Promise<Demandeur | null> {
  * détail est en regard de chacun.
  */
 const EXECUTION: { methode: string; chemin: string }[] = [
-  { methode: "POST", chemin: "/helix/models/load" },
-  { methode: "POST", chemin: "/helix/provision/moteur" },
-  { methode: "POST", chemin: "/helix/provision/start" },
+  { methode: "POST", chemin: "/oxoai/models/load" },
+  { methode: "POST", chemin: "/oxoai/provision/moteur" },
+  { methode: "POST", chemin: "/oxoai/provision/start" },
   // L'emplacement des modèles (28/09/2026) : les chemins de la machine, et le choix de l'administrateur.
-  { methode: "GET", chemin: "/helix/emplacement-modeles" },
-  { methode: "POST", chemin: "/helix/emplacement-modeles" },
-  { methode: "POST", chemin: "/helix/emplacement-modeles/verifier" },
-  // Le moteur de LM Studio que Helix peut démarrer (23/10/2026) : l'état de la machine, et le choix de l'administrateur.
-  { methode: "GET", chemin: "/helix/moteur-lmstudio" },
-  { methode: "POST", chemin: "/helix/moteur-lmstudio" },
-  { methode: "POST", chemin: "/helix/mcp/toggle" },
-  { methode: "POST", chemin: "/helix/mcp/workspace" },
-  { methode: "POST", chemin: "/helix/code/session" },
-  { methode: "POST", chemin: "/helix/code/prompt" },
-  { methode: "POST", chemin: "/helix/code/interrupt" },
+  { methode: "GET", chemin: "/oxoai/emplacement-modeles" },
+  { methode: "POST", chemin: "/oxoai/emplacement-modeles" },
+  { methode: "POST", chemin: "/oxoai/emplacement-modeles/verifier" },
+  // Le moteur de LM Studio que OxoAI peut démarrer (23/10/2026) : l'état de la machine, et le choix de l'administrateur.
+  { methode: "GET", chemin: "/oxoai/moteur-lmstudio" },
+  { methode: "POST", chemin: "/oxoai/moteur-lmstudio" },
+  { methode: "POST", chemin: "/oxoai/mcp/toggle" },
+  { methode: "POST", chemin: "/oxoai/mcp/workspace" },
+  { methode: "POST", chemin: "/oxoai/code/session" },
+  { methode: "POST", chemin: "/oxoai/code/prompt" },
+  { methode: "POST", chemin: "/oxoai/code/interrupt" },
   /*
    * Le flux des demandes d'approbation d'écran porte l'action **entière**,
    * texte à saisir compris. Mesuré au banc, au jeton seul et sans séance :
@@ -1919,13 +1919,13 @@ const EXECUTION: { methode: string; chemin: string }[] = [
    * à l'agent. Il faut donc savoir *qui* écoute, pas seulement que la machine
    * a le droit de parler.
    */
-  { methode: "GET", chemin: "/helix/computer/events" },
+  { methode: "GET", chemin: "/oxoai/computer/events" },
   /*
    * Et l'état lui-même, pour la même raison : il rend `enAttente`, c'est-à-dire
    * les mêmes actions entières que le flux. Seul le flux avait été fermé ; la
    * route d'état donnait la même chose à qui la demandait au jeton seul.
    */
-  { methode: "GET", chemin: "/helix/computer" },
+  { methode: "GET", chemin: "/oxoai/computer" },
   /*
    * Approbation des outils : l'état et le flux portent le **détail** des
    * demandes, et ce détail est le mail tel qu'il partira — destinataires,
@@ -1934,82 +1934,82 @@ const EXECUTION: { methode: string; chemin: string }[] = [
    * agent préparait pour un collègue. Les deux routes exigent une séance, et
    * ne montrent à chacun que ses propres demandes (`Demande.pour`).
    */
-  { methode: "GET", chemin: "/helix/approbation" },
-  { methode: "GET", chemin: "/helix/approbation/evenements" },
+  { methode: "GET", chemin: "/oxoai/approbation" },
+  { methode: "GET", chemin: "/oxoai/approbation/evenements" },
   /*
    * Le flux de la session de code laisse voir le travail en cours d'un
    * collègue — prompts, sorties d'outils, contenu de fichiers. Et il ne se
    * contente pas de lire : jusqu'ici il **démarrait** le serveur OpenCode,
    * processus persistant enraciné sur le dossier de projet (mesuré : PID vivant
    * après un simple GET au jeton seul). Le démarrage est redevenu le rôle de
-   * `POST /helix/code/session`, qui exige déjà une séance ; voir
+   * `POST /oxoai/code/session`, qui exige déjà une séance ; voir
    * `handleCodeEvents`.
    */
-  { methode: "GET", chemin: "/helix/code/events" },
+  { methode: "GET", chemin: "/oxoai/code/events" },
   // Codex avec le compte ChatGPT du propriétaire du poste (codex.ts, 27/09/2026) : la séance, puis ses propres barrières.
-  { methode: "GET", chemin: "/helix/codex" },
-  { methode: "POST", chemin: "/helix/codex/connexion" },
-  { methode: "POST", chemin: "/helix/codex/connexion/annuler" },
-  { methode: "POST", chemin: "/helix/codex/tache" },
-  { methode: "POST", chemin: "/helix/codex/arreter" },
+  { methode: "GET", chemin: "/oxoai/codex" },
+  { methode: "POST", chemin: "/oxoai/codex/connexion" },
+  { methode: "POST", chemin: "/oxoai/codex/connexion/annuler" },
+  { methode: "POST", chemin: "/oxoai/codex/tache" },
+  { methode: "POST", chemin: "/oxoai/codex/arreter" },
   // Préparer l'atelier installe des logiciels ; le vérifier écrit des fichiers
   // d'essai. Le jeton d'instance seul ne suffit donc pas.
-  { methode: "POST", chemin: "/helix/atelier/preparer" },
-  { methode: "POST", chemin: "/helix/atelier/verifier" },
+  { methode: "POST", chemin: "/oxoai/atelier/preparer" },
+  { methode: "POST", chemin: "/oxoai/atelier/verifier" },
   /*
    * Installer la dictée télécharge un logiciel et un modèle de 464 Mo ;
    * transcrire fait tourner un interpréteur sur la voix de quelqu'un. Les deux
    * engagent une personne, que le journal doit pouvoir nommer.
    */
-  { methode: "POST", chemin: "/helix/dictee/installer" },
+  { methode: "POST", chemin: "/oxoai/dictee/installer" },
   /*
    * Créer une image fait tourner un modèle de plusieurs Go sur la machine ;
    * l'installer en télécharge autant. Une personne, nommée au journal.
    */
-  { methode: "POST", chemin: "/helix/images/installer" },
-  { methode: "POST", chemin: "/helix/images/desinstaller" },
-  { methode: "POST", chemin: "/helix/images/choisir" },
-  { methode: "POST", chemin: "/helix/images/creer" },
-  { methode: "POST", chemin: "/helix/videos/installer" },
-  { methode: "POST", chemin: "/helix/videos/desinstaller" },
-  { methode: "POST", chemin: "/helix/videos/choisir" },
-  { methode: "POST", chemin: "/helix/videos/creer" },
-  { methode: "POST", chemin: "/helix/dictee" },
+  { methode: "POST", chemin: "/oxoai/images/installer" },
+  { methode: "POST", chemin: "/oxoai/images/desinstaller" },
+  { methode: "POST", chemin: "/oxoai/images/choisir" },
+  { methode: "POST", chemin: "/oxoai/images/creer" },
+  { methode: "POST", chemin: "/oxoai/videos/installer" },
+  { methode: "POST", chemin: "/oxoai/videos/desinstaller" },
+  { methode: "POST", chemin: "/oxoai/videos/choisir" },
+  { methode: "POST", chemin: "/oxoai/videos/creer" },
+  { methode: "POST", chemin: "/oxoai/dictee" },
   /*
    * Approuver une action, ou desserrer le niveau d'approbation, engage une
    * personne autant qu'exécuter l'outil lui-même. Sans séance, le jeton
    * d'instance aurait suffi à s'auto-approuver, et le journal n'aurait eu
    * personne à nommer.
    */
-  { methode: "POST", chemin: "/helix/approbation/niveau" },
-  { methode: "POST", chemin: "/helix/approbation/repondre" },
+  { methode: "POST", chemin: "/oxoai/approbation/niveau" },
+  { methode: "POST", chemin: "/oxoai/approbation/repondre" },
   // Donner à l'agent la souris et le clavier de la machine engage quelqu'un.
-  { methode: "POST", chemin: "/helix/computer/mode" },
-  { methode: "POST", chemin: "/helix/machine/demarrer" },
-  { methode: "POST", chemin: "/helix/machine/arreter" },
-  { methode: "POST", chemin: "/helix/machine/effacer" },
+  { methode: "POST", chemin: "/oxoai/computer/mode" },
+  { methode: "POST", chemin: "/oxoai/machine/demarrer" },
+  { methode: "POST", chemin: "/oxoai/machine/arreter" },
+  { methode: "POST", chemin: "/oxoai/machine/effacer" },
   // Voir l'écran de la machine montre ce que l'agent y fait : réservé à une séance, comme le reste.
-  { methode: "GET", chemin: "/helix/machine/ecran" },
+  { methode: "GET", chemin: "/oxoai/machine/ecran" },
   /*
    * Brancher ou débrancher une boîte aux lettres modifie l'instance, et ouvre
    * aux agents la correspondance de l'entreprise. Le jeton d'instance, présent
    * sur chaque poste du parc, ne suffit donc pas : il faut une séance, pour que
    * le journal puisse nommer qui a connecté quelle boîte.
    */
-  { methode: "POST", chemin: "/helix/courrier/configurer" },
+  { methode: "POST", chemin: "/oxoai/courrier/configurer" },
   // Même famille : brancher une boîte par autorisation engage l'instance.
-  { methode: "POST", chemin: "/helix/courrier/oauth" },
-  { methode: "POST", chemin: "/helix/courrier/oauth/coller" },
-  { methode: "POST", chemin: "/helix/courrier/envoi" },
-  { methode: "POST", chemin: "/helix/courrier/confirmation" },
-  { methode: "POST", chemin: "/helix/courrier/oublier" },
+  { methode: "POST", chemin: "/oxoai/courrier/oauth" },
+  { methode: "POST", chemin: "/oxoai/courrier/oauth/coller" },
+  { methode: "POST", chemin: "/oxoai/courrier/envoi" },
+  { methode: "POST", chemin: "/oxoai/courrier/confirmation" },
+  { methode: "POST", chemin: "/oxoai/courrier/oublier" },
   /*
    * Même raisonnement pour l'agenda : le brancher ouvre aux agents l'emploi du
    * temps de l'entreprise, c'est-à-dire qui rencontre qui et quand. Il faut une
    * séance, pour que le journal puisse nommer qui a connecté quel agenda.
    */
-  { methode: "POST", chemin: "/helix/agenda/configurer" },
-  { methode: "POST", chemin: "/helix/agenda/oublier" },
+  { methode: "POST", chemin: "/oxoai/agenda/configurer" },
+  { methode: "POST", chemin: "/oxoai/agenda/oublier" },
   /*
    * Google Drive et Slack : les brancher ouvre aux agents les documents ou les
    * conversations de l'entreprise, les débrancher coupe cet accès à tous.
@@ -2017,28 +2017,28 @@ const EXECUTION: { methode: string; chemin: string }[] = [
    * demande ; `drive/code` achève une autorisation recopiée depuis le
    * navigateur. Il faut une séance, pour que le journal nomme qui l'a fait.
    */
-  { methode: "POST", chemin: "/helix/drive/connecter" },
-  { methode: "POST", chemin: "/helix/drive/code" },
-  { methode: "POST", chemin: "/helix/drive/oublier" },
-  { methode: "POST", chemin: "/helix/slack/configurer" },
-  { methode: "POST", chemin: "/helix/slack/oublier" },
+  { methode: "POST", chemin: "/oxoai/drive/connecter" },
+  { methode: "POST", chemin: "/oxoai/drive/code" },
+  { methode: "POST", chemin: "/oxoai/drive/oublier" },
+  { methode: "POST", chemin: "/oxoai/slack/configurer" },
+  { methode: "POST", chemin: "/oxoai/slack/oublier" },
   // Sheets, Slides, YouTube, réseaux sociaux (oauthNatif.ts, 28/09/2026) : réservés en plus à l'administrateur (`handleNatifs`).
-  { methode: "GET", chemin: "/helix/natifs" },
-  { methode: "POST", chemin: "/helix/natifs/application" },
-  { methode: "POST", chemin: "/helix/natifs/application/effacer" },
-  { methode: "POST", chemin: "/helix/natifs/connecter" },
-  { methode: "POST", chemin: "/helix/natifs/code" },
-  { methode: "POST", chemin: "/helix/natifs/oublier" },
+  { methode: "GET", chemin: "/oxoai/natifs" },
+  { methode: "POST", chemin: "/oxoai/natifs/application" },
+  { methode: "POST", chemin: "/oxoai/natifs/application/effacer" },
+  { methode: "POST", chemin: "/oxoai/natifs/connecter" },
+  { methode: "POST", chemin: "/oxoai/natifs/code" },
+  { methode: "POST", chemin: "/oxoai/natifs/oublier" },
   // Telegram, Discord, WhatsApp (natifs/messageries.ts) : réservés en plus à l'administrateur (`handleMessageries`).
-  { methode: "GET", chemin: "/helix/messageries" },
-  { methode: "POST", chemin: "/helix/messageries/connecter" },
-  { methode: "POST", chemin: "/helix/messageries/envoi" },
-  { methode: "POST", chemin: "/helix/messageries/oublier" },
+  { methode: "GET", chemin: "/oxoai/messageries" },
+  { methode: "POST", chemin: "/oxoai/messageries/connecter" },
+  { methode: "POST", chemin: "/oxoai/messageries/envoi" },
+  { methode: "POST", chemin: "/oxoai/messageries/oublier" },
   // Commerce et relation client (natifs/commerce.ts, § 47) : réservés en plus à l'administrateur.
-  { methode: "GET", chemin: "/helix/commerce" },
-  { methode: "POST", chemin: "/helix/commerce/enregistrer" },
-  { methode: "POST", chemin: "/helix/commerce/connecter" },
-  { methode: "POST", chemin: "/helix/commerce/oublier" },
+  { methode: "GET", chemin: "/oxoai/commerce" },
+  { methode: "POST", chemin: "/oxoai/commerce/enregistrer" },
+  { methode: "POST", chemin: "/oxoai/commerce/connecter" },
+  { methode: "POST", chemin: "/oxoai/commerce/oublier" },
   /*
    * Ajouter un connecteur lance un programme de plus sur la machine, et lui
    * confie un jeton d'accès à un service de l'entreprise ; le retirer coupe cet
@@ -2049,7 +2049,7 @@ const EXECUTION: { methode: string; chemin: string }[] = [
    * Un billet de flux ouvre un flux d'évènements au nom de son titulaire : il
    * ne s'obtient qu'avec une séance, sinon il n'y aurait personne à y inscrire.
    */
-  { methode: "POST", chemin: "/helix/flux/ticket" },
+  { methode: "POST", chemin: "/oxoai/flux/ticket" },
   /*
    * Inviter engage l'instance : cela ouvre à quelqu'un le droit de rattacher un
    * poste et d'y ouvrir un compte, et cela fait partir un mail en son nom. Le
@@ -2060,45 +2060,45 @@ const EXECUTION: { methode: string; chemin: string }[] = [
    * Ouvrir l'instance au réseau change la surface de la machine : cela engage
    * la personne qui l'administre, et le journal doit pouvoir la nommer.
    */
-  { methode: "GET", chemin: "/helix/reseau" },
-  { methode: "POST", chemin: "/helix/reseau" },
-  { methode: "POST", chemin: "/helix/invitations/inviter" },
-  { methode: "GET", chemin: "/helix/invitations" },
-  { methode: "POST", chemin: "/helix/invitations" },
-  { methode: "POST", chemin: "/helix/connecteurs/ajouter" },
-  { methode: "POST", chemin: "/helix/connecteurs/connecter" },
-  { methode: "POST", chemin: "/helix/connecteurs/retirer" },
+  { methode: "GET", chemin: "/oxoai/reseau" },
+  { methode: "POST", chemin: "/oxoai/reseau" },
+  { methode: "POST", chemin: "/oxoai/invitations/inviter" },
+  { methode: "GET", chemin: "/oxoai/invitations" },
+  { methode: "POST", chemin: "/oxoai/invitations" },
+  { methode: "POST", chemin: "/oxoai/connecteurs/ajouter" },
+  { methode: "POST", chemin: "/oxoai/connecteurs/connecter" },
+  { methode: "POST", chemin: "/oxoai/connecteurs/retirer" },
   // Un serveur MCP ajouté par l'administrateur (16/10/2026) : le journal nomme qui l'a ajouté ou réglé.
-  { methode: "POST", chemin: "/helix/connecteurs/personnalise" },
-  { methode: "POST", chemin: "/helix/connecteurs/personnalise/lectures" },
+  { methode: "POST", chemin: "/oxoai/connecteurs/personnalise" },
+  { methode: "POST", chemin: "/oxoai/connecteurs/personnalise/lectures" },
   /*
    * La consommation d'une personne dit quand elle travaille et combien : elle
    * ne se lit qu'avec une séance, et la route ne rend que celle du demandeur.
    * Le tarif d'un modèle distant change tous les coûts affichés, pour tout le
    * monde : le modifier engage quelqu'un, que le journal doit pouvoir nommer.
    */
-  { methode: "GET", chemin: "/helix/usage" },
-  { methode: "POST", chemin: "/helix/usage/tarif" },
+  { methode: "GET", chemin: "/oxoai/usage" },
+  { methode: "POST", chemin: "/oxoai/usage/tarif" },
   /*
    * Modifier son nom ou son adresse change une identité : l'adresse est à la
    * fois un identifiant de connexion et une clé de partage. Le jeton
    * d'instance ne dit pas qui parle ; la séance, si, et c'est son compte, et
    * lui seul, que la route modifie (`handleAuthProfil`).
    */
-  { methode: "POST", chemin: "/helix/auth/profil" },
+  { methode: "POST", chemin: "/oxoai/auth/profil" },
   // Installer OpenClaw télécharge et installe un logiciel sur la machine de l'instance.
-  { methode: "POST", chemin: "/helix/openclaw/installer" },
+  { methode: "POST", chemin: "/oxoai/openclaw/installer" },
 ];
 
 /*
- * `/helix/data` (les révisions) reste au jeton seul, volontairement : c'est ce
+ * `/oxoai/data` (les révisions) reste au jeton seul, volontairement : c'est ce
  * que la synchronisation interroge **avant la connexion** pour rapatrier la
  * liste des comptes et peupler l'écran de connexion. L'y soumettre à une séance
  * rendait tout poste neuf incapable d'afficher ses comptes.
  *
  * Ce qu'elle expose se limite à des horodatages d'écriture par collection : de
  * l'activité, jamais du contenu. Le contenu, lui, exige une séance
- * (`/helix/data/<collection>`), à la seule exception des comptes expurgés.
+ * (`/oxoai/data/<collection>`), à la seule exception des comptes expurgés.
  */
 
 /*
@@ -2108,7 +2108,7 @@ const EXECUTION: { methode: string; chemin: string }[] = [
  * (serveurOutils.ts).
  */
 const routeEmploye = (chemin: string) =>
-  (chemin === "/helix/employes" || chemin.startsWith("/helix/employes/")) && !/\/outils$/.test(chemin);
+  (chemin === "/oxoai/employes" || chemin.startsWith("/oxoai/employes/")) && !/\/outils$/.test(chemin);
 
 /*
  * Clés de modèles cloud : les lister, les essayer, les brancher engagent le
@@ -2116,42 +2116,42 @@ const routeEmploye = (chemin: string) =>
  * titulaire. Tout le préfixe exige une séance.
  */
 const routeFournisseur = (chemin: string) =>
-  chemin === "/helix/fournisseurs" || chemin.startsWith("/helix/fournisseurs/");
+  chemin === "/oxoai/fournisseurs" || chemin.startsWith("/oxoai/fournisseurs/");
 
 /*
- * Dossier de travail de l'équipe (« Depuis Helix ») : parcourir et relire ce
+ * Dossier de travail de l'équipe (« Depuis OxoAI ») : parcourir et relire ce
  * que les agents voient déjà. Une séance, pour savoir qui l'a fait.
  */
-const routeEspace = (chemin: string) => chemin === "/helix/espace" || chemin === "/helix/espace/fichier";
+const routeEspace = (chemin: string) => chemin === "/oxoai/espace" || chemin === "/oxoai/espace/fichier";
 
 /*
  * Groupes de l'équipe : qui en est membre décide de ce que chacun voit ; les
  * créer, les changer, les quitter engagent quelqu'un.
  */
-const routeGroupe = (chemin: string) => chemin === "/helix/groupes" || chemin.startsWith("/helix/groupes/");
+const routeGroupe = (chemin: string) => chemin === "/oxoai/groupes" || chemin.startsWith("/oxoai/groupes/");
 
 // Bibliothèque : chaque lecture est filtrée pour qui la demande, chaque écriture a un auteur.
-const routeBibliotheque = (chemin: string) => chemin === "/helix/bibliotheque" || chemin.startsWith("/helix/bibliotheque/");
+const routeBibliotheque = (chemin: string) => chemin === "/oxoai/bibliotheque" || chemin.startsWith("/oxoai/bibliotheque/");
 
 // Bases de connaissances : comme la Bibliothèque dont elles lisent les documents.
-const routeConnaissances = (chemin: string) => chemin === "/helix/connaissances" || chemin.startsWith("/helix/connaissances/");
+const routeConnaissances = (chemin: string) => chemin === "/oxoai/connaissances" || chemin.startsWith("/oxoai/connaissances/");
 
 // Réunions : enregistrer, transcrire, envoyer le bot engagent quelqu'un ; lire est filtré pour lui.
-const routeReunion = (chemin: string) => chemin === "/helix/reunions" || chemin.startsWith("/helix/reunions/");
+const routeReunion = (chemin: string) => chemin === "/oxoai/reunions" || chemin.startsWith("/oxoai/reunions/");
 
 /*
  * Entraîner un modèle : installer le moteur télécharge plusieurs Go, entraîner
  * occupe la machine, et les exemples sont ceux de quelqu'un. Tout le préfixe
  * exige une séance ; chaque projet n'est rendu qu'à son auteur.
  */
-const routeEntrainement = (chemin: string) => chemin === "/helix/entrainement" || chemin.startsWith("/helix/entrainement/");
+const routeEntrainement = (chemin: string) => chemin === "/oxoai/entrainement" || chemin.startsWith("/oxoai/entrainement/");
 
 /*
  * Clés d'API personnelles : les lister, en créer, en révoquer engagent une
  * personne, et chacune ne voit que les siennes. Une séance, jamais une clé
- * (une clé n'atteint aucune route `/helix/*`, voir `ROUTES_CLE`).
+ * (une clé n'atteint aucune route `/oxoai/*`, voir `ROUTES_CLE`).
  */
-const routeClesApi = (chemin: string) => chemin === "/helix/cles-api" || chemin.startsWith("/helix/cles-api/");
+const routeClesApi = (chemin: string) => chemin === "/oxoai/cles-api" || chemin.startsWith("/oxoai/cles-api/");
 
 const exigeSeance = (methode: string, chemin: string) =>
   EXECUTION.some((r) => r.methode === methode && r.chemin === chemin) ||
@@ -2195,7 +2195,7 @@ async function handleDataRead(
    * connexion qui la demande, avant qu'une séance existe.
    *
    * `hasPassword` en disparaît aussi. Il disait quels comptes n'ont pas encore
-   * de mot de passe — c'est-à-dire ceux dont `/helix/auth/premier-mot-de-passe`
+   * de mot de passe — c'est-à-dire ceux dont `/oxoai/auth/premier-mot-de-passe`
    * ouvre une séance à qui le pose. Publier la liste des comptes à prendre
    * revenait à la servir. L'écran de connexion l'apprend autrement : il essaie,
    * et la réponse lui dit « mot de passe à définir » pour le compte visé,
@@ -2237,7 +2237,7 @@ async function handleDataWrite(
     return send(res, 403, {
       error: {
         message:
-          t("Les comptes se créent via /helix/auth/create : leur écriture directe est refusée."),
+          t("Les comptes se créent via /oxoai/auth/create : leur écriture directe est refusée."),
       },
     });
   }
@@ -2935,7 +2935,7 @@ async function handleSessionsList(
   const qui = await demandeur(req, url);
   if (!qui) return send(res, 401, sansSeance());
 
-  const entete = req.headers["x-helix-session"];
+  const entete = req.headers["x-oxoai-session"];
   const token = typeof entete === "string" ? entete : entete?.[0];
   const courante = await resolveSession(token);
   send(res, 200, { sessions: await listSessions(qui.userId, courante?.hash) });
@@ -2992,7 +2992,7 @@ async function handleDataRevisions(res: http.ServerResponse): Promise<void> {
 /* ------------------------------- routes Code ---------------------------------- */
 
 /**
- * `GET /helix/code` : le moteur est-il là, tourne-t-il, et quel dossier
+ * `GET /oxoai/code` : le moteur est-il là, tourne-t-il, et quel dossier
  * proposer. Au jeton seul ; le dossier est celui de la personne si une séance
  * est présentée. Le port d'OpenCode n'est plus rendu (revue du 25/09/2026) :
  * aucun client ne s'en servait.
@@ -3078,7 +3078,7 @@ async function handleCodeSession(
    * Sans cette ligne, la session partait sans modèle et OpenCode choisissait
    * lui-même. Mesuré le 20/09/2026 sur le poste du client : chaque prompt de
    * l'écran Code rendait « Provider request failed with HTTP 401 :
-   * missing_api_key ». OpenCode n'avait pas retenu le fournisseur « helix »
+   * missing_api_key ». OpenCode n'avait pas retenu le fournisseur « oxoai »
    * écrit dans `opencode.json` et tombait sur un fournisseur distant, sans clé.
    *
    * Deux raisons de nommer le modèle plutôt que de réparer la configuration :
@@ -3160,12 +3160,12 @@ async function refusSessionCode(
   return { session: s };
 }
 
-/** `GET /helix/code/sessions` : les sessions de Code de la personne, la plus récente d'abord. */
+/** `GET /oxoai/code/sessions` : les sessions de Code de la personne, la plus récente d'abord. */
 async function handleCodeSessions(res: http.ServerResponse, userId: string): Promise<void> {
   try {
     const liste = await sessionsDe(userId);
     send(res, 200, {
-      // `enCours` : l'agent ou Helix y travaille encore (fluxCode.ts), pour l'indicateur de la liste.
+      // `enCours` : l'agent ou OxoAI y travaille encore (fluxCode.ts), pour l'indicateur de la liste.
       sessions: liste.map((s) => ({ id: s.id, titre: s.titre, dossier: s.dossier, creee: s.creee, maj: s.maj, enCours: auTravailCode(s.id) })),
     });
   } catch (err) {
@@ -3174,7 +3174,7 @@ async function handleCodeSessions(res: http.ServerResponse, userId: string): Pro
 }
 
 /**
- * `GET /helix/code/sessions/<id>` : l'historique d'une session, relu chez
+ * `GET /oxoai/code/sessions/<id>` : l'historique d'une session, relu chez
  * OpenCode, pour la rouvrir. `enCours` : l'agent y travaille encore ;
  * `dernier` : le dernier numéro d'évènement vu par la passerelle, pour suivre
  * la suite sans rien rejouer.
@@ -3205,12 +3205,12 @@ async function handleCodeSessionHistorique(res: http.ServerResponse, userId: str
     if (!sessionCodeSuivie(id)) suivreSessionCode(id, s.dossier);
     await ecouterDossierCode(s.dossier).catch(() => {});
     /*
-     * En cours : OpenCode le dit, ou la passerelle le sait (Helix prépare,
+     * En cours : OpenCode le dit, ou la passerelle le sait (OxoAI prépare,
      * contrôle ou envoie ; tour ouvert vu dans le flux). OpenCode au repos et
-     * Helix sans travail : un tour qu'on croyait ouvert a perdu sa fin.
+     * OxoAI sans travail : un tour qu'on croyait ouvert a perdu sa fin.
      */
     const occupeChezOpenCode = Boolean(statuts[id] && statuts[id]!.type !== "idle");
-    if (etat?.ok && !occupeChezOpenCode && !helixAuTravailCode(id)) reposConfirmeCode(id);
+    if (etat?.ok && !occupeChezOpenCode && !oxoaiAuTravailCode(id)) reposConfirmeCode(id);
     const enCours = occupeChezOpenCode || auTravailCode(id);
     const attente = demandesCodeEnCours.get(id);
     send(res, 200, {
@@ -3228,7 +3228,7 @@ async function handleCodeSessionHistorique(res: http.ServerResponse, userId: str
 }
 
 /**
- * Ouvre une session de Helix Code et la fait suivre par la passerelle, avant
+ * Ouvre une session de OxoAI Code et la fait suivre par la passerelle, avant
  * toute demande : `/event` ne rejoue rien, un évènement émis avant l'écoute
  * serait perdu.
  */
@@ -3328,15 +3328,15 @@ async function attendreAppel(texte: string, depuis: number): Promise<boolean> {
 const SESSION_CODE = /^[A-Za-z0-9_-]{1,64}$/;
 
 /*
- * Contrôle automatique de fin de tour (controleCode.ts) : Helix vérifie ce que
+ * Contrôle automatique de fin de tour (controleCode.ts) : OxoAI vérifie ce que
  * l'agent a écrit, essaie les pages, et le relance avec la liste des problèmes
  * tant que ce n'est pas propre. La relance part dans la même session, avec le
  * même modèle, au nom de la même personne ; les clients la suivent dans le même
- * tour (`relanceHelix`, fluxCode.ts).
+ * tour (`relanceOxoAI`, fluxCode.ts).
  */
 surFinDeTourCode((sessionID, dossier) => {
   // Le contrôle est du travail de la session : l'écran qui y revient la voit en cours (fluxCode.ts).
-  const fin = travailHelixCode(sessionID);
+  const fin = travailOxoAICode(sessionID);
   void apresTourCode(
     sessionID,
     dossier,
@@ -3344,7 +3344,7 @@ surFinDeTourCode((sessionID, dossier) => {
       const reglage = modeleDeSession.get(sessionID);
       if (!reglage) return false;
       const messageID = idMessageCode();
-      noterRelanceHelix(messageID);
+      noterRelanceOxoAI(messageID);
       try {
         const reponse = await codeApi(`/session/${sessionID}/prompt_async?directory=${encodeURIComponent(reglage.dossier)}`, {
           method: "POST",
@@ -3365,9 +3365,9 @@ surFinDeTourCode((sessionID, dossier) => {
 });
 
 /**
- * La demande de la personne, par session, tant que `POST /helix/code/prompt`
+ * La demande de la personne, par session, tant que `POST /oxoai/code/prompt`
  * la traite (27/09/2026). `envoyee` : partie chez OpenCode, qui la rend
- * désormais dans l'historique. Avant, pendant que Helix prépare une
+ * désormais dans l'historique. Avant, pendant que OxoAI prépare une
  * application ou un plan, OpenCode ne l'a pas : l'historique relu pour
  * l'écran qui revient sur la session l'ajoute (sessionsCode.ts).
  */
@@ -3375,7 +3375,7 @@ const demandesCodeEnCours = new Map<string, { texte: string; envoyee: boolean }>
 
 /** La demande est prise en charge : la session est « en cours » jusqu'à la réponse de la route. */
 function prendreDemandeCode(sessionID: string, texte: string): { envoyee: () => void; fin: () => void } {
-  const finTravail = travailHelixCode(sessionID);
+  const finTravail = travailOxoAICode(sessionID);
   const demande = { texte, envoyee: false };
   demandesCodeEnCours.set(sessionID, demande);
   return {
@@ -3485,18 +3485,18 @@ async function traiterCodePrompt(
   void toucherSessionCode(body.sessionID, body.text, { modele: reglageEnvoi.modele, variante: reglageEnvoi.variante }).catch(() => {});
 
   /*
-   * Une demande de site : Helix pose d'abord un design professionnel dans le
+   * Une demande de site : OxoAI pose d'abord un design professionnel dans le
    * projet (design.ts), et la demande part avec la consigne de s'en servir.
    * Un petit modèle ne sait pas dessiner ; il sait suivre un guide.
    */
   let texteEnvoye = body.text;
   // Une demande de la personne : le contrôle automatique repart de zéro (controleCode.ts). Avant la
-  // préparation d'une application : les fichiers que Helix y écrit comptent parmi ceux à essayer.
+  // préparation d'une application : les fichiers que OxoAI y écrit comptent parmi ceux à essayer.
   nouvelleDemandeCode(body.sessionID);
   /*
-   * Une application de gestion dans un dossier neuf : Helix la fait en
+   * Une application de gestion dans un dossier neuf : OxoAI la fait en
    * plusieurs étapes (application.ts), le plan et les exemples par le modèle,
-   * l'interface par Helix, et l'agent n'écrit plus que les règles du métier.
+   * l'interface par OxoAI, et l'agent n'écrit plus que les règles du métier.
    * Plusieurs minutes avec un petit modèle : l'écran suit chaque étape.
    */
   let preparee = false;
@@ -3504,15 +3504,15 @@ async function traiterCodePrompt(
     const statut = (message: string) => publierStatutCode(body.sessionID!, { etat: "preparation", message });
     try {
       const qui = await demandeur(req, new URL(req.url ?? "/", "http://localhost"));
-      statut(t("Helix prépare l'application : choix du design..."));
+      statut(t("OxoAI prépare l'application : choix du design..."));
       const design = await choisirDesign(body.text, qui?.userId ?? "code").catch(() => undefined);
       const plan = await planifierApplication(body.text, qui?.userId ?? "code", statut);
       if (plan && !demandeArretee(body.sessionID)) {
-        statut(t("Helix prépare l'application, étape 3 sur 4 : l'interface complète..."));
+        statut(t("OxoAI prépare l'application, étape 3 sur 4 : l'interface complète..."));
         const ecrits = ecrireApplication(reglageEnvoi.dossier, plan, design);
         texteEnvoye = body.text + consigneApplication(plan, reglageEnvoi.dossier);
         preparee = true;
-        statut(t("Helix prépare l'application, étape 4 sur 4 : l'agent de code ajoute les règles du métier..."));
+        statut(t("OxoAI prépare l'application, étape 4 sur 4 : l'agent de code ajoute les règles du métier..."));
         console.log(`[code] application préparée : ${plan.nom}, ${plan.modules.length} parties, ${ecrits.length} fichiers.`);
       } else if (!plan) {
         console.log("[code] plan d'application inutilisable : la demande part avec le design seul.");
@@ -3540,7 +3540,7 @@ async function traiterCodePrompt(
 
   /*
    * Le séquençage (sequenceCode.ts) : une demande composée, avec un petit ou un
-   * moyen modèle, est faite étape par étape, et Helix tient le fil. Un grand
+   * moyen modèle, est faite étape par étape, et OxoAI tient le fil. Un grand
    * modèle, une question ou une réplique partent tels quels (`strategie`,
    * plan.ts). Une application de gestion a déjà ses étapes (application.ts).
    */
@@ -3556,7 +3556,7 @@ async function traiterCodePrompt(
       if (etapes) {
         demarrerSequence(body.sessionID, body.text, reglageEnvoi.dossier, etapes);
         texteEnvoye += consignePremiereEtape(body.sessionID);
-        statut(tf("Plan de Helix : {0} étapes. Étape 1 : {1}", etapes.length, etapes[0]!.titre));
+        statut(tf("Plan de OxoAI : {0} étapes. Étape 1 : {1}", etapes.length, etapes[0]!.titre));
         console.log(`[code] plan : ${etapes.length} étapes (${regime.raison}).`);
       }
     }
@@ -3630,7 +3630,7 @@ async function traiterCodePrompt(
    * `chauffer`, opencode.ts). La passerelle le voit, puisque c'est elle qui
    * relaie l'appel au modèle : sans cet appel au bout de huit secondes, la
    * session est perdue. On en ouvre une identique et on y renvoie la demande,
-   * une fois. L'écran apprend le nouvel identifiant par `helixRelance` et s'y
+   * une fois. L'écran apprend le nouvel identifiant par `oxoaiRelance` et s'y
    * abonne.
    *
    * Un premier guet, posé côté écran, attendait « la première étape » et la
@@ -3681,7 +3681,7 @@ async function traiterCodePrompt(
         if (second.ok) priseNouvelle.envoyee();
         if (second.ok && (await attendreAppel(body.text, envoi))) {
           ouvrirTourCode(nouvelle);
-          return send(res, 200, { data: { id: second.messageID }, helixRelance: { sessionID: nouvelle } });
+          return send(res, 200, { data: { id: second.messageID }, oxoaiRelance: { sessionID: nouvelle } });
         }
         fermerTourCode(nouvelle);
       }
@@ -3733,7 +3733,7 @@ async function handleCodeInterrupt(
  * tourne pas : cette route de lecture lançait donc un processus persistant,
  * enraciné sur le dossier de projet, à qui présentait le seul jeton d'instance.
  * Une route qui lit ne doit pas allumer un moteur. Le démarrage reste le rôle
- * de `POST /helix/code/session`, qui exige une séance et valide le dossier.
+ * de `POST /oxoai/code/session`, qui exige une séance et valide le dossier.
  *
  * Serveur éteint : on le dit (503) plutôt que de le démarrer. L'interface
  * n'ouvre ce flux qu'après avoir créé une session, donc après le démarrage :
@@ -3753,7 +3753,7 @@ async function handleCodeEvents(
       error: {
         message:
           "Le moteur de code n'est pas démarré. Ouvrez une session de code " +
-          "(POST /helix/code/session) avant d'écouter son flux d'évènements.",
+          "(POST /oxoai/code/session) avant d'écouter son flux d'évènements.",
       },
     });
   }
@@ -3794,7 +3794,7 @@ async function handleCodeEvents(
    */
   const veille = setInterval(() => res.write(": veille\n\n"), 20_000);
   /*
-   * Fin d'un tour de Code (« step.ended » avec « stop ») : Helix repasse sur
+   * Fin d'un tour de Code (« step.ended » avec « stop ») : OxoAI repasse sur
    * les pages du projet, si un design y a été posé (design.ts). Seulement
    * pour un évènement qui arrive, pas pour l'historique rejoué à l'ouverture.
    */
@@ -3929,7 +3929,7 @@ async function handleWorkspace(
     if (!verdict.ok) return send(res, 400, { error: { message: verdict.raison } });
     /*
      * Choisir une zone protégée comme dossier de l'équipe reviendrait à l'ouvrir
-     * à tous (zonesProtegees.ts, revue du 25/09/2026) : `~/.helix/data`, `~/.ssh`
+     * à tous (zonesProtegees.ts, revue du 25/09/2026) : `~/.oxoai/data`, `~/.ssh`
      * et leurs voisins ne se désignent pas. Un dossier qui en contient un reste
      * possible (le dossier personnel) : la zone y est alors filtrée partout.
      */
@@ -4131,7 +4131,7 @@ function adresseJoignable(req: http.IncomingMessage): string | null {
  */
 async function handleReseauEtat(res: http.ServerResponse, qui: Demandeur): Promise<void> {
   const etat = etatReseau();
-  const parLeProfil = deployment().share === true || process.env.HELIX_GATEWAY_HOST !== undefined;
+  const parLeProfil = deployment().share === true || process.env.OXOAI_GATEWAY_HOST !== undefined;
   send(res, 200, {
     ouverte: surLeReseau(),
     parLeProfil,
@@ -4178,7 +4178,7 @@ async function handleReseauRegler(
   if (typeof body.ouverte !== "boolean") {
     return send(res, 400, { error: { message: t("« ouverte » doit valoir true ou false.") } });
   }
-  if (deployment().share === true || process.env.HELIX_GATEWAY_HOST !== undefined) {
+  if (deployment().share === true || process.env.OXOAI_GATEWAY_HOST !== undefined) {
     return send(res, 409, {
       error: {
         message:
@@ -4640,7 +4640,7 @@ async function handleComputerMode(
   await definirModeEcran(body.mode, qui.userId);
   /*
    * La machine suit le mode : choisie, elle démarre (en arrière-plan, la
-   * progression se lit sur /helix/machine) ; quittée, elle s'arrête et rend
+   * progression se lit sur /oxoai/machine) ; quittée, elle s'arrête et rend
    * ses 3 Go de mémoire.
    */
   if (body.mode === "sandbox") void demarrerMachine(qui.userId).catch(() => undefined);
@@ -4686,7 +4686,7 @@ async function handleImagesInstaller(req: http.IncomingMessage, res: http.Server
 /*
  * La vidéo, comme les images (27/09/2026) : même moteur, mêmes droits. Le
  * suivi d'une création et la lecture du fichier passent par les routes des
- * images (`/helix/images/travail`, `/helix/images/fichier`), qui ne font pas
+ * images (`/oxoai/images/travail`, `/oxoai/images/fichier`), qui ne font pas
  * la différence.
  */
 async function handleVideos(req: http.IncomingMessage, res: http.ServerResponse, url: URL, action: string): Promise<void> {
@@ -4726,8 +4726,8 @@ async function handleVideos(req: http.IncomingMessage, res: http.ServerResponse,
 
 /**
  * Entraîner un modèle sur ses exemples (entrainement.ts). Une seule entrée :
- * `GET /helix/entrainement` rend l'état de la machine, le travail en cours et
- * les projets de la personne ; le reste suit `/helix/entrainement/<action>`.
+ * `GET /oxoai/entrainement` rend l'état de la machine, le travail en cours et
+ * les projets de la personne ; le reste suit `/oxoai/entrainement/<action>`.
  */
 async function handleEntrainement(req: http.IncomingMessage, res: http.ServerResponse, url: URL, action: string): Promise<void> {
   const qui = await demandeur(req, url);
@@ -4779,7 +4779,7 @@ async function handleEntrainement(req: http.IncomingMessage, res: http.ServerRes
   }
 }
 
-/** Lance une création ; l'écran suit son avancement sur /helix/images/travail/<id>. */
+/** Lance une création ; l'écran suit son avancement sur /oxoai/images/travail/<id>. */
 async function handleImagesCreer(req: http.IncomingMessage, res: http.ServerResponse, url: URL): Promise<void> {
   const qui = await demandeur(req, url);
   if (!qui) return send(res, 401, sansSeance());
@@ -4837,7 +4837,7 @@ const depuisCePoste = (req: http.IncomingMessage) => /^(::1|127\.|::ffff:127\.)/
 async function handleImportLogiciels(req: http.IncomingMessage, res: http.ServerResponse, url: URL, id?: string): Promise<void> {
   /*
    * Revue du 25/09/2026 : la boucle locale ne prouvait rien sur une instance
-   * partagée. Un outil qui tourne sur le serveur (le bash de Helix Code, un
+   * partagée. Un outil qui tourne sur le serveur (le bash de OxoAI Code, un
    * script d'employé) appelle `http://127.0.0.1:<port>/…` et passe pour « le
    * poste », jetons en `?token=` et `?session=`. Il recevait les
    * conversations Claude Code, Codex et Cursor du compte qui fait tourner le
@@ -5370,8 +5370,8 @@ async function handleBibliotheque(req: http.IncomingMessage, res: http.ServerRes
       "Content-Type": "application/octet-stream",
       "Content-Length": r.valeur.taille,
       "Content-Disposition": `attachment; filename*=UTF-8''${encodeURIComponent(r.valeur.nom)}`,
-      "X-Helix-Type": r.valeur.type,
-      "Access-Control-Expose-Headers": "X-Helix-Type",
+      "X-OxoAI-Type": r.valeur.type,
+      "Access-Control-Expose-Headers": "X-OxoAI-Type",
     });
     return envoyerFlux(res, r.valeur.flux);
   }
@@ -5522,7 +5522,7 @@ async function handleEmployes(
       ? send(res, 200, { ...(succes(r.valeur) as object), ...(r.avertissement ? { avertissement: r.avertissement } : {}) })
       : send(res, r.statut, { error: { message: r.message, ...(r.code ? { code: r.code } : {}), ...(r.details ? { details: r.details } : {}) } });
 
-  // GET /helix/employes : l'équipe, ce qu'on peut leur donner, et l'état du moteur.
+  // GET /oxoai/employes : l'équipe, ce qu'on peut leur donner, et l'état du moteur.
   if (!id && req.method === "GET") {
     const comptes = await publicAccounts();
     const liste = (await employes.listerEmployes()).filter((e) => employes.visiblePar(e, qui.userId, qui.groupes ?? []));
@@ -5627,7 +5627,7 @@ async function handleEmployes(
     return confirmerIdentite(qui.userId, b.motDePasse, b.code);
   };
 
-  // POST /helix/employes : déployer.
+  // POST /oxoai/employes : déployer.
   if (!id && req.method === "POST") {
     const b = await corps();
     const refus = await confirmerReglageSensible(b);
@@ -5753,7 +5753,7 @@ async function handleEmployes(
     return send(res, 200, await employes.activite(id));
   }
   /*
-   * POST /helix/employes/<id>/connaissances : ce que l'employé lira
+   * POST /oxoai/employes/<id>/connaissances : ce que l'employé lira
    * réellement dans ces bases (celles qu'on est en train de choisir, à défaut
    * les siennes), et pourquoi pas dans les autres. Même calcul que son outil
    * `connaissances__chercher` (serveurOutils.ts), rien n'est lu ni cherché.
@@ -5865,12 +5865,12 @@ const traiter = (
       "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
       /*
        * Tout en-tête que l'écran pose doit figurer ici : sans lui, le
-       * navigateur refuse la requête avant même de l'envoyer. X-Helix-Session
-       * porte l'identité, X-Helix-Langue la langue de lecture — oublier le
+       * navigateur refuse la requête avant même de l'envoyer. X-OxoAI-Session
+       * porte l'identité, X-OxoAI-Langue la langue de lecture — oublier le
        * second avait coupé toutes les requêtes d'un poste rattaché, y compris
        * celles qui n'avaient rien à voir avec la langue.
        */
-      "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Helix-Session, X-Helix-Langue",
+      "Access-Control-Allow-Headers": "Content-Type, Authorization, X-OxoAI-Session, X-OxoAI-Langue",
       "Access-Control-Max-Age": "600",
     });
     return res.end();
@@ -5925,7 +5925,7 @@ const traiter = (
    * On identifie l'appelant par son jeton de séance, à défaut par son adresse
    * (voir debit.ts).
    */
-  const entete = req.headers["x-helix-session"];
+  const entete = req.headers["x-oxoai-session"];
   const jeton = (typeof entete === "string" ? entete : entete?.[0]) ?? url.searchParams.get("session");
   /*
    * Une séance ne compte comme appelant que si elle est valide (revue du
@@ -5965,86 +5965,86 @@ const traiter = (
     }
 
     if (req.method === "GET" && path === "/v1/models") return handleModels(req, res, url, true);
-    if (req.method === "GET" && path === "/helix/models") return handleModels(req, res, url, false);
+    if (req.method === "GET" && path === "/oxoai/models") return handleModels(req, res, url, false);
     if (req.method === "POST" && path === "/v1/chat/completions")
       return handleChat(req, res, url);
-    if (req.method === "POST" && path === "/helix/models/load") return handleLoad(req, res);
-    if (req.method === "GET" && path === "/helix/provision") return handleProvisionStatus(res);
-    if (req.method === "POST" && path === "/helix/provision/moteur")
+    if (req.method === "POST" && path === "/oxoai/models/load") return handleLoad(req, res);
+    if (req.method === "GET" && path === "/oxoai/provision") return handleProvisionStatus(res);
+    if (req.method === "POST" && path === "/oxoai/provision/moteur")
       return handleEngineInstall(req, res, url);
-    if (req.method === "POST" && path === "/helix/provision/start")
+    if (req.method === "POST" && path === "/oxoai/provision/start")
       return handleProvisionStart(req, res);
-    if (req.method === "GET" && path === "/helix/provision/stream")
+    if (req.method === "GET" && path === "/oxoai/provision/stream")
       return handleProvisionStream(req, res);
-    if (req.method === "GET" && path === "/helix/emplacement-modeles") return handleEmplacementEtat(req, res, url);
-    if (req.method === "POST" && path === "/helix/emplacement-modeles") return handleEmplacementChoix(req, res, url);
-    if (req.method === "POST" && path === "/helix/emplacement-modeles/verifier") return handleEmplacementVerifier(req, res, url);
-    if (req.method === "GET" && path === "/helix/moteur-lmstudio") return handleMoteurLmStudioEtat(req, res, url);
-    if (req.method === "POST" && path === "/helix/moteur-lmstudio") return handleMoteurLmStudioChoix(req, res, url);
-    if (req.method === "POST" && path === "/helix/auth/create")
+    if (req.method === "GET" && path === "/oxoai/emplacement-modeles") return handleEmplacementEtat(req, res, url);
+    if (req.method === "POST" && path === "/oxoai/emplacement-modeles") return handleEmplacementChoix(req, res, url);
+    if (req.method === "POST" && path === "/oxoai/emplacement-modeles/verifier") return handleEmplacementVerifier(req, res, url);
+    if (req.method === "GET" && path === "/oxoai/moteur-lmstudio") return handleMoteurLmStudioEtat(req, res, url);
+    if (req.method === "POST" && path === "/oxoai/moteur-lmstudio") return handleMoteurLmStudioChoix(req, res, url);
+    if (req.method === "POST" && path === "/oxoai/auth/create")
       return handleAuthCreate(req, res, url);
-    if (req.method === "POST" && path === "/helix/auth/premier-mot-de-passe")
+    if (req.method === "POST" && path === "/oxoai/auth/premier-mot-de-passe")
       return handlePremierMotDePasse(req, res);
-    if (req.method === "POST" && path === "/helix/auth/mot-de-passe-provisoire")
+    if (req.method === "POST" && path === "/oxoai/auth/mot-de-passe-provisoire")
       return handleChangerProvisoire(req, res);
-    if (req.method === "POST" && path === "/helix/auth/verify")
+    if (req.method === "POST" && path === "/oxoai/auth/verify")
       return handleAuthVerify(req, res);
     // Mot de passe oublié (23/10/2026) : code de récupération, codes à tirer, réinitialisation par un administrateur.
-    if (req.method === "POST" && path === "/helix/auth/recuperer")
+    if (req.method === "POST" && path === "/oxoai/auth/recuperer")
       return handleRecuperer(req, res);
-    if ((req.method === "GET" || req.method === "POST") && path === "/helix/auth/codes-recuperation")
+    if ((req.method === "GET" || req.method === "POST") && path === "/oxoai/auth/codes-recuperation")
       return handleCodesRecuperation(req, res, url);
-    if ((req.method === "GET" || req.method === "POST") && path === "/helix/auth/reinitialiser")
+    if ((req.method === "GET" || req.method === "POST") && path === "/oxoai/auth/reinitialiser")
       return handleReinitialiser(req, res, url);
-    if (req.method === "GET" && path === "/helix/export") return handleExport(req, res, url);
-    if (req.method === "DELETE" && path.startsWith("/helix/memoire-chat/"))
-      return handleOublierMemoireChat(req, res, url, path.slice("/helix/memoire-chat/".length));
-    if (req.method === "GET" && path === "/helix/compte/effacement")
+    if (req.method === "GET" && path === "/oxoai/export") return handleExport(req, res, url);
+    if (req.method === "DELETE" && path.startsWith("/oxoai/memoire-chat/"))
+      return handleOublierMemoireChat(req, res, url, path.slice("/oxoai/memoire-chat/".length));
+    if (req.method === "GET" && path === "/oxoai/compte/effacement")
       return handleEffacement(req, res, url, "apercu");
-    if (req.method === "POST" && path === "/helix/compte/effacer")
+    if (req.method === "POST" && path === "/oxoai/compte/effacer")
       return handleEffacement(req, res, url, "effacer");
-    if (req.method === "POST" && path === "/helix/auth/deux-facteurs")
+    if (req.method === "POST" && path === "/oxoai/auth/deux-facteurs")
       return handleDeuxFacteurs(req, res);
-    if (req.method === "POST" && path === "/helix/auth/deux-facteurs/inscription")
+    if (req.method === "POST" && path === "/oxoai/auth/deux-facteurs/inscription")
       return handleInscriptionDeuxFacteurs(req, res, "preparer");
-    if (req.method === "POST" && path === "/helix/auth/deux-facteurs/inscription/activer")
+    if (req.method === "POST" && path === "/oxoai/auth/deux-facteurs/inscription/activer")
       return handleInscriptionDeuxFacteurs(req, res, "activer");
-    if (req.method === "GET" && path === "/helix/auth/deux-facteurs/etat")
+    if (req.method === "GET" && path === "/oxoai/auth/deux-facteurs/etat")
       return handleReglageDeuxFacteurs(req, res, url, "etat");
-    if (req.method === "POST" && path === "/helix/auth/deux-facteurs/preparer")
+    if (req.method === "POST" && path === "/oxoai/auth/deux-facteurs/preparer")
       return handleReglageDeuxFacteurs(req, res, url, "preparer");
-    if (req.method === "POST" && path === "/helix/auth/deux-facteurs/activer")
+    if (req.method === "POST" && path === "/oxoai/auth/deux-facteurs/activer")
       return handleReglageDeuxFacteurs(req, res, url, "activer");
-    if (req.method === "POST" && path === "/helix/auth/deux-facteurs/desactiver")
+    if (req.method === "POST" && path === "/oxoai/auth/deux-facteurs/desactiver")
       return handleReglageDeuxFacteurs(req, res, url, "desactiver");
-    if (req.method === "POST" && path === "/helix/auth/deux-facteurs/codes")
+    if (req.method === "POST" && path === "/oxoai/auth/deux-facteurs/codes")
       return handleReglageDeuxFacteurs(req, res, url, "codes");
-    if (req.method === "POST" && path === "/helix/auth/profil")
+    if (req.method === "POST" && path === "/oxoai/auth/profil")
       return handleAuthProfil(req, res, url);
-    if (req.method === "GET" && path === "/helix/data") return handleDataRevisions(res);
-    if (req.method === "GET" && path === "/helix/audit") return handleAudit(req, res, url);
-    if (req.method === "GET" && path === "/helix/auth/sessions")
+    if (req.method === "GET" && path === "/oxoai/data") return handleDataRevisions(res);
+    if (req.method === "GET" && path === "/oxoai/audit") return handleAudit(req, res, url);
+    if (req.method === "GET" && path === "/oxoai/auth/sessions")
       return handleSessionsList(req, res, url);
-    if (req.method === "POST" && path === "/helix/auth/revoke")
+    if (req.method === "POST" && path === "/oxoai/auth/revoke")
       return handleSessionRevoke(req, res, url);
-    if (path.startsWith("/helix/data/")) {
-      const name = path.slice("/helix/data/".length);
+    if (path.startsWith("/oxoai/data/")) {
+      const name = path.slice("/oxoai/data/".length);
       if (req.method === "GET") return handleDataRead(req, res, url, name);
       if (req.method === "PUT") return handleDataWrite(req, res, url, name);
     }
-    if (req.method === "GET" && path === "/helix/code") return handleCodeStatus(req, res, url);
-    if (req.method === "GET" && path === "/helix/dossiers")
+    if (req.method === "GET" && path === "/oxoai/code") return handleCodeStatus(req, res, url);
+    if (req.method === "GET" && path === "/oxoai/dossiers")
       return handleDossiers(req, res, url);
-    if (req.method === "POST" && path === "/helix/code/session")
+    if (req.method === "POST" && path === "/oxoai/code/session")
       return handleCodeSession(req, res);
-    if (req.method === "POST" && path === "/helix/code/prompt")
+    if (req.method === "POST" && path === "/oxoai/code/prompt")
       return handleCodePrompt(req, res);
     /*
      * Pose OpenCode, le moteur de l'écran Code (opencodePrive.ts) : un logiciel
      * installé sur la machine de l'instance, donc l'administrateur, comme le
-     * moteur des modèles. En arrière-plan ; l'écran suit `GET /helix/code`.
+     * moteur des modèles. En arrière-plan ; l'écran suit `GET /oxoai/code`.
      */
-    if (req.method === "POST" && path === "/helix/code/installer") {
+    if (req.method === "POST" && path === "/oxoai/code/installer") {
       return avecSeance(req, res, url, async (qui) => {
         if (!(await estAdministrateur(qui.userId))) {
           return send(res, 403, { error: { message: t("Seul l'administrateur de l'instance installe le moteur de l'écran Code.") } });
@@ -6054,18 +6054,18 @@ const traiter = (
         journaliser("code.opencode_installe", qui.userId, corps.ouverture === true ? { automatique: true } : {});
         void installerOpencode()
           .then(() => oublierOpencode())
-          .catch((err: unknown) => console.error("[helix] installation d'OpenCode :", err instanceof Error ? err.message : err));
+          .catch((err: unknown) => console.error("[oxoai] installation d'OpenCode :", err instanceof Error ? err.message : err));
         send(res, 202, { started: true });
       });
     }
-    if (req.method === "POST" && path === "/helix/code/interrupt")
+    if (req.method === "POST" && path === "/oxoai/code/interrupt")
       return handleCodeInterrupt(req, res);
     /*
      * RTK (rtk.ts) : s'il est posé, et les jetons qu'il a épargnés dans une
      * session, d'après l'historique qu'il tient sur ce poste. Séance requise,
      * et la session doit être à la personne : ses commandes n'intéressent qu'elle.
      */
-    if (req.method === "GET" && path === "/helix/code/rtk") {
+    if (req.method === "GET" && path === "/oxoai/code/rtk") {
       return avecSeance(req, res, url, async (qui) => {
         relayerReplis();
         const sessionID = url.searchParams.get("sessionID");
@@ -6081,10 +6081,10 @@ const traiter = (
      * d'une session pour la rouvrir, et « retirer de la liste » (la conversation
      * reste chez OpenCode). Séance requise : on ne liste que les siennes.
      */
-    if (req.method === "GET" && path === "/helix/code/sessions")
+    if (req.method === "GET" && path === "/oxoai/code/sessions")
       return avecSeance(req, res, url, (qui) => handleCodeSessions(res, qui.userId));
-    if (path.startsWith("/helix/code/sessions/")) {
-      const id = path.slice("/helix/code/sessions/".length);
+    if (path.startsWith("/oxoai/code/sessions/")) {
+      const id = path.slice("/oxoai/code/sessions/".length);
       if (!SESSION_CODE.test(id)) return send(res, 400, { error: { message: t("`sessionID` invalide.") } });
       if (req.method === "GET") return avecSeance(req, res, url, (qui) => handleCodeSessionHistorique(res, qui.userId, id));
       if (req.method === "DELETE") {
@@ -6111,14 +6111,14 @@ const traiter = (
      * personne pour qui il travaille est retrouvée par la passerelle, jamais
      * lue dans la requête.
      */
-    if (path === "/helix/code/outils") {
+    if (path === "/oxoai/code/outils") {
       const corps = req.method === "POST" ? await readJson(req).catch(() => undefined) : undefined;
       if (!(await servirOutilsCode(req, res, corps))) {
         send(res, 403, { error: { message: t("Accès réservé à l'agent de code de l'instance.") } });
       }
       return;
     }
-    if (req.method === "GET" && path === "/helix/code/events") {
+    if (req.method === "GET" && path === "/oxoai/code/events") {
       /*
        * `sessionID` et non plus `session` : depuis que ce flux exige une séance,
        * les deux se disputaient le même nom dans l'URL. `EventSource` ne pose
@@ -6138,7 +6138,7 @@ const traiter = (
      * que la passerelle sait de la requête est établi ici, jamais lu dans la
      * requête elle-même.
      */
-    if (path === "/helix/codex" || path.startsWith("/helix/codex/")) {
+    if (path === "/oxoai/codex" || path.startsWith("/oxoai/codex/")) {
       return avecSeance(req, res, url, async (qui) =>
         routeCodex(req, res, path, {
           userId: qui.userId,
@@ -6155,103 +6155,103 @@ const traiter = (
         }),
       );
     }
-    if (req.method === "GET" && path === "/helix/computer") return avecSeance(req, res, url, (qui) => handleComputerStatus(res, qui));
-    if (req.method === "POST" && path === "/helix/computer/action")
+    if (req.method === "GET" && path === "/oxoai/computer") return avecSeance(req, res, url, (qui) => handleComputerStatus(res, qui));
+    if (req.method === "POST" && path === "/oxoai/computer/action")
       return handleComputerAction(req, res, url);
-    if (req.method === "POST" && path === "/helix/computer/approve")
+    if (req.method === "POST" && path === "/oxoai/computer/approve")
       return handleComputerApprove(req, res, url);
-    if (req.method === "POST" && path === "/helix/computer/mode")
+    if (req.method === "POST" && path === "/oxoai/computer/mode")
       return handleComputerMode(req, res, url);
-    if (req.method === "GET" && path === "/helix/machine") return handleMachineEtat(req, res, url);
-    if (req.method === "POST" && path === "/helix/machine/demarrer") return handleMachineAction(req, res, url, "demarrer");
-    if (req.method === "POST" && path === "/helix/machine/arreter") return handleMachineAction(req, res, url, "arreter");
-    if (req.method === "POST" && path === "/helix/machine/effacer") return handleMachineAction(req, res, url, "effacer");
-    if (req.method === "GET" && path === "/helix/machine/ecran") return handleMachineEcran(req, res, url);
-    if (path === "/helix/videos" || path.startsWith("/helix/videos/")) return handleVideos(req, res, url, path.slice("/helix/videos".length).replace(/^\//, ""));
-    if (req.method === "GET" && path === "/helix/images") return handleImagesEtat(req, res, url);
+    if (req.method === "GET" && path === "/oxoai/machine") return handleMachineEtat(req, res, url);
+    if (req.method === "POST" && path === "/oxoai/machine/demarrer") return handleMachineAction(req, res, url, "demarrer");
+    if (req.method === "POST" && path === "/oxoai/machine/arreter") return handleMachineAction(req, res, url, "arreter");
+    if (req.method === "POST" && path === "/oxoai/machine/effacer") return handleMachineAction(req, res, url, "effacer");
+    if (req.method === "GET" && path === "/oxoai/machine/ecran") return handleMachineEcran(req, res, url);
+    if (path === "/oxoai/videos" || path.startsWith("/oxoai/videos/")) return handleVideos(req, res, url, path.slice("/oxoai/videos".length).replace(/^\//, ""));
+    if (req.method === "GET" && path === "/oxoai/images") return handleImagesEtat(req, res, url);
     // La recherche sur le web du Chat : permise ou non par le profil, et le moteur que la puce nomme (rechercheWeb.ts).
-    if (req.method === "GET" && path === "/helix/recherche-web") return send(res, 200, etatRechercheWeb());
-    if (routeEntrainement(path)) return handleEntrainement(req, res, url, path === "/helix/entrainement" ? "" : path.slice("/helix/entrainement/".length));
-    if (req.method === "GET" && path === "/helix/import/logiciels") return handleImportLogiciels(req, res, url);
-    if ((req.method === "GET" || req.method === "POST") && path.startsWith("/helix/import/logiciel/")) return handleImportLogiciels(req, res, url, path.slice("/helix/import/logiciel/".length));
-    if (req.method === "POST" && path === "/helix/images/installer") return handleImagesInstaller(req, res, url, "installer");
-    if (req.method === "POST" && path === "/helix/images/desinstaller") return handleImagesInstaller(req, res, url, "retirer");
-    if (req.method === "POST" && path === "/helix/images/choisir") return handleImagesInstaller(req, res, url, "choisir");
-    if (req.method === "POST" && path === "/helix/images/creer") return handleImagesCreer(req, res, url);
-    if (req.method === "GET" && path.startsWith("/helix/images/travail/")) return handleImagesTravail(req, res, url, path.slice("/helix/images/travail/".length));
-    if (req.method === "GET" && path.startsWith("/helix/images/fichier/")) return handleImagesFichier(req, res, url, path.slice("/helix/images/fichier/".length));
-    if (req.method === "GET" && path === "/helix/computer/events")
+    if (req.method === "GET" && path === "/oxoai/recherche-web") return send(res, 200, etatRechercheWeb());
+    if (routeEntrainement(path)) return handleEntrainement(req, res, url, path === "/oxoai/entrainement" ? "" : path.slice("/oxoai/entrainement/".length));
+    if (req.method === "GET" && path === "/oxoai/import/logiciels") return handleImportLogiciels(req, res, url);
+    if ((req.method === "GET" || req.method === "POST") && path.startsWith("/oxoai/import/logiciel/")) return handleImportLogiciels(req, res, url, path.slice("/oxoai/import/logiciel/".length));
+    if (req.method === "POST" && path === "/oxoai/images/installer") return handleImagesInstaller(req, res, url, "installer");
+    if (req.method === "POST" && path === "/oxoai/images/desinstaller") return handleImagesInstaller(req, res, url, "retirer");
+    if (req.method === "POST" && path === "/oxoai/images/choisir") return handleImagesInstaller(req, res, url, "choisir");
+    if (req.method === "POST" && path === "/oxoai/images/creer") return handleImagesCreer(req, res, url);
+    if (req.method === "GET" && path.startsWith("/oxoai/images/travail/")) return handleImagesTravail(req, res, url, path.slice("/oxoai/images/travail/".length));
+    if (req.method === "GET" && path.startsWith("/oxoai/images/fichier/")) return handleImagesFichier(req, res, url, path.slice("/oxoai/images/fichier/".length));
+    if (req.method === "GET" && path === "/oxoai/computer/events")
       return avecSeance(req, res, url, (qui) => handleComputerStream(req, res, qui));
 
-    if (req.method === "GET" && path === "/helix/approbation")
+    if (req.method === "GET" && path === "/oxoai/approbation")
       return avecSeance(req, res, url, (qui) => handleApprobationEtat(res, qui));
-    if (req.method === "POST" && path === "/helix/approbation/niveau")
+    if (req.method === "POST" && path === "/oxoai/approbation/niveau")
       return handleApprobationNiveau(req, res, url);
-    if (req.method === "POST" && path === "/helix/approbation/repondre")
+    if (req.method === "POST" && path === "/oxoai/approbation/repondre")
       return handleApprobationRepondre(req, res, url);
-    if (req.method === "GET" && path === "/helix/approbation/evenements")
+    if (req.method === "GET" && path === "/oxoai/approbation/evenements")
       return avecSeance(req, res, url, (qui) => handleApprobationFlux(req, res, qui));
 
-    if (req.method === "GET" && path === "/helix/atelier")
+    if (req.method === "GET" && path === "/oxoai/atelier")
       return handleAtelierDiagnostic(res);
-    if (req.method === "POST" && path === "/helix/atelier/preparer")
+    if (req.method === "POST" && path === "/oxoai/atelier/preparer")
       return handleAtelierPreparer(req, res);
-    if (req.method === "POST" && path === "/helix/atelier/verifier")
+    if (req.method === "POST" && path === "/oxoai/atelier/verifier")
       return handleAtelierVerifier(res);
 
-    if (req.method === "GET" && path === "/helix/dictee") return handleDicteeEtat(res);
-    if (req.method === "POST" && path === "/helix/dictee/installer")
+    if (req.method === "GET" && path === "/oxoai/dictee") return handleDicteeEtat(res);
+    if (req.method === "POST" && path === "/oxoai/dictee/installer")
       return handleDicteeInstaller(req, res, url);
-    if (req.method === "POST" && path === "/helix/dictee") return handleDictee(req, res, url);
+    if (req.method === "POST" && path === "/oxoai/dictee") return handleDictee(req, res, url);
 
-    if (req.method === "GET" && path === "/helix/courrier")
+    if (req.method === "GET" && path === "/oxoai/courrier")
       return handleCourrierEtat(req, res, url);
-    if (req.method === "POST" && path === "/helix/courrier/configurer")
+    if (req.method === "POST" && path === "/oxoai/courrier/configurer")
       return handleCourrierConfigurer(req, res, url);
-    if (req.method === "POST" && path === "/helix/courrier/oauth")
+    if (req.method === "POST" && path === "/oxoai/courrier/oauth")
       return handleCourrierOauth(req, res, url);
-    if (req.method === "POST" && path === "/helix/courrier/oauth/coller")
+    if (req.method === "POST" && path === "/oxoai/courrier/oauth/coller")
       return handleCourrierOauthColler(req, res, url);
-    if (req.method === "POST" && path === "/helix/courrier/envoi")
+    if (req.method === "POST" && path === "/oxoai/courrier/envoi")
       return handleCourrierEnvoi(req, res, url);
-    if (req.method === "POST" && path === "/helix/courrier/confirmation")
+    if (req.method === "POST" && path === "/oxoai/courrier/confirmation")
       return handleCourrierConfirmation(req, res, url);
-    if (req.method === "POST" && path === "/helix/courrier/oublier")
+    if (req.method === "POST" && path === "/oxoai/courrier/oublier")
       return handleCourrierOublier(req, res, url);
 
-    if (req.method === "GET" && path === "/helix/agenda") return handleAgendaEtat(res, url);
-    if (req.method === "POST" && path === "/helix/agenda/configurer")
+    if (req.method === "GET" && path === "/oxoai/agenda") return handleAgendaEtat(res, url);
+    if (req.method === "POST" && path === "/oxoai/agenda/configurer")
       return handleAgendaConfigurer(req, res, url);
-    if (req.method === "POST" && path === "/helix/agenda/oublier")
+    if (req.method === "POST" && path === "/oxoai/agenda/oublier")
       return handleAgendaOublier(req, res, url);
 
     // Tâches programmées (tachesProgrammees.ts).
-    if (path === "/helix/taches-programmees" || path.startsWith("/helix/taches-programmees/")) return handleTachesProgrammees(req, res, url, path);
+    if (path === "/oxoai/taches-programmees" || path.startsWith("/oxoai/taches-programmees/")) return handleTachesProgrammees(req, res, url, path);
     // Application Google de l'instance (clientGoogle.ts), partagée par Drive et Google Agenda.
-    if (req.method === "GET" && path === "/helix/google/client") return handleClientGoogleEtat(req, res, url);
-    if (req.method === "POST" && path === "/helix/google/client") return handleClientGoogleEnregistrer(req, res, url);
-    if (req.method === "POST" && path === "/helix/google/client/effacer") return handleClientGoogleEffacer(req, res, url);
+    if (req.method === "GET" && path === "/oxoai/google/client") return handleClientGoogleEtat(req, res, url);
+    if (req.method === "POST" && path === "/oxoai/google/client") return handleClientGoogleEnregistrer(req, res, url);
+    if (req.method === "POST" && path === "/oxoai/google/client/effacer") return handleClientGoogleEffacer(req, res, url);
     // Google Agenda par la connexion Google (agendaGoogle.ts).
-    if (req.method === "GET" && path === "/helix/agenda/google") return handleAgendaGoogleEtat(req, res, url);
-    if (req.method === "POST" && path === "/helix/agenda/google/connecter") return handleAgendaGoogleConnecter(req, res, url);
-    if (req.method === "POST" && path === "/helix/agenda/google/code") return handleAgendaGoogleCode(req, res, url);
-    if (req.method === "POST" && path === "/helix/agenda/google/oublier") return handleAgendaGoogleOublier(req, res, url);
+    if (req.method === "GET" && path === "/oxoai/agenda/google") return handleAgendaGoogleEtat(req, res, url);
+    if (req.method === "POST" && path === "/oxoai/agenda/google/connecter") return handleAgendaGoogleConnecter(req, res, url);
+    if (req.method === "POST" && path === "/oxoai/agenda/google/code") return handleAgendaGoogleCode(req, res, url);
+    if (req.method === "POST" && path === "/oxoai/agenda/google/oublier") return handleAgendaGoogleOublier(req, res, url);
     // Sheets, Slides, YouTube, LinkedIn, Facebook, Instagram, TikTok (oauthNatif.ts, 28/09/2026).
-    if (path === "/helix/natifs" || path.startsWith("/helix/natifs/")) return handleNatifs(req, res, url, path.slice("/helix/natifs".length));
+    if (path === "/oxoai/natifs" || path.startsWith("/oxoai/natifs/")) return handleNatifs(req, res, url, path.slice("/oxoai/natifs".length));
     // Telegram, Discord, WhatsApp (natifs/messageries.ts). Le webhook de WhatsApp est public (auth.ts) : signé par Meta, vérifié par le module.
     if (path === messageries.CHEMIN_WEBHOOK) return messageries.webhookWhatsApp(req, res, url);
-    if (path === "/helix/messageries" || path.startsWith("/helix/messageries/")) return handleMessageries(req, res, url, path.slice("/helix/messageries".length));
-    if (path === "/helix/commerce" || path.startsWith("/helix/commerce/")) return handleCommerce(req, res, url, path.slice("/helix/commerce".length));
-    if (req.method === "GET" && path === "/helix/drive") return handleDriveEtat(res);
-    if (req.method === "POST" && path === "/helix/drive/connecter")
+    if (path === "/oxoai/messageries" || path.startsWith("/oxoai/messageries/")) return handleMessageries(req, res, url, path.slice("/oxoai/messageries".length));
+    if (path === "/oxoai/commerce" || path.startsWith("/oxoai/commerce/")) return handleCommerce(req, res, url, path.slice("/oxoai/commerce".length));
+    if (req.method === "GET" && path === "/oxoai/drive") return handleDriveEtat(res);
+    if (req.method === "POST" && path === "/oxoai/drive/connecter")
       return handleDriveConnecter(req, res, url);
-    if (req.method === "POST" && path === "/helix/drive/code") return handleDriveCode(req, res, url);
-    if (req.method === "POST" && path === "/helix/drive/oublier")
+    if (req.method === "POST" && path === "/oxoai/drive/code") return handleDriveCode(req, res, url);
+    if (req.method === "POST" && path === "/oxoai/drive/oublier")
       return handleDriveOublier(req, res, url);
-    if (req.method === "GET" && path === "/helix/slack") return handleSlackEtat(res);
-    if (req.method === "POST" && path === "/helix/slack/configurer")
+    if (req.method === "GET" && path === "/oxoai/slack") return handleSlackEtat(res);
+    if (req.method === "POST" && path === "/oxoai/slack/configurer")
       return handleSlackConfigurer(req, res, url);
-    if (req.method === "POST" && path === "/helix/slack/oublier")
+    if (req.method === "POST" && path === "/oxoai/slack/oublier")
       return handleSlackOublier(req, res, url);
 
     /*
@@ -6273,34 +6273,34 @@ const traiter = (
      * l'application qui demande, sans séance. Seulement la description de la
      * version et l'archive de l'application : rien des données de personne.
      */
-    if (req.method === "GET" && path === "/helix/mises-a-jour/latest-mac.yml") {
+    if (req.method === "GET" && path === "/oxoai/mises-a-jour/latest-mac.yml") {
       const f = await telechargement.fluxMiseAJour();
       if ("erreur" in f) return send(res, 404, { error: { message: f.erreur } });
       res.writeHead(200, { "Content-Type": "text/yaml; charset=utf-8", "Cache-Control": "no-store" });
       return void res.end(f.yml);
     }
     {
-      const archive = /^\/helix\/mises-a-jour\/([A-Za-z0-9._-]+\.zip)$/.exec(path);
+      const archive = /^\/oxoai\/mises-a-jour\/([A-Za-z0-9._-]+\.zip)$/.exec(path);
       if (req.method === "GET" && archive) {
         if (archive[1] !== telechargement.nomArchiveMiseAJour()) return send(res, 404, { error: { message: t("Archive inconnue.") } });
         return telechargement.servir(res, "macos");
       }
     }
-    if (req.method === "GET" && path === "/helix/telecharger") {
+    if (req.method === "GET" && path === "/oxoai/telecharger") {
       return avecSeance(req, res, url, () => {
         send(res, 200, {
           paquets: (["macos", "windows", "linux"] as const).map((p) => telechargement.etat(p)),
         });
       });
     }
-    if (req.method === "POST" && path === "/helix/telecharger/macos/preparer") {
+    if (req.method === "POST" && path === "/oxoai/telecharger/macos/preparer") {
       return avecSeance(req, res, url, async () => {
         const r = await telechargement.preparer();
         send(res, r.ok ? 200 : 503, r.ok ? { ok: true, etat: telechargement.etat("macos") } : { error: { message: r.message } });
       });
     }
     {
-      const telecharger = /^\/helix\/telecharger\/(macos|windows|linux)$/.exec(path);
+      const telecharger = /^\/oxoai\/telecharger\/(macos|windows|linux)$/.exec(path);
       if (req.method === "GET" && telecharger) {
         return avecSeance(req, res, url, () =>
           telechargement.servir(res, telecharger[1] as telechargement.Plateforme),
@@ -6308,47 +6308,47 @@ const traiter = (
       }
     }
 
-    if (req.method === "POST" && path === "/helix/flux/ticket") {
+    if (req.method === "POST" && path === "/oxoai/flux/ticket") {
       return avecSeance(req, res, url, (qui) => {
         const { billet, expireDansMs } = flux.creer(qui.userId);
         send(res, 200, { billet, expireDansMs });
       });
     }
 
-    if (req.method === "GET" && path === "/helix/mcp") return handleMcpStatus(res);
-    if (req.method === "POST" && path === "/helix/mcp/toggle") return handleMcpToggle(req, res);
-    if (req.method === "POST" && path === "/helix/mcp/workspace")
+    if (req.method === "GET" && path === "/oxoai/mcp") return handleMcpStatus(res);
+    if (req.method === "POST" && path === "/oxoai/mcp/toggle") return handleMcpToggle(req, res);
+    if (req.method === "POST" && path === "/oxoai/mcp/workspace")
       return handleWorkspace(req, res, url);
 
-    if (req.method === "GET" && path === "/helix/connecteurs")
+    if (req.method === "GET" && path === "/oxoai/connecteurs")
       return handleConnecteursEtat(req, res, url);
-    if (req.method === "POST" && path === "/helix/connecteurs/personnalise")
+    if (req.method === "POST" && path === "/oxoai/connecteurs/personnalise")
       return handleConnecteurPersonnalise(req, res, url);
-    if (req.method === "POST" && path === "/helix/connecteurs/personnalise/lectures")
+    if (req.method === "POST" && path === "/oxoai/connecteurs/personnalise/lectures")
       return handleConnecteurLectures(req, res, url);
-    if (req.method === "POST" && path === "/helix/connecteurs/ajouter")
+    if (req.method === "POST" && path === "/oxoai/connecteurs/ajouter")
       return handleConnecteurAjouter(req, res, url);
-    if (req.method === "GET" && path === "/helix/reseau")
+    if (req.method === "GET" && path === "/oxoai/reseau")
       return avecSeance(req, res, url, (qui) => handleReseauEtat(res, qui));
-    if (req.method === "POST" && path === "/helix/reseau")
+    if (req.method === "POST" && path === "/oxoai/reseau")
       return handleReseauRegler(req, res, url);
 
-    if (req.method === "POST" && path === "/helix/invitations/inviter")
+    if (req.method === "POST" && path === "/oxoai/invitations/inviter")
       return handleInviter(req, res, url);
-    if (path === "/helix/invitations" && (req.method === "GET" || req.method === "POST"))
+    if (path === "/oxoai/invitations" && (req.method === "GET" || req.method === "POST"))
       return handleInvitations(req, res, url);
-    if (req.method === "POST" && path === "/helix/invitations/rejoindre")
+    if (req.method === "POST" && path === "/oxoai/invitations/rejoindre")
       return handleRejoindre(req, res);
 
-    if (req.method === "POST" && path === "/helix/connecteurs/connecter")
+    if (req.method === "POST" && path === "/oxoai/connecteurs/connecter")
       return handleConnecteurConnecter(req, res, url);
-    if (req.method === "POST" && path === "/helix/connecteurs/retirer")
+    if (req.method === "POST" && path === "/oxoai/connecteurs/retirer")
       return handleConnecteurRetirer(req, res, url);
-    if (req.method === "GET" && path === "/helix/oauth/retour")
+    if (req.method === "GET" && path === "/oxoai/oauth/retour")
       return handleOauthRetour(res, url);
-    if (req.method === "GET" && path === "/helix/outils") return handleOutils(res);
+    if (req.method === "GET" && path === "/oxoai/outils") return handleOutils(res);
 
-    if (path === "/helix/employes" || path.startsWith("/helix/employes/")) {
+    if (path === "/oxoai/employes" || path.startsWith("/oxoai/employes/")) {
       return handleEmployes(req, res, url, path);
     }
     if (routeFournisseur(path)) return handleFournisseurs(req, res, url, path);
@@ -6357,11 +6357,11 @@ const traiter = (
     if (routeBibliotheque(path)) return handleBibliotheque(req, res, url, path);
     if (routeConnaissances(path)) return handleConnaissances(req, res, url, path);
     if (routeReunion(path)) return handleReunions(req, res, url, path);
-    if (req.method === "GET" && path === "/helix/espace") {
+    if (req.method === "GET" && path === "/oxoai/espace") {
       const r = listerEspace(url.searchParams.get("chemin") ?? "");
       return r.ok ? send(res, 200, r.valeur) : send(res, r.statut, { error: { message: r.message } });
     }
-    if (req.method === "GET" && path === "/helix/espace/fichier") {
+    if (req.method === "GET" && path === "/oxoai/espace/fichier") {
       const r = lireFichierEspace(url.searchParams.get("chemin") ?? "");
       if (!r.ok) return send(res, r.statut, { error: { message: r.message } });
       res.writeHead(200, {
@@ -6372,7 +6372,7 @@ const traiter = (
       });
       return envoyerFlux(res, r.valeur.flux);
     }
-    if (req.method === "POST" && path === "/helix/openclaw/installer") {
+    if (req.method === "POST" && path === "/oxoai/openclaw/installer") {
       const qui = await demandeur(req, url);
       if (!qui) return send(res, 401, sansSeance());
       /*
@@ -6399,8 +6399,8 @@ const traiter = (
       return send(res, 202, { installation: etatInstallation() });
     }
 
-    if (req.method === "GET" && path === "/helix/usage") return handleUsage(req, res, url);
-    if (req.method === "POST" && path === "/helix/usage/tarif")
+    if (req.method === "GET" && path === "/oxoai/usage") return handleUsage(req, res, url);
+    if (req.method === "POST" && path === "/oxoai/usage/tarif")
       return handleUsageTarif(req, res, url);
     send(res, 404, { error: { message: tf("Route inconnue : {0} {1}", req.method, path) } });
   };
@@ -6444,7 +6444,7 @@ server.requestTimeout = 2 * 60 * 60 * 1000;
 server.headersTimeout = 60_000;
 
 /*
- * Arrêt propre. Fermer Helix doit tout refermer : le serveur OpenCode, et le
+ * Arrêt propre. Fermer OxoAI doit tout refermer : le serveur OpenCode, et le
  * moteur de modèles si c'est nous qui l'avions démarré. Sans cela, un modèle de
  * plusieurs gigaoctets resterait en mémoire après la fermeture de la fenêtre.
  */
@@ -6473,10 +6473,10 @@ function arreterProprement(): void {
  * défaut qui l'a causée reste à corriger à la source.
  */
 process.on("uncaughtException", (err) => {
-  console.error("[helix] erreur non rattrapée :", err instanceof Error ? `${err.name}: ${err.message}` : String(err));
+  console.error("[oxoai] erreur non rattrapée :", err instanceof Error ? `${err.name}: ${err.message}` : String(err));
 });
 process.on("unhandledRejection", (raison) => {
-  console.error("[helix] promesse rejetée sans suite :", raison instanceof Error ? `${raison.name}: ${raison.message}` : String(raison));
+  console.error("[oxoai] promesse rejetée sans suite :", raison instanceof Error ? `${raison.name}: ${raison.message}` : String(raison));
 });
 
 for (const signal of ["SIGINT", "SIGTERM"] as const) {
@@ -6497,8 +6497,8 @@ process.on("exit", arreterProprement);
  * ne change.
  *
  * Depuis le 28/09/2026 le canal est celui d'un `utilityProcess`
- * (canalApplication.ts). L'application y demande aussi le Node de Helix pour
- * la commande `helix` (electron/ligneDeCommande.cjs) : ce canal ne s'ouvre
+ * (canalApplication.ts). L'application y demande aussi le Node de OxoAI pour
+ * la commande `oxoai` (electron/ligneDeCommande.cjs) : ce canal ne s'ouvre
  * qu'entre l'application et sa passerelle, aucune route HTTP n'y mène.
  */
 if (canalOuvert()) {
@@ -6557,7 +6557,7 @@ if (canalOuvert()) {
  */
 if (process.platform !== "win32") {
   process.on("SIGUSR1", () => {
-    console.error("[helix] signal SIGUSR1 reçu et ignoré : le débogueur de Node reste fermé.");
+    console.error("[oxoai] signal SIGUSR1 reçu et ignoré : le débogueur de Node reste fermé.");
   });
 }
 
@@ -6576,19 +6576,19 @@ async function preparerMagasin(): Promise<void> {
     await Promise.race([
       migrerChiffrement().then(({ reecrites }) => {
         if (reecrites.length > 0) {
-          console.log(`[helix] chiffrement appliqué à : ${reecrites.join(", ")}.`);
+          console.log(`[oxoai] chiffrement appliqué à : ${reecrites.join(", ")}.`);
         }
       }),
       new Promise<void>((resolve) => {
         delai = setTimeout(() => {
-          console.warn("[helix] la base tarde à répondre : démarrage sans attendre la migration du chiffrement.");
+          console.warn("[oxoai] la base tarde à répondre : démarrage sans attendre la migration du chiffrement.");
           resolve();
         }, DELAI_MIGRATION_MS);
       }),
     ]);
   } catch (err) {
     console.warn(
-      `[helix] migration du chiffrement interrompue : ${err instanceof Error ? err.message : String(err)}`,
+      `[oxoai] migration du chiffrement interrompue : ${err instanceof Error ? err.message : String(err)}`,
     );
   } finally {
     clearTimeout(delai);
@@ -6596,7 +6596,7 @@ async function preparerMagasin(): Promise<void> {
   // Le mode d'écran choisi dans l'interface doit être connu avant la première
   // requête, même si la migration a échoué : il ne lève jamais d'erreur.
   await chargerReglagesEcran();
-  // Le moteur de LM Studio que Helix peut démarrer (23/10/2026) : connu avant la première découverte, qui lancerait `lms`.
+  // Le moteur de LM Studio que OxoAI peut démarrer (23/10/2026) : connu avant la première découverte, qui lancerait `lms`.
   await chargerChoixMoteur();
   // Mode « machine de l'agent » choisi : elle démarre avec l'instance, sans attendre la première demande.
   if (configEcran().mode === "sandbox") void demarrerMachine().catch(() => undefined);
@@ -6605,39 +6605,39 @@ async function preparerMagasin(): Promise<void> {
 }
 
 /*
- * Le port pris (un autre Helix, un serveur de développement) : la passerelle
+ * Le port pris (un autre OxoAI, un serveur de développement) : la passerelle
  * s'arrête, pour que l'application la relance plus tard. Sans cela, le filet
  * ci-dessus l'aurait gardée en vie sans rien servir.
  */
 server.on("error", (err: NodeJS.ErrnoException) => {
   if (server.listening) return;
-  console.error(`[helix-gateway] écoute impossible sur ${HOST}:${PORT} : ${err.code ?? err.message}`);
+  console.error(`[oxoai-gateway] écoute impossible sur ${HOST}:${PORT} : ${err.code ?? err.message}`);
   process.exit(1);
 });
 void preparerMagasin().then(() => server.listen(PORT, HOST, () => {
   const schema = tls ? "https" : "http";
-  console.log(`[helix-gateway] écoute sur ${schema}://${HOST}:${PORT}`);
+  console.log(`[oxoai-gateway] écoute sur ${schema}://${HOST}:${PORT}`);
   // L'adresse réellement ouverte (« localhost » peut donner ::1) : l'adresse de retour de X en dépend (oauthNatif.ts, SECURITE.md § 43).
   const ouverte = server.address();
   if (ouverte && typeof ouverte === "object") natifs.noterEcoute(ouverte.address);
   /*
    * Le port réellement ouvert, à côté du jeton (0600). La ligne de commande
-   * ne lit le jeton du poste que pour ce port-là (cli/helix.mjs) : revue du
+   * ne lit le jeton du poste que pour ce port-là (cli/oxoai.mjs) : revue du
    * 26/09/2026, elle l'envoyait à n'importe quel port de la boucle locale,
    * c'est-à-dire à tout programme du poste qui y écoute.
    */
   try {
-    const dossier = process.env.HELIX_DATA_DIR ?? joindre(dossierPersonnel(), ".helix", "data");
+    const dossier = process.env.OXOAI_DATA_DIR ?? joindre(dossierPersonnel(), ".oxoai", "data");
     writeFileSync(joindre(dossier, "instance-port"), `${PORT}\n`, { encoding: "utf8", mode: 0o600 });
     /*
-     * ~/.helix lui-même en 0700 : revue du 26/09/2026, il restait en 0755
+     * ~/.oxoai lui-même en 0700 : revue du 26/09/2026, il restait en 0755
      * (`mkdirSync({ mode })` ne change pas un dossier existant), et les autres
      * comptes du Mac voyaient la liste de ce qu'il contient. Seulement pour le
-     * dossier par défaut : un HELIX_DATA_DIR choisi appartient à l'administrateur.
+     * dossier par défaut : un OXOAI_DATA_DIR choisi appartient à l'administrateur.
      */
-    if (!process.env.HELIX_DATA_DIR) chmodSync(joindre(dossierPersonnel(), ".helix"), 0o700);
+    if (!process.env.OXOAI_DATA_DIR) chmodSync(joindre(dossierPersonnel(), ".oxoai"), 0o700);
   } catch (err) {
-    console.error("[helix-gateway] port non noté pour la ligne de commande :", err instanceof Error ? err.message : err);
+    console.error("[oxoai-gateway] port non noté pour la ligne de commande :", err instanceof Error ? err.message : err);
   }
   if (HOST === "127.0.0.1") {
     console.log("  (boucle locale uniquement — « share »: true pour ouvrir au réseau)");
@@ -6646,7 +6646,7 @@ void preparerMagasin().then(() => server.listen(PORT, HOST, () => {
     console.log(
       "  TLS auto-signé : le trafic est chiffré, mais les postes devront " +
         "accepter ce certificat. Pour une instance exposée durablement, " +
-        "fournissez le vôtre via « tls » dans helix.config.json.",
+        "fournissez le vôtre via « tls » dans oxoai.config.json.",
     );
   } else if (tls) {
     console.log(`  TLS : certificat fourni (${tls.chemin}).`);
@@ -6704,7 +6704,7 @@ void preparerMagasin().then(() => server.listen(PORT, HOST, () => {
    * échec ne gêne rien, l'essai se refera au premier chargement.
    */
   setTimeout(() => {
-    void verifierModeleEnPlace().catch((err: unknown) => console.error("[helix] essai du modèle en place", err));
+    void verifierModeleEnPlace().catch((err: unknown) => console.error("[oxoai] essai du modèle en place", err));
   }, 15_000).unref();
   // Mac Intel : les fichiers laissés par un modèle retiré du catalogue du moteur ouvert (llamaCpp.ts).
   if (moteurOuvert()) menageLlama();
@@ -6727,7 +6727,7 @@ void preparerMagasin().then(() => server.listen(PORT, HOST, () => {
     // Les employés en dernier : leur fiche de poste nomme les outils, qui doivent être là.
     .then(() => demarrerEmployes())
     .catch((err: unknown) => {
-      console.warn(`[helix] employés non démarrés : ${err instanceof Error ? err.message : String(err)}`);
+      console.warn(`[oxoai] employés non démarrés : ${err instanceof Error ? err.message : String(err)}`);
     });
 }));
 
@@ -6744,7 +6744,7 @@ void preparerMagasin().then(() => server.listen(PORT, HOST, () => {
  * Les tâches programmées (tachesProgrammees.ts) s'exécutent par la route du
  * Chat, sur la boucle locale, au nom de leur propriétaire. Cette clé, tirée au
  * sort à chaque démarrage et jamais écrite, est ce qui l'autorise : sans elle,
- * l'en-tête « x-helix-tache » ne vaut rien (vérifié dans handleChatCompletions).
+ * l'en-tête « x-oxoai-tache » ne vaut rien (vérifié dans handleChatCompletions).
  */
 const CLE_TACHES = randomBytes(32).toString("base64url");
 
@@ -6755,9 +6755,9 @@ function demarrerTachesProgrammees(url: string): void {
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${instanceToken()}`,
-        "x-helix-tache": ownerId,
-        "x-helix-cle-tache": CLE_TACHES,
-        ...(options.titre ? { "x-helix-tache-titre": encodeURIComponent(options.titre) } : {}),
+        "x-oxoai-tache": ownerId,
+        "x-oxoai-cle-tache": CLE_TACHES,
+        ...(options.titre ? { "x-oxoai-tache-titre": encodeURIComponent(options.titre) } : {}),
       },
       body: JSON.stringify({
         messages,
@@ -6781,7 +6781,7 @@ function demarrerTachesProgrammees(url: string): void {
     const decodeur = new TextDecoder();
     let tampon = "";
     let texte = "";
-    // Une erreur du Chat arrive comme un évènement Helix : elle est la raison de l'échec, pas « rien répondu ».
+    // Une erreur du Chat arrive comme un évènement OxoAI : elle est la raison de l'échec, pas « rien répondu ».
     let erreurDuChat: string | null = null;
     for (;;) {
       const { done, value } = await lecteur.read();
@@ -6795,11 +6795,11 @@ function demarrerTachesProgrammees(url: string): void {
           const charge = ligne.slice(5).trim();
           if (!charge || charge === "[DONE]") continue;
           try {
-            const j = JSON.parse(charge) as { helix?: { type?: unknown; message?: unknown }; error?: { message?: unknown }; choices?: { delta?: { content?: unknown } }[] };
+            const j = JSON.parse(charge) as { oxoai?: { type?: unknown; message?: unknown }; error?: { message?: unknown }; choices?: { delta?: { content?: unknown } }[] };
             const c = j.choices?.[0]?.delta?.content;
-            if (j.helix?.type === "error" && typeof j.helix.message === "string") erreurDuChat = j.helix.message;
+            if (j.oxoai?.type === "error" && typeof j.oxoai.message === "string") erreurDuChat = j.oxoai.message;
             else if (typeof j.error?.message === "string") erreurDuChat = j.error.message;
-            else if (!j.helix && typeof c === "string") texte += c;
+            else if (!j.oxoai && typeof c === "string") texte += c;
           } catch {
             /* ligne illisible : ignorée */
           }

@@ -4,7 +4,7 @@
  * Il part de celui de la batterie de sécurité (scripts/faux-opencode.mjs) :
  * l'ancienne API d'OpenCode 1.18.32 dont la passerelle se sert (sessions,
  * `prompt_async`, flux `/event`, fournisseurs de la configuration), avec son
- * mot de passe. Il y ajoute ce qu'il faut pour l'écran de Helix Code :
+ * mot de passe. Il y ajoute ce qu'il faut pour l'écran de OxoAI Code :
  *
  *  - à chaque demande, un appel au modèle par la passerelle, avec des outils,
  *    comme le vrai (la passerelle y reconnaît une session vivante, index.ts,
@@ -55,17 +55,17 @@ function configuration() {
 
 /** L'appel au modèle, par la passerelle, comme le vrai : la demande et un outil déclaré. */
 async function appelerModele(texte) {
-  const helix = configuration().provider?.helix ?? {};
-  const base = String(helix.options?.baseURL ?? "").replace(/\/+$/, "");
-  const modele = Object.keys(helix.models ?? {})[0] ?? "";
+  const oxoai = configuration().provider?.oxoai ?? {};
+  const base = String(oxoai.options?.baseURL ?? "").replace(/\/+$/, "");
+  const modele = Object.keys(oxoai.models ?? {})[0] ?? "";
   if (!base) return;
   try {
     const r = await fetch(`${base}/chat/completions`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${process.env.HELIX_OPENCODE_JETON ?? ""}`,
-        "X-Helix-Relais": process.env.HELIX_OPENCODE_CLE_RELAIS ?? "",
+        Authorization: `Bearer ${process.env.OXOAI_OPENCODE_JETON ?? ""}`,
+        "X-OxoAI-Relais": process.env.OXOAI_OPENCODE_CLE_RELAIS ?? "",
       },
       body: JSON.stringify({
         model: modele,
@@ -131,11 +131,11 @@ const serveur = http.createServer((req, res) => {
       return;
     }
     if (chemin === "/config/providers") {
-      return json({ providers: [{ id: "helix", models: configuration().provider?.helix?.models ?? {} }] });
+      return json({ providers: [{ id: "oxoai", models: configuration().provider?.oxoai?.models ?? {} }] });
     }
     if (chemin === "/session/status") return json({});
     if (chemin === "/api/session/active") return json({ data: {} });
-    if (chemin === "/mcp/helix/connect") return json(true);
+    if (chemin === "/mcp/oxoai/connect") return json(true);
     if (chemin === "/session" && req.method === "POST") {
       const nouvelle = id("ses");
       dossiers.set(nouvelle, url.searchParams.get("directory") ?? "");

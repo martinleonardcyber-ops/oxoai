@@ -64,14 +64,14 @@ export const NIVEAU_DEFAUT: Niveau = "modifications";
  * Où le niveau est conservé.
  *
  * Volontairement **hors** des collections de `db.ts`. Celles-ci se synchronisent
- * entre les postes par `PUT /helix/data/<collection>` : y ranger le niveau
+ * entre les postes par `PUT /oxoai/data/<collection>` : y ranger le niveau
  * aurait donné à n'importe quel poste authentifié le moyen de le remettre à
  * « tout » par une route générique, c'est-à-dire exactement le contournement
  * que ce module existe pour empêcher. Il se change par une route dédiée, qui
  * exige une séance et laisse une trace.
  */
 const fichierNiveau = () =>
-  join(process.env.HELIX_DATA_DIR ?? join(homedir(), ".helix", "data"), "approbation.json");
+  join(process.env.OXOAI_DATA_DIR ?? join(homedir(), ".oxoai", "data"), "approbation.json");
 
 let niveauCourant: Niveau | null = null;
 
@@ -915,9 +915,9 @@ export function repondre(id: string, accord: boolean, nature: Nature, par: strin
  *
  * Revue du 25/09/2026 : le résumé d'une carte, l'objet ou le corps d'un mail,
  * une commande, tous écrits par le modèle, arrivaient tels quels dans un
- * terminal (`helix`). Une séquence `\x1b[2K\r` y efface la ligne affichée et
+ * terminal (`oxoai`). Une séquence `\x1b[2K\r` y efface la ligne affichée et
  * en écrit une autre : on aurait approuvé autre chose que ce qu'on lisait.
- * Même règle dans la ligne de commande (`nettoyer`, cli/helix.mjs).
+ * Même règle dans la ligne de commande (`nettoyer`, cli/oxoai.mjs).
  */
 export function nettoyer(texte: string): string {
   return texte.replace(/[\u0000-\u0008\u000B-\u001F\u007F-\u009F\u202A-\u202E\u2066-\u2069]/g, "");
@@ -1014,7 +1014,7 @@ export function fermerDemande(id: string): void {
  * approuvé couvrait aussi tous les suivants, quel que soit leur contenu.
  */
 /*
- * Les modifications de fichiers de Helix Code aussi (relecture du 27/09/2026) :
+ * Les modifications de fichiers de OxoAI Code aussi (relecture du 27/09/2026) :
  * sans elles, l'agent de code redemandait pour chaque fichier d'un même
  * dossier. Ses commandes et ses adresses, elles, gardent leur portée mot pour
  * mot (plus bas, avant ce test).

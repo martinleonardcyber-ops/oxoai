@@ -109,7 +109,7 @@ export const ICONE_DU_CONNECTEUR: Record<string, LucideIcon> = {
   /*
    * Unreal Engine (16/10/2026) : pas le logo. C'est une marque d'Epic Games,
    * dont l'usage passe par ses règles de marque et, hors des productions
-   * faites avec le moteur, par un accord qu'Helix n'a pas : une icône neutre,
+   * faites avec le moteur, par un accord qu'OxoAI n'a pas : une icône neutre,
    * et le nom écrit en toutes lettres.
    */
   unreal: Gamepad2,

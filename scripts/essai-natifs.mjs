@@ -421,9 +421,9 @@ await new Promise((ok) => faux.listen(PORT_FAUX, "127.0.0.1", ok));
 /* Passerelle jetable, transport remplacé par le module préalable            */
 /* ------------------------------------------------------------------------- */
 
-const AUX = mkdtempSync(join(tmpdir(), "helix-natifs-aux-"));
-const DONNEES = mkdtempSync(join(tmpdir(), "helix-natifs-donnees-"));
-const ESPACE = mkdtempSync(join(tmpdir(), "helix-natifs-espace-"));
+const AUX = mkdtempSync(join(tmpdir(), "oxoai-natifs-aux-"));
+const DONNEES = mkdtempSync(join(tmpdir(), "oxoai-natifs-donnees-"));
+const ESPACE = mkdtempSync(join(tmpdir(), "oxoai-natifs-espace-"));
 const PREALABLE = join(AUX, "prealable.mjs");
 writeFileSync(
   PREALABLE,
@@ -503,15 +503,15 @@ const PORT = await portLibre();
 const G = `http://127.0.0.1:${PORT}`;
 const ENV = {
   ...process.env,
-  HELIX_CONFIG: join(AUX, "profil.json"),
-  HELIX_GATEWAY_PORT: String(PORT),
-  HELIX_DATA_DIR: DONNEES,
-  HELIX_WORKSPACE: ESPACE,
-  HELIX_OPENCODE_BIN: FAUX_OPENCODE,
-  HELIX_CODE_DIR: ESPACE,
-  HELIX_LMSTUDIO_URL: "http://127.0.0.1:9/v1",
-  HELIX_EXO_URL: "http://127.0.0.1:9/v1",
-  HELIX_GATEWAY_HOST: "127.0.0.1",
+  OXOAI_CONFIG: join(AUX, "profil.json"),
+  OXOAI_GATEWAY_PORT: String(PORT),
+  OXOAI_DATA_DIR: DONNEES,
+  OXOAI_WORKSPACE: ESPACE,
+  OXOAI_OPENCODE_BIN: FAUX_OPENCODE,
+  OXOAI_CODE_DIR: ESPACE,
+  OXOAI_LMSTUDIO_URL: "http://127.0.0.1:9/v1",
+  OXOAI_EXO_URL: "http://127.0.0.1:9/v1",
+  OXOAI_GATEWAY_HOST: "127.0.0.1",
 };
 const passerelle = spawn(process.execPath, ["--import", PREALABLE, join(RACINE, "gateway", "src", "index.ts")], { env: ENV, stdio: ["ignore", "pipe", "pipe"] });
 let journal = "";
@@ -534,51 +534,51 @@ if (!demarree) {
 }
 
 const JETON = readFileSync(join(DONNEES, "instance-token"), "utf8").trim();
-const avecJeton = { "Content-Type": "application/json", Authorization: `Bearer ${JETON}`, "X-Helix-Langue": "fr" };
+const avecJeton = { "Content-Type": "application/json", Authorization: `Bearer ${JETON}`, "X-OxoAI-Langue": "fr" };
 const appel = (chemin, options = {}) => fetch(`${G}${chemin}`, { redirect: "manual", ...options });
 const poster = (chemin, entetes, corps) => appel(chemin, { method: "POST", headers: entetes, body: JSON.stringify(corps ?? {}) });
-const premier = await (await poster("/helix/auth/create", avecJeton, { fullName: "Alice Essai", email: "alice@example.test", password: "Mot2PasseSolide!42" })).json();
-const A = { ...avecJeton, "X-Helix-Session": premier.session?.token };
+const premier = await (await poster("/oxoai/auth/create", avecJeton, { fullName: "Alice Essai", email: "alice@example.test", password: "Mot2PasseSolide!42" })).json();
+const A = { ...avecJeton, "X-OxoAI-Session": premier.session?.token };
 const idA = premier.account?.id;
-const creeB = await (await poster("/helix/auth/create", A, { fullName: "Bruno Essai", email: "bruno@example.test", password: "Provisoire2Passe!11" })).json();
-const connB = await (await poster("/helix/auth/mot-de-passe-provisoire", avecJeton, { accountId: creeB.account?.id, password: "Provisoire2Passe!11", nouveau: "Bruno2PasseSolide!57" })).json();
-const B = { ...avecJeton, "X-Helix-Session": connB.session?.token };
+const creeB = await (await poster("/oxoai/auth/create", A, { fullName: "Bruno Essai", email: "bruno@example.test", password: "Provisoire2Passe!11" })).json();
+const connB = await (await poster("/oxoai/auth/mot-de-passe-provisoire", avecJeton, { accountId: creeB.account?.id, password: "Provisoire2Passe!11", nouveau: "Bruno2PasseSolide!57" })).json();
+const B = { ...avecJeton, "X-OxoAI-Session": connB.session?.token };
 const idB = creeB.account?.id;
-const etatDe = async (entetes = A) => (await (await appel("/helix/natifs", { headers: entetes })).json()).services ?? [];
+const etatDe = async (entetes = A) => (await (await appel("/oxoai/natifs", { headers: entetes })).json()).services ?? [];
 const service = async (id) => (await etatDe()).find((s) => s.id === id);
 
 /* ------------------------------------------------------------------------- */
 console.log("\nA. Qui a le droit");
 {
-  const sans = await appel("/helix/natifs", { headers: avecJeton });
+  const sans = await appel("/oxoai/natifs", { headers: avecJeton });
   verifier("état des connexions : sans séance → 401", sans.status === 401, sans.status);
-  const vueB = await (await appel("/helix/natifs", { headers: B })).json();
+  const vueB = await (await appel("/oxoai/natifs", { headers: B })).json();
   verifier("un collègue voit l'état, et l'écran sait qu'il n'administre pas", Array.isArray(vueB.services) && HUIT.every((id) => vueB.services.some((s) => s.id === id)) && vueB.administrateur === false, JSON.stringify(vueB).slice(0, 200));
   for (const [suite, corps] of [["/application", { service: "linkedin", clientId: APPS.linkedin.id, clientSecret: APPS.linkedin.secret }], ["/connecter", { service: "sheets" }], ["/oublier", { service: "facebook" }]]) {
-    const r = await poster(`/helix/natifs${suite}`, B, corps);
+    const r = await poster(`/oxoai/natifs${suite}`, B, corps);
     verifier(`un collègue qui n'administre pas : ${suite} refusé (403)`, r.status === 403, r.status);
   }
-  const mal = await poster("/helix/natifs/application", A, { service: "linkedin", clientId: "pas un identifiant !", clientSecret: "x" });
+  const mal = await poster("/oxoai/natifs/application", A, { service: "linkedin", clientId: "pas un identifiant !", clientSecret: "x" });
   verifier("un identifiant d'application mal formé est refusé (400)", mal.status === 400, mal.status);
-  const inconnu = await poster("/helix/natifs/connecter", A, { service: "myspace" });
+  const inconnu = await poster("/oxoai/natifs/connecter", A, { service: "myspace" });
   verifier("un service hors de la liste est refusé (400)", inconnu.status === 400, inconnu.status);
-  const mcp = await poster("/helix/connecteurs/ajouter", A, { id: "linkedin", command: "/bin/sh" });
+  const mcp = await poster("/oxoai/connecteurs/ajouter", A, { id: "linkedin", command: "/bin/sh" });
   const jMcp = await mcp.json().catch(() => ({}));
   verifier("un connecteur MCP ne peut pas prendre le préfixe « linkedin » (réservé)", mcp.status === 400 && /intégré/.test(jMcp.message ?? ""), JSON.stringify(jMcp).slice(0, 160));
 }
 
 console.log("\nB. Applications des fournisseurs : le secret n'en ressort jamais");
 {
-  const g = await poster("/helix/google/client", A, { clientId: APPS.google.id, clientSecret: APPS.google.secret });
+  const g = await poster("/oxoai/google/client", A, { clientId: APPS.google.id, clientSecret: APPS.google.secret });
   verifier("application Google enregistrée (partagée avec Sheets, Slides, YouTube)", g.status === 200, g.status);
   for (const id of ["linkedin", "linkedinPage", "facebook", "instagram", "tiktok"]) {
-    const r = await poster("/helix/natifs/application", A, { service: id, clientId: APPS[id].id, clientSecret: APPS[id].secret });
+    const r = await poster("/oxoai/natifs/application", A, { service: id, clientId: APPS[id].id, clientSecret: APPS[id].secret });
     const texte = await r.text();
     verifier(`${id} : application enregistrée, et la réponse ne contient pas le secret`, r.status === 200 && !texte.includes(APPS[id].secret), `${r.status} ${texte.slice(0, 160)}`);
   }
   // X accepte une application « publique » (Native App), sans secret ; LinkedIn, non (témoin).
-  const xPublique = await poster("/helix/natifs/application", A, { service: "x", clientId: APPS.x.id });
-  const liSans = await poster("/helix/natifs/application", A, { service: "linkedin", clientId: APPS.linkedin.id });
+  const xPublique = await poster("/oxoai/natifs/application", A, { service: "x", clientId: APPS.x.id });
+  const liSans = await poster("/oxoai/natifs/application", A, { service: "linkedin", clientId: APPS.linkedin.id });
   const vueX = (await etatDe()).find((s) => s.id === "x");
   verifier("X : application publique enregistrée sans secret ; LinkedIn sans secret refusé", xPublique.status === 200 && vueX?.application?.disponible === true && vueX?.application?.avecSecret === false && liSans.status === 400, `${xPublique.status} ${liSans.status} ${JSON.stringify(vueX?.application)}`);
   const etats = JSON.stringify(await etatDe());
@@ -587,7 +587,7 @@ console.log("\nB. Applications des fournisseurs : le secret n'en ressort jamais"
 
 /** L'adresse d'autorisation, décortiquée. */
 async function depart(id, choix = []) {
-  const r = await poster("/helix/natifs/connecter", A, { service: id, choix });
+  const r = await poster("/oxoai/natifs/connecter", A, { service: id, choix });
   const j = await r.json().catch(() => ({}));
   const u = typeof j.url === "string" ? new URL(j.url) : null;
   return { statut: r.status, j, u, p: u?.searchParams ?? new URLSearchParams() };
@@ -603,13 +603,13 @@ console.log("\nC. Autorisation : portées minimales, PKCE, `state`");
   const yt = await depart("youtube", ["ecriture"]);
   verifier("YouTube : youtube.readonly seule, même si on demande l'écriture (aucune n'est proposée)", yt.p.get("scope") === "https://www.googleapis.com/auth/youtube.readonly", yt.p.get("scope"));
   const li = await depart("linkedin");
-  verifier("LinkedIn, lecture : openid profile, sans rien d'autre, retour sur l'instance, `state` tiré au sort", li.u?.hostname === "www.linkedin.com" && li.p.get("scope") === "openid profile" && li.p.get("redirect_uri") === `${G}/helix/oauth/retour` && /^natif\.[A-Za-z0-9_-]{43}$/.test(li.p.get("state") ?? ""), li.j.url);
+  verifier("LinkedIn, lecture : openid profile, sans rien d'autre, retour sur l'instance, `state` tiré au sort", li.u?.hostname === "www.linkedin.com" && li.p.get("scope") === "openid profile" && li.p.get("redirect_uri") === `${G}/oxoai/oauth/retour` && /^natif\.[A-Za-z0-9_-]{43}$/.test(li.p.get("state") ?? ""), li.j.url);
   // L'ancienne case « page » (retirée le 29/09/2026), envoyée par un écran resté ouvert : ignorée, rien d'organisation n'est demandé au profil.
   const liPage = await depart("linkedin", ["ecriture", "page"]);
   const choixProfil = (await service("linkedin"))?.choix?.map((c) => c.id);
   verifier("LinkedIn, profil : plus de case « page » ; demandée quand même, elle est ignorée (openid profile w_member_social, aucune portée d'organisation)", liPage.p.get("scope") === "openid profile w_member_social" && JSON.stringify(choixProfil) === '["ecriture"]', `${liPage.p.get("scope")} ${JSON.stringify(choixProfil)}`);
   const pg = await depart("linkedinPage");
-  verifier("LinkedIn, Page d'entreprise : sa propre application, r_organization_social et rw_organization_admin seulement, retour sur l'instance", pg.u?.hostname === "www.linkedin.com" && pg.p.get("client_id") === APPS.linkedinPage.id && pg.p.get("scope") === "r_organization_social rw_organization_admin" && pg.p.get("redirect_uri") === `${G}/helix/oauth/retour`, pg.j.url);
+  verifier("LinkedIn, Page d'entreprise : sa propre application, r_organization_social et rw_organization_admin seulement, retour sur l'instance", pg.u?.hostname === "www.linkedin.com" && pg.p.get("client_id") === APPS.linkedinPage.id && pg.p.get("scope") === "r_organization_social rw_organization_admin" && pg.p.get("redirect_uri") === `${G}/oxoai/oauth/retour`, pg.j.url);
   const pgE = await depart("linkedinPage", ["ecriture", "page"]);
   const portPage = (pgE.p.get("scope") ?? "").split(" ");
   verifier("LinkedIn, Page d'entreprise, publier : w_organization_social en plus, et aucune portée du profil (ni openid, ni profile, ni w_member_social)", pgE.p.get("scope") === "r_organization_social rw_organization_admin w_organization_social" && !portPage.some((x) => ["openid", "profile", "w_member_social", "r_organization_admin"].includes(x)), pgE.p.get("scope"));
@@ -623,14 +623,14 @@ console.log("\nC. Autorisation : portées minimales, PKCE, `state`");
   verifier("TikTok : client_key, lecture seule, PKCE S256 en hexadécimal, retour sur la boucle locale", tk.u?.hostname === "www.tiktok.com" && tk.p.get("client_key") === APPS.tiktok.id && tk.p.get("scope") === "user.info.basic,user.info.stats,video.list" && /^[0-9a-f]{64}$/.test(tk.p.get("code_challenge") ?? "") && /^http:\/\/127\.0\.0\.1:\d+\/callback\/$/.test(tk.p.get("redirect_uri") ?? ""), tk.j.url);
 
   // Un `state` faux : ignoré, et la demande en cours reste en attente.
-  const faux1 = await appel(`/helix/oauth/retour?state=natif.faux&code=CODE-linkedin`);
-  const faux2 = await appel(`/helix/oauth/retour?state=natif.faux&error=access_denied`);
+  const faux1 = await appel(`/oxoai/oauth/retour?state=natif.faux&code=CODE-linkedin`);
+  const faux2 = await appel(`/oxoai/oauth/retour?state=natif.faux&error=access_denied`);
   const li2 = await service("linkedin");
   verifier("retour public : un `state` faux est refusé (400), avec ou sans erreur, et n'annule pas la demande en cours", faux1.status === 400 && faux2.status === 400 && li2?.attente === true && li2?.configure === false, `${faux1.status} ${faux2.status} ${JSON.stringify(li2).slice(0, 120)}`);
   const direct = await fetch(`${tk.p.get("redirect_uri")}?state=natif.faux&code=CODE-tiktok`).catch(() => null);
   const tk2 = await service("tiktok");
   verifier("boucle locale de TikTok : un `state` faux est refusé, rien n'est enregistré", (direct?.status ?? 400) === 400 && tk2?.configure === false && tk2?.attente === true, `${direct?.status} ${JSON.stringify(tk2).slice(0, 120)}`);
-  const colle = await poster("/helix/natifs/code", A, { service: "tiktok", adresse: `${tk.p.get("redirect_uri")}?state=natif.autre&code=CODE-tiktok` });
+  const colle = await poster("/oxoai/natifs/code", A, { service: "tiktok", adresse: `${tk.p.get("redirect_uri")}?state=natif.autre&code=CODE-tiktok` });
   verifier("adresse recopiée à l'écran avec un `state` faux : refusée", colle.status === 400, colle.status);
 }
 
@@ -704,7 +704,7 @@ console.log("\nD. Retour vérifié : portée relue, compte lu, puis seulement en
   verifier("TikTok branché, vérificateur PKCE conforme au défi hexadécimal", rTk.statut === 200 && createHash("sha256").update(tkVerif).digest("hex") === tk.p.get("code_challenge"), `${rTk.statut} ${rTk.page.slice(0, 160)}`);
 
   // Le même code rejoué après coup : la demande est close, il ne mène à rien.
-  const rejoue = await appel(`/helix/oauth/retour?state=${encodeURIComponent(li.p.get("state") ?? "")}&code=CODE-linkedin`);
+  const rejoue = await appel(`/oxoai/oauth/retour?state=${encodeURIComponent(li.p.get("state") ?? "")}&code=CODE-linkedin`);
   verifier("un retour rejoué (même `state`, même code) ne vaut plus rien", rejoue.status === 400, rejoue.status);
 }
 
@@ -763,13 +763,13 @@ console.log("\nH. X (ex-Twitter) : PKCE, client public puis confidentiel, porté
   const x = await depart("x");
   verifier(
     "X, lecture : chez x.com, tweet.read users.read offline.access seulement, PKCE S256, retour sur l'instance, `state` tiré au sort",
-    x.u?.origin === "https://x.com" && x.u?.pathname === "/i/oauth2/authorize" && x.p.get("response_type") === "code" && x.p.get("client_id") === APPS.x.id && x.p.get("scope") === "tweet.read users.read offline.access" && x.p.get("code_challenge_method") === "S256" && /^[A-Za-z0-9_-]{43}$/.test(x.p.get("code_challenge") ?? "") && x.p.get("redirect_uri") === `${G}/helix/oauth/retour` && /^natif\.[A-Za-z0-9_-]{43}$/.test(x.p.get("state") ?? ""),
+    x.u?.origin === "https://x.com" && x.u?.pathname === "/i/oauth2/authorize" && x.p.get("response_type") === "code" && x.p.get("client_id") === APPS.x.id && x.p.get("scope") === "tweet.read users.read offline.access" && x.p.get("code_challenge_method") === "S256" && /^[A-Za-z0-9_-]{43}$/.test(x.p.get("code_challenge") ?? "") && x.p.get("redirect_uri") === `${G}/oxoai/oauth/retour` && /^natif\.[A-Za-z0-9_-]{43}$/.test(x.p.get("state") ?? ""),
     x.j.url,
   );
   verifier("X : le secret ne voyage pas dans l'adresse d'autorisation", !x.p.has("client_secret") && !SECRETS.test(x.j.url ?? ""), x.j.url);
   const xE = await depart("x", ["ecriture"]);
   verifier("X, publier coché : tweet.write et media.write en plus, et rien d'autre", xE.p.get("scope") === "tweet.read users.read offline.access tweet.write media.write", xE.p.get("scope"));
-  const viaLocalhost = await posterAvecHote(`localhost:${PORT}`, "/helix/natifs/connecter", A, { service: "x" });
+  const viaLocalhost = await posterAvecHote(`localhost:${PORT}`, "/oxoai/natifs/connecter", A, { service: "x" });
   const retourLocal = (() => {
     try {
       return new URL(JSON.parse(viaLocalhost.texte).url).searchParams.get("redirect_uri");
@@ -784,12 +784,12 @@ console.log("\nH. X (ex-Twitter) : PKCE, client public puis confidentiel, porté
       return null;
     }
   })();
-  verifier("X : instance ouverte par « localhost », l'adresse de retour (demandée et montrée) est en 127.0.0.1, que X exige", retourLocal === `http://127.0.0.1:${PORT}/helix/oauth/retour` && etatLocal === retourLocal, `${viaLocalhost.statut} ${retourLocal} ${etatLocal}`);
+  verifier("X : instance ouverte par « localhost », l'adresse de retour (demandée et montrée) est en 127.0.0.1, que X exige", retourLocal === `http://127.0.0.1:${PORT}/oxoai/oauth/retour` && etatLocal === retourLocal, `${viaLocalhost.statut} ${retourLocal} ${etatLocal}`);
 
   const d = await depart("x", ["ecriture"]);
   const avantFaux = recues.filter((r) => r.hote === "api.x.com" && r.chemin === "/2/oauth2/token").length;
-  const faux1 = await appel(`/helix/oauth/retour?state=natif.faux&code=CODE-x`);
-  const faux2 = await appel(`/helix/oauth/retour?state=${encodeURIComponent((d.p.get("state") ?? "") + "x")}&code=CODE-x`);
+  const faux1 = await appel(`/oxoai/oauth/retour?state=natif.faux&code=CODE-x`);
+  const faux2 = await appel(`/oxoai/oauth/retour?state=${encodeURIComponent((d.p.get("state") ?? "") + "x")}&code=CODE-x`);
   const apresFaux = await service("x");
   verifier("X : un `state` faux (inventé, ou le vrai allongé) est refusé, rien n'est échangé, la demande reste en attente", faux1.status === 400 && faux2.status === 400 && apresFaux?.attente === true && apresFaux?.configure === false && recues.filter((r) => r.hote === "api.x.com" && r.chemin === "/2/oauth2/token").length === avantFaux, `${faux1.status} ${faux2.status} ${JSON.stringify(apresFaux).slice(0, 120)}`);
 
@@ -820,7 +820,7 @@ console.log("\nH. X (ex-Twitter) : PKCE, client public puis confidentiel, porté
   const moi402 = recues.filter((r) => r.hote === "api.x.com" && r.chemin.startsWith("/2/users/me")).length;
   verifier("X sans crédit (402 à la lecture du compte) : connexion refusée, et la page dit d'acheter des crédits dans la console de X", r402.statut === 400 && /crédits|credits/i.test(r402.page) && /console/i.test(r402.page) && moi402 >= 1, `${r402.statut} ${r402.page.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").slice(0, 300)}`);
 
-  const conf = await poster("/helix/natifs/application", A, { service: "x", clientId: APPS.x.id, clientSecret: APPS.x.secret });
+  const conf = await poster("/oxoai/natifs/application", A, { service: "x", clientId: APPS.x.id, clientSecret: APPS.x.secret });
   const confTexte = await conf.text();
   verifier("X : le secret d'une application confidentielle s'enregistre, et ne ressort pas", conf.status === 200 && !SECRETS.test(confTexte), `${conf.status} ${confTexte.slice(0, 160)}`);
   const d3 = await depart("x", ["ecriture"]);
@@ -834,19 +834,19 @@ console.log("\nH. X (ex-Twitter) : PKCE, client public puis confidentiel, porté
   );
   const etatX = await service("x");
   verifier("X branché : l'écran nomme le compte (@orga_essai), lecture et publication, sans jeton ni secret", etatX?.configure === true && etatX?.compte === "@orga_essai" && etatX?.accordes?.includes("ecriture") && etatX?.application?.avecSecret === true && !SECRETS.test(JSON.stringify(etatX)), JSON.stringify(etatX).slice(0, 200));
-  const rejoue = await appel(`/helix/oauth/retour?state=${encodeURIComponent(d3.p.get("state") ?? "")}&code=CODE-x`);
+  const rejoue = await appel(`/oxoai/oauth/retour?state=${encodeURIComponent(d3.p.get("state") ?? "")}&code=CODE-x`);
   verifier("X : le même retour rejoué ne vaut plus rien", rejoue.status === 400, rejoue.status);
 }
 
 console.log("\nE. Jetons : jamais à l'écran, jamais en clair sur le disque, jamais au journal");
 {
   for (const [nom, entetes] of [["administrateur", A], ["collègue", B]]) {
-    const brut = await (await appel("/helix/natifs", { headers: entetes })).text();
+    const brut = await (await appel("/oxoai/natifs", { headers: entetes })).text();
     // Les huit de cet essai ; Brevo et Mailchimp (28/09/2026) ont le leur, scripts/essai-projets.mjs.
     const tous = (JSON.parse(brut).services ?? []).filter((s) => HUIT.includes(s.id));
     verifier(`état (${nom}) : les huit services, branchés, sans aucun jeton ni secret`, tous.length === 8 && tous.every((s) => s.configure) && !SECRETS.test(brut), `${tous.filter((s) => !s.configure).map((s) => s.id)} ${brut.match(SECRETS)?.[0] ?? ""}`);
   }
-  const outils = await (await appel("/helix/outils", { headers: A })).text();
+  const outils = await (await appel("/oxoai/outils", { headers: A })).text();
   verifier("la puce « Outils » nomme les services branchés, sans rien de secret", /LinkedIn/.test(outils) && /TikTok/.test(outils) && !SECRETS.test(outils), outils.slice(0, 200));
   const fichiers = [];
   const parcourir = (d) => {
@@ -883,14 +883,14 @@ console.log("\nG. Un appel recopié d'une publication lue n'est pas un appel du 
   const enCours = chat("RESUME-PAGE : résume les dernières publications de Page Essai.");
   let carte;
   for (let t = 0; t < 8000 && !carte; t += 200) {
-    const e = await (await appel("/helix/approbation", { headers: A })).json().catch(() => ({}));
+    const e = await (await appel("/oxoai/approbation", { headers: A })).json().catch(() => ({}));
     carte = (e.enAttente ?? []).find((d) => d.detail?.outil === "facebook__publier");
     if (!carte) {
       const fini = await Promise.race([enCours.then(() => true), attendre(200).then(() => false)]);
       if (fini) break;
     }
   }
-  if (carte) await poster("/helix/approbation/repondre", A, { id: carte.id, accord: false });
+  if (carte) await poster("/oxoai/approbation/repondre", A, { id: carte.id, accord: false });
   const flux = await enCours;
   const pendantG = recues.slice(avantG);
   verifier("témoin : le modèle a bien lu la publication piégée par un vrai appel", pendantG.some((x) => x.chemin?.startsWith("/v25.0/111/published_posts")) && auModele.length >= 2, `${pendantG.map((x) => x.chemin).join(" ")} ${auModele.length}`);
@@ -904,14 +904,14 @@ console.log("\nG. Un appel recopié d'une publication lue n'est pas un appel du 
   const enCoursX = chat("RESUME-X : résume mes derniers posts X.");
   let carteX;
   for (let t = 0; t < 8000 && !carteX; t += 200) {
-    const e = await (await appel("/helix/approbation", { headers: A })).json().catch(() => ({}));
+    const e = await (await appel("/oxoai/approbation", { headers: A })).json().catch(() => ({}));
     carteX = (e.enAttente ?? []).find((d) => d.detail?.outil === "x__publier");
     if (!carteX) {
       const fini = await Promise.race([enCoursX.then(() => true), attendre(200).then(() => false)]);
       if (fini) break;
     }
   }
-  if (carteX) await poster("/helix/approbation/repondre", A, { id: carteX.id, accord: false });
+  if (carteX) await poster("/oxoai/approbation/repondre", A, { id: carteX.id, accord: false });
   const fluxX = await enCoursX;
   const pendantX = recues.slice(avantX);
   verifier("X, témoin : le modèle a bien lu le post piégé par un vrai appel", pendantX.some((r) => r.hote === "api.x.com" && r.chemin?.startsWith(`/2/users/${X_MOI}/tweets`)), pendantX.map((r) => r.chemin).join(" "));
@@ -924,15 +924,15 @@ console.log("\nG. Un appel recopié d'une publication lue n'est pas un appel du 
   verifier("témoin : un appel que le modèle écrit lui-même dans le texte est toujours lancé", recues.slice(avantT).some((x) => x.chemin?.startsWith("/v25.0/me/accounts")), recues.slice(avantT).map((x) => x.chemin).join(" "));
 
   /*
-   * La commande `helix` (cli/helix.mjs) : la carte d'un post n'y montrait que
+   * La commande `oxoai` (cli/oxoai.mjs) : la carte d'un post n'y montrait que
    * le résumé (120 caractères du texte). Lancée ici sans terminal, elle écrit
    * ce qu'elle aurait montré avant de poser la question ; on refuse ensuite
    * la carte depuis l'instance.
    */
   const seanceCli = join(AUX, "cli-seance");
   writeFileSync(seanceCli, JSON.stringify({ instances: { [G]: { seance: premier.session?.token } } }), { mode: 0o600 });
-  const cli = spawn(process.execPath, [join(RACINE, "cli", "helix.mjs"), "chat", "--outils", "--modele", "essai-injection", "PUBLIE-LONG sur la page"], {
-    env: { ...ENV, HELIX_ADRESSE: G, HELIX_JETON: JETON, HELIX_CLI_SEANCE: seanceCli, NO_COLOR: "1" },
+  const cli = spawn(process.execPath, [join(RACINE, "cli", "oxoai.mjs"), "chat", "--outils", "--modele", "essai-injection", "PUBLIE-LONG sur la page"], {
+    env: { ...ENV, OXOAI_ADRESSE: G, OXOAI_JETON: JETON, OXOAI_CLI_SEANCE: seanceCli, NO_COLOR: "1" },
     stdio: ["pipe", "pipe", "pipe"],
   });
   let sortieCli = "";
@@ -942,13 +942,13 @@ console.log("\nG. Un appel recopié d'une publication lue n'est pas un appel du 
   const finCli = new Promise((ok) => cli.on("close", ok));
   let carteCli;
   for (let t = 0; t < 8000 && !carteCli; t += 200) {
-    const e = await (await appel("/helix/approbation", { headers: A })).json().catch(() => ({}));
+    const e = await (await appel("/oxoai/approbation", { headers: A })).json().catch(() => ({}));
     carteCli = (e.enAttente ?? []).find((d) => d.detail?.outil === "facebook__publier");
     if (!carteCli) await attendre(200);
   }
   await attendre(800);
   const vuDansLeTerminal = sortieCli;
-  if (carteCli) await poster("/helix/approbation/repondre", A, { id: carteCli.id, accord: false });
+  if (carteCli) await poster("/oxoai/approbation/repondre", A, { id: carteCli.id, accord: false });
   await Promise.race([finCli, attendre(10_000)]);
   cli.kill();
   verifier("ligne de commande : la carte d'un post montre le texte entier, pas seulement son début", Boolean(carteCli) && /FIN-DU-POST-CLI/.test(vuDansLeTerminal), `${carteCli ? "carte posée" : "aucune carte"} ; terminal : ${vuDansLeTerminal.slice(-400)}`);
@@ -979,14 +979,14 @@ console.log("\nI. Google Drive et Google Agenda, sur la même application Google
     return { flux, tools, noms: tools.map((o) => o?.function?.name) };
   };
 
-  const d = await commencer("/helix/drive/connecter");
+  const d = await commencer("/oxoai/drive/connecter");
   verifier("Drive : autorisation chez Google, drive.readonly seule, PKCE S256, retour sur la boucle locale", d.statut === 200 && d.p.get("scope") === G_SCOPES.drive && d.p.get("code_challenge_method") === "S256" && /^http:\/\/127\.0\.0\.1:\d+\/$/.test(d.p.get("redirect_uri") ?? ""), JSON.stringify(d.j).slice(0, 200));
   const rD = await retour(d, "CODE-drive");
-  const eD = await (await appel("/helix/drive", { headers: A })).json();
+  const eD = await (await appel("/oxoai/drive", { headers: A })).json();
   verifier("Drive branché par la boucle locale ; la page et le message de l'écran sont en français, la langue de la demande", rD.statut === 200 && eD.configure === true && eD.compte === "alice@exemple.test" && /^Google Drive connecté en lecture seule/.test(eD.issue?.message ?? "") && /fermer cet onglet/.test(rD.page), `${rD.statut} ${rD.page.replace(/<[^>]+>/g, " ").slice(0, 160)} | ${JSON.stringify(eD).slice(0, 200)}`);
-  const ag = await commencer("/helix/agenda/google/connecter");
+  const ag = await commencer("/oxoai/agenda/google/connecter");
   const rA = await retour(ag, "CODE-agenda");
-  const eA = await (await appel("/helix/agenda/google", { headers: A })).json();
+  const eA = await (await appel("/oxoai/agenda/google", { headers: A })).json();
   verifier("Google Agenda branché en lecture par la boucle locale, message en français", rA.statut === 200 && eA.configure === true && /^Google Agenda connecté en lecture seule/.test(eA.issue?.message ?? ""), `${rA.statut} ${JSON.stringify(eA).slice(0, 200)}`);
 
   const m = await outilsDuModele("DRIVE-RECENTS : quels fichiers ai-je modifiés ?");
@@ -1014,11 +1014,11 @@ console.log("\nI. Google Drive et Google Agenda, sur la même application Google
   verifier("Chat : l'agenda Google est lu par un vrai appel", /Réunion essai/.test(fluxAgenda), fluxAgenda.slice(-300));
 
   const revAvant = revocations();
-  const oD = await (await poster("/helix/drive/oublier", A, {})).json();
+  const oD = await (await poster("/oxoai/drive/oublier", A, {})).json();
   verifier("Drive débranché pendant que l'agenda, Sheets, Slides et YouTube restent branchés : pas de révocation chez Google (elle les couperait), et le message le dit, en français", revocations() === revAvant && /pas révoqué chez Google/.test(oD.message ?? "") && /Google Agenda/.test(oD.message ?? "") && /Google Sheets/.test(oD.message ?? "") && oD.etat?.configure === false, oD.message);
   const fluxApres = await chat("AGENDA-PROCHAINS : et maintenant ?");
   verifier("l'agenda Google répond encore après le débranchement du Drive", /Réunion essai/.test(fluxApres), fluxApres.slice(-300));
-  const oA = await (await poster("/helix/agenda/google/oublier", A, {})).json();
+  const oA = await (await poster("/oxoai/agenda/google/oublier", A, {})).json();
   verifier("Google Agenda débranché à son tour : toujours pas de révocation tant que Sheets, Slides et YouTube restent branchés", revocations() === revAvant && /pas révoqué chez Google/.test(oA.message ?? "") && /YouTube/.test(oA.message ?? "") && oA.etat?.configure === false, oA.message);
   const m2 = await outilsDuModele("Rien de spécial.");
   verifier("Chat : après débranchement, plus aucun outil du Drive ni de l'agenda n'est proposé ; ceux des services encore branchés le sont", m2.noms.length > 0 && !m2.noms.some((n) => /^(drive|agenda)__/.test(n ?? "")) && m2.noms.includes("sheets__lire"), m2.noms.join(", ").slice(0, 300));
@@ -1178,7 +1178,7 @@ const lecture = await Promise.race([ap.verifierOutil(null, "linkedin__profil", {
 sortie.lectureLibre = lecture !== "attente" && lecture.autorise === true;
 // Hors requête, la passerelle parle anglais (langue.ts) : les messages de l'écran sont lus ici en français, comme par une personne qui l'a choisi.
 const { avecLangueDe } = await import(${src("langue.ts")});
-await avecLangueDe({ "x-helix-langue": "fr" }, new URL("http://essai/"), async () => {
+await avecLangueDe({ "x-oxoai-langue": "fr" }, new URL("http://essai/"), async () => {
   // La Page d'entreprise débranchée seule : ses outils disparaissent, le profil garde les siens.
   sortie.oubli_linkedinPage = await n.oublier("linkedinPage", A.userId);
   sortie.outilsSansPage = o.toolsForModel().map((x) => x.function.name);
@@ -1189,7 +1189,7 @@ sortie.apres = (await n.etat("http://127.0.0.1")).filter((s) => s.configure).map
 sortie.outilsApres = o.toolsForModel().map((x) => x.function.name);
 // Tournée des connecteurs du 28/09/2026 : Sheets débranché, Slides et YouTube, sur la même application Google, doivent encore marcher.
 sortie.slidesApresSheets = await appeler("slides__lire", { presentation: "1AbCdEfGhIjKlMnOpQrStUvWxYz0123456789" });
-await avecLangueDe({ "x-helix-langue": "fr" }, new URL("http://essai/"), async () => {
+await avecLangueDe({ "x-oxoai-langue": "fr" }, new URL("http://essai/"), async () => {
   sortie.oubli_youtube = await n.oublier("youtube", A.userId);
   sortie.slidesApresYoutube = await appeler("slides__lire", { presentation: "1AbCdEfGhIjKlMnOpQrStUvWxYz0123456789" });
   sortie.oubli_slides = await n.oublier("slides", A.userId);
@@ -1355,11 +1355,11 @@ process.exit(0);
  */
 console.log("\nJ. Chaque outil natif a son libellé traduit à l'écran");
 {
-  const donneesJ = mkdtempSync(join(tmpdir(), "helix-natifs-libelles-"));
+  const donneesJ = mkdtempSync(join(tmpdir(), "oxoai-natifs-libelles-"));
   const listeNoms = execFileSync(
     process.execPath,
     ["--input-type=module", "-e", `const a = await import(${JSON.stringify(pathToFileURL(join(RACINE, "gateway", "src", "approbation.ts")).href)}); console.log(JSON.stringify([...a.LECTURES_NATIVES, ...a.ECRITURES_NATIVES]));`],
-    { env: { ...process.env, HELIX_DATA_DIR: donneesJ }, encoding: "utf8" },
+    { env: { ...process.env, OXOAI_DATA_DIR: donneesJ }, encoding: "utf8" },
   );
   rmSync(donneesJ, { recursive: true, force: true });
   const noms = JSON.parse(listeNoms.trim().split("\n").pop() ?? "[]");

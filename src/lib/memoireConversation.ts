@@ -9,7 +9,7 @@ import { t } from "@/lib/i18n";
 
 /** « Effacer la mémoire de ce Chat » : la sienne seulement ; le Chat et ses messages restent. Rend vrai si une mémoire existait. */
 export async function effacerMemoireDuChat(chat: string): Promise<boolean> {
-  const res = await apiFetch(`/helix/memoire-chat/${encodeURIComponent(chat)}`, { method: "DELETE" });
+  const res = await apiFetch(`/oxoai/memoire-chat/${encodeURIComponent(chat)}`, { method: "DELETE" });
   const corps = (await res.json().catch(() => ({}))) as { effacee?: boolean; error?: { message?: string } };
   if (!res.ok) throw new Error(corps.error?.message ?? t("L'instance n'a pas répondu."));
   return corps.effacee === true;

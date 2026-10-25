@@ -24,7 +24,7 @@ h1 { font-size: 46px; line-height: 1.08; font-weight: 700; letter-spacing: -0.02
 .capture img { display: block; width: 100%; }
 </style></head><body><div class="fond"></div>
 <div class="gauche">
-  <img class="logo" src="data:image/png;base64,${b64("src/assets/helix-logo.png")}">
+  <img class="logo" src="data:image/png;base64,${b64("src/assets/oxoai-logo.png")}">
   <h1>Your own AI workspace,<br>on your own machines.</h1>
   <p class="sous">Chat, agents, coding, knowledge bases and fine-tuning with local models. Your data stays with you.</p>
   <div class="puces"><span class="puce forte">Open source · AGPL-3.0</span><span class="puce">macOS · Windows · Linux</span><span class="puce">Local models</span></div>

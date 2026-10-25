@@ -3,10 +3,10 @@
  * l'application juste fabriquée (electron/signatureEditeur.cjs), avant que
  * l'image disque et l'archive ne soient faites.
  *
- * La clé privée n'est jamais dans le dépôt : ~/.helix-editeur/
+ * La clé privée n'est jamais dans le dépôt : ~/.oxoai-editeur/
  * cle-privee-mises-a-jour.pem par défaut (`npm run cle:editeur` la crée une
- * fois), ou le chemin donné par HELIX_CLE_EDITEUR. Sans elle, la fabrication
- * s'arrête, sauf si HELIX_SANS_CLE_EDITEUR=1 : l'application n'aura alors pas
+ * fois), ou le chemin donné par OXOAI_CLE_EDITEUR. Sans elle, la fabrication
+ * s'arrête, sauf si OXOAI_SANS_CLE_EDITEUR=1 : l'application n'aura alors pas
  * de clé, et ses postes refuseront toute mise à jour d'un clic (elle s'installe
  * à la main).
  *
@@ -47,7 +47,7 @@ exports.default = async function signerMiseAJour(context) {
    * sur l'empreinte de ce paquet-ci (27/09/2026). Une signature ad hoc a par
    * défaut pour exigence son empreinte, qui change à chaque fabrication : le
    * trousseau prenait alors chaque nouvelle version pour une autre application,
-   * redemandait l'accès à « Helix Safe Storage », et l'application attendait la
+   * redemandait l'accès à « OxoAI Safe Storage », et l'application attendait la
    * réponse avant de lancer sa passerelle. Les programmes intérieurs gardent la
    * leur ; seule l'application elle-même est resignée avec cette exigence.
    */
@@ -60,16 +60,16 @@ exports.default = async function signerMiseAJour(context) {
       { stdio: "inherit" },
     );
   };
-  const chemin = process.env.HELIX_CLE_EDITEUR || path.join(os.homedir(), ".helix-editeur", "cle-privee-mises-a-jour.pem");
+  const chemin = process.env.OXOAI_CLE_EDITEUR || path.join(os.homedir(), ".oxoai-editeur", "cle-privee-mises-a-jour.pem");
   if (!fs.existsSync(chemin)) {
-    if (process.env.HELIX_SANS_CLE_EDITEUR === "1") {
-      console.log("  • signature de l'éditeur : aucune (HELIX_SANS_CLE_EDITEUR=1) ; les postes de cette application refuseront les mises à jour d'un clic");
+    if (process.env.OXOAI_SANS_CLE_EDITEUR === "1") {
+      console.log("  • signature de l'éditeur : aucune (OXOAI_SANS_CLE_EDITEUR=1) ; les postes de cette application refuseront les mises à jour d'un clic");
       signerCode();
       return;
     }
     throw new Error(
       `Clé d'éditeur introuvable (${chemin}). Créez-la une fois avec « npm run cle:editeur », ` +
-        "ou fabriquez sans mises à jour d'un clic avec HELIX_SANS_CLE_EDITEUR=1.",
+        "ou fabriquez sans mises à jour d'un clic avec OXOAI_SANS_CLE_EDITEUR=1.",
     );
   }
   const identite = { identifiant: context.packager.appInfo.id, version: context.packager.appInfo.version };

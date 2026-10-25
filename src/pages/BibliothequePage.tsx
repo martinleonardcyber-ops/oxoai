@@ -58,7 +58,7 @@ import { t, tf, lister } from "@/lib/i18n";
  * Bibliothèque de l'équipe : dossiers et documents gardés par l'instance,
  * chiffrés, chacun avec sa visibilité (vous seul, des groupes, toute
  * l'équipe). Les agents y cherchent et y lisent ce qu'on leur a partagé ;
- * « Depuis Helix » y puise pour leur confier un document.
+ * « Depuis OxoAI » y puise pour leur confier un document.
  */
 
 type Vue = "tous" | "favoris" | "prives" | "groupes" | "connaissances";

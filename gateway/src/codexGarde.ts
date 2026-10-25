@@ -13,7 +13,7 @@ import type { Niveau } from "./approbation.ts";
  *  1. **qui** peut s'en servir (`refusCodex`) : le propriétaire du poste, sur
  *     une installation de bureau, et personne d'autre ;
  *  2. **quel bac à sable** Codex reçoit (`bacASable`), jamais plus large que le
- *     niveau d'approbation de Helix ;
+ *     niveau d'approbation de OxoAI ;
  *  3. **comment son flux se lit** (`traduireCodex`) : les lignes JSON de
  *     `codex exec --json` deviennent les évènements de l'écran Code.
  */
@@ -24,7 +24,7 @@ import type { Niveau } from "./approbation.ts";
 
 /** Ce que la passerelle sait de la requête, vérifié par elle (index.ts). */
 export interface ContexteCodex {
-  /** La passerelle a été lancée par l'application de bureau (`HELIX_BUREAU`, electron/main.cjs). */
+  /** La passerelle a été lancée par l'application de bureau (`OXOAI_BUREAU`, electron/main.cjs). */
   bureau: boolean;
   /** Instance ouverte aux collègues (`share`, ou écoute sur le réseau). */
   partagee: boolean;
@@ -83,20 +83,20 @@ export function refusCodex(c: ContexteCodex): { code: CodeRefusCodex; message: s
 export type BacCodex = "read-only" | "workspace-write";
 
 /**
- * Le bac à sable passé à Codex pour un niveau d'approbation de Helix, ou
+ * Le bac à sable passé à Codex pour un niveau d'approbation de OxoAI, ou
  * `null` quand aucun n'est assez strict.
  *
  * `codex exec` ne demande jamais rien : il fixe `approval_policy = never`
  * (lu dans codex-rs/exec/src/lib.rs, « Default to never ask for approvals in
  * headless mode », 27/09/2026). Ce qu'il fait lui-même, ses commandes et ses
- * modifications, ne passe donc par aucune carte de Helix : seul son bac à
- * sable le borne. D'où une correspondance qui ne prête jamais plus que Helix :
+ * modifications, ne passe donc par aucune carte de OxoAI : seul son bac à
+ * sable le borne. D'où une correspondance qui ne prête jamais plus que OxoAI :
  *
  *  - « tout » (l'agent agit seul) : `workspace-write`, écriture dans le
  *    dossier du projet, réseau des commandes coupé ;
- *  - « modifications » (Helix demande avant d'écrire) : `read-only`. Codex ne
+ *  - « modifications » (OxoAI demande avant d'écrire) : `read-only`. Codex ne
  *    sachant pas demander, il ne peut pas écrire du tout ;
- *  - « chaque » (Helix demande avant chaque action, lecture comprise) : rien.
+ *  - « chaque » (OxoAI demande avant chaque action, lecture comprise) : rien.
  *    Codex lit sans demander ; le proposer à ce niveau le trahirait.
  *
  * `danger-full-access` n'est jamais passé, quel que soit le niveau.

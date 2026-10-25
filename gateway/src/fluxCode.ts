@@ -6,12 +6,12 @@ import { rtkSousSession } from "./rtk.ts";
 import { permissionRepondueAilleurs, traiterPermissionCode, type DemandeOpenCode } from "./permissionsCode.ts";
 
 /**
- * Le flux d'évènements de Helix Code, fabriqué par la passerelle à partir de
+ * Le flux d'évènements de OxoAI Code, fabriqué par la passerelle à partir de
  * l'**ancienne** API d'OpenCode.
  *
  * ── Pourquoi ────────────────────────────────────────────────────────────────
  *
- * Helix Code ouvrait ses sessions par la nouvelle API d'OpenCode
+ * OxoAI Code ouvrait ses sessions par la nouvelle API d'OpenCode
  * (`/api/session`), et l'écran, l'extension VS Code et la ligne de commande
  * lisent son flux (`session.next.*`). Or les sessions de cette nouvelle API
  * **n'ont pas d'outils MCP**, quelle que soit la configuration : lu dans le
@@ -27,7 +27,7 @@ import { permissionRepondueAilleurs, traiterPermissionCode, type DemandeOpenCode
  * l'agent (vérifié le 25/09/2026 : un outil d'un serveur MCP d'essai appelé
  * par Qwen3 8B dans une session `/session`, sans rien d'autre à régler).
  *
- * Les sessions de Helix Code passent donc par l'ancienne API. Mais son flux
+ * Les sessions de OxoAI Code passent donc par l'ancienne API. Mais son flux
  * (`/event`, un seul pour tout un dossier, fait de `message.part.updated`) ne
  * ressemble pas à celui que lisent les trois clients. Plutôt que de réécrire
  * trois clients, la passerelle traduit : elle écoute `/event` et rend, pour
@@ -50,7 +50,7 @@ import { permissionRepondueAilleurs, traiterPermissionCode, type DemandeOpenCode
  *    passerelle a fabriqué moins de cent évènements par seconde en moyenne.
  */
 
-/** Un évènement tel que les clients de Helix Code le lisent. */
+/** Un évènement tel que les clients de OxoAI Code le lisent. */
 export interface EvenementCode {
   type: string;
   data: Record<string, unknown>;
@@ -120,7 +120,7 @@ let numero = Math.floor(Date.now() / 10);
 
 /**
  * La passerelle suit cette session, ouverte dans ce dossier. Appelée à la
- * création d'une session de Helix Code, avant tout envoi.
+ * création d'une session de OxoAI Code, avant tout envoi.
  */
 export function suivreSession(sessionID: string, dossier: string): void {
   const connu = sessions.get(sessionID);
@@ -156,21 +156,21 @@ export function suivreSession(sessionID: string, dossier: string): void {
 
 /**
  * Où en est le modèle d'une session, pendant qu'il lit la demande ou attend son
- * tour (attenteModele.ts) : `helix.statut`, sans numéro, jamais rejoué, comme
- * `helix.activite`. C'est ce qui tient le guet de silence des clients au
+ * tour (attenteModele.ts) : `oxoai.statut`, sans numéro, jamais rejoué, comme
+ * `oxoai.activite`. C'est ce qui tient le guet de silence des clients au
  * repos pendant une lecture de plusieurs minutes.
  */
 /**
  * Fin d'un tour de l'agent principal (le modèle s'arrête sans appeler d'outil) :
- * le contrôle automatique de Helix passe derrière (controleCode.ts). Un seul
+ * le contrôle automatique de OxoAI passe derrière (controleCode.ts). Un seul
  * abonné, posé par index.ts ; les sous-agents n'en déclenchent pas.
  */
 let surFin: ((sessionID: string, dossier: string) => void) | null = null;
-/** Messages envoyés par Helix lui-même (relance du contrôle automatique) : les clients les suivent dans le même tour. */
-const relancesHelix = new Set<string>();
-export function noterRelanceHelix(messageID: string): void {
-  if (relancesHelix.size > 500) relancesHelix.clear();
-  relancesHelix.add(messageID);
+/** Messages envoyés par OxoAI lui-même (relance du contrôle automatique) : les clients les suivent dans le même tour. */
+const relancesOxoAI = new Set<string>();
+export function noterRelanceOxoAI(messageID: string): void {
+  if (relancesOxoAI.size > 500) relancesOxoAI.clear();
+  relancesOxoAI.add(messageID);
 }
 export function surFinDeTour(f: (sessionID: string, dossier: string) => void): void {
   surFin = f;
@@ -178,7 +178,7 @@ export function surFinDeTour(f: (sessionID: string, dossier: string) => void): v
 
 export function publierStatut(sessionID: string, donnees: Record<string, unknown>): void {
   const suivi = sessions.get(sessionID);
-  if (suivi) publier(sessionID, suivi, "helix.statut", donnees, false);
+  if (suivi) publier(sessionID, suivi, "oxoai.statut", donnees, false);
 }
 
 /**
@@ -198,7 +198,7 @@ function cibleCourte(entree: unknown): Record<string, string> {
 
 /**
  * Un évènement d'un sous-agent, rapporté à la session qui l'a lancé : ses
- * appels d'outils (`helix.soustache`) et ses signes de vie. Rien de son texte :
+ * appels d'outils (`oxoai.soustache`) et ses signes de vie. Rien de son texte :
  * le sous-agent rend un seul message à l'agent principal, qui le résume.
  */
 function traduireEnfant(
@@ -212,7 +212,7 @@ function traduireEnfant(
   if (type === "message.part.delta") {
     if (Date.now() - suivi.dernierSigne < 1000) return;
     suivi.dernierSigne = Date.now();
-    publier(lien.parent, suivi, "helix.activite", { sousTache: true }, false);
+    publier(lien.parent, suivi, "oxoai.activite", { sousTache: true }, false);
     return;
   }
   if (type !== "message.part.updated") return;
@@ -223,7 +223,7 @@ function traduireEnfant(
   publier(
     lien.parent,
     suivi,
-    "helix.soustache",
+    "oxoai.soustache",
     {
       sousSession: enfant,
       ...(lien.callID ? { parentCallID: lien.callID } : {}),
@@ -245,27 +245,27 @@ export const sessionSuivie = (sessionID: string): boolean => sessions.has(sessio
  * on a l'impression qu'il ne travaille plus ». L'écran qui revient sur une
  * session demande à l'instance si l'agent y travaille, et la liste des
  * sessions le montre. Demander seulement à OpenCode (`/session/status`) ne
- * suffit pas : pendant que Helix prépare une application ou un plan, contrôle
+ * suffit pas : pendant que OxoAI prépare une application ou un plan, contrôle
  * le code écrit ou attend que la demande atteigne le modèle, OpenCode est au
  * repos, et c'est pourtant du travail de cette session (plusieurs minutes avec
- * un petit modèle). La passerelle tient donc les deux : le travail de Helix
- * (`travailHelix`, compté, rendu par qui l'a pris) et le tour ouvert chez
+ * un petit modèle). La passerelle tient donc les deux : le travail de OxoAI
+ * (`travailOxoAI`, compté, rendu par qui l'a pris) et le tour ouvert chez
  * OpenCode, vu passer dans le flux (`tourOuvert`).
  */
-const travauxHelix = new Map<string, number>();
+const travauxOxoAI = new Map<string, number>();
 /** Au-delà de ce silence, un tour qu'on croit ouvert ne compte plus : une fin a pu se perdre (OpenCode redémarré). */
 const TOUR_MUET_MAX_MS = 15 * 60_000;
 
-/** Helix travaille pour cette session (préparation, contrôle, envoi) : rend de quoi dire qu'il a fini, une seule fois. */
-export function travailHelix(sessionID: string): () => void {
-  travauxHelix.set(sessionID, (travauxHelix.get(sessionID) ?? 0) + 1);
+/** OxoAI travaille pour cette session (préparation, contrôle, envoi) : rend de quoi dire qu'il a fini, une seule fois. */
+export function travailOxoAI(sessionID: string): () => void {
+  travauxOxoAI.set(sessionID, (travauxOxoAI.get(sessionID) ?? 0) + 1);
   let rendu = false;
   return () => {
     if (rendu) return;
     rendu = true;
-    const reste = (travauxHelix.get(sessionID) ?? 1) - 1;
-    if (reste > 0) travauxHelix.set(sessionID, reste);
-    else travauxHelix.delete(sessionID);
+    const reste = (travauxOxoAI.get(sessionID) ?? 1) - 1;
+    if (reste > 0) travauxOxoAI.set(sessionID, reste);
+    else travauxOxoAI.delete(sessionID);
   };
 }
 
@@ -294,15 +294,15 @@ export function reposConfirme(sessionID: string): void {
   if (suivi?.tourOuvert && Date.now() - suivi.ouvertLe > 5000) suivi.tourOuvert = false;
 }
 
-/** L'agent ou Helix travaille encore pour cette session. */
+/** L'agent ou OxoAI travaille encore pour cette session. */
 export function auTravail(sessionID: string): boolean {
-  if ((travauxHelix.get(sessionID) ?? 0) > 0) return true;
+  if ((travauxOxoAI.get(sessionID) ?? 0) > 0) return true;
   const suivi = sessions.get(sessionID);
   return Boolean(suivi?.tourOuvert && Date.now() - suivi.vu < TOUR_MUET_MAX_MS);
 }
 
-/** Helix lui-même travaille pour cette session (sans compter OpenCode). */
-export const helixAuTravail = (sessionID: string): boolean => (travauxHelix.get(sessionID) ?? 0) > 0;
+/** OxoAI lui-même travaille pour cette session (sans compter OpenCode). */
+export const oxoaiAuTravail = (sessionID: string): boolean => (travauxOxoAI.get(sessionID) ?? 0) > 0;
 
 /** Dernier numéro publié pour cette session (0 s'il n'y en a pas) : pour la suivre sans rien rejouer. */
 export function dernierNumero(sessionID: string): number {
@@ -348,7 +348,7 @@ function messageDe(erreur: unknown): string {
  * L'échec d'un outil, pour l'écran (23/10/2026). Capture d'un utilisateur
  * sous Windows : un chemin hors du dossier du projet affichait le message de
  * règle d'OpenCode suivi du JSON de toutes ses règles. Ce refus-là (ou celui
- * du greffon de Helix, opencode.ts, `codeCheminHorsProjet`) porte désormais
+ * du greffon de OxoAI, opencode.ts, `codeCheminHorsProjet`) porte désormais
  * `horsProjet`, avec le chemin quand l'appel en donne un : l'écran le dit en
  * une phrase traduite (src/lib/code.ts). Le message garde sa première phrase
  * seulement, sans le JSON, pour l'extension et la ligne de commande.
@@ -430,7 +430,7 @@ export function traduire(brut: { type?: string; properties?: Record<string, unkn
         suivi.ouvertLe = Date.now();
         suivi.echecDit = false;
         suivi.natures.clear();
-        publier(sessionID, suivi, "session.next.prompted", { messageID: info.id, ...(relancesHelix.has(info.id) ? { relanceHelix: true } : {}) });
+        publier(sessionID, suivi, "session.next.prompted", { messageID: info.id, ...(relancesOxoAI.has(info.id) ? { relanceOxoAI: true } : {}) });
       }
       return;
     }
@@ -446,7 +446,7 @@ export function traduire(brut: { type?: string; properties?: Record<string, unkn
       if (Date.now() - suivi.dernierSigne < 1000) return;
       suivi.dernierSigne = Date.now();
       const nature = typeof p.partID === "string" ? suivi.natures.get(p.partID) : undefined;
-      publier(sessionID, suivi, "helix.activite", nature ? { phase: nature === "reasoning" ? "reflexion" : "ecriture" } : {}, false);
+      publier(sessionID, suivi, "oxoai.activite", nature ? { phase: nature === "reasoning" ? "reflexion" : "ecriture" } : {}, false);
       return;
     }
     case "message.part.updated": {
@@ -488,7 +488,7 @@ export function traduire(brut: { type?: string; properties?: Record<string, unkn
              */
             if (Date.now() - suivi.dernierSigne < 1000) return;
             suivi.dernierSigne = Date.now();
-            publier(sessionID, suivi, "helix.activite", { phase: "outil", tool: part.tool ?? "outil" }, false);
+            publier(sessionID, suivi, "oxoai.activite", { phase: "outil", tool: part.tool ?? "outil" }, false);
             return;
           }
           if (!suivi.appels.has(appel)) {
@@ -571,7 +571,7 @@ export function traduire(brut: { type?: string; properties?: Record<string, unkn
       /*
        * Une demande d'autorisation d'OpenCode (commande, écriture, adresse…,
        * voir `permission` dans opencode.ts) : elle passe par la barrière de
-       * Helix, et la carte va à la propriétaire de la session
+       * OxoAI, et la carte va à la propriétaire de la session
        * (permissionsCode.ts). Depuis le 26/09/2026 ; avant, refusée d'office,
        * et seulement si elle passait malgré une configuration qui laissait
        * tout faire (revue du 25/09).

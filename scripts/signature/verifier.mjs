@@ -2,7 +2,7 @@
  * Vérifie qu'un paquet macOS est réellement signé, durci, notarié et agrafé.
  *
  *   npm run verifier:signature                       (dernier paquet construit)
- *   npm run verifier:signature -- chemin/vers/Helix.app
+ *   npm run verifier:signature -- chemin/vers/OxoAI.app
  *
  * Tant que les quatre points ne sont pas verts, la signature n'est pas faite,
  * quoi qu'en dise la sortie de construction.
@@ -16,7 +16,7 @@ import { fileURLToPath } from "node:url";
 // fileURLToPath et non `.pathname` : le chemin du projet contient des espaces.
 const racine = fileURLToPath(new URL("../../", import.meta.url));
 const pkg = JSON.parse(readFileSync(join(racine, "package.json"), "utf8"));
-const nom = pkg.build?.productName ?? "Helix";
+const nom = pkg.build?.productName ?? "OxoAI";
 
 /** Code de retour et sortie complète : `codesign -d` et `spctl` écrivent sur la sortie d'erreur. */
 function sortie(cmd, args) {

@@ -6,7 +6,7 @@ import { t } from "@/lib/i18n";
 /**
  * Comptes locaux.
  *
- * Helix s'installe sur un poste et peut servir plusieurs collaborateurs. Le
+ * OxoAI s'installe sur un poste et peut servir plusieurs collaborateurs. Le
  * compte détermine à qui appartiennent le profil, la mémoire et les sessions
  * (ADR-010).
  *
@@ -59,7 +59,7 @@ export async function createAccount(data: {
   /** « Rester connecté sur ce poste », comme à la connexion. */
   rester?: boolean;
 }): Promise<{ account: Account; inscription?: string }> {
-  const res = await apiFetch("/helix/auth/create", {
+  const res = await apiFetch("/oxoai/auth/create", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ ...data, poste: nomDuPoste() }),
@@ -174,7 +174,7 @@ export async function authenticate(
   password?: string,
   rester = false,
 ): Promise<Connexion> {
-  const res = await apiFetch("/helix/auth/verify", {
+  const res = await apiFetch("/oxoai/auth/verify", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ accountId, password, poste: nomDuPoste(), rester }),
@@ -188,7 +188,7 @@ export async function definirPremierMotDePasse(
   password: string,
   rester = false,
 ): Promise<Connexion> {
-  const res = await apiFetch("/helix/auth/premier-mot-de-passe", {
+  const res = await apiFetch("/oxoai/auth/premier-mot-de-passe", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ accountId, password, poste: nomDuPoste(), rester }),
@@ -203,7 +203,7 @@ export async function remplacerMotDePasseProvisoire(
   nouveau: string,
   rester = false,
 ): Promise<Connexion> {
-  const res = await apiFetch("/helix/auth/mot-de-passe-provisoire", {
+  const res = await apiFetch("/oxoai/auth/mot-de-passe-provisoire", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ accountId, password: provisoire, nouveau, poste: nomDuPoste(), rester }),
@@ -221,7 +221,7 @@ export async function recupererAvecCode(
   nouveau: string,
   rester = false,
 ): Promise<Connexion> {
-  const res = await apiFetch("/helix/auth/recuperer", {
+  const res = await apiFetch("/oxoai/auth/recuperer", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ accountId, code, nouveau, poste: nomDuPoste(), rester }),
@@ -235,7 +235,7 @@ export async function validerDeuxFacteurs(
   code: string,
   rester = false,
 ): Promise<Connexion> {
-  const res = await apiFetch("/helix/auth/deux-facteurs", {
+  const res = await apiFetch("/oxoai/auth/deux-facteurs", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ defi, code, poste: nomDuPoste(), rester }),
@@ -245,7 +245,7 @@ export async function validerDeuxFacteurs(
 
 /** Activation imposée, premier temps : le secret à scanner, rattaché au défi. */
 export async function preparerInscription(defi: string): Promise<{ secret: string }> {
-  const res = await apiFetch("/helix/auth/deux-facteurs/inscription", {
+  const res = await apiFetch("/oxoai/auth/deux-facteurs/inscription", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ defi }),
@@ -264,7 +264,7 @@ export async function activerInscription(
   code: string,
   rester = false,
 ): Promise<{ connexion: Connexion; codesDeSecours: string[] }> {
-  const res = await apiFetch("/helix/auth/deux-facteurs/inscription/activer", {
+  const res = await apiFetch("/oxoai/auth/deux-facteurs/inscription/activer", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ defi, code, poste: nomDuPoste(), rester }),
@@ -289,13 +289,13 @@ export async function endSession(): Promise<void> {
   const jeton = sessionToken();
   if (jeton) {
     try {
-      const res = await apiFetch("/helix/auth/sessions");
+      const res = await apiFetch("/oxoai/auth/sessions");
       const body = (await res.json().catch(() => ({}))) as {
         sessions?: { id: string; courante?: boolean }[];
       };
       const courante = body.sessions?.find((s) => s.courante);
       if (courante) {
-        await apiFetch("/helix/auth/revoke", {
+        await apiFetch("/oxoai/auth/revoke", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ id: courante.id }),
@@ -327,7 +327,7 @@ export async function modifierCompte(changements: {
 }): Promise<Account> {
   let res: Response;
   try {
-    res = await apiFetch("/helix/auth/profil", {
+    res = await apiFetch("/oxoai/auth/profil", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(changements),

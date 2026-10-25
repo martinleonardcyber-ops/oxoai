@@ -34,7 +34,7 @@ import { canalOuvert, ecouterLApplication, envoyerALApplication } from "./canalA
  *    les raccourcis avec modificateurs.
  *
  * Les deux autorisations macOS nécessaires (Enregistrement de l'écran,
- * Accessibilité) sont accordées à l'application Helix, pas à la passerelle :
+ * Accessibilité) sont accordées à l'application OxoAI, pas à la passerelle :
  * elles se demandent au premier usage et se vérifient ici.
  */
 
@@ -118,7 +118,7 @@ export const isReadOnly = (action: ActionName): boolean => LECTURE.has(action);
  * viser un bouton, assez léger pour rester utilisable sur une machine modeste.
  * L'intégrateur peut l'ajuster pour un cluster plus généreux.
  */
-const MAX_LARGEUR = Number(process.env.HELIX_CAPTURE_LARGEUR ?? 1024);
+const MAX_LARGEUR = Number(process.env.OXOAI_CAPTURE_LARGEUR ?? 1024);
 
 export interface Capture {
   /** Image PNG encodée en base64, redimensionnée pour le modèle. */
@@ -174,7 +174,7 @@ async function autorisationCapture(): Promise<{ ok: true } | { ok: false; error:
   if (statut === "granted" || statut === "not-determined") return { ok: true };
   /*
    * Avant toute demande, macOS répond « refusé » (Chromium ne sait pas lire
-   * « pas encore demandé » pour l'écran, revue du 27/09/2026) : tant que Helix
+   * « pas encore demandé » pour l'écran, revue du 27/09/2026) : tant que OxoAI
    * n'a jamais tenté de capture, c'est « pas encore demandé », et la première
    * action fera ouvrir la demande par macOS.
    */
@@ -198,8 +198,8 @@ function pngSize(buffer: Buffer): { largeur: number; hauteur: number } | null {
   return { largeur: buffer.readUInt32BE(16), hauteur: buffer.readUInt32BE(20) };
 }
 
-/** Témoin : Helix a tenté au moins une capture sur cette machine (donc macOS a posé sa question). */
-const temoinDemandeEcran = () => join(process.env.HELIX_DATA_DIR ?? join(homedir(), ".helix", "data"), ".ecran-demande");
+/** Témoin : OxoAI a tenté au moins une capture sur cette machine (donc macOS a posé sa question). */
+const temoinDemandeEcran = () => join(process.env.OXOAI_DATA_DIR ?? join(homedir(), ".oxoai", "data"), ".ecran-demande");
 
 async function captureHost(): Promise<{ ok: true; capture: Capture } | { ok: false; error: string }> {
   try {
@@ -207,7 +207,7 @@ async function captureHost(): Promise<{ ok: true; capture: Capture } | { ok: fal
   } catch {
     /* dossier des données absent : l'état dira « refusé » plus tôt, rien de plus */
   }
-  const dir = await mkdtemp(join(tmpdir(), "helix-capture-"));
+  const dir = await mkdtemp(join(tmpdir(), "oxoai-capture-"));
   const file = join(dir, "ecran.png");
   try {
     // -x : pas de son d'obturateur. -C : inclure le curseur, utile au modèle.
@@ -367,11 +367,11 @@ function keystrokeScript(touche: string): string {
  * n'est alors demandée sur le poste de l'utilisateur.
  */
 /*
- * La machine de l'agent, démarrée par Helix (machine.ts) ; une autre adresse
+ * La machine de l'agent, démarrée par OxoAI (machine.ts) ; une autre adresse
  * reste possible. Relue à chaque appel : celle de la machine macOS n'est
  * connue qu'une fois qu'elle a démarré.
  */
-const cuaUrl = () => process.env.HELIX_CUA_URL ?? adresseMachine();
+const cuaUrl = () => process.env.OXOAI_CUA_URL ?? adresseMachine();
 
 /** La touche des raccourcis dans la machine : Commande sur macOS, Contrôle sur Linux. */
 const modificateur = () => (systemeMachine() === "macos" ? "command" : "ctrl");
@@ -379,10 +379,10 @@ const modificateur = () => (systemeMachine() === "macos" ? "command" : "ctrl");
 /** En-têtes des conteneurs cua hébergés ; inutiles pour une VM locale. */
 function cuaHeaders(): Record<string, string> {
   const headers: Record<string, string> = { "Content-Type": "application/json" };
-  if (process.env.HELIX_CUA_CONTAINER) {
-    headers["X-Container-Name"] = process.env.HELIX_CUA_CONTAINER;
+  if (process.env.OXOAI_CUA_CONTAINER) {
+    headers["X-Container-Name"] = process.env.OXOAI_CUA_CONTAINER;
   }
-  if (process.env.HELIX_CUA_KEY) headers["X-API-Key"] = process.env.HELIX_CUA_KEY;
+  if (process.env.OXOAI_CUA_KEY) headers["X-API-Key"] = process.env.OXOAI_CUA_KEY;
   return headers;
 }
 
@@ -554,7 +554,7 @@ async function measure(): Promise<Capability> {
       modeleEcran: null,
       problemes: [
         config.source === "profil"
-          ? t("Le contrôle de l'écran est désactivé par le profil de déploiement (helix.config.json, champ computerUse.mode).")
+          ? t("Le contrôle de l'écran est désactivé par le profil de déploiement (oxoai.config.json, champ computerUse.mode).")
           : t("Le contrôle de l'écran n'est pas activé sur ce poste."),
       ],
     };
@@ -679,7 +679,7 @@ function nomApplication(brut: string): string {
 }
 
 /**
- * Traduit une touche Helix vers le vocabulaire de cua (pyautogui).
+ * Traduit une touche OxoAI vers le vocabulaire de cua (pyautogui).
  * Un nom inconnu serait ignoré silencieusement par la VM.
  */
 function toCuaKeys(touche: string): string[] {
@@ -861,7 +861,7 @@ async function performSandbox(action: Action): Promise<ActionResult> {
       return {
         ok: true,
         message:
-          tf("Document enregistré : {0} ({1} octets). La personne le trouve dans Helix/Machine.", nom, taillePoste) +
+          tf("Document enregistré : {0} ({1} octets). La personne le trouve dans OxoAI/Machine.", nom, taillePoste) +
           (reluPoste ? `\n${t("Contenu relu dans le fichier :")}\n${reluPoste}` : ""),
       };
     }
@@ -886,7 +886,7 @@ async function performSandbox(action: Action): Promise<ActionResult> {
       ? {
           ok: true,
           message:
-            tf("Document enregistré : {0} ({1} octets). La personne le trouve dans Helix/Machine.", nom, taille) +
+            tf("Document enregistré : {0} ({1} octets). La personne le trouve dans OxoAI/Machine.", nom, taille) +
             (relu ? `\n${t("Contenu relu dans le fichier :")}\n${relu}` : ""),
         }
       : { ok: false, message: t("L'enregistrement n'a pas abouti : une fenêtre attend peut-être une réponse. Prends une capture pour voir ce qui bloque.") };
@@ -1180,7 +1180,7 @@ export async function request(action: Action, pour = "anonyme", portee?: string)
    * Désactivé : on le dit tout de suite. La demande d'accord partait avant ce
    * contrôle, fait seulement dans `perform` : une carte « Cowork veut agir sur
    * votre machine » s'affichait pour une fonction coupée, et l'appel restait
-   * suspendu deux minutes (mesuré le 23/09/2026 sur /helix/computer/action).
+   * suspendu deux minutes (mesuré le 23/09/2026 sur /oxoai/computer/action).
    */
   if (config.mode === "desactive") {
     return { ok: false, message: t("Le contrôle de l'écran est désactivé sur cette instance.") };
@@ -1357,7 +1357,7 @@ export function toolsForModel(): {
           fn(
             "enregistrer_document",
             "Enregistre le document ouvert (Writer, Calc, Impress) dans le dossier d'échange, sous le nom donné, " +
-              "et vérifie qu'il existe. Le document apparaît alors chez la personne dans Helix/Machine. " +
+              "et vérifie qu'il existe. Le document apparaît alors chez la personne dans OxoAI/Machine. " +
               "Utilise-le au lieu de chercher toi-même la boîte d'enregistrement.",
             { texte: { type: "string", description: "Nom du fichier avec son extension : « compte-rendu.docx », « budget.xlsx »." } },
             ["texte"],

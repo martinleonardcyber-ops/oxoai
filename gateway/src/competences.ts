@@ -20,13 +20,13 @@ import {
  *  - le Chat, Cowork et les tâches d'un agent, qui le demandent (`competences:
  *    true`, chat.ts) : les compétences de la personne et celles partagées à
  *    l'organisation ;
- *  - Code (index.ts, `/helix/code/prompt`) : les mêmes, ajoutées à la demande
+ *  - Code (index.ts, `/oxoai/code/prompt`) : les mêmes, ajoutées à la demande
  *    comme la méthode de travail ;
  *  - les employés toujours actifs (OpenClaw) : **seulement** celles partagées à
  *    l'organisation. Un employé parle à plusieurs personnes ; la compétence
  *    personnelle de sa propriétaire n'a pas à leur être récitée.
  *
- * Pourquoi pas le format « skills » d'OpenClaw : Helix l'a coupé exprès
+ * Pourquoi pas le format « skills » d'OpenClaw : OxoAI l'a coupé exprès
  * (employes.ts, `skills: []`, `allowBundled: []`, atelier éteint). Une
  * compétence d'OpenClaw peut porter des scripts et des dépendances à
  * installer ; ici, une compétence reste du texte. Elle arrive à l'employé par

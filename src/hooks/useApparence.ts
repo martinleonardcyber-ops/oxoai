@@ -10,7 +10,7 @@ import {
 } from "@/lib/store/apparence";
 
 /** Événement interne : garde tous les écrans d'accord sur l'apparence. */
-const CHANGE = "helix:apparence-changee";
+const CHANGE = "oxoai:apparence-changee";
 
 /**
  * Apparence courante et moyen d'en changer.

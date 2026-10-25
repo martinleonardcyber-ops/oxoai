@@ -25,7 +25,7 @@ export interface SourceWeb {
 /** `null` : l'instance ne répond pas, ou ne connaît pas encore la recherche sur le web (version plus ancienne). */
 export async function etatRechercheWeb(): Promise<EtatRechercheWeb | null> {
   try {
-    const res = await apiFetch("/helix/recherche-web");
+    const res = await apiFetch("/oxoai/recherche-web");
     return res.ok ? ((await res.json()) as EtatRechercheWeb) : null;
   } catch {
     return null;

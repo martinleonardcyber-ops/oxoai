@@ -9,7 +9,7 @@ import { t } from "@/lib/i18n";
  * Trois situations servies par le produit, et c'est la troisième qui a besoin
  * de cet écran : un particulier seul (rien à ouvrir), une entreprise dont
  * l'intégrateur règle tout dans le profil de déploiement, et **quelqu'un qui a
- * Helix sur son PC et veut inviter une personne à travailler avec lui**. Pour
+ * OxoAI sur son PC et veut inviter une personne à travailler avec lui**. Pour
  * lui, ouvrir l'instance demandait d'éditer un fichier JSON à la main.
  *
  * Ce que l'ouverture entraîne, et que l'écran doit dire : l'instance se met à
@@ -23,7 +23,7 @@ import { t } from "@/lib/i18n";
  *  - `local` : depuis le même réseau — le même Wi-Fi, le même câble.
  *  - `prive` : depuis n'importe où, à condition d'être sur le même réseau
  *    privé (VPN d'entreprise, Tailscale, WireGuard). Cette adresse n'existe
- *    que si un tunnel est monté sur cette machine ; Helix le détecte, il ne
+ *    que si un tunnel est monté sur cette machine ; OxoAI le détecte, il ne
  *    l'installe pas.
  */
 export interface Proposition {
@@ -47,7 +47,7 @@ export interface EtatReseau {
 
 export async function etatReseau(): Promise<EtatReseau | null> {
   try {
-    const res = await apiFetch("/helix/reseau");
+    const res = await apiFetch("/oxoai/reseau");
     if (!res.ok) return null;
     return (await res.json()) as EtatReseau;
   } catch {
@@ -69,7 +69,7 @@ export async function reglerReseau(
 ): Promise<{ ok: boolean; adresse?: string; message?: string; confirmation?: boolean }> {
   let adresse: string | undefined;
   try {
-    const res = await apiFetch("/helix/reseau", {
+    const res = await apiFetch("/oxoai/reseau", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ ouverte, ...identite }),
@@ -104,8 +104,8 @@ export async function reglerReseau(
   });
   await secretsEcrits();
 
-  const pont = (window as unknown as { helix?: { redemarrerPasserelle?: () => Promise<unknown> } })
-    .helix?.redemarrerPasserelle;
+  const pont = (window as unknown as { oxoai?: { redemarrerPasserelle?: () => Promise<unknown> } })
+    .oxoai?.redemarrerPasserelle;
   if (pont) await pont().catch(() => undefined);
 
   return { ok: true, adresse };

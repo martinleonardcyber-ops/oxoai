@@ -56,7 +56,7 @@ import { t, tf } from "@/lib/i18n";
  *
  *  - **Se connecter** : le service publie son propre serveur, on l'autorise
  *    dans son navigateur, comme partout ailleurs. Rien à installer, aucun
- *    jeton à trouver. La page d'autorisation est celle du service : Helix ne
+ *    jeton à trouver. La page d'autorisation est celle du service : OxoAI ne
  *    voit jamais le mot de passe ;
  *  - **par jeton** : le service n'offre pas cette voie. On colle un jeton, et
  *    un serveur tourne sur la machine de l'instance ;
@@ -451,7 +451,7 @@ export function Connecteurs({ maison = [] }: { maison?: ServiceMaison[] } = {}) 
   const ligne = (entree: EntreeCatalogue) => {
     const vivant = installe(entree.id);
     /*
-     * Le serveur de fichiers est livré avec Helix : il apparaît ici comme les
+     * Le serveur de fichiers est livré avec OxoAI : il apparaît ici comme les
      * autres, mais sans bouton. Le masquer laisserait croire que l'agent n'a
      * accès à rien tant qu'on n'a rien branché.
      */

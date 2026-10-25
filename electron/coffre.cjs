@@ -37,7 +37,7 @@ function renommer(de, vers) {
 
 
 function fichier() {
-  return path.join(process.env.HELIX_DATA_DIR ?? path.join(os.homedir(), ".helix"), "secrets.enc");
+  return path.join(process.env.OXOAI_DATA_DIR ?? path.join(os.homedir(), ".oxoai"), "secrets.enc");
 }
 
 /** Le système sait-il chiffrer pour ce compte ? */
@@ -84,7 +84,7 @@ function ecrire(valeurs) {
     renommer(provisoire, chemin);
     return true;
   } catch (err) {
-    console.error("[helix] coffre non écrit :", err instanceof Error ? err.message : err);
+    console.error("[oxoai] coffre non écrit :", err instanceof Error ? err.message : err);
     return false;
   }
 }

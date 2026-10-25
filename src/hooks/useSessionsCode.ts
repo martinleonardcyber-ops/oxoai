@@ -12,7 +12,7 @@ import { CODE_EN_COURS } from "./useCode";
 const RELECTURE_EN_COURS_MS = 5000;
 
 /**
- * Les sessions de Helix Code de la personne connectée, séparées des Chats
+ * Les sessions de OxoAI Code de la personne connectée, séparées des Chats
  * (gateway/src/sessionsCode.ts). Relues à chaque changement signalé
  * (`signalerSessionsCode`) : ouverture, demande, retrait.
  *
@@ -47,7 +47,7 @@ export function useSessionsCode(actif = true) {
   }, [actif, relire]);
 
   /*
-   * Une session travaille (d'après l'instance : l'agent, ou Helix qui prépare
+   * Une session travaille (d'après l'instance : l'agent, ou OxoAI qui prépare
    * ou contrôle) : on relit la liste de temps en temps, jusqu'à ce qu'elle ait
    * fini. Rien ne tourne quand aucune ne travaille.
    */

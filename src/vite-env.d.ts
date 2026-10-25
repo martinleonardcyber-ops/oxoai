@@ -1,7 +1,7 @@
 /// <reference types="vite/client" />
 
 /** Version de package.json, injectée par Vite à la construction. */
-declare const __HELIX_VERSION__: string;
+declare const __OXOAI_VERSION__: string;
 
 interface ImportMetaEnv {
   /** URL de la passerelle modèles (défaut : proxy Vite « /api »). */

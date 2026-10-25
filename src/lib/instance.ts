@@ -1,5 +1,5 @@
 /**
- * Instance Helix à laquelle ce poste est rattaché.
+ * Instance OxoAI à laquelle ce poste est rattaché.
  *
  * Deux façons d'utiliser le logiciel :
  *
@@ -18,7 +18,7 @@ import { branding } from "@/config/branding";
 import { ecrireSecret, lireSecret } from "./coffre";
 import { t, tf } from "@/lib/i18n";
 
-const KEY = "helix:instance";
+const KEY = "oxoai:instance";
 const LOCAL = "http://localhost:8787";
 
 export interface InstanceConfig {
@@ -175,7 +175,7 @@ export async function probeInstance(
     // Une instance protégée n'accepte rien sans jeton : autant le vérifier
     // maintenant plutôt que de laisser le poste échouer plus tard.
     if (token) {
-      const check = await fetch(`${url}/helix/data`, {
+      const check = await fetch(`${url}/oxoai/data`, {
         headers: { Authorization: `Bearer ${token}` },
         signal: AbortSignal.timeout(6000),
       });

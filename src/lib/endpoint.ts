@@ -10,7 +10,7 @@ import { ecrireSecret, lireSecret } from "./coffre";
  *   d'aucun modèle installé.
  * - **Poste autonome, en développement** : « /api », relayé par le proxy Vite.
  * - **Poste autonome, application empaquetée** : l'interface est servie par
- *   l'application elle-même, sous `helix://app`, où un chemin relatif ne
+ *   l'application elle-même, sous `oxoai://app`, où un chemin relatif ne
  *   pointerait pas vers la passerelle.
  *
  * Toutes les requêtes portent le jeton d'instance : la passerelle donne accès
@@ -23,7 +23,7 @@ function resolve(): string {
 
   /*
    * Servie par le serveur de développement (http), l'interface passe par son
-   * proxy « /api ». Servie autrement — `helix://` dans l'application livrée,
+   * proxy « /api ». Servie autrement — `oxoai://` dans l'application livrée,
    * `file://` pour les anciennes versions — il n'y a pas de proxy : on vise
    * l'adresse de la passerelle en entier.
    */
@@ -48,7 +48,7 @@ export function authToken(): string | undefined {
  * réglages, et vit dans le trousseau du système quand il y en a un
  * (`lib/coffre.ts`) plutôt qu'en clair dans le stockage du navigateur.
  */
-const CLE_SEANCE = "helix:session-token";
+const CLE_SEANCE = "oxoai:session-token";
 
 export function sessionToken(): string | undefined {
   return lireSecret(CLE_SEANCE);
@@ -64,13 +64,13 @@ export function authHeaders(): Record<string, string> {
   const token = authToken();
   if (token) headers.Authorization = `Bearer ${token}`;
   const session = sessionToken();
-  if (session) headers["X-Helix-Session"] = session;
+  if (session) headers["X-OxoAI-Session"] = session;
   /*
    * La langue de lecture de ce poste. L'instance sert plusieurs personnes, qui
    * ne lisent pas toutes la même : ses messages sont donc traduits par requête,
    * pas une fois pour toutes (gateway/src/langue.ts).
    */
-  headers["X-Helix-Langue"] = langue();
+  headers["X-OxoAI-Langue"] = langue();
   return headers;
 }
 
@@ -82,7 +82,7 @@ export function authHeaders(): Record<string, string> {
  * des erreurs incompréhensibles partout — « Dossiers illisibles », listes
  * vides — sans jamais comprendre qu'il devait se reconnecter.
  */
-export const SEANCE_EXPIREE = "helix:seance-expiree";
+export const SEANCE_EXPIREE = "oxoai:seance-expiree";
 
 /**
  * `fetch` vers la passerelle, jeton inclus.

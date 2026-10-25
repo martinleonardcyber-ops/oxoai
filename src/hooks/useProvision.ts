@@ -21,7 +21,7 @@ export interface CatalogEntry {
   /** Qui publie les poids (gateway/src/provision.ts). */
   editeur?: string;
   /**
-   * Essayé avec Helix ? Faux : l'accueil dit que s'il ne se charge pas, un
+   * Essayé avec OxoAI ? Faux : l'accueil dit que s'il ne se charge pas, un
    * autre modèle prend le relais (sans dire qu'il n'a pas été essayé, PROJET.md
    * § 3.16).
    */
@@ -106,7 +106,7 @@ export function useProvision() {
 
   const load = useCallback(() => {
     // Borné (24/10/2026) : une instance qui ne répond pas laissait « Analyse de votre machine... » tourner sans fin ; l'écran « Moteur indisponible » propose de réessayer.
-    apiFetch(`/helix/provision`, { signal: AbortSignal.timeout(120_000) })
+    apiFetch(`/oxoai/provision`, { signal: AbortSignal.timeout(120_000) })
       .then((r) => (r.ok ? r.json() : Promise.reject(new Error(String(r.status)))))
       .then((data: Status) => {
         setStatus(data);
@@ -132,7 +132,7 @@ export function useProvision() {
   const suivre = useCallback(() => {
     sourceRef.current?.();
     sourceRef.current = ouvrirFlux(
-      "/helix/provision/stream",
+      "/oxoai/provision/stream",
       (donnees) => {
         try {
           const next = JSON.parse(donnees) as ProvisionState;
@@ -167,7 +167,7 @@ export function useProvision() {
   const start = useCallback(
     (model?: string) => {
       suivre();
-      void apiFetch(`/helix/provision/start`, {
+      void apiFetch(`/oxoai/provision/start`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ model }),
@@ -184,7 +184,7 @@ export function useProvision() {
    */
   const installerMoteur = useCallback(() => {
     suivre();
-    void apiFetch(`/helix/provision/moteur`, {
+    void apiFetch(`/oxoai/provision/moteur`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ conditionsAcceptees: true }),

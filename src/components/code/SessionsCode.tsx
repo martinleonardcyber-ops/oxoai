@@ -8,7 +8,7 @@ import { dateCourte, nomDossier, type SessionCodeResume } from "@/lib/code";
 import { t, tf } from "@/lib/i18n";
 
 /**
- * Les sessions de Helix Code, séparées des Chats (demandé par Medhi le
+ * Les sessions de OxoAI Code, séparées des Chats (demandé par Medhi le
  * 25/09/2026, « comme dans Claude Code »). Dans la barre latérale en mode
  * Code, à la place de la liste des Chats, rangées par dossier de projet ; et
  * sur l'accueil de Code, les plus récentes. Chaque ligne rouvre sa session
@@ -28,7 +28,7 @@ function LigneSessionCode({
   const titre = session.titre || t("Session sans demande");
   /*
    * L'agent y travaille encore (27/09/2026) : vu de cet écran (session quittée
-   * en plein travail) ou dit par l'instance (ouverte ailleurs, Helix qui
+   * en plein travail) ou dit par l'instance (ouverte ailleurs, OxoAI qui
    * prépare ou contrôle). Comme la roue d'un Chat qui écrit encore.
    */
   const enCours = Boolean(session.enCours) || sessionCodeEnCours(session.id);

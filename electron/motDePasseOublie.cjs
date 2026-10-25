@@ -20,7 +20,7 @@
  *  - **Windows et Linux** : un code à usage unique, écrit dans un fichier du
  *    dossier de l'application (dossier personnel de la session), que la
  *    personne ouvre et recopie dans la fenêtre. Windows Hello ne s'atteint pas
- *    depuis Electron sans module natif, et Helix n'ajoute pas de dépendance
+ *    depuis Electron sans module natif, et OxoAI n'ajoute pas de dépendance
  *    pour cela. Ce que le fichier prouve : être devant la session ouverte de
  *    la machine de l'instance, ni dans un navigateur, ni sur un poste
  *    rattaché, et pas seulement être la page affichée (une page détournée ne
@@ -48,7 +48,7 @@ const repartir = require("./repartirDeZero.cjs");
 
 const TEXTES = {
   fr: {
-    // macOS l'affiche après « Helix veut » : un verbe à l'infinitif.
+    // macOS l'affiche après « OxoAI veut » : un verbe à l'infinitif.
     raison: "redéfinir le mot de passe de {0}",
     titre: "Code pour redéfinir un mot de passe oublié ({1})",
     consigne: "Recopiez ce code dans la fenêtre de {1}. Il sert une seule fois et ne vaut que dix minutes. Si vous n'avez rien demandé, supprimez ce fichier.",
@@ -197,13 +197,13 @@ function installerMotDePasseOublie(options) {
     });
   }
 
-  ipcMain.handle("helix:mdp-oublie-etat", (event) => {
+  ipcMain.handle("oxoai:mdp-oublie-etat", (event) => {
     if (!depuisLaFenetre(event)) return { disponible: false };
     return { disponible: disponible(), moyen };
   });
 
   /** Windows et Linux : écrit le code dans le fichier, et l'ouvre. Rend le chemin, pour que l'écran le dise. */
-  ipcMain.handle("helix:mdp-oublie-fichier", async (event, demande) => {
+  ipcMain.handle("oxoai:mdp-oublie-fichier", async (event, demande) => {
     if (!depuisLaFenetre(event) || moyen !== "fichier" || !disponible()) return { ok: false, raison: "indisponible" };
     const pourRepartir = demande?.pour === "repartir";
     const accountId = pourRepartir ? CLE_REPARTIR : typeof demande?.accountId === "string" ? demande.accountId.slice(0, 100) : "";
@@ -273,7 +273,7 @@ function installerMotDePasseOublie(options) {
     return null;
   }
 
-  ipcMain.handle("helix:mdp-oublie", async (event, demande) => {
+  ipcMain.handle("oxoai:mdp-oublie", async (event, demande) => {
     if (!depuisLaFenetre(event) || !disponible()) return { ok: false, raison: "indisponible" };
     const accountId = typeof demande?.accountId === "string" ? demande.accountId.slice(0, 100) : "";
     const motDePasse = typeof demande?.motDePasse === "string" ? demande.motDePasse : "";
@@ -290,7 +290,7 @@ function installerMotDePasseOublie(options) {
    */
   const repartirPossible = () => Boolean(options.donnees && options.profil && options.relancer);
 
-  ipcMain.handle("helix:repartir-apercu", (event) => {
+  ipcMain.handle("oxoai:repartir-apercu", (event) => {
     if (!depuisLaFenetre(event) || !disponible() || !repartirPossible()) return { disponible: false };
     return {
       disponible: true,
@@ -300,7 +300,7 @@ function installerMotDePasseOublie(options) {
     };
   });
 
-  ipcMain.handle("helix:repartir", async (event, demande) => {
+  ipcMain.handle("oxoai:repartir", async (event, demande) => {
     if (!depuisLaFenetre(event) || !disponible() || !repartirPossible()) return { ok: false, raison: "indisponible" };
     // Le mot d'abord : une fausse manœuvre ne doit même pas ouvrir la fenêtre du système.
     const attendu = textes().motRepartir.toLocaleUpperCase();
@@ -319,11 +319,11 @@ function installerMotDePasseOublie(options) {
   });
 
   /** Après le départ : où sont les anciennes données (ou pourquoi rien n'a bougé), jusqu'à « Compris ». */
-  ipcMain.handle("helix:repartir-bilan", (event) => {
+  ipcMain.handle("oxoai:repartir-bilan", (event) => {
     if (!depuisLaFenetre(event) || !options.donnees) return null;
     return repartir.bilan(options.donnees);
   });
-  ipcMain.handle("helix:repartir-oublier", (event) => {
+  ipcMain.handle("oxoai:repartir-oublier", (event) => {
     if (!depuisLaFenetre(event) || !options.donnees) return false;
     repartir.oublierBilan(options.donnees);
     return true;

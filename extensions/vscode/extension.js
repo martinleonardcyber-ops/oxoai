@@ -2,20 +2,20 @@
 "use strict";
 
 /**
- * Helix AI pour VS Code.
+ * OxoAI AI pour VS Code.
  *
- * Le Chat de l'instance Helix dans la barre latérale, et deux commandes sur
+ * Le Chat de l'instance OxoAI dans la barre latérale, et deux commandes sur
  * le code sélectionné (expliquer, améliorer). Tout passe par l'instance
- * Helix : ses modèles (locaux d'abord), ses règles, son journal. L'extension
+ * OxoAI : ses modèles (locaux d'abord), ses règles, son journal. L'extension
  * ne parle à aucun autre service.
  *
  * Les appels partent de VS Code lui-même (le processus de l'extension), pas
  * de la page du Chat : le jeton d'instance ne passe jamais dans la page.
  *
- * Instance : par défaut celle de l'application Helix de cet ordinateur
- * (http://127.0.0.1:8787, jeton lu dans ~/.helix/data/instance-token).
- * Une instance d'entreprise se règle dans les paramètres (helix.adresse,
- * helix.jeton).
+ * Instance : par défaut celle de l'application OxoAI de cet ordinateur
+ * (http://127.0.0.1:8787, jeton lu dans ~/.oxoai/data/instance-token).
+ * Une instance d'entreprise se règle dans les paramètres (oxoai.adresse,
+ * oxoai.jeton).
  */
 
 const vscode = require("vscode");
@@ -31,9 +31,9 @@ const BOUCLE = ["127.0.0.1", "localhost", "::1", "[::1]"];
 
 /**
  * Réglages de l'extension, avec les règles de la ligne de commande
- * (`adresseInstance`, cli/helix.mjs).
+ * (`adresseInstance`, cli/oxoai.mjs).
  *
- * Revue de sécurité du 26/09/2026 : `helix.adresse` et `helix.jeton` étaient
+ * Revue de sécurité du 26/09/2026 : `oxoai.adresse` et `oxoai.jeton` étaient
  * réglables par le `.vscode/settings.json` d'un dépôt ouvert. Un dépôt piégé
  * désignait son serveur, et recevait le jeton du poste, le fichier ouvert, la
  * séance, puis le mot de passe à la connexion. Désormais :
@@ -44,7 +44,7 @@ const BOUCLE = ["127.0.0.1", "localhost", "::1", "[::1]"];
  *    le port que l'application a réellement ouvert (`instance-port`).
  */
 function reglages() {
-  const c = vscode.workspace.getConfiguration("helix");
+  const c = vscode.workspace.getConfiguration("oxoai");
   const adresse = String(c.get("adresse") || "http://127.0.0.1:8787").replace(/\/+$/, "");
   let url;
   try {
@@ -60,12 +60,12 @@ function reglages() {
   let jeton = String(c.get("jeton") || "");
   if (!jeton && locale) {
     try {
-      const dossier = process.env.HELIX_DATA_DIR || path.join(os.homedir(), ".helix", "data");
+      const dossier = process.env.OXOAI_DATA_DIR || path.join(os.homedir(), ".oxoai", "data");
       const ouvert = fs.readFileSync(path.join(dossier, "instance-port"), "utf8").trim();
       const vise = url.port || (url.protocol === "https:" ? "443" : "80");
       if (ouvert === vise) jeton = fs.readFileSync(path.join(dossier, "instance-token"), "utf8").trim();
     } catch {
-      /* pas d'application Helix sur ce poste, ou d'une version qui ne note pas son port : il faudra régler le jeton */
+      /* pas d'application OxoAI sur ce poste, ou d'une version qui ne note pas son port : il faudra régler le jeton */
     }
   }
   return { adresse, jeton, modele: String(c.get("modele") || "") };
@@ -190,7 +190,7 @@ async function demander(messages, surMorceau, signal, surReflexion, surRequalifi
   const { adresse, jeton, modele } = reglages();
   if (!jeton) {
     throw new Error(
-      "Aucun jeton d'instance : ouvrez l'application Helix sur cet ordinateur, ou réglez « helix.jeton » dans les paramètres.",
+      "Aucun jeton d'instance : ouvrez l'application OxoAI sur cet ordinateur, ou réglez « oxoai.jeton » dans les paramètres.",
     );
   }
   let res;
@@ -204,7 +204,7 @@ async function demander(messages, surMorceau, signal, surReflexion, surRequalifi
       signal,
     });
   } catch {
-    throw new Error(`L'instance Helix ne répond pas (${adresse}). Ouvrez l'application Helix, puis réessayez.`);
+    throw new Error(`L'instance OxoAI ne répond pas (${adresse}). Ouvrez l'application OxoAI, puis réessayez.`);
   }
   if (!res.ok || !res.body) {
     const corps = await res.json().catch(() => ({}));
@@ -253,21 +253,21 @@ async function demander(messages, surMorceau, signal, surReflexion, surRequalifi
 }
 
 /* ------------------------------------------------------------------ */
-/* Séance (Helix Code)                                                 */
+/* Séance (OxoAI Code)                                                 */
 /* ------------------------------------------------------------------ */
 
 /*
- * Le Chat se contente du jeton d'instance. Helix Code, qui modifie des
- * fichiers, exige une séance : la personne se connecte avec son compte Helix,
+ * Le Chat se contente du jeton d'instance. OxoAI Code, qui modifie des
+ * fichiers, exige une séance : la personne se connecte avec son compte OxoAI,
  * et la séance est gardée dans le coffre de VS Code (SecretStorage), jamais
  * dans les réglages en clair.
  */
 /*
  * Une séance par adresse : celle d'une instance n'est jamais présentée à une
- * autre (revue du 26/09/2026, une clé unique « helix.seance » la donnait à
+ * autre (revue du 26/09/2026, une clé unique « oxoai.seance » la donnait à
  * toute adresse réglée ensuite).
  */
-const cleSeance = () => `helix.seance:${reglages().adresse}`;
+const cleSeance = () => `oxoai.seance:${reglages().adresse}`;
 
 /** @param {vscode.ExtensionContext} contexte */
 async function seance(contexte) {
@@ -284,12 +284,12 @@ async function appel(chemin, options = {}) {
   const { seance: s, ...reste } = options;
   return fetch(`${adresse}${chemin}`, {
     ...reste,
-    // Jamais de redirection suivie : `fetch` renverrait `X-Helix-Session` à l'adresse désignée (vérifié sur Node 24).
+    // Jamais de redirection suivie : `fetch` renverrait `X-OxoAI-Session` à l'adresse désignée (vérifié sur Node 24).
     redirect: "error",
     headers: {
       "Content-Type": "application/json",
       ...(jeton ? { Authorization: `Bearer ${jeton}` } : {}),
-      ...(s ? { "X-Helix-Session": s } : {}),
+      ...(s ? { "X-OxoAI-Session": s } : {}),
       ...(reste.headers || {}),
     },
   });
@@ -299,25 +299,25 @@ async function appel(chemin, options = {}) {
 async function seConnecter(contexte) {
   let comptes = [];
   try {
-    const r = await appel("/helix/data/accounts");
+    const r = await appel("/oxoai/data/accounts");
     comptes = ((await r.json()).value || []);
   } catch {
-    return void vscode.window.showErrorMessage("L'instance Helix ne répond pas : ouvrez l'application Helix, puis réessayez.");
+    return void vscode.window.showErrorMessage("L'instance OxoAI ne répond pas : ouvrez l'application OxoAI, puis réessayez.");
   }
   if (comptes.length === 0) return void vscode.window.showErrorMessage("Aucun compte sur cette instance.");
   const choix = await vscode.window.showQuickPick(
     comptes.map((c) => ({ label: c.fullName || c.email, description: c.email, id: c.id })),
-    { title: "Helix : se connecter", placeHolder: "Votre compte" },
+    { title: "OxoAI : se connecter", placeHolder: "Votre compte" },
   );
   if (!choix) return;
   const motDePasse = await vscode.window.showInputBox({ title: `Mot de passe de ${choix.label}`, password: true, ignoreFocusOut: true });
   if (!motDePasse) return;
-  let r = await appel("/helix/auth/verify", { method: "POST", body: JSON.stringify({ accountId: choix.id, password: motDePasse, poste: "VS Code", rester: true }) });
+  let r = await appel("/oxoai/auth/verify", { method: "POST", body: JSON.stringify({ accountId: choix.id, password: motDePasse, poste: "VS Code", rester: true }) });
   let corps = await r.json().catch(() => ({}));
   if (!r.ok && corps?.error?.code === "deux-facteurs-requis" && corps.defi) {
     const code = await vscode.window.showInputBox({ title: "Code de vérification", prompt: "Celui de votre application d'authentification, ou un code de secours.", ignoreFocusOut: true });
     if (!code) return;
-    r = await appel("/helix/auth/deux-facteurs", { method: "POST", body: JSON.stringify({ defi: corps.defi, code, poste: "VS Code", rester: true }) });
+    r = await appel("/oxoai/auth/deux-facteurs", { method: "POST", body: JSON.stringify({ defi: corps.defi, code, poste: "VS Code", rester: true }) });
     corps = await r.json().catch(() => ({}));
   }
   const jetonSeance = corps?.session?.token;
@@ -325,11 +325,11 @@ async function seConnecter(contexte) {
     return void vscode.window.showErrorMessage(corps?.error?.message || "Connexion refusée.");
   }
   await contexte.secrets.store(cleSeance(), jetonSeance);
-  vscode.window.showInformationMessage(`Connecté à Helix : ${choix.label}.`);
+  vscode.window.showInformationMessage(`Connecté à OxoAI : ${choix.label}.`);
 }
 
 /* ------------------------------------------------------------------ */
-/* Helix Code                                                          */
+/* OxoAI Code                                                          */
 /* ------------------------------------------------------------------ */
 
 /** Nom lisible des outils de l'agent de code, les mêmes que l'écran Code et la ligne de commande. */
@@ -354,7 +354,7 @@ function duree(ms) {
 }
 
 /**
- * Ce que l'on dit pendant que le modèle n'a encore rien rendu (`helix.statut`
+ * Ce que l'on dit pendant que le modèle n'a encore rien rendu (`oxoai.statut`
  * de l'instance, toutes les dix secondes) : sans lui, une lecture de deux
  * minutes ressemblait à une panne. Chaîne vide : le modèle répond, on efface.
  */
@@ -368,7 +368,7 @@ function texteStatut(d) {
 }
 
 /**
- * Une demande à Helix Code, sur le dossier ouvert dans VS Code. Rend les
+ * Une demande à OxoAI Code, sur le dossier ouvert dans VS Code. Rend les
  * évènements de l'agent un à un (texte, outil appelé, outil fini), jusqu'à la
  * fin du tour.
  * @param {vscode.ExtensionContext} contexte
@@ -379,9 +379,9 @@ function texteStatut(d) {
  */
 async function demanderAuCode(contexte, etat, texte, surEvenement, signal) {
   const s = await seance(contexte);
-  if (!s) throw new Error("Helix Code modifie vos fichiers : connectez-vous d'abord (commande « Helix : se connecter »).");
+  if (!s) throw new Error("OxoAI Code modifie vos fichiers : connectez-vous d'abord (commande « OxoAI : se connecter »).");
   const dossier = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
-  if (!dossier) throw new Error("Ouvrez d'abord un dossier dans VS Code : c'est là que Helix Code travaille.");
+  if (!dossier) throw new Error("Ouvrez d'abord un dossier dans VS Code : c'est là que OxoAI Code travaille.");
   /*
    * Le dossier ouvert est un chemin de CE poste ; l'agent de code travaille
    * sur la machine de l'instance. Pour une instance distante, il désignerait un
@@ -394,10 +394,10 @@ async function demanderAuCode(contexte, etat, texte, surEvenement, signal) {
     /* adresse illisible : l'appel échouera plus loin, avec son message */
   }
   if (hote && !["127.0.0.1", "localhost", "::1", "[::1]"].includes(hote)) {
-    throw new Error("Helix Code travaille sur la machine de l'instance : depuis VS Code, seulement avec l'instance de cet ordinateur. Pour une instance d'entreprise, utilisez l'application ou « helix code --dossier ».");
+    throw new Error("OxoAI Code travaille sur la machine de l'instance : depuis VS Code, seulement avec l'instance de cet ordinateur. Pour une instance d'entreprise, utilisez l'application ou « oxoai code --dossier ».");
   }
   if (!etat.session) {
-    const r = await appel("/helix/code/session", { method: "POST", seance: s, body: JSON.stringify({ dossier }) });
+    const r = await appel("/oxoai/code/session", { method: "POST", seance: s, body: JSON.stringify({ dossier }) });
     const corps = await r.json().catch(() => ({}));
     if (r.status === 401) await contexte.secrets.delete(cleSeance());
     if (!r.ok) throw new Error(corps?.error?.message || `Session refusée (${r.status}).`);
@@ -415,7 +415,7 @@ async function demanderAuCode(contexte, etat, texte, surEvenement, signal) {
   const suivreArret = () => arretPremier.abort();
   signal.addEventListener("abort", suivreArret, { once: true });
   const ecouter = async (session, arretFlux = signal) => {
-    const r = await appel(`/helix/code/events?sessionID=${encodeURIComponent(session)}`, { seance: s, signal: arretFlux });
+    const r = await appel(`/oxoai/code/events?sessionID=${encodeURIComponent(session)}`, { seance: s, signal: arretFlux });
     if (!r.ok || !r.body) throw new Error(`Flux de l'agent indisponible (${r.status}).`);
     const lecteur = r.body.getReader();
     const decodeur = new TextDecoder();
@@ -436,7 +436,7 @@ async function demanderAuCode(contexte, etat, texte, surEvenement, signal) {
           continue;
         }
         const d = ev.data || {};
-        if (ev.type === "helix.statut") surEvenement({ type: "statut", statut: texteStatut(d) });
+        if (ev.type === "oxoai.statut") surEvenement({ type: "statut", statut: texteStatut(d) });
         else if (ev.type === "session.next.text.ended" && d.text) surEvenement({ type: "texte", texte: d.text });
         else if (ev.type === "session.next.tool.called") {
           const cible = d.input?.filePath || d.input?.path || d.input?.command || d.input?.pattern || "";
@@ -444,8 +444,8 @@ async function demanderAuCode(contexte, etat, texte, surEvenement, signal) {
           const libelle =
             d.tool === "task" && typeof d.input?.description === "string"
               ? `${OUTILS.task} : ${d.input.description}`
-              : // Connecteurs de l'instance : « helix_drive__chercher » chez OpenCode, « drive__chercher » ici.
-                `${OUTILS[d.tool] || String(d.tool ?? "").replace(/^helix_/, "")} ${cible}`.trim();
+              : // Connecteurs de l'instance : « oxoai_drive__chercher » chez OpenCode, « drive__chercher » ici.
+                `${OUTILS[d.tool] || String(d.tool ?? "").replace(/^oxoai_/, "")} ${cible}`.trim();
           surEvenement({ type: "outil", outil: libelle });
         } else if (ev.type === "session.next.tool.failed") surEvenement({ type: "outil-fin", ok: false });
         else if (ev.type === "session.next.tool.success") surEvenement({ type: "outil-fin", ok: true });
@@ -466,13 +466,13 @@ async function demanderAuCode(contexte, etat, texte, surEvenement, signal) {
   const arretCartes = new AbortController();
   void ecouterCartes(s, arretCartes.signal).catch(() => undefined);
   try {
-    const r = await appel("/helix/code/prompt", { method: "POST", seance: s, body: JSON.stringify({ sessionID: etat.session, text: texte }) });
+    const r = await appel("/oxoai/code/prompt", { method: "POST", seance: s, body: JSON.stringify({ sessionID: etat.session, text: texte }) });
     const corps = await r.json().catch(() => ({}));
     if (!r.ok) throw new Error(corps?.error?.message || `Demande refusée (${r.status}).`);
-    if (corps?.helixRelance?.sessionID) {
+    if (corps?.oxoaiRelance?.sessionID) {
       // L'instance a dû relancer la demande dans une nouvelle session : on suit celle-là, et on lâche l'autre.
       arretPremier.abort();
-      etat.session = corps.helixRelance.sessionID;
+      etat.session = corps.oxoaiRelance.sessionID;
       await ecouter(etat.session);
       return;
     }
@@ -486,19 +486,19 @@ async function demanderAuCode(contexte, etat, texte, surEvenement, signal) {
 
 /**
  * Ce qui vient de l'instance, sans caractère de contrôle ni renversement de
- * l'ordre d'affichage (même règle que la ligne de commande, cli/helix.mjs).
+ * l'ordre d'affichage (même règle que la ligne de commande, cli/oxoai.mjs).
  * @param {unknown} v
  */
 const propre = (v) => String(v ?? "").replace(/[\u0000-\u0008\u000B-\u001F\u007F-\u009F‪-‮⁦-⁩]/g, "");
 
 /**
- * Les demandes d'accord de Helix Code pour la personne connectée, posées dans
+ * Les demandes d'accord de OxoAI Code pour la personne connectée, posées dans
  * une fenêtre modale. Seul « Autoriser » accorde ; fermer la fenêtre refuse.
  * @param {string} s séance
  * @param {AbortSignal} signal
  */
 async function ecouterCartes(s, signal) {
-  const r = await appel("/helix/approbation/evenements", { seance: s, signal });
+  const r = await appel("/oxoai/approbation/evenements", { seance: s, signal });
   if (!r.ok || !r.body) return;
   const lecteur = r.body.getReader();
   const decodeur = new TextDecoder();
@@ -522,9 +522,9 @@ async function ecouterCartes(s, signal) {
       vues.add(ev.id);
       const commande = typeof ev.detail?.commande === "string" ? `\n\n${propre(ev.detail.commande).slice(0, 2000)}` : "";
       void vscode.window
-        .showWarningMessage(`Helix Code veut ${propre(ev.resume)}.`, { modal: true, detail: `Accord demandé.${commande}` }, "Autoriser", "Refuser")
+        .showWarningMessage(`OxoAI Code veut ${propre(ev.resume)}.`, { modal: true, detail: `Accord demandé.${commande}` }, "Autoriser", "Refuser")
         .then((choix) =>
-          appel("/helix/approbation/repondre", { method: "POST", seance: s, body: JSON.stringify({ id: ev.id, accord: choix === "Autoriser" }) }).catch(() => undefined),
+          appel("/oxoai/approbation/repondre", { method: "POST", seance: s, body: JSON.stringify({ id: ev.id, accord: choix === "Autoriser" }) }).catch(() => undefined),
         );
     }
   }
@@ -553,7 +553,7 @@ class VueChat {
     this.historique = [];
     /** @type {AbortController | null} */
     this.arret = null;
-    /** Session Helix Code en cours (une par vue, sur le dossier ouvert). */
+    /** Session OxoAI Code en cours (une par vue, sur le dossier ouvert). */
     this.code = { session: null };
   }
 
@@ -565,7 +565,7 @@ class VueChat {
     vue.webview.onDidReceiveMessage((m) => {
       if (m.type === "question") void this.question(String(m.texte || ""), Boolean(m.joindre));
       if (m.type === "code") void this.demandeCode(String(m.texte || ""));
-      if (m.type === "connexion") void vscode.commands.executeCommand("helix.seConnecter");
+      if (m.type === "connexion") void vscode.commands.executeCommand("oxoai.seConnecter");
       if (m.type === "arreter") this.arret?.abort();
       if (m.type === "nouveau") this.nouveau();
       if (m.type === "inserer") void this.inserer(String(m.texte || ""));
@@ -630,13 +630,13 @@ class VueChat {
        * `type` en dernier : placé avant, il était remplacé par celui de
        * l'évènement (« texte », « outil », « outil-fin »), et la page, qui
        * n'attend que « code », n'affichait ni les actions ni la réponse de
-       * Helix Code, seulement la fin du tour.
+       * OxoAI Code, seulement la fin du tour.
        */
       await demanderAuCode(this.contexte, this.code, texte, (e) => this.vue?.webview.postMessage({ ...e, type: "code" }), this.arret.signal);
       this.vue?.webview.postMessage({ type: "fin" });
     } catch (err) {
       const arrete = this.arret?.signal.aborted;
-      if (arrete && this.code.session) void appel("/helix/code/interrupt", { method: "POST", seance: await seance(this.contexte), body: JSON.stringify({ sessionID: this.code.session }) });
+      if (arrete && this.code.session) void appel("/oxoai/code/interrupt", { method: "POST", seance: await seance(this.contexte), body: JSON.stringify({ sessionID: this.code.session }) });
       this.vue?.webview.postMessage({ type: "erreur", texte: arrete ? "Arrêté." : err instanceof Error ? err.message : String(err) });
     } finally {
       this.arret = null;
@@ -666,10 +666,10 @@ class VueChat {
   <button type="button" role="tab" id="onglet-code" aria-selected="false">Code</button>
 </nav>
 <main id="fil" aria-live="polite">
-  <p class="accueil">Chat : posez une question à Helix. Code : Helix Code lit, écrit et modifie les fichiers du dossier ouvert.</p>
+  <p class="accueil">Chat : posez une question à OxoAI. Code : OxoAI Code lit, écrit et modifie les fichiers du dossier ouvert.</p>
 </main>
 <form id="formulaire">
-  <textarea id="saisie" rows="3" placeholder="Demandez à Helix…"></textarea>
+  <textarea id="saisie" rows="3" placeholder="Demandez à OxoAI…"></textarea>
   <div class="barre">
     <label><input type="checkbox" id="joindre" checked> Joindre le fichier ouvert</label>
     <span class="espace"></span>
@@ -685,28 +685,28 @@ class VueChat {
 /** @param {vscode.ExtensionContext} contexte */
 function activate(contexte) {
   const vue = new VueChat(contexte);
-  contexte.subscriptions.push(vscode.window.registerWebviewViewProvider("helix.chat", vue, { webviewOptions: { retainContextWhenHidden: true } }));
+  contexte.subscriptions.push(vscode.window.registerWebviewViewProvider("oxoai.chat", vue, { webviewOptions: { retainContextWhenHidden: true } }));
 
   /** @param {string} consigne */
   const surSelection = async (consigne) => {
     const e = vscode.window.activeTextEditor;
     const selection = e?.document.getText(e.selection) ?? "";
     if (!selection.trim()) return void vscode.window.showInformationMessage("Sélectionnez d'abord du code.");
-    await vscode.commands.executeCommand("helix.chat.focus");
+    await vscode.commands.executeCommand("oxoai.chat.focus");
     const langage = e?.document.languageId ?? "";
     void vue.question(`${consigne}\n\n\`\`\`${langage}\n${selection}\n\`\`\``, false);
   };
 
   contexte.subscriptions.push(
-    vscode.commands.registerCommand("helix.expliquer", () => surSelection("Explique ce code, simplement et précisément :")),
-    vscode.commands.registerCommand("helix.ameliorer", () =>
+    vscode.commands.registerCommand("oxoai.expliquer", () => surSelection("Explique ce code, simplement et précisément :")),
+    vscode.commands.registerCommand("oxoai.ameliorer", () =>
       surSelection("Améliore ce code (clarté, bugs, performances). Donne la version corrigée dans un seul bloc de code, puis ce que tu as changé :"),
     ),
-    vscode.commands.registerCommand("helix.nouveau", () => vue.nouveau()),
-    vscode.commands.registerCommand("helix.seConnecter", () => seConnecter(contexte)),
-    vscode.commands.registerCommand("helix.seDeconnecter", async () => {
+    vscode.commands.registerCommand("oxoai.nouveau", () => vue.nouveau()),
+    vscode.commands.registerCommand("oxoai.seConnecter", () => seConnecter(contexte)),
+    vscode.commands.registerCommand("oxoai.seDeconnecter", async () => {
       await contexte.secrets.delete(cleSeance());
-      vscode.window.showInformationMessage("Déconnecté de Helix.");
+      vscode.window.showInformationMessage("Déconnecté de OxoAI.");
     }),
   );
 }

@@ -33,7 +33,7 @@ export interface TlsMaterial {
   chemin: string;
 }
 
-const dossierTls = () => join(process.env.HELIX_DATA_DIR ?? join(homedir(), ".helix", "data"), "tls");
+const dossierTls = () => join(process.env.OXOAI_DATA_DIR ?? join(homedir(), ".oxoai", "data"), "tls");
 
 /** Le certificat auto-signé arrive-t-il à expiration (dans 30 jours) ? On le refait avant. */
 function bientotExpire(certPath: string): boolean {
@@ -110,10 +110,10 @@ function genererAutoSigne(): { certPath: string; keyPath: string } | null {
     // La liste couverte est notée à côté : elle sert à savoir quand refaire le
     // certificat, l'adresse d'une machine n'étant pas éternelle.
     writeFileSync(join(dir, "instance-noms.txt"), nomsAlternatifs(), "utf8");
-    console.log(`[helix] certificat auto-signé généré pour « ${nom} ».`);
+    console.log(`[oxoai] certificat auto-signé généré pour « ${nom} ».`);
     return { certPath, keyPath };
   } catch (err) {
-    console.error("[helix] impossible de générer un certificat :", err instanceof Error ? err.message : String(err));
+    console.error("[oxoai] impossible de générer un certificat :", err instanceof Error ? err.message : String(err));
     return null;
   }
 }
@@ -142,7 +142,7 @@ export function tlsMaterial(): TlsMaterial | null {
       };
     } catch (err) {
       console.error(
-        `[helix] certificat illisible (${config.cert}) :`,
+        `[oxoai] certificat illisible (${config.cert}) :`,
         err instanceof Error ? err.message : String(err),
       );
       // On n'ouvre pas en clair une instance censée être chiffrée.

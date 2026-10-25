@@ -2,7 +2,7 @@
 /*
  * Petit serveur MCP d'essai (stdio, JSON-RPC ligne à ligne), sans compte ni
  * dépendance, pour `npm run essai:cli -- --modele` (essai-cli.mjs) : il sert
- * à vérifier qu'un connecteur MCP marche dans Helix Code, barrière comprise.
+ * à vérifier qu'un connecteur MCP marche dans OxoAI Code, barrière comprise.
  *
  *   node scripts/mcp-essai.mjs <carnet> <trace>
  *

@@ -1,13 +1,13 @@
 {
-  "name": "helix-ai",
-  "displayName": "Helix AI",
-  "description": "Le Chat de votre instance Helix dans VS Code : vos modèles, sur votre machine ou celle de votre entreprise.",
+  "name": "oxoai-ai",
+  "displayName": "OxoAI AI",
+  "description": "Le Chat de votre instance OxoAI dans VS Code : vos modèles, sur votre machine ou celle de votre entreprise.",
   "version": "0.2.6",
-  "publisher": "helix-agence",
+  "publisher": "oxoai",
   "license": "AGPL-3.0-only",
   "repository": {
     "type": "git",
-    "url": "https://github.com/medhiclb/HelixAI"
+    "url": "https://github.com/martinleonardcyber-ops/oxoai"
   },
   "engines": {
     "vscode": "^1.90.0"
@@ -22,76 +22,76 @@
     "viewsContainers": {
       "activitybar": [
         {
-          "id": "helix",
-          "title": "Helix AI",
-          "icon": "media/helix.svg"
+          "id": "oxoai",
+          "title": "OxoAI AI",
+          "icon": "media/oxoai.svg"
         }
       ]
     },
     "views": {
-      "helix": [
+      "oxoai": [
         {
           "type": "webview",
-          "id": "helix.chat",
+          "id": "oxoai.chat",
           "name": "Chat"
         }
       ]
     },
     "commands": [
       {
-        "command": "helix.expliquer",
-        "title": "Helix : expliquer la sélection"
+        "command": "oxoai.expliquer",
+        "title": "OxoAI : expliquer la sélection"
       },
       {
-        "command": "helix.ameliorer",
-        "title": "Helix : améliorer la sélection"
+        "command": "oxoai.ameliorer",
+        "title": "OxoAI : améliorer la sélection"
       },
       {
-        "command": "helix.nouveau",
-        "title": "Helix : nouveau Chat"
+        "command": "oxoai.nouveau",
+        "title": "OxoAI : nouveau Chat"
       },
       {
-        "command": "helix.seConnecter",
-        "title": "Helix : se connecter (pour Helix Code)"
+        "command": "oxoai.seConnecter",
+        "title": "OxoAI : se connecter (pour OxoAI Code)"
       },
       {
-        "command": "helix.seDeconnecter",
-        "title": "Helix : se déconnecter"
+        "command": "oxoai.seDeconnecter",
+        "title": "OxoAI : se déconnecter"
       }
     ],
     "menus": {
       "editor/context": [
         {
-          "command": "helix.expliquer",
+          "command": "oxoai.expliquer",
           "when": "editorHasSelection",
-          "group": "helix@1"
+          "group": "oxoai@1"
         },
         {
-          "command": "helix.ameliorer",
+          "command": "oxoai.ameliorer",
           "when": "editorHasSelection",
-          "group": "helix@2"
+          "group": "oxoai@2"
         }
       ]
     },
     "configuration": {
-      "title": "Helix AI",
+      "title": "OxoAI AI",
       "properties": {
-        "helix.adresse": {
+        "oxoai.adresse": {
           "type": "string",
           "default": "http://127.0.0.1:8787",
-          "description": "Adresse de l'instance Helix. Par défaut, celle de l'application Helix de cet ordinateur. Hors de cet ordinateur, en https. Réglable seulement pour la machine, jamais par un espace de travail.",
+          "description": "Adresse de l'instance OxoAI. Par défaut, celle de l'application OxoAI de cet ordinateur. Hors de cet ordinateur, en https. Réglable seulement pour la machine, jamais par un espace de travail.",
           "scope": "machine"
         },
-        "helix.jeton": {
+        "oxoai.jeton": {
           "type": "string",
           "default": "",
-          "description": "Jeton d'instance. Vide : lu dans ~/.helix/data/instance-token, pour l'instance de cet ordinateur.",
+          "description": "Jeton d'instance. Vide : lu dans ~/.oxoai/data/instance-token, pour l'instance de cet ordinateur.",
           "scope": "machine"
         },
-        "helix.modele": {
+        "oxoai.modele": {
           "type": "string",
           "default": "",
-          "description": "Modèle à utiliser (identifiant Helix). Vide : Helix choisit, comme en mode Auto."
+          "description": "Modèle à utiliser (identifiant OxoAI). Vide : OxoAI choisit, comme en mode Auto."
         }
       }
     }
@@ -99,7 +99,7 @@
   "capabilities": {
     "untrustedWorkspaces": {
       "supported": false,
-      "description": "L'extension envoie le fichier ouvert et la sélection à l'instance Helix : elle ne s'active que dans un espace de confiance."
+      "description": "L'extension envoie le fichier ouvert et la sélection à l'instance OxoAI : elle ne s'active que dans un espace de confiance."
     }
   }
 }

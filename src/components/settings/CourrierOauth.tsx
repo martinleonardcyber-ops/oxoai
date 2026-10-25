@@ -107,7 +107,7 @@ export function CourrierOauth({
   const applicationGoogle = google && Boolean(oauth?.google.disponible ?? client?.disponible);
   const applicationMicrosoft = !google && Boolean(oauth?.microsoft.disponible);
   const parInstance = google || (applicationMicrosoft && reprendre);
-  const retourMicrosoft = oauth?.microsoft.retour ?? `${instanceVue()}/helix/oauth/retour`;
+  const retourMicrosoft = oauth?.microsoft.retour ?? `${instanceVue()}/oxoai/oauth/retour`;
 
   const lancer = async () => {
     setOccupe(true);
@@ -294,7 +294,7 @@ export function CourrierOauth({
  * connecteurs du 28/09/2026 : elle était lue dans le stockage local, où
  * l'adresse ne se trouve plus depuis qu'elle vit dans le coffre du poste
  * (lib/coffre.ts) ; l'écran retombait alors sur l'origine de la page, et
- * l'application de bureau demandait de déclarer « helix://app/helix/oauth/retour »
+ * l'application de bureau demandait de déclarer « oxoai://app/oxoai/oauth/retour »
  * chez Google ou Microsoft, qui refusaient ensuite la connexion.
  */
 function instanceVue(): string {

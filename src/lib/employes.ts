@@ -91,7 +91,7 @@ export interface EtatModele {
   pays?: string;
 }
 
-/** Un modèle qu'on peut donner à un employé, tel que `GET /helix/employes` le liste. */
+/** Un modèle qu'on peut donner à un employé, tel que `GET /oxoai/employes` le liste. */
 export interface ModeleEmploye {
   uid: string;
   nom: string;
@@ -158,7 +158,7 @@ export const messageEtape = (i: EtatInstallation): string =>
 
 /** Lance l'installation d'OpenClaw sur la machine de l'instance ; on suit ensuite `moteur.installation`. */
 export async function installerOpenClaw(): Promise<void> {
-  await lire(await poster("/helix/openclaw/installer", {}));
+  await lire(await poster("/oxoai/openclaw/installer", {}));
 }
 
 /**
@@ -380,7 +380,7 @@ const poster = (chemin: string, corps: unknown) =>
   });
 
 export async function chargerEmployes(): Promise<EtatEmployes> {
-  return lire<EtatEmployes>(await apiFetch("/helix/employes"));
+  return lire<EtatEmployes>(await apiFetch("/oxoai/employes"));
 }
 
 /** Pourquoi un agent toujours actif ne lit que ce qui est ouvert à toute l'équipe (gateway/src/employes.ts, `lectureDesBases`). */
@@ -404,7 +404,7 @@ export interface LectureDesBases {
 }
 
 export async function lectureDesBases(id: string, bases: string[]): Promise<LectureDesBases> {
-  return lire<LectureDesBases>(await poster(`/helix/employes/${encodeURIComponent(id)}/connaissances`, { bases }));
+  return lire<LectureDesBases>(await poster(`/oxoai/employes/${encodeURIComponent(id)}/connaissances`, { bases }));
 }
 
 export interface NouvelEmploye {
@@ -431,7 +431,7 @@ export interface NouvelEmploye {
 export async function deployerEmploye(
   e: NouvelEmploye,
 ): Promise<{ employe: Employe; avertissement?: string }> {
-  return lire(await poster("/helix/employes", e));
+  return lire(await poster("/oxoai/employes", e));
 }
 
 export async function modifierEmploye(
@@ -445,11 +445,11 @@ export async function modifierEmploye(
     viderMemoire?: boolean;
   },
 ): Promise<{ employe: Employe; avertissement?: string }> {
-  return lire(await poster(`/helix/employes/${encodeURIComponent(id)}`, changements));
+  return lire(await poster(`/oxoai/employes/${encodeURIComponent(id)}`, changements));
 }
 
 export async function supprimerEmploye(id: string): Promise<void> {
-  await lire(await poster(`/helix/employes/${encodeURIComponent(id)}/supprimer`, {}));
+  await lire(await poster(`/oxoai/employes/${encodeURIComponent(id)}/supprimer`, {}));
 }
 
 export interface EnCours {
@@ -460,26 +460,26 @@ export interface EnCours {
 
 /** Ses échanges avec l'employé, et le message qu'il traite encore s'il y en a un. */
 export async function lireEchanges(id: string): Promise<{ echanges: Echange[]; enCours: EnCours | null }> {
-  return lire(await apiFetch(`/helix/employes/${encodeURIComponent(id)}/echanges`));
+  return lire(await apiFetch(`/oxoai/employes/${encodeURIComponent(id)}/echanges`));
 }
 
 /** `avertissement` : l'instance n'a pas pu dire toutes ses exécutions (la liste n'est pas complète). */
 export async function lireActivite(id: string): Promise<{ executions: Execution[]; avertissement?: string }> {
   return lire<{ executions: Execution[]; avertissement?: string }>(
-    await apiFetch(`/helix/employes/${encodeURIComponent(id)}/activite`),
+    await apiFetch(`/oxoai/employes/${encodeURIComponent(id)}/activite`),
   );
 }
 
 export async function lancerMission(id: string, mission: string): Promise<void> {
   await lire(
-    await poster(`/helix/employes/${encodeURIComponent(id)}/missions/${encodeURIComponent(mission)}/lancer`, {}),
+    await poster(`/oxoai/employes/${encodeURIComponent(id)}/missions/${encodeURIComponent(mission)}/lancer`, {}),
   );
 }
 
 /** Envoie un message ; la réponse s'attend avec `attendreReponse`. */
 export async function envoyerMessage(id: string, texte: string): Promise<string> {
   const { travail } = await lire<{ travail: string }>(
-    await poster(`/helix/employes/${encodeURIComponent(id)}/message`, { texte }),
+    await poster(`/oxoai/employes/${encodeURIComponent(id)}/message`, { texte }),
   );
   return travail;
 }
@@ -498,7 +498,7 @@ export async function attendreReponse(
     await new Promise((r) => setTimeout(r, 3000));
     if (signal.aborted) throw new DOMException("Abandonné.", "AbortError");
     const etat = await lire<{ etat: string; reponse: string | null }>(
-      await apiFetch(`/helix/employes/${encodeURIComponent(id)}/message/${travail}`, { signal }),
+      await apiFetch(`/oxoai/employes/${encodeURIComponent(id)}/message/${travail}`, { signal }),
     );
     if (etat.etat !== "en-cours") return { reponse: etat.reponse ?? "", ok: etat.etat === "termine" };
   }
@@ -528,7 +528,7 @@ export async function brancherCanal(
   id: string,
   donnees: { type: TypeCanal; champs: Record<string, string>; acces: "appairage" | "liste"; autorises: string[]; outilsEntreprise: boolean; viderMemoire?: boolean },
 ): Promise<{ avertissement?: string }> {
-  return lire(await poster(`/helix/employes/${encodeURIComponent(id)}/canaux`, donnees));
+  return lire(await poster(`/oxoai/employes/${encodeURIComponent(id)}/canaux`, donnees));
 }
 
 /* ---- Mémoire mise de côté --------------------------------------------- */
@@ -545,24 +545,24 @@ export interface CopieMemoire {
 }
 
 export async function lireCopiesMemoire(id: string): Promise<{ copies: CopieMemoire[]; aLuHorsEquipe: boolean }> {
-  return lire(await apiFetch(`/helix/employes/${encodeURIComponent(id)}/memoire`));
+  return lire(await apiFetch(`/oxoai/employes/${encodeURIComponent(id)}/memoire`));
 }
 
 export async function restaurerMemoire(id: string, copie: string): Promise<{ fichiers: number }> {
-  return lire(await poster(`/helix/employes/${encodeURIComponent(id)}/memoire/${encodeURIComponent(copie)}/restaurer`, {}));
+  return lire(await poster(`/oxoai/employes/${encodeURIComponent(id)}/memoire/${encodeURIComponent(copie)}/restaurer`, {}));
 }
 
 export async function supprimerCopieMemoire(id: string, copie: string): Promise<void> {
-  await lire(await poster(`/helix/employes/${encodeURIComponent(id)}/memoire/${encodeURIComponent(copie)}/supprimer`, {}));
+  await lire(await poster(`/oxoai/employes/${encodeURIComponent(id)}/memoire/${encodeURIComponent(copie)}/supprimer`, {}));
 }
 
 export async function retirerCanal(id: string, type: TypeCanal): Promise<void> {
-  await lire(await poster(`/helix/employes/${encodeURIComponent(id)}/canaux/${type}/retirer`, {}));
+  await lire(await poster(`/oxoai/employes/${encodeURIComponent(id)}/canaux/${type}/retirer`, {}));
 }
 
 export async function etatCanaux(id: string): Promise<Record<string, { enMarche: boolean; detail?: string }>> {
   return (await lire<{ etat: Record<string, { enMarche: boolean; detail?: string }> }>(
-    await apiFetch(`/helix/employes/${encodeURIComponent(id)}/canaux`),
+    await apiFetch(`/oxoai/employes/${encodeURIComponent(id)}/canaux`),
   )).etat;
 }
 
@@ -570,7 +570,7 @@ export async function liaisonWhatsApp(
   id: string,
   attendre: boolean,
 ): Promise<{ connecte: boolean; qr?: string; message: string }> {
-  return lire(await poster(`/helix/employes/${encodeURIComponent(id)}/canaux/whatsapp/qr`, { attendre }));
+  return lire(await poster(`/oxoai/employes/${encodeURIComponent(id)}/canaux/whatsapp/qr`, { attendre }));
 }
 
 export interface DemandeAcces {
@@ -581,14 +581,14 @@ export interface DemandeAcces {
 }
 
 export async function lireDemandes(id: string): Promise<DemandeAcces[]> {
-  return (await lire<{ demandes: DemandeAcces[] }>(await apiFetch(`/helix/employes/${encodeURIComponent(id)}/demandes`)))
+  return (await lire<{ demandes: DemandeAcces[] }>(await apiFetch(`/oxoai/employes/${encodeURIComponent(id)}/demandes`)))
     .demandes;
 }
 
 export async function accepterDemande(id: string, canal: TypeCanal, code: string): Promise<void> {
   await lire(
     await poster(
-      `/helix/employes/${encodeURIComponent(id)}/demandes/${canal}/${encodeURIComponent(code)}/accepter`,
+      `/oxoai/employes/${encodeURIComponent(id)}/demandes/${canal}/${encodeURIComponent(code)}/accepter`,
       {},
     ),
   );
@@ -609,7 +609,7 @@ export interface DocumentAgent {
 export const ACCEPT_DOCUMENTS = ".pdf,.docx,.xlsx,.pptx,.odt,.ods,.odp,.txt,.md,.csv,.json,.html,.xml";
 
 export async function lireDocuments(id: string): Promise<DocumentAgent[]> {
-  return (await lire<{ documents: DocumentAgent[] }>(await apiFetch(`/helix/employes/${encodeURIComponent(id)}/documents`)))
+  return (await lire<{ documents: DocumentAgent[] }>(await apiFetch(`/oxoai/employes/${encodeURIComponent(id)}/documents`)))
     .documents;
 }
 
@@ -626,7 +626,7 @@ export async function envoyerDocument(id: string, fichier: File, onProgression?:
   // Au-delà de 100 Mo, pas d'extraction sur le poste : l'agent aura le fichier, sans son texte.
   if (EXTENSIONS_DOCUMENTS.includes(ext) && fichier.size <= EXTRACTION_MAX) texte = await extraireTexte(fichier, ext);
   const r = await envoyerEnFlux<{ documents: DocumentAgent[] }>(
-    `/helix/employes/${encodeURIComponent(id)}/documents`,
+    `/oxoai/employes/${encodeURIComponent(id)}/documents`,
     { nom: fichier.name, taille: fichier.size, texte },
     fichier,
     onProgression,
@@ -637,7 +637,7 @@ export async function envoyerDocument(id: string, fichier: File, onProgression?:
 export async function retirerDocument(id: string, nom: string): Promise<DocumentAgent[]> {
   return (
     await lire<{ documents: DocumentAgent[] }>(
-      await poster(`/helix/employes/${encodeURIComponent(id)}/documents/${encodeURIComponent(nom)}/supprimer`, {}),
+      await poster(`/oxoai/employes/${encodeURIComponent(id)}/documents/${encodeURIComponent(nom)}/supprimer`, {}),
     )
   ).documents;
 }

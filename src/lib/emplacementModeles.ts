@@ -36,14 +36,14 @@ export interface EtatEmplacement {
 const message = async (r: Response) => ((await r.json().catch(() => ({}))) as { error?: { message?: string } }).error?.message ?? tf("Demande refusée ({0}).", r.status);
 
 export async function lireEmplacement(): Promise<EtatEmplacement> {
-  const r = await apiFetch("/helix/emplacement-modeles");
+  const r = await apiFetch("/oxoai/emplacement-modeles");
   if (!r.ok) throw new Error(await message(r));
   return (await r.json()) as EtatEmplacement;
 }
 
 /** Choisit l'emplacement (null : l'emplacement habituel). `deplacement` : les modèles partent, suivre l'état. */
 export async function choisirEmplacement(dossier: string | null): Promise<{ deplacement: boolean }> {
-  const r = await apiFetch("/helix/emplacement-modeles", {
+  const r = await apiFetch("/oxoai/emplacement-modeles", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ dossier }),
@@ -55,7 +55,7 @@ export async function choisirEmplacement(dossier: string | null): Promise<{ depl
 
 /** Juge un dossier sans rien changer : le sous-dossier qui serait créé, et la place libre. `actuel` : c'est déjà l'emplacement retenu. */
 export async function verifierEmplacement(dossier: string): Promise<{ dossier: string; libre: number | null; actuel?: boolean }> {
-  const r = await apiFetch("/helix/emplacement-modeles/verifier", {
+  const r = await apiFetch("/oxoai/emplacement-modeles/verifier", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ dossier }),
@@ -74,7 +74,7 @@ type Selecteur = (options?: { titre?: string; message?: string; bouton?: string 
  */
 export function selecteurDossier(): Selecteur | null {
   if (!isDesktopApp() || instance().remote) return null;
-  const pont = (window as unknown as { helix?: { choisirDossier?: Selecteur } }).helix;
+  const pont = (window as unknown as { oxoai?: { choisirDossier?: Selecteur } }).oxoai;
   return pont?.choisirDossier ?? null;
 }
 

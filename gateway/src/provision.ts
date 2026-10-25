@@ -130,7 +130,7 @@ export interface CatalogEntry {
    */
   auChoix?: boolean;
   /**
-   * Essayé avec Helix : niveaux de raisonnement, outils, découpage des tâches.
+   * Essayé avec OxoAI : niveaux de raisonnement, outils, découpage des tâches.
    * Seul un modèle vérifié est installé d'office ; les autres sont proposés,
    * en le disant.
    */
@@ -177,7 +177,7 @@ const FICHES: Fiche[] = [
    * Pour les très grosses machines (Mac Studio de 256 Go et plus). Kimi K3
    * (ECI 157,7), GLM-5.3 (155,6) et MiniMax, plus forts encore, pèsent plusieurs
    * centaines de Go : ils ne tournent que sur un serveur à plusieurs cartes, et
-   * s'utilisent dans Helix par un prestataire ou une clé, pas en local.
+   * s'utilisent dans OxoAI par un prestataire ou une clé, pas en local.
    */
   { key: "deepseek/deepseek-v4-flash", label: "DeepSeek V4 Flash", editeur: "DeepSeek", licence: "MIT", downloadGb: 150, moe: true, outils: true, raisonne: true, verifie: false },
   { key: "qwen/qwen3.8-27b", label: "Qwen3.8 27B", editeur: "Alibaba (Qwen)", licence: "Apache 2.0", downloadGb: 16, vision: true, outils: true, raisonne: true, verifie: false },
@@ -210,8 +210,8 @@ const FICHES: Fiche[] = [
  * ni mis dans la courte liste du sélecteur (`auChoix`). Le conseil et les
  * replis restent ceux du catalogue ci-dessus, choisi et en partie essayé :
  * certains d'ici sont mieux notés (Qwen3.6 35B A3B, Qwen3 30B A3B Thinking 2507), et les y
- * faire entrer changerait ce que Helix installe sur chaque machine. C'est à
- * Medhi d'en décider (PROJET.md § 3.22). Aucun n'a été chargé avec Helix.
+ * faire entrer changerait ce que OxoAI installe sur chaque machine. C'est à
+ * Medhi d'en décider (PROJET.md § 3.22). Aucun n'a été chargé avec OxoAI.
  *
  * Relevé le 28/09/2026, pour chacun :
  *  - l'identifiant, la taille et les capacités (outils, raisonnement, images)
@@ -222,7 +222,7 @@ const FICHES: Fiche[] = [
  *    aussi les couches à fenêtre glissante (OLMo 3 : 4 096 jetons, gpt-oss :
  *    128) pour ce qu'elles gardent.
  *
- * Écartés : Phi-4 (16 384 jetons au plus, Helix charge à 32 768), Bonsai 27B
+ * Écartés : Phi-4 (16 384 jetons au plus, OxoAI charge à 32 768), Bonsai 27B
  * (poids à 1 bit, noyaux encore dans les copies de l'éditeur), Laguna S 2.1
  * (licence OpenMDW), LFM2 (licence LFM), Nemotron 3 (licence NVIDIA),
  * Codestral (licence non commerciale), Devstral 2 123B (licence « other »),
@@ -399,7 +399,7 @@ export function tientSur(hw: Hardware, f: { downloadGb: number; moe?: boolean; k
   const vram = hw.gpuVramGb ?? 0;
   /*
    * Le cache de conversation, compté pour ce qu'il pèse (28/09/2026). Sur
-   * 36 Go ou moins, Helix charge toujours avec 32 768 jetons
+   * 36 Go ou moins, OxoAI charge toujours avec 32 768 jetons
    * (`optionsDeChargement`, backends.ts) ; au processeur et sur un Mac, ce
    * cache prend la même mémoire que les poids. Les 30 % comptés jusqu'ici
    * valaient pour Qwen3.5 (1 Gio pour 3 Go de poids : trois couches sur
@@ -473,10 +473,10 @@ function legerVerifie(catalogue: CatalogEntry[]): CatalogEntry | undefined {
  * machine. À défaut, le plus léger vérifié.
  *
  * Pour converser, la note seule décide depuis le 25/09/2026, essayé avec
- * Helix ou non. Demandé par Medhi : « le but du logiciel est d'installer, en
+ * OxoAI ou non. Demandé par Medhi : « le but du logiciel est d'installer, en
  * fonction du PC, le meilleur modèle », même quand on n'a pas la machine pour
  * l'essayer. Avant, seuls les modèles essayés ici comptaient : sur un Mac de
- * 32 Go ou plus, Helix installait Qwen3.5 9B alors que Qwen3.8 27B, mieux
+ * 32 Go ou plus, OxoAI installait Qwen3.5 9B alors que Qwen3.8 27B, mieux
  * noté, tenait. Un modèle pas encore essayé le reste (`verifie`), sans que
  * l'écran le dise depuis le 28/09/2026 (PROJET.md § 3.16) ; s'il ne se charge
  * pas, les suivants du classement prennent le relais (`replis`), jusqu'au plus
@@ -487,7 +487,7 @@ function legerVerifie(catalogue: CatalogEntry[]): CatalogEntry | undefined {
  * mieux noté qui tient est installé, et s'il ne se charge pas, les suivants,
  * jusqu'au plus léger essayé (Qwen3-VL). Un modèle qui lit les images sans
  * savoir désigner un point à l'écran clique à côté ; les autres restent
- * proposés. Le badge « pas encore vérifié avec Helix » du sélecteur a été
+ * proposés. Le badge « pas encore vérifié avec OxoAI » du sélecteur a été
  * retiré le 28/09/2026 (PROJET.md § 3.16).
  */
 function best(hw: Hardware, catalogue: CatalogEntry[], verifiesSeulement = false): CatalogEntry {
@@ -807,7 +807,7 @@ async function unloadOthers(lms: string, garder: string): Promise<number> {
     const res = await run(lms, ["unload", cle], () => {});
     if (res.ok) {
       liberes += 1;
-      console.log(`[helix] ${cle} déchargé pour libérer la mémoire.`);
+      console.log(`[oxoai] ${cle} déchargé pour libérer la mémoire.`);
     }
   }
   return liberes;
@@ -981,7 +981,7 @@ export async function verifierModeleEnPlace(): Promise<void> {
   if (moteurOuvert()) {
     const conseil = best(detectHardware(), catalogueOuvert());
     if (!aEssayer(conseil.key) || !modelesLlamaCpp().includes(conseil.key)) return;
-    console.log(`[helix] ${conseil.key} n'a jamais été essayé sur cette machine : essai au démarrage.`);
+    console.log(`[oxoai] ${conseil.key} n'a jamais été essayé sur cette machine : essai au démarrage.`);
     await ensureLocalModel();
     invalidate();
     return;
@@ -993,7 +993,7 @@ export async function verifierModeleEnPlace(): Promise<void> {
   if (!aEssayer(conseil.key)) return;
   const installes = await run(lms, ["ls"], () => {});
   if (!installes.ok || !installes.output.includes(conseil.key)) return;
-  console.log(`[helix] ${conseil.key} n'a jamais été essayé sur cette machine : essai au démarrage.`);
+  console.log(`[oxoai] ${conseil.key} n'a jamais été essayé sur cette machine : essai au démarrage.`);
   await ensureLocalModel();
   invalidate();
 }
@@ -1023,7 +1023,7 @@ export async function relaisApresDefaillance(modele: string, auto: boolean): Pro
   if (autoProvisionEnabled() && !enCours) {
     void ensureLocalModel()
       .then(() => invalidate())
-      .catch((err: unknown) => console.error("[helix] relais après défaillance", err));
+      .catch((err: unknown) => console.error("[oxoai] relais après défaillance", err));
     return tf("{0} n'est plus choisi d'office sur cette machine, et {1} installe un modèle qui lui convient : les réponses suivantes viendront de lui dès qu'il sera prêt.", modele, nomProduit());
   }
   return tf("{0} n'est plus choisi d'office sur cette machine, et aucun autre modèle n'y est installé.", modele);
@@ -1038,7 +1038,7 @@ export async function apresCoupure(model: ModelInfo, auto: boolean): Promise<str
   const etat = noterCoupure(model.id);
   if (etat === "douteux") return tf("Si cela se reproduit, {0} ne sera plus choisi d'office sur cette machine.", model.id);
   if (etat !== "defaillant") return "";
-  console.warn(`[helix] ${model.id} noté défaillant sur cette machine : deux réponses parties en boucle.`);
+  console.warn(`[oxoai] ${model.id} noté défaillant sur cette machine : deux réponses parties en boucle.`);
   return `${t("C'est la deuxième fois sur cette machine.")} ${await relaisApresDefaillance(model.id, auto)}`;
 }
 
@@ -1088,7 +1088,7 @@ async function provision(
     return state;
   }
   const lms = await findLms();
-  // L'application LM Studio de la personne, fermée, que Helix ne démarre pas sans son accord (23/10/2026, engine.ts).
+  // L'application LM Studio de la personne, fermée, que OxoAI ne démarre pas sans son accord (23/10/2026, engine.ts).
   if (!lms && (await applicationEnAttenteDeChoix())) {
     setState({
       phase: "error",
@@ -1148,7 +1148,7 @@ async function provision(
    * « Vérification des modèles disponibles... » (24/10/2026).
    */
   if (loadedNow.muet || installed.muet) {
-    console.error(`[helix] moteur LM Studio sans réponse à « lms ${loadedNow.muet ? "ps" : "ls"} » : ${diagnosticInstallation()}`);
+    console.error(`[oxoai] moteur LM Studio sans réponse à « lms ${loadedNow.muet ? "ps" : "ls"} » : ${diagnosticInstallation()}`);
     setState({
       phase: "error",
       message: t("Le moteur des modèles ne démarre pas sur cette machine."),
@@ -1241,7 +1241,7 @@ async function provision(
        *
        * Reprendre le même modèle plutôt que passer au suivant (16/10/2026) :
        * sur la machine Linux de l'essai GitHub, Qwen3 1.7B s'était arrêté à
-       * 40 %, et Helix passait à Qwen3 8B (5 Go), puis Granite 4.1 8B, encore
+       * 40 %, et OxoAI passait à Qwen3 8B (5 Go), puis Granite 4.1 8B, encore
        * plus longs à venir sur la même connexion.
        */
       const ESSAIS = 5;
@@ -1282,13 +1282,13 @@ async function provision(
          * l'échec est dit à la fin, avec ce message.
          */
         if (sansProgres >= 2) {
-          console.error(`[helix] téléchargement de ${choice.key} arrêté, sans progrès : ${raisonTelechargement(got.output)}`);
+          console.error(`[oxoai] téléchargement de ${choice.key} arrêté, sans progrès : ${raisonTelechargement(got.output)}`);
           reseauArrete = true;
           echec = { message, error: t("Le téléchargement n'avance plus depuis plusieurs minutes : vérifiez la connexion, puis réessayez. Ce qui a déjà été reçu est gardé.") };
           plafondGo = Math.min(plafondGo, choice.downloadGb + 0.01);
           continue;
         }
-        console.error(`[helix] téléchargement de ${choice.key} refusé : ${got.output.slice(-400)}`);
+        console.error(`[oxoai] téléchargement de ${choice.key} refusé : ${got.output.slice(-400)}`);
         /*
          * Le moteur lui-même ne démarre pas (vu sous Windows le 28/09/2026 :
          * « daemon is not running and no valid installation »). Un autre modèle
@@ -1296,7 +1296,7 @@ async function provision(
          * au lieu d'essayer tous les modèles jusqu'au plus léger.
          */
         if (/daemon is not running|no valid installation|failed to start or connect to local LM Studio/i.test(got.output)) {
-          console.error(`[helix] moteur LM Studio injoignable : ${diagnosticInstallation()}`);
+          console.error(`[oxoai] moteur LM Studio injoignable : ${diagnosticInstallation()}`);
           setState({
             phase: "error",
             message: t("Le moteur des modèles ne démarre pas sur cette machine."),
@@ -1359,7 +1359,7 @@ async function provision(
     let loaded = await charger();
     // Échec sans manque de mémoire (moteur encore en train de démarrer) : une seconde tentative, et la vraie réponse au journal.
     if (!loaded.ok && !isResourceError(loaded.output)) {
-      console.error(`[helix] chargement de ${choice.key} refusé : ${loaded.output.slice(-400)}`);
+      console.error(`[oxoai] chargement de ${choice.key} refusé : ${loaded.output.slice(-400)}`);
       await new Promise((r) => setTimeout(r, 3000));
       preparerDossiersLlmster();
       loaded = await charger();
@@ -1406,7 +1406,7 @@ async function provision(
       continue;
     }
 
-    console.error(`[helix] chargement de ${choice.key} refusé : ${loaded.output.slice(-400)}`);
+    console.error(`[oxoai] chargement de ${choice.key} refusé : ${loaded.output.slice(-400)}`);
     echec = {
       message: isResourceError(loaded.output) ? t("Aucun modèle n'a pu être chargé sur cette machine.") : t("Le chargement du modèle a échoué."),
       error: loaded.output.slice(-400),
@@ -1509,12 +1509,12 @@ async function provisionOuverte(requested: string | undefined, catalogue: Catalo
      * lourd pour cette machine ».
      */
     if (!charge.ok && charge.moteur) {
-      console.error(`[helix] llama.cpp : ${charge.message}`);
+      console.error(`[oxoai] llama.cpp : ${charge.message}`);
       setState({ phase: "error", message: t("Le chargement du modèle a échoué."), error: charge.message });
       return state;
     }
     if (!charge.ok) {
-      console.error(`[helix] llama.cpp : chargement de ${choice.key} refusé : ${charge.message}`);
+      console.error(`[oxoai] llama.cpp : chargement de ${choice.key} refusé : ${charge.message}`);
       echec = { message: t("Le chargement du modèle a échoué."), error: charge.message };
       const suivant = suivantDe(choice);
       if (suivant) setState({ phase: "checking", message: tf("{0} est trop lourd pour cette machine, essai d'un modèle plus léger...", choice.label) });

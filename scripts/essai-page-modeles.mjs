@@ -45,7 +45,7 @@ const portLibre = () =>
     });
   });
 
-const TMP = realpathSync(mkdtempSync(join(tmpdir(), "helix-essai-page-modeles-")));
+const TMP = realpathSync(mkdtempSync(join(tmpdir(), "oxoai-essai-page-modeles-")));
 const MAISON = join(TMP, "maison");
 const BIN = join(TMP, "bin");
 const DONNEES = join(TMP, "donnees");
@@ -137,16 +137,16 @@ const passerelle = spawn(process.execPath, ["--import", PREALABLE, join(RACINE, 
     LANG: "C",
     HTTPS_PROXY: "http://127.0.0.1:9",
     HTTP_PROXY: "http://127.0.0.1:9",
-    HELIX_CONFIG: join(TMP, "profil.json"),
-    HELIX_DATA_DIR: DONNEES,
-    HELIX_GATEWAY_PORT: String(port),
-    HELIX_WORKSPACE: join(TMP, "espace"),
-    HELIX_MOTEUR: "lmstudio",
-    HELIX_LMSTUDIO_URL: `http://127.0.0.1:${portLms}/v1`,
-    HELIX_EXO_URL: "http://127.0.0.1:9/v1",
-    HELIX_APPS_DIR: join(TMP, "Applications"),
-    HELIX_OPENCODE_BIN: join(BIN, "opencode"),
-    HELIX_RTK_BIN: join(BIN, "rtk"),
+    OXOAI_CONFIG: join(TMP, "profil.json"),
+    OXOAI_DATA_DIR: DONNEES,
+    OXOAI_GATEWAY_PORT: String(port),
+    OXOAI_WORKSPACE: join(TMP, "espace"),
+    OXOAI_MOTEUR: "lmstudio",
+    OXOAI_LMSTUDIO_URL: `http://127.0.0.1:${portLms}/v1`,
+    OXOAI_EXO_URL: "http://127.0.0.1:9/v1",
+    OXOAI_APPS_DIR: join(TMP, "Applications"),
+    OXOAI_OPENCODE_BIN: join(BIN, "opencode"),
+    OXOAI_RTK_BIN: join(BIN, "rtk"),
   },
   stdio: ["ignore", "pipe", "pipe"],
 });
@@ -164,17 +164,17 @@ try {
     }
   }
   if (!JETON) throw new Error(`passerelle muette :\n${journal.slice(-2000)}`);
-  const entetes = (seance, langue = "fr") => ({ "Content-Type": "application/json", Authorization: `Bearer ${JETON}`, "X-Helix-Langue": langue, ...(seance ? { "X-Helix-Session": seance } : {}) });
+  const entetes = (seance, langue = "fr") => ({ "Content-Type": "application/json", Authorization: `Bearer ${JETON}`, "X-OxoAI-Langue": langue, ...(seance ? { "X-OxoAI-Session": seance } : {}) });
   const appel = async (chemin, seance, corps, langue) => {
     const r = await fetch(`${G}${chemin}`, corps === undefined ? { headers: entetes(seance, langue) } : { method: "POST", headers: entetes(seance, langue), body: JSON.stringify(corps) });
     return { statut: r.status, json: await r.json().catch(() => ({})) };
   };
   // Compte d'essai sur la passerelle jetable (valeurs d'essai).
-  const admin = await appel("/helix/auth/create", null, { fullName: "Admin Essai", email: "admin@example.test", password: "Admin2Essai!Solide42" });
+  const admin = await appel("/oxoai/auth/create", null, { fullName: "Admin Essai", email: "admin@example.test", password: "Admin2Essai!Solide42" });
   const seance = admin.json.session?.token ?? "";
 
   console.log("A. Le catalogue complet");
-  const e0 = (await appel("/helix/provision", seance)).json;
+  const e0 = (await appel("/oxoai/provision", seance)).json;
   const modeles = e0.modeles ?? [];
   const chat = modeles.filter((m) => m.role === "chat");
   verifier("moteur LM Studio reconnu, rien de piloté par un intégrateur", e0.moteur === "lmstudio" && e0.moteurInstalle === true && e0.managed === false, JSON.stringify({ moteur: e0.moteur, installe: e0.moteurInstalle, managed: e0.managed }));
@@ -185,33 +185,33 @@ try {
   verifier("le modèle d'écran déjà là est « installé » (nom sans le préfixe d'éditeur)", modeles.find((m) => m.key === "qwen3-vl-2b")?.installe === true, JSON.stringify(modeles.find((m) => m.key === "qwen3-vl-2b")));
   verifier("la courte liste du sélecteur ne prend aucun modèle au choix", (e0.installables ?? []).every((m) => !m.auChoix), (e0.installables ?? []).map((m) => m.key).join(","));
   verifier("le modèle conseillé n'est pas un modèle au choix", !(e0.recommended?.auChoix), e0.recommended?.key);
-  const en = (await appel("/helix/provision", seance, undefined, "en")).json;
+  const en = (await appel("/oxoai/provision", seance, undefined, "en")).json;
   const lourdEn = (en.modeles ?? []).find((m) => m.key === "deepseek/deepseek-v4-flash");
   verifier("la raison est dite dans la langue de la personne (anglais)", /needs about [\d.]+ GB of memory; this computer has [\d.]+/.test(lourdEn?.tropLourd?.texte ?? ""), lourdEn?.tropLourd?.texte);
 
   // La mise en route du démarrage finie (ou rien à faire), avant de demander.
   for (let i = 0; i < 40; i++) {
-    const p = (await appel("/helix/provision", seance)).json.state?.phase;
+    const p = (await appel("/oxoai/provision", seance)).json.state?.phase;
     if (!["checking", "downloading", "loading"].includes(p)) break;
     await attendre(250);
   }
 
   console.log("B. Un modèle trop lourd est refusé avant tout téléchargement");
-  const refus = await appel("/helix/provision/start", seance, { model: "deepseek/deepseek-v4-flash", role: "chat" });
+  const refus = await appel("/oxoai/provision/start", seance, { model: "deepseek/deepseek-v4-flash", role: "chat" });
   await attendre(800);
   verifier("refusé (409) avec la raison chiffrée", refus.statut === 409 && /demande environ [\d,]+ Go/.test(refus.json.error?.message ?? ""), `${refus.statut} ${JSON.stringify(refus.json)}`);
   verifier("rien n'est téléchargé (`lms get` jamais appelé pour lui)", !readFileSync(APPELS, "utf8").includes("get deepseek/deepseek-v4-flash"), readFileSync(APPELS, "utf8").split("\n").filter((l) => l.startsWith("get")).join(" | "));
-  const sansSeance = await appel("/helix/provision/start", null, { model: "ibm/granite-4-h-micro", role: "chat" });
+  const sansSeance = await appel("/oxoai/provision/start", null, { model: "ibm/granite-4-h-micro", role: "chat" });
   verifier("sans séance, l'installation est refusée (401), comme depuis le sélecteur", sansSeance.statut === 401, sansSeance.statut);
 
   console.log("C. Un modèle au choix qui tient s'installe");
   const micro = modeles.find((m) => m.key === "ibm/granite-4-h-micro");
   verifier("Granite 4.0 H Micro est au catalogue, tient sur la machine, pas encore là", Boolean(micro) && !micro.tropLourd && micro.installe === false, JSON.stringify(micro));
-  const lance = await appel("/helix/provision/start", seance, { model: "ibm/granite-4-h-micro", role: "chat" });
+  const lance = await appel("/oxoai/provision/start", seance, { model: "ibm/granite-4-h-micro", role: "chat" });
   let fin = {};
   const vus = new Set();
   for (let i = 0; i < 120; i++) {
-    fin = (await appel("/helix/provision", seance)).json;
+    fin = (await appel("/oxoai/provision", seance)).json;
     vus.add(fin.state?.phase);
     if (["ready", "error"].includes(fin.state?.phase) && fin.state?.model === "ibm/granite-4-h-micro") break;
     await attendre(250);
@@ -228,7 +228,7 @@ try {
   await Promise.race([fin, attendre(10_000)]);
   if (passerelle.exitCode === null) passerelle.kill("SIGKILL");
   faux.close();
-  if (echecs.length && process.env.HELIX_ESSAI_BAVARD) console.log(journal.slice(-4000));
+  if (echecs.length && process.env.OXOAI_ESSAI_BAVARD) console.log(journal.slice(-4000));
   await attendre(1500);
   try {
     rmSync(TMP, { recursive: true, force: true, maxRetries: 10, retryDelay: 300 });

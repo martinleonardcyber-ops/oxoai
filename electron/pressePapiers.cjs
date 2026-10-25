@@ -11,11 +11,11 @@
  *
  * Plutôt que d'ouvrir une permission du navigateur, deux canaux étroits :
  *
- *  - `helix:presse-papiers-ecrire` : du texte, rien d'autre (ni image, ni
+ *  - `oxoai:presse-papiers-ecrire` : du texte, rien d'autre (ni image, ni
  *    HTML, ni fichier), borné en taille, relu aussitôt pour ne répondre
  *    « copié » que si c'est vrai ;
- *  - `helix:presse-papiers-vider` : pour une clé d'API, vider le
- *    presse-papiers s'il contient encore **ce que Helix y a mis lui-même** en
+ *  - `oxoai:presse-papiers-vider` : pour une clé d'API, vider le
+ *    presse-papiers s'il contient encore **ce que OxoAI y a mis lui-même** en
  *    dernier. La page ne lit jamais le presse-papiers : elle ne peut ni en
  *    tirer ce que la personne a copié ailleurs, ni s'en servir pour deviner
  *    son contenu, ni effacer autre chose que sa propre copie.
@@ -45,7 +45,7 @@ function installerPressePapiers({ ipcMain, clipboard, depuisLaFenetre }) {
   /** Le dernier texte écrit par ce canal, seul que `vider` accepte d'effacer. */
   let dernierEcrit = null;
 
-  ipcMain.handle("helix:presse-papiers-ecrire", async (event, texte) => {
+  ipcMain.handle("oxoai:presse-papiers-ecrire", async (event, texte) => {
     if (!depuisLaFenetre(event)) throw new Error("Refusé.");
     if (typeof texte !== "string") return { ok: false, motif: "invalide" };
     if (texte.length > TAILLE_MAX) return { ok: false, motif: "trop long" };
@@ -60,18 +60,18 @@ function installerPressePapiers({ ipcMain, clipboard, depuisLaFenetre }) {
     return { ok: true };
   });
 
-  ipcMain.handle("helix:presse-papiers-vider", async (event, texte) => {
+  ipcMain.handle("oxoai:presse-papiers-vider", async (event, texte) => {
     if (!depuisLaFenetre(event)) throw new Error("Refusé.");
     if (typeof texte !== "string" || texte === "" || texte.length > TAILLE_MAX) return { ok: false, motif: "invalide" };
-    // Autre chose que la dernière copie de Helix : on n'y touche pas, et on ne dit pas ce qu'il y a.
+    // Autre chose que la dernière copie de OxoAI : on n'y touche pas, et on ne dit pas ce qu'il y a.
     if (dernierEcrit === null || texte !== dernierEcrit) return { ok: true, vide: false };
     try {
       if (!memeTexte(String(await clipboard.readText()), texte)) {
-        // Remplacé depuis par la personne : ce n'est plus à Helix de le vider.
+        // Remplacé depuis par la personne : ce n'est plus à OxoAI de le vider.
         dernierEcrit = null;
         return { ok: true, vide: false };
       }
-      // Une autre copie de Helix, faite pendant la relecture, n'est pas effacée à sa place.
+      // Une autre copie de OxoAI, faite pendant la relecture, n'est pas effacée à sa place.
       if (dernierEcrit !== texte) return { ok: true, vide: false };
       await clipboard.clear();
       dernierEcrit = null;

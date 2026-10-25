@@ -3,7 +3,7 @@ import { features, branding } from "@/config/branding";
 import { lireReglages, nomDuBot, passerelle, pontBot } from "@/lib/reunions";
 
 /** Émis quand les réglages des réunions changent : le bot automatique suit. */
-export const REGLAGES_REUNIONS = "helix:reglages-reunions";
+export const REGLAGES_REUNIONS = "oxoai:reglages-reunions";
 
 /**
  * Bot automatique : si la personne l'a demandé, l'application de bureau

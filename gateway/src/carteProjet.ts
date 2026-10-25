@@ -7,7 +7,7 @@ import { estProtege } from "./zonesProtegees.ts";
  * définit (fonctions, classes, exports, identifiants d'une page), en quelques
  * milliers de caractères.
  *
- * Demandé par Medhi le 26/09/2026 : Helix Code doit être bon « sur tous les
+ * Demandé par Medhi le 26/09/2026 : OxoAI Code doit être bon « sur tous les
  * domaines de code », même avec un petit modèle et un petit contexte. Mesuré
  * sur les essais du jour avec Qwen3 8B : ses erreurs viennent surtout de ce
  * qu'il ne sait pas ce qui existe (fonction appelée qui n'existe pas, champ
@@ -154,7 +154,7 @@ export function carteDuProjet(dossier: string, budget = 6000): string {
 }
 
 /** Le marqueur du bloc : sessionsCode.ts le retire de l'historique affiché. */
-export const MARQUEUR_CARTE = "\n\n---\nCarte du projet (Helix)";
+export const MARQUEUR_CARTE = "\n\n---\nCarte du projet (OxoAI)";
 
 /** La carte, prête à joindre à une demande (vide si le dossier est vide). */
 export function blocCarte(dossier: string, budget = 6000): string {

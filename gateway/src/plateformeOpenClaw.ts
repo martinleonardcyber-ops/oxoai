@@ -3,16 +3,16 @@ import { t, tf } from "./langue.ts";
 import { nomProduit } from "./marque.ts";
 
 /**
- * Ce qui change d'un système à l'autre pour l'OpenClaw de Helix : l'archive
+ * Ce qui change d'un système à l'autre pour l'OpenClaw de OxoAI : l'archive
  * de Node, la disposition des fichiers qu'elle pose, la façon de lancer
  * OpenClaw, le PATH, l'arrêt d'un arbre de processus.
  *
- * Pourquoi un module à part (28/09/2026) : sous Windows, Helix refusait
+ * Pourquoi un module à part (28/09/2026) : sous Windows, OxoAI refusait
  * OpenClaw (« OpenClaw demande WSL »). La documentation d'OpenClaw, relue ce
  * jour-là (docs.openclaw.ai/platforms/windows), dit le contraire : « OpenClaw
  * ships a native Windows Hub companion app plus Windows CLI support », WSL2
  * seulement recommandé. Installer WSL pour la personne n'était pas possible
- * (droits d'administrateur, redémarrage) : Helix pose donc un OpenClaw natif,
+ * (droits d'administrateur, redémarrage) : OxoAI pose donc un OpenClaw natif,
  * comme sur macOS et Linux. Aucune de ces fonctions ne lit `process.platform` :
  * le système leur est passé, pour qu'un Mac puisse les essayer telles que
  * Windows les verra (scripts/essai-openclaw-windows.mjs, avec `path.win32`).
@@ -22,16 +22,16 @@ import { nomProduit } from "./marque.ts";
  *  - le lanceur est `openclaw.mjs` (champ `bin`), lancé par Node. npm pose à
  *    côté un `openclaw.cmd`, qu'on ne lance pas : Node refuse d'exécuter un
  *    `.cmd` sans passer par `cmd.exe` (CVE-2024-27980), et `cmd.exe` couperait
- *    les chemins qui ont des espaces ou des accents. Helix lance donc
+ *    les chemins qui ont des espaces ou des accents. OxoAI lance donc
  *    `node.exe openclaw.mjs …` lui-même, sans interpréteur de commandes ;
  *  - ses commandes (`exec`, palier Libre) passent par PowerShell sous Windows
  *    (`getShellConfig` : PowerShell 7 s'il est là, sinon Windows PowerShell
  *    5.1), pas par un shell Unix ;
  *  - ses modules natifs ont leur version Windows x64 et arm64 (koffi,
  *    node-pty) ; `sqlite-vec` n'a pas d'arm64 sous Windows, mais il ne sert
- *    qu'aux embeddings de la mémoire, que Helix ne règle pas (la recherche se
+ *    qu'aux embeddings de la mémoire, que OxoAI ne règle pas (la recherche se
  *    fait par mots, partout) ;
- *  - les messageries que Helix propose sont en JavaScript ou en WebAssembly
+ *  - les messageries que OxoAI propose sont en JavaScript ou en WebAssembly
  *    (Baileys et whatsapp-rust-bridge, grammY, discord.js et libopus-wasm,
  *    Bolt) : rien à compiler.
  */
@@ -212,14 +212,14 @@ export function dispositionNode(dossier: string, p: NodeJS.Platform): Dispositio
 
 /**
  * L'environnement de l'installation par npm : celui de la passerelle, moins
- * ce qui la regarde (`HELIX_*`, `ELECTRON_*`) et ce qui réglerait npm à notre
+ * ce qui la regarde (`OXOAI_*`, `ELECTRON_*`) et ce qui réglerait npm à notre
  * insu (`npm_config_prefix`, un registre…), sans tenir compte de la casse
  * (npm lit `NPM_CONFIG_PREFIX` comme `npm_config_prefix`). PATH : le Node
  * privé, puis le minimum du système.
  */
 export function envInstallation(source: Env, dossierBin: string, p: NodeJS.Platform): Env {
   const env: Env = { ...source };
-  for (const k of Object.keys(env)) if (/^(helix_|electron_|npm_)/i.test(k)) delete env[k];
+  for (const k of Object.keys(env)) if (/^(oxoai_|electron_|npm_)/i.test(k)) delete env[k];
   return poserPath(env, joindrePath([dossierBin, pathSysteme(p, source)], p), p);
 }
 
@@ -227,7 +227,7 @@ export function envInstallation(source: Env, dossierBin: string, p: NodeJS.Platf
  * Les arguments de `npm install` pour OpenClaw : préfixe explicite, pour
  * qu'aucun `.npmrc` de la personne ne l'envoie ailleurs, et aucun script
  * d'installation (`--ignore-scripts`) : ceux d'OpenClaw lui-même sont lancés
- * ensuite par Helix (`scriptsOpenClaw`), par Node, sans interpréteur.
+ * ensuite par OxoAI (`scriptsOpenClaw`), par Node, sans interpréteur.
  *
  * Pourquoi plus `--allow-scripts=openclaw` (29/09/2026) : on le croyait
  * suffisant pour ne laisser tourner que les scripts d'OpenClaw. Le journal de
@@ -250,7 +250,7 @@ export function argumentsInstallation(version: string, prefixe: string, options:
   return args;
 }
 
-/** Un script d'installation d'OpenClaw, tel que Helix le lance : `node <fichier>`, dans le dossier du paquet. */
+/** Un script d'installation d'OpenClaw, tel que OxoAI le lance : `node <fichier>`, dans le dossier du paquet. */
 export interface ScriptOpenClaw {
   etape: "preinstall" | "install" | "postinstall";
   fichier: string;
@@ -291,7 +291,7 @@ export function scriptsOpenClaw(manifeste: unknown, dossierPaquet: string, p: No
 /* ---- Trouver et lancer OpenClaw ------------------------------------------ */
 
 /**
- * Où chercher un OpenClaw : celui imposé par le profil, celui de Helix, puis
+ * Où chercher un OpenClaw : celui imposé par le profil, celui de OxoAI, puis
  * ceux du PATH et des emplacements usuels. Sous Windows, le lanceur de npm
  * (`openclaw.cmd`) : dans le PATH, et dans le préfixe global par défaut de
  * npm (`%APPDATA%\npm`), qu'une application ouverte depuis le menu Démarrer
@@ -309,7 +309,7 @@ export function candidatsOpenClaw(o: {
   const c = chemins(o.platform);
   const liste: string[] = [];
   if (o.impose) liste.push(o.impose);
-  // Celui qu'Helix a installé passe avant tout autre : c'est la version éprouvée.
+  // Celui qu'OxoAI a installé passe avant tout autre : c'est la version éprouvée.
   liste.push(o.gere);
   const dossiersPath = (lireVariable(o.env, "PATH", o.platform) ?? "")
     .split(separateur(o.platform))
@@ -384,7 +384,7 @@ export interface Lancement {
  *    (`openclaw.cmd`, `openclaw.ps1`, ou `openclaw` sans extension), le paquet
  *    est dans `node_modules\openclaw` à côté ; derrière un script (`.mjs`,
  *    `.js`), c'est lui. Le Node : `node.exe` à côté du lanceur (le Node privé
- *    de Helix, ou un Node installé sans préfixe à part), sinon celui du PATH,
+ *    de OxoAI, ou un Node installé sans préfixe à part), sinon celui du PATH,
  *    comme le fait le `.cmd` de npm lui-même.
  */
 export function lancementOpenClaw(bin: string, p: NodeJS.Platform, existe: (f: string) => boolean, nodeDuPath: () => string | null, entree = "openclaw.mjs"): Lancement | null {
@@ -448,10 +448,10 @@ export function estPasserelleOpenClaw(ligne: string, p: NodeJS.Platform, port?: 
   if (p !== "win32") return ligne.includes("openclaw");
   if (!/openclaw/i.test(ligne) || !/\bgateway\b/i.test(ligne)) return false;
   /*
-   * Et sur le port de Helix, quand on le connaît (test d'intrusion du
+   * Et sur le port de OxoAI, quand on le connaît (test d'intrusion du
    * 28/09/2026, SECURITE.md § 58) : l'OpenClaw personnel de la personne
    * (`gateway run --port 18789`) a la même ligne, et un numéro de processus
-   * noté par Helix, puis réutilisé par lui après un redémarrage, l'aurait fait
+   * noté par OxoAI, puis réutilisé par lui après un redémarrage, l'aurait fait
    * arrêter. Sous Windows la ligne garde ses arguments : on peut le distinguer.
    */
   return port === undefined || new RegExp(`--port[=\\s]+"?${port}"?(\\s|$)`).test(ligne);
@@ -548,7 +548,7 @@ export function raisonNpm(sortie: string, version: string, origine: "npm" | "scr
       ? tf("le script d'installation du paquet « {0} » a échoué ({1})", paquet, propre)
       : tf("le script d'installation du paquet « {0} » a échoué", paquet);
   }
-  // Un script d'OpenClaw lancé par Helix (installationOpenClaw.ts) : sa sortie brute, la cause suffit.
+  // Un script d'OpenClaw lancé par OxoAI (installationOpenClaw.ts) : sa sortie brute, la cause suffit.
   if (origine === "script") return propre || t("il s'est arrêté sans rien dire");
   if (propre) return tf("npm a échoué ({0})", propre);
   // Rien d'autre que le code : on le dit, la sortie entière est dans le journal (journaliserNpm).
@@ -565,7 +565,7 @@ export function sansChemins(texte: string): string {
    * Un dossier du chemin peut contenir des espaces (`C:\Users\Jean Dupont\…`,
    * le cas ordinaire sous Windows) : on avale chaque dossier suivi d'un
    * séparateur, espaces compris, et le dernier morceau jusqu'au premier blanc
-   * (29/09/2026 ; avant, « Dupont\.helix\… » restait à l'écran). Quitte à
+   * (29/09/2026 ; avant, « Dupont\.oxoai\… » restait à l'écran). Quitte à
    * avaler quelques mots de plus : mieux vaut perdre un mot qu'un nom. Un
    * dossier ne contient jamais `:`, ce qui arrête le chemin avant une adresse
    * (`https://registry.npmjs.org/…`, gardée).

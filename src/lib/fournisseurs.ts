@@ -38,11 +38,11 @@ const poster = (chemin: string, corps: unknown) =>
   apiFetch(chemin, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(corps) });
 
 export async function chargerFournisseurs(): Promise<{ catalogue: Fournisseur[]; cles: CleModele[] }> {
-  return lire(await apiFetch("/helix/fournisseurs"));
+  return lire(await apiFetch("/oxoai/fournisseurs"));
 }
 
 export async function essayerCle(fournisseur: string, cle: string, adresse?: string): Promise<string[]> {
-  return (await lire<{ modeles: string[] }>(await poster("/helix/fournisseurs/essayer", { fournisseur, cle, adresse })))
+  return (await lire<{ modeles: string[] }>(await poster("/oxoai/fournisseurs/essayer", { fournisseur, cle, adresse })))
     .modeles;
 }
 
@@ -55,15 +55,15 @@ export async function ajouterCle(donnees: {
   portee: "moi" | "equipe";
   modeles: string[];
 }): Promise<CleModele> {
-  return (await lire<{ cle: CleModele }>(await poster("/helix/fournisseurs", donnees))).cle;
+  return (await lire<{ cle: CleModele }>(await poster("/oxoai/fournisseurs", donnees))).cle;
 }
 
 export async function modifierCle(id: string, changements: { modeles?: string[]; portee?: "moi" | "equipe" }): Promise<void> {
-  await lire(await poster(`/helix/fournisseurs/${encodeURIComponent(id)}`, changements));
+  await lire(await poster(`/oxoai/fournisseurs/${encodeURIComponent(id)}`, changements));
 }
 
 export async function retirerCle(id: string): Promise<void> {
-  await lire(await poster(`/helix/fournisseurs/${encodeURIComponent(id)}/supprimer`, {}));
+  await lire(await poster(`/oxoai/fournisseurs/${encodeURIComponent(id)}/supprimer`, {}));
 }
 
 /*

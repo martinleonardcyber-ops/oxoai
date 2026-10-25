@@ -44,7 +44,7 @@ export async function chargerReglagesEcran(): Promise<void> {
 
 /**
  * L'instance est-elle ouverte aux collègues ? `share` du profil, **ou** une
- * écoute sur le réseau (`HELIX_GATEWAY_HOST`, ou l'interrupteur « ouvrir aux
+ * écoute sur le réseau (`OXOAI_GATEWAY_HOST`, ou l'interrupteur « ouvrir aux
  * collègues » de l'écran, reseau.ts), comme `instancePartagee` d'index.ts.
  *
  * Test d'intrusion du 27/09/2026 : seul `share` était regardé. Une instance

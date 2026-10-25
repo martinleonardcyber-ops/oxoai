@@ -29,12 +29,12 @@ const verifier = (nom, ok, detail = "") => {
  * trousseau ne soit jamais sollicité.
  */
 if (!process.argv.includes("--enfant-usage")) {
-  const vide = mkdtempSync(join(tmpdir(), "helix-essai-notes-parent-"));
-  writeFileSync(join(vide, "helix.config.json"), JSON.stringify({ chiffrement: "fichier" }));
-  process.env.HELIX_DATA_DIR = join(vide, "donnees");
-  process.env.HELIX_CONFIG = join(vide, "helix.config.json");
-  process.env.HELIX_LMSTUDIO_URL = "http://127.0.0.1:9/v1";
-  process.env.HELIX_EXO_URL = "http://127.0.0.1:9/v1";
+  const vide = mkdtempSync(join(tmpdir(), "oxoai-essai-notes-parent-"));
+  writeFileSync(join(vide, "oxoai.config.json"), JSON.stringify({ chiffrement: "fichier" }));
+  process.env.OXOAI_DATA_DIR = join(vide, "donnees");
+  process.env.OXOAI_CONFIG = join(vide, "oxoai.config.json");
+  process.env.OXOAI_LMSTUDIO_URL = "http://127.0.0.1:9/v1";
+  process.env.OXOAI_EXO_URL = "http://127.0.0.1:9/v1";
   process.on("exit", () => rmSync(vide, { recursive: true, force: true }));
 }
 
@@ -56,7 +56,7 @@ if (process.argv.includes("--enfant-usage")) {
   sortie.prixAutre = u.prixPublieDe("cle-9/gpt-4.1-nano", { id: "cle-9", kind: "openai-compatible", catalogue: "compatible", baseUrl: "https://llm.exemple.fr/v1" });
 
   // Tarifs et registre présents mais illisibles : rien n'est écrit par-dessus.
-  const dossier = process.env.HELIX_DATA_DIR;
+  const dossier = process.env.OXOAI_DATA_DIR;
   const abime = '{"value": {"cle-1/gpt-4.1": {"entree": 2, "sortie"';
   writeFileSync(join(dossier, "tarifs.json"), abime);
   writeFileSync(join(dossier, "usage.json"), abime);
@@ -226,11 +226,11 @@ verifier("PC de 16 Go sans carte : Qwen3 8B (noté) avant Qwen3.5 4B (non noté)
 verifier("PC de 8 Go sans carte : aucun modèle noté ne tient, le plus lourd d'abord (Qwen3.5 4B)", prov.recommend(pc(8)).key === "qwen/qwen3.5-4b");
 
 console.log("\nMon usage (processus à part, données jetables)");
-const ICI = mkdtempSync(join(tmpdir(), "helix-essai-notes-"));
+const ICI = mkdtempSync(join(tmpdir(), "oxoai-essai-notes-"));
 mkdirSync(join(ICI, "donnees"));
 mkdirSync(join(ICI, "maison"));
 // Clé de chiffrement en fichier, dans le dossier jetable : le trousseau du poste n'est jamais sollicité.
-writeFileSync(join(ICI, "helix.config.json"), JSON.stringify({ chiffrement: "fichier" }));
+writeFileSync(join(ICI, "oxoai.config.json"), JSON.stringify({ chiffrement: "fichier" }));
 const brut = await new Promise((ok) => {
   const enfant = spawn(process.execPath, ["--experimental-strip-types", "--no-warnings", fileURLToPath(import.meta.url), "--enfant-usage"], {
     cwd: ICI,
@@ -239,10 +239,10 @@ const brut = await new Promise((ok) => {
       PATH: "/bin",
       HOME: join(ICI, "maison"),
       TMPDIR: tmpdir(),
-      HELIX_CONFIG: join(ICI, "helix.config.json"),
-      HELIX_DATA_DIR: join(ICI, "donnees"),
-      HELIX_LMSTUDIO_URL: "http://127.0.0.1:9/v1",
-      HELIX_EXO_URL: "http://127.0.0.1:9/v1",
+      OXOAI_CONFIG: join(ICI, "oxoai.config.json"),
+      OXOAI_DATA_DIR: join(ICI, "donnees"),
+      OXOAI_LMSTUDIO_URL: "http://127.0.0.1:9/v1",
+      OXOAI_EXO_URL: "http://127.0.0.1:9/v1",
     },
     stdio: ["ignore", "pipe", "pipe"],
   });

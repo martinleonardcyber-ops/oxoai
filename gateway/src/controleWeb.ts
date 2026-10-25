@@ -62,7 +62,7 @@ function lister(dossier: string): string[] {
          */
         const s = lstatSync(chemin);
         if (s.isSymbolicLink()) continue;
-        // Un dossier de données sans point (`HELIX_DATA_DIR=~/HelixDonnees`) n'est pas parcouru non plus.
+        // Un dossier de données sans point (`OXOAI_DATA_DIR=~/OxoAIDonnees`) n'est pas parcouru non plus.
         if (s.isDirectory()) {
           if (!estProtege(chemin)) pile.push(chemin);
         }
@@ -212,7 +212,7 @@ function classesSansEffet(code: string, css: string, posees: Set<string>): { cla
  * `langue` : celle de la demande, pour signaler les textes d'interface dans une autre.
  */
 export function controler(dossier: string, options: { langue?: "fr"; racine?: string } = {}): { problemes: string[]; fichiers: number } {
-  // `racine` : le dossier de projet de Helix Code (controleCode.ts) ; sinon l'espace de Cowork.
+  // `racine` : le dossier de projet de OxoAI Code (controleCode.ts) ; sinon l'espace de Cowork.
   const racine = options.racine ?? workspace();
   const rel = (f: string) => relative(racine, f) || f;
   const fichiers = lister(dossier);

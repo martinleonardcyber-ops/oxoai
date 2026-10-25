@@ -1,6 +1,6 @@
-# Contributing to HelixAI
+# Contributing to OxoAI
 
-Thank you for considering a contribution. HelixAI is developed in French: the code,
+Thank you for considering a contribution. OxoAI is developed in French: the code,
 comments and technical documentation are written in French, and the interface is
 translated into English, Chinese, Japanese, Spanish, German and Arabic (Arabic reads right to left). Issues and pull requests are welcome in English or
 French.
@@ -94,8 +94,8 @@ instance); if you touch the Palmier Pro connector or local MCP servers, run
 
 None of these scripts needs a model, a real provider key or the network. Each gateway they start
 has a disposable data folder and keeps its data key in a file there (`"chiffrement": "fichier"`
-in its `HELIX_CONFIG`), so the data of your own installation and its keychain entry are not used. If you start a gateway yourself for a test, do the same: point `HELIX_DATA_DIR` at a
-temporary folder, `HELIX_CONFIG` at a profile containing `{"chiffrement": "fichier"}`, and use a
+in its `OXOAI_CONFIG`), so the data of your own installation and its keychain entry are not used. If you start a gateway yourself for a test, do the same: point `OXOAI_DATA_DIR` at a
+temporary folder, `OXOAI_CONFIG` at a profile containing `{"chiffrement": "fichier"}`, and use a
 port other than 8787.
 
 Describe **what you checked, and how**. "Tested" says nothing; "opened screen X, clicked Y,
@@ -107,8 +107,5 @@ Do not open a public issue for a vulnerability. See [SECURITY.md](SECURITY.md).
 
 ## Licence of contributions
 
-The project is licensed under AGPL-3.0. Every contribution requires the agreement described
-in [CLA.md](CLA.md) (in French): two lines, already in the pull request template, with your
-name. In short, you remain the author of your work and grant the project a broad licence to
-it, which lets the project stay open source and also sell private licences. Without these
-lines, the contribution cannot be merged; [CLA.md](CLA.md) explains why.
+OxoAI is licensed under AGPL-3.0, like HelixAI from which it is derived. By contributing, you
+agree that your contribution is published under the same licence. No other agreement is asked.

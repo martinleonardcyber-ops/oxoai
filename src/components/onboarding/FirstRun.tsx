@@ -120,13 +120,13 @@ export function FirstRun({ onReady }: { onReady: () => void }) {
 
   /*
    * Sans moteur d'exécution, il n'y a aucun modèle à télécharger : c'est la
-   * première chose à mettre en place. Helix s'en charge — demander à
+   * première chose à mettre en place. OxoAI s'en charge — demander à
    * l'utilisateur d'aller chercher un logiciel tiers, c'est là que la plupart
    * des installations s'arrêtent.
    */
   if (!status.moteurInstalle) {
     /*
-     * Mac Intel : le moteur est llama.cpp, logiciel libre (MIT), que Helix
+     * Mac Intel : le moteur est llama.cpp, logiciel libre (MIT), que OxoAI
      * pose lui-même (llamaCpp.ts, 28/09/2026). Rien à accepter : la licence
      * MIT ne pose aucune condition à qui s'en sert.
      */

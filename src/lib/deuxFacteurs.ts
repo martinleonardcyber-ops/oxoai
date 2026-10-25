@@ -29,19 +29,19 @@ async function appeler<T>(chemin: string, corps?: unknown): Promise<T> {
   return donnees;
 }
 
-export const lireEtat = () => appeler<EtatDeuxFacteurs>("/helix/auth/deux-facteurs/etat");
+export const lireEtat = () => appeler<EtatDeuxFacteurs>("/oxoai/auth/deux-facteurs/etat");
 
 export const preparer = (password: string) =>
-  appeler<{ secret: string }>("/helix/auth/deux-facteurs/preparer", { password });
+  appeler<{ secret: string }>("/oxoai/auth/deux-facteurs/preparer", { password });
 
 export const activer = (code: string) =>
-  appeler<{ codesDeSecours: string[] }>("/helix/auth/deux-facteurs/activer", { code });
+  appeler<{ codesDeSecours: string[] }>("/oxoai/auth/deux-facteurs/activer", { code });
 
 export const desactiver = (password: string, code: string) =>
-  appeler<unknown>("/helix/auth/deux-facteurs/desactiver", { password, code });
+  appeler<unknown>("/oxoai/auth/deux-facteurs/desactiver", { password, code });
 
 export const regenererCodes = (password: string, code: string) =>
-  appeler<{ codesDeSecours: string[] }>("/helix/auth/deux-facteurs/codes", { password, code });
+  appeler<{ codesDeSecours: string[] }>("/oxoai/auth/deux-facteurs/codes", { password, code });
 
 /**
  * Adresse `otpauth://` que lisent les applications d'authentification

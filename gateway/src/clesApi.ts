@@ -20,7 +20,7 @@ import { t, tf } from "./langue.ts";
  *
  * `GET /v1/models` et `POST /v1/chat/completions`, au nom de sa titulaire :
  * ses modèles, ses bases de connaissances, sa consommation, son journal. Aucune
- * route `/helix/*` (comptes, données, fichiers, agents, réglages, Code), aucun
+ * route `/oxoai/*` (comptes, données, fichiers, agents, réglages, Code), aucun
  * outil que l'instance exécuterait (`tools: true`), et pas de quoi créer une
  * autre clé. La barrière est dans index.ts (`ROUTES_CLE`), posée avant le
  * routage comme `EXECUTION`.
@@ -48,7 +48,7 @@ export const DUREES_JOURS = [30, 90, 365] as const;
  * l'atteint pas ; une clé fuitée qui tourne en boucle, si, et elle ne peut
  * alors plus occuper la machine au détriment des autres.
  */
-export const PAR_MINUTE = Math.max(1, Number(process.env.HELIX_CLE_API_PAR_MINUTE ?? 60) || 60);
+export const PAR_MINUTE = Math.max(1, Number(process.env.OXOAI_CLE_API_PAR_MINUTE ?? 60) || 60);
 
 const NOM_MAX = 60;
 const COLLECTION = "clesApi";
@@ -267,7 +267,7 @@ export function cleMalPlacee(req: http.IncomingMessage, url: URL): boolean {
   for (const valeur of url.searchParams.values()) {
     if (FORME.test(valeur.trim())) return true;
   }
-  const seance = req.headers["x-helix-session"];
+  const seance = req.headers["x-oxoai-session"];
   const valeurs = Array.isArray(seance) ? seance : seance ? [seance] : [];
   return valeurs.some((v) => FORME.test(v.trim()));
 }

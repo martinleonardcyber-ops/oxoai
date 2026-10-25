@@ -27,8 +27,8 @@ const os = require("node:os");
  * est seulement capté.
  */
 
-const PARTITION = "persist:helix-bot";
-const PARTITION_PASSERELLE = "helix-passerelle";
+const PARTITION = "persist:oxoai-bot";
+const PARTITION_PASSERELLE = "oxoai-passerelle";
 const DUREE_MAX_MS = 4 * 3600_000;
 const ATTENTE_ADMISSION_MS = 15 * 60_000;
 const CHARGEMENT_MAX_MS = 3 * 60_000;
@@ -50,8 +50,8 @@ function uaChrome() {
 
 function sessionBot() {
   const s = session.fromPartition(PARTITION);
-  if (!s.__helixPrete) {
-    s.__helixPrete = true;
+  if (!s.__oxoaiPrete) {
+    s.__oxoaiPrete = true;
     s.setUserAgent(uaChrome());
     // Ni micro, ni caméra, ni notifications : le bot écoute, il ne parle pas.
     s.setPermissionRequestHandler((_wc, _permission, callback) => callback(false));
@@ -63,7 +63,7 @@ function sessionBot() {
 /* ---- Appels à l'instance ------------------------------------------------ */
 
 function fichierInstancesConnues() {
-  return path.join(os.homedir(), ".helix", "data", "instances-connues.json");
+  return path.join(os.homedir(), ".oxoai", "data", "instances-connues.json");
 }
 
 /**
@@ -74,8 +74,8 @@ function fichierInstancesConnues() {
  */
 function sessionPasserelle() {
   const s = session.fromPartition(PARTITION_PASSERELLE);
-  if (!s.__helixPrete) {
-    s.__helixPrete = true;
+  if (!s.__oxoaiPrete) {
+    s.__oxoaiPrete = true;
     s.setCertificateVerifyProc((req, callback) => {
       if (req.errorCode === 0) return callback(0);
       let connues = {};
@@ -129,7 +129,7 @@ async function appeler(passerelle, chemin, options = {}) {
     method: options.method ?? "GET",
     headers: {
       Authorization: `Bearer ${passerelle.jeton}`,
-      "X-Helix-Session": passerelle.seance,
+      "X-OxoAI-Session": passerelle.seance,
       ...(options.type ? { "Content-Type": options.type } : {}),
     },
     body: options.body,
@@ -216,9 +216,9 @@ function diagnostic(bot, lu) {
   try {
     const ligne = `${new Date().toISOString()} ${lu?.phase ?? "?"} ${lu?.clic ? `clic(${lu.clic.x},${lu.clic.y}) ` : ""}${lu?.saisie ? "saisie " : ""}${bot.debutEnregistrement ? "" : (lu?.extrait ?? "")}\n`;
     if (!bot.diagOuvert) {
-      fs.writeFileSync(path.join(os.tmpdir(), "helix-bot-diagnostic.txt"), ligne, { mode: 0o600 });
+      fs.writeFileSync(path.join(os.tmpdir(), "oxoai-bot-diagnostic.txt"), ligne, { mode: 0o600 });
       bot.diagOuvert = true;
-    } else fs.appendFileSync(path.join(os.tmpdir(), "helix-bot-diagnostic.txt"), ligne);
+    } else fs.appendFileSync(path.join(os.tmpdir(), "oxoai-bot-diagnostic.txt"), ligne);
   } catch {
     /* sans diagnostic, le bot fonctionne pareil */
   }
@@ -228,7 +228,7 @@ function diagnostic(bot, lu) {
 
 function publier(bot) {
   const w = fenetrePrincipale();
-  if (w && !w.isDestroyed()) w.webContents.send("helix:bot-etat", listerBots());
+  if (w && !w.isDestroyed()) w.webContents.send("oxoai:bot-etat", listerBots());
 }
 
 function vueBot(bot) {
@@ -250,7 +250,7 @@ async function signaler(bot, statut, message) {
   bot.message = message;
   publier(bot);
   try {
-    await appeler(bot.passerelle, `/helix/reunions/${encodeURIComponent(bot.reunionId)}/etat`, {
+    await appeler(bot.passerelle, `/oxoai/reunions/${encodeURIComponent(bot.reunionId)}/etat`, {
       method: "POST",
       type: "application/json",
       body: JSON.stringify({ statut, message }),
@@ -273,7 +273,7 @@ async function conclure(bot, erreur) {
     // Les morceaux encore en route arrivent avant la fin de l'enregistrement.
     await bot.envois;
     try {
-      await appeler(bot.passerelle, `/helix/reunions/${encodeURIComponent(bot.reunionId)}/terminer`, { method: "POST" });
+      await appeler(bot.passerelle, `/oxoai/reunions/${encodeURIComponent(bot.reunionId)}/terminer`, { method: "POST" });
     } catch {
       /* l'instance terminera d'elle-même au prochain démarrage */
     }
@@ -291,7 +291,7 @@ function arreterEnregistrement(bot) {
     void conclure(bot, bot.debutEnregistrement ? null : bot.erreurAttendue ?? "Le bot n'est pas entré dans la réunion.");
     return;
   }
-  bot.fenetre.webContents.send("helix:bot-arreter");
+  bot.fenetre.webContents.send("oxoai:bot-arreter");
   // Si la page ne répond plus, on conclut quand même.
   setTimeout(() => void conclure(bot, null), 8000);
 }
@@ -350,7 +350,7 @@ async function passage(bot) {
     if (!bot.debutEnregistrement) {
       bot.debutEnregistrement = new Date().toISOString();
       bot.phase = "enregistrement";
-      bot.fenetre.webContents.send("helix:bot-demarrer");
+      bot.fenetre.webContents.send("oxoai:bot-demarrer");
       await signaler(bot, "bot-en-cours", "Le bot enregistre la réunion.");
     }
     if (lu.participants === 1) {
@@ -455,12 +455,12 @@ function botDe(sender) {
   return [...bots.values()].find((b) => b.fenetre && !b.fenetre.isDestroyed() && b.fenetre.webContents === sender);
 }
 
-ipcMain.on("helix:bot-morceau", (event, morceau) => {
+ipcMain.on("oxoai:bot-morceau", (event, morceau) => {
   const bot = botDe(event.sender);
   if (!bot || bot.fini || !(morceau instanceof ArrayBuffer) || morceau.byteLength === 0) return;
   // Un morceau après l'autre, dans l'ordre : l'instance les met bout à bout.
   bot.envois = bot.envois.then(() =>
-    appeler(bot.passerelle, `/helix/reunions/${encodeURIComponent(bot.reunionId)}/audio`, {
+    appeler(bot.passerelle, `/oxoai/reunions/${encodeURIComponent(bot.reunionId)}/audio`, {
       method: "POST",
       type: "application/octet-stream",
       body: new Uint8Array(morceau),
@@ -471,7 +471,7 @@ ipcMain.on("helix:bot-morceau", (event, morceau) => {
   );
 });
 
-ipcMain.on("helix:bot-fini", (event) => {
+ipcMain.on("oxoai:bot-fini", (event) => {
   const bot = botDe(event.sender);
   if (bot) void conclure(bot, null);
 });
@@ -483,7 +483,7 @@ async function tourAutomatique() {
   if (!a) return;
   let liste;
   try {
-    liste = (await appeler(a.passerelle, "/helix/reunions/a-rejoindre")).reunions ?? [];
+    liste = (await appeler(a.passerelle, "/oxoai/reunions/a-rejoindre")).reunions ?? [];
   } catch {
     return;
   }
@@ -491,7 +491,7 @@ async function tourAutomatique() {
     if (dejaLances.has(r.evenement)) continue;
     dejaLances.add(r.evenement);
     try {
-      const { reunion } = await appeler(a.passerelle, "/helix/reunions", {
+      const { reunion } = await appeler(a.passerelle, "/oxoai/reunions", {
         method: "POST",
         type: "application/json",
         body: JSON.stringify({ source: "bot", lien: r.lien, titre: r.titre, evenement: r.evenement }),
@@ -507,17 +507,17 @@ async function tourAutomatique() {
 
 function installerBotReunion(obtenirFenetre) {
   fenetrePrincipale = obtenirFenetre;
-  const depuisHelix = (event) => {
+  const depuisOxoAI = (event) => {
     const w = fenetrePrincipale();
     return Boolean(w && !w.isDestroyed() && event.sender === w.webContents);
   };
 
-  ipcMain.handle("helix:bot-envoyer", (event, demande) => {
-    if (!depuisHelix(event)) throw new Error("Refusé.");
+  ipcMain.handle("oxoai:bot-envoyer", (event, demande) => {
+    if (!depuisOxoAI(event)) throw new Error("Refusé.");
     return demarrerBot(demande);
   });
-  ipcMain.handle("helix:bot-arreter", (event, reunionId) => {
-    if (!depuisHelix(event)) throw new Error("Refusé.");
+  ipcMain.handle("oxoai:bot-arreter", (event, reunionId) => {
+    if (!depuisOxoAI(event)) throw new Error("Refusé.");
     const bot = bots.get(reunionId);
     if (bot) {
       if (bot.fenetre && !bot.fenetre.isDestroyed()) void bot.fenetre.webContents.executeJavaScript(SCRIPT_QUITTER, true).catch(() => undefined);
@@ -525,8 +525,8 @@ function installerBotReunion(obtenirFenetre) {
     }
     return listerBots();
   });
-  ipcMain.handle("helix:bot-afficher", (event, reunionId) => {
-    if (!depuisHelix(event)) throw new Error("Refusé.");
+  ipcMain.handle("oxoai:bot-afficher", (event, reunionId) => {
+    if (!depuisOxoAI(event)) throw new Error("Refusé.");
     const bot = bots.get(reunionId);
     if (bot?.fenetre && !bot.fenetre.isDestroyed()) {
       bot.fenetre.show();
@@ -534,8 +534,8 @@ function installerBotReunion(obtenirFenetre) {
     }
     return listerBots();
   });
-  ipcMain.handle("helix:bot-liste", (event) => {
-    if (!depuisHelix(event)) throw new Error("Refusé.");
+  ipcMain.handle("oxoai:bot-liste", (event) => {
+    if (!depuisOxoAI(event)) throw new Error("Refusé.");
     return listerBots();
   });
   /*
@@ -543,8 +543,8 @@ function installerBotReunion(obtenirFenetre) {
    * séance de la personne, gardées en mémoire tant que l'application tourne
    * (fenêtre fermée comprise), jamais écrites sur le disque. `null` arrête.
    */
-  ipcMain.handle("helix:bot-auto", (event, autorisation) => {
-    if (!depuisHelix(event)) throw new Error("Refusé.");
+  ipcMain.handle("oxoai:bot-auto", (event, autorisation) => {
+    if (!depuisOxoAI(event)) throw new Error("Refusé.");
     // Même contrôle qu'à l'envoi d'un bot : cette adresse sera interrogée
     // toutes les minutes, avec les deux jetons, tant que l'application tourne.
     if (autorisation && autorisation.passerelle && !passerelleAcceptable(autorisation.passerelle)) {
@@ -566,8 +566,8 @@ function installerBotReunion(obtenirFenetre) {
    * connectés. La personne se connecte elle-même, dans une fenêtre de Google,
    * que l'application ne lit pas ; la session reste propre au bot.
    */
-  ipcMain.handle("helix:bot-compte", async (event, action) => {
-    if (!depuisHelix(event)) throw new Error("Refusé.");
+  ipcMain.handle("oxoai:bot-compte", async (event, action) => {
+    if (!depuisOxoAI(event)) throw new Error("Refusé.");
     const s = sessionBot();
     if (action === "oublier") {
       await s.clearStorageData();

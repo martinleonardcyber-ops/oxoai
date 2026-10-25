@@ -10,11 +10,11 @@
  * MCP stdio (scripts Node écrits dans un dossier jetable) imitent les outils
  * réels, et un faux module de Blender écoute sur un port libre, dans ce
  * processus. Variables réservées aux essais, posées pour la passerelle :
- *  - HELIX_ESSAI_ROBLOX_EXECUTABLE : le faux StudioMCP, à la place du
+ *  - OXOAI_ESSAI_ROBLOX_EXECUTABLE : le faux StudioMCP, à la place du
  *    programme de Studio et de sa signature ;
- *  - HELIX_ESSAI_BLENDER_SERVEUR : le faux serveur de Blender, à la place de
- *    celui que Helix pose ;
- *  - HELIX_ESSAI_BLENDER_PORT, HELIX_ESSAI_BLENDER_EXECUTABLE : le port du
+ *  - OXOAI_ESSAI_BLENDER_SERVEUR : le faux serveur de Blender, à la place de
+ *    celui que OxoAI pose ;
+ *  - OXOAI_ESSAI_BLENDER_PORT, OXOAI_ESSAI_BLENDER_EXECUTABLE : le port du
  *    faux module, et l'exécutable qui doit y écouter (Node, ce processus) à la
  *    place de la signature de la Blender Foundation. « Un autre programme »
  *    est `nc`, qui note tout ce qu'il reçoit.
@@ -24,8 +24,8 @@
  *  B. La passerelle : branchement, lecture sans carte, écriture derrière la
  *     carte à tout niveau, collègue non administrateur, chemin de fichier
  *     refusé, port de Blender pris par un autre programme, retrait.
- *  C. Seulement avec HELIX_ESSAI_BLENDER_RESEAU=1 (réseau requis, pypi.org) :
- *     Helix pose le vrai serveur de Blender (empreintes vérifiées), qui est
+ *  C. Seulement avec OXOAI_ESSAI_BLENDER_RESEAU=1 (réseau requis, pypi.org) :
+ *     OxoAI pose le vrai serveur de Blender (empreintes vérifiées), qui est
  *     lancé contre le faux module, avec un piège à toute sortie réseau.
  */
 import { execFileSync, spawn } from "node:child_process";
@@ -59,10 +59,10 @@ const portLibre = () =>
   });
 const attendre = (ms) => new Promise((r) => setTimeout(r, ms));
 const importer = (...p) => import(pathToFileURL(join(RACINE, ...p)).href);
-const AUX = mkdtempSync(join(tmpdir(), "helix-essai-roblox-blender-"));
+const AUX = mkdtempSync(join(tmpdir(), "oxoai-essai-roblox-blender-"));
 mkdirSync(join(AUX, "espace-a"), { recursive: true });
 writeFileSync(join(AUX, "profil-a.json"), JSON.stringify({ chiffrement: "fichier" }));
-Object.assign(process.env, { HELIX_DATA_DIR: join(AUX, "donnees-a"), HELIX_WORKSPACE: join(AUX, "espace-a"), HELIX_CONFIG: join(AUX, "profil-a.json") });
+Object.assign(process.env, { OXOAI_DATA_DIR: join(AUX, "donnees-a"), OXOAI_WORKSPACE: join(AUX, "espace-a"), OXOAI_CONFIG: join(AUX, "profil-a.json") });
 const NODE = realpathSync(process.execPath);
 
 /* Les outils réels, tels que la documentation de Roblox (12/10/2026) et le code de MCP for Blender 2.1.9 les donnent. */
@@ -148,12 +148,12 @@ try {
   const licencesInconnues = Object.entries(paquets.licences).filter(([, l]) => !/MIT|Apache|BSD|PSF|MPL/.test(l));
   verifier("licence relevée pour chaque paquet (MIT, Apache, BSD, PSF ou MPL ; les écarts à MIT et Apache sont dans PROJET.md)", Object.keys(paquets.licences).length === paquets.exigences.length && licencesInconnues.length === 0, licencesInconnues);
 
-  delete process.env.HELIX_ESSAI_BLENDER_SERVEUR;
+  delete process.env.OXOAI_ESSAI_BLENDER_SERVEUR;
   const b = await importer("gateway", "src", "blender.ts");
   const cmd = b.commandeBlender();
   const env = b.envBlender();
   verifier(
-    "serveur de Blender lancé en Python isolé (-I) depuis l'environnement de Helix ; télémétrie et vérification de mise à jour coupées, module sur 127.0.0.1:9876",
+    "serveur de Blender lancé en Python isolé (-I) depuis l'environnement de OxoAI ; télémétrie et vérification de mise à jour coupées, module sur 127.0.0.1:9876",
     cmd.command.startsWith(join(AUX, "donnees-a", "blender-mcp", "venv")) && cmd.args[0] === "-I" && /from blender_mcp\.server import main; main\(\)/.test(cmd.args[2]) &&
       env.DISABLE_TELEMETRY === "1" && env.BLENDER_MCP_DISABLE_TELEMETRY === "1" && env.MCP_DISABLE_TELEMETRY === "1" && env.BLENDERMCP_NO_UPDATE_CHECK === "1" && env.BLENDER_HOST === "127.0.0.1" && env.BLENDER_PORT === "9876",
     { cmd, env },
@@ -165,7 +165,7 @@ try {
   );
   verifier("serveur de Blender pas encore posé : il ne se lance pas, l'écran dit de cliquer « Brancher »", !b.serveurBlenderInstalle() && /pas installé|not installed/.test((await b.refusBlender()) ?? ""), await b.refusBlender());
   verifier(
-    "Python du système pris seulement en 3.10 à 3.14 (les roues figées), sinon celui de Helix",
+    "Python du système pris seulement en 3.10 à 3.14 (les roues figées), sinon celui de OxoAI",
     [[3, 10], [3, 12], [3, 14]].every(([a, c]) => b.versionPythonAcceptee(a, c)) && ![[3, 9], [3, 15], [2, 7], [4, 0]].some(([a, c]) => b.versionPythonAcceptee(a, c)),
     "versionPythonAcceptee",
   );
@@ -203,7 +203,7 @@ try {
 
   if (process.platform === "darwin") {
     // La vraie reconnaissance, sans variable d'essai : Node n'a pas la signature de la Blender Foundation.
-    delete process.env.HELIX_ESSAI_BLENDER_EXECUTABLE;
+    delete process.env.OXOAI_ESSAI_BLENDER_EXECUTABLE;
     const port = await portLibre();
     const absent = await b.ecouteurBlender(port);
     const ecouteur = serveurTcp().listen(port, "127.0.0.1");
@@ -216,9 +216,9 @@ try {
       `${JSON.stringify(absent)} ${JSON.stringify(nonSigne)}`,
     );
     const r = await importer("gateway", "src", "roblox.ts");
-    process.env.HELIX_ESSAI_ROBLOX_EXECUTABLE = join(AUX, "absent-studiomcp");
+    process.env.OXOAI_ESSAI_ROBLOX_EXECUTABLE = join(AUX, "absent-studiomcp");
     const introuvable = await r.refusRoblox();
-    delete process.env.HELIX_ESSAI_ROBLOX_EXECUTABLE;
+    delete process.env.OXOAI_ESSAI_ROBLOX_EXECUTABLE;
     const sansStudio = existsSync("/Applications/RobloxStudio.app") ? null : await r.refusRoblox();
     verifier(
       "Roblox Studio introuvable : rien n'est lancé, l'écran le dit (sur ce Mac sans Studio : avec la page d'installation officielle)",
@@ -415,18 +415,18 @@ async function lancerPasserelle() {
   const port = await portLibre();
   const env = {
     ...process.env,
-    HELIX_CONFIG: PROFIL,
-    HELIX_GATEWAY_PORT: String(port),
-    HELIX_DATA_DIR: DONNEES,
-    HELIX_WORKSPACE: ESPACE,
-    HELIX_CODE_DIR: ESPACE,
-    HELIX_LMSTUDIO_URL: "http://127.0.0.1:9/v1",
-    HELIX_EXO_URL: "http://127.0.0.1:9/v1",
-    HELIX_GATEWAY_HOST: "127.0.0.1",
-    HELIX_ESSAI_ROBLOX_EXECUTABLE: FAUX_ROBLOX,
-    HELIX_ESSAI_BLENDER_SERVEUR: FAUX_BLENDER,
-    HELIX_ESSAI_BLENDER_PORT: String(PORT_BLENDER),
-    HELIX_ESSAI_BLENDER_EXECUTABLE: NODE,
+    OXOAI_CONFIG: PROFIL,
+    OXOAI_GATEWAY_PORT: String(port),
+    OXOAI_DATA_DIR: DONNEES,
+    OXOAI_WORKSPACE: ESPACE,
+    OXOAI_CODE_DIR: ESPACE,
+    OXOAI_LMSTUDIO_URL: "http://127.0.0.1:9/v1",
+    OXOAI_EXO_URL: "http://127.0.0.1:9/v1",
+    OXOAI_GATEWAY_HOST: "127.0.0.1",
+    OXOAI_ESSAI_ROBLOX_EXECUTABLE: FAUX_ROBLOX,
+    OXOAI_ESSAI_BLENDER_SERVEUR: FAUX_BLENDER,
+    OXOAI_ESSAI_BLENDER_PORT: String(PORT_BLENDER),
+    OXOAI_ESSAI_BLENDER_EXECUTABLE: NODE,
   };
   const processus = spawn(process.execPath, ["--import", PREALABLE, join(RACINE, "gateway", "src", "index.ts")], { env, stdio: ["ignore", "pipe", "pipe"] });
   const inst = { port, processus, journal: "", G: `http://127.0.0.1:${port}` };
@@ -441,7 +441,7 @@ async function lancerPasserelle() {
     }
   }
   const jeton = readFileSync(join(DONNEES, "instance-token"), "utf8").trim();
-  inst.J = { "Content-Type": "application/json", Authorization: `Bearer ${jeton}`, "X-Helix-Langue": "fr" };
+  inst.J = { "Content-Type": "application/json", Authorization: `Bearer ${jeton}`, "X-OxoAI-Langue": "fr" };
   return inst;
 }
 const api = async (inst, chemin, corps, entetes = inst.A) => {
@@ -458,11 +458,11 @@ async function chat(inst, plan, accorder = () => true, entetes = inst.A, demande
   enCours.finally(() => (fini = true));
   const cartes = [];
   while (!fini) {
-    const e = await api(inst, "/helix/approbation", undefined, entetes);
+    const e = await api(inst, "/oxoai/approbation", undefined, entetes);
     for (const c of e.enAttente ?? []) {
       if (cartes.some((x) => x.id === c.id)) continue;
       cartes.push(c);
-      await api(inst, "/helix/approbation/repondre", { id: c.id, accord: accorder(c) }, entetes);
+      await api(inst, "/oxoai/approbation/repondre", { id: c.id, accord: accorder(c) }, entetes);
     }
     await attendre(120);
   }
@@ -472,7 +472,7 @@ async function chat(inst, plan, accorder = () => true, entetes = inst.A, demande
     if (!ligne.startsWith("data: ") || ligne === "data: [DONE]") continue;
     try {
       const j = JSON.parse(ligne.slice(6));
-      if (j.helix) evenements.push(j.helix);
+      if (j.oxoai) evenements.push(j.oxoai);
       const d = j.choices?.[0]?.delta?.content;
       if (typeof d === "string") texte += d;
     } catch {
@@ -488,17 +488,17 @@ const passerelle = await lancerPasserelle();
 let module = null;
 const comptes = { alice: null, collegue: null };
 try {
-  const cree = await api(passerelle, "/helix/auth/create", { fullName: "Alice Essai", email: "alice@example.test", password: "Mot2PasseSolide!42" }, passerelle.J);
-  passerelle.A = { ...passerelle.J, "X-Helix-Session": cree.session?.token };
+  const cree = await api(passerelle, "/oxoai/auth/create", { fullName: "Alice Essai", email: "alice@example.test", password: "Mot2PasseSolide!42" }, passerelle.J);
+  passerelle.A = { ...passerelle.J, "X-OxoAI-Session": cree.session?.token };
   verifier("la passerelle d'essai démarre et ouvre une séance (premier compte : administrateur)", Boolean(cree.session?.token), passerelle.journal.slice(-1500));
 
-  const etat0 = await api(passerelle, "/helix/connecteurs");
+  const etat0 = await api(passerelle, "/oxoai/connecteurs");
   const fiches = (etat0.catalogue ?? []).filter((e) => e.id === "roblox" || e.id === "blender");
   verifier("sur ce Mac, les fiches « Roblox Studio » et « Blender » sont proposées, lancées sur la machine, sans adresse ni commande", fiches.length === 2 && fiches.every((f) => f.lanceur === true && !f.url && !f.command), fiches);
 
   /* ---- Roblox Studio ---- */
   writeFileSync(VIDE_ROBLOX, "");
-  const brancheVide = await api(passerelle, "/helix/connecteurs/connecter", { id: "roblox", command: "/bin/sh", args: ["-c", "id"], url: "http://127.0.0.1:9/mcp" });
+  const brancheVide = await api(passerelle, "/oxoai/connecteurs/connecter", { id: "roblox", command: "/bin/sh", args: ["-c", "id"], url: "http://127.0.0.1:9/mcp" });
   const instR = (brancheVide.etat?.installes ?? []).find((c) => c.id === "roblox");
   const nbRoblox = LECTURES_ROBLOX.length + ECRITURES_ROBLOX.length;
   verifier(
@@ -508,7 +508,7 @@ try {
   );
   verifier("la commande, les arguments et l'adresse glissés dans la requête sont ignorés : c'est le serveur de Studio qui a démarré", lireJournal(JOURNAL_ROBLOX).some((e) => e.demarre) && !passerelle.journal.includes("uid="), passerelle.journal.slice(-300));
   rmSync(VIDE_ROBLOX);
-  const rebranche = await api(passerelle, "/helix/connecteurs/connecter", { id: "roblox" });
+  const rebranche = await api(passerelle, "/oxoai/connecteurs/connecter", { id: "roblox" });
   verifier("un Studio répond : le branchement le dit sans conseil", rebranche.statut === 200 && !/Enable Studio/.test(rebranche.message), rebranche.message);
 
   const lecture = await chat(passerelle, [["roblox__script_read", { studio_id: "a1b2", path: "game.ServerScriptService.Main" }], ["roblox__search_game_tree", { studio_id: "a1b2" }]]);
@@ -530,21 +530,21 @@ try {
     `${JSON.stringify(non.cartes)} ${appelsDe(JOURNAL_ROBLOX).slice(avantRefus)}`,
   );
 
-  await api(passerelle, "/helix/approbation/niveau", { niveau: "tout" });
+  await api(passerelle, "/oxoai/approbation/niveau", { niveau: "tout" });
   const tout = await chat(passerelle, [["roblox__get_console_output", { studio_id: "a1b2" }], ["roblox__multi_edit", { studio_id: "a1b2" }], ["roblox__store_image", { path: "/Users/x/photo.png" }], ["roblox__nouvel_outil_inconnu", {}]]);
   verifier(
     "au niveau « Tout approuver » : la console se lit seule ; modifier un script, lire un fichier de la machine (store_image) et un outil inconnu demandent toujours",
     tout.cartes.map((c) => c.detail?.outil).join(",") === "roblox__multi_edit,roblox__store_image,roblox__nouvel_outil_inconnu" && tout.fins.every((f) => f.ok),
     `${tout.cartes.map((c) => c.detail?.outil)} ${JSON.stringify(tout.fins)}`,
   );
-  await api(passerelle, "/helix/approbation/niveau", { niveau: "modifications" });
+  await api(passerelle, "/oxoai/approbation/niveau", { niveau: "modifications" });
 
   // Un collègue non administrateur : il lit, mais ne modifie ni n'exécute rien.
-  const coll = await api(passerelle, "/helix/auth/create", { fullName: "Collègue", email: "collegue@example.test", password: "Provisoire2Collegue!7" });
+  const coll = await api(passerelle, "/oxoai/auth/create", { fullName: "Collègue", email: "collegue@example.test", password: "Provisoire2Collegue!7" });
   comptes.alice = cree.account?.id ?? null;
   comptes.collegue = coll.account?.id ?? null;
-  const connexion = await api(passerelle, "/helix/auth/mot-de-passe-provisoire", { accountId: coll.account?.id, password: "Provisoire2Collegue!7", nouveau: "Collegue2PasseSolide!9" }, passerelle.J);
-  const B = { ...passerelle.J, "X-Helix-Session": connexion.session?.token };
+  const connexion = await api(passerelle, "/oxoai/auth/mot-de-passe-provisoire", { accountId: coll.account?.id, password: "Provisoire2Collegue!7", nouveau: "Collegue2PasseSolide!9" }, passerelle.J);
+  const B = { ...passerelle.J, "X-OxoAI-Session": connexion.session?.token };
   const avantB = appelsDe(JOURNAL_ROBLOX).length;
   const parB = await chat(passerelle, [["roblox__script_read", { studio_id: "a1b2" }], ["roblox__execute_luau", { studio_id: "a1b2", code: "print(1)" }], ["blender__execute_blender_code", { code: "print(1)" }]], () => true, B);
   verifier(
@@ -554,11 +554,11 @@ try {
   );
 
   /* ---- Blender ---- */
-  const ferme = await api(passerelle, "/helix/connecteurs/connecter", { id: "blender" });
+  const ferme = await api(passerelle, "/oxoai/connecteurs/connecter", { id: "blender" });
   verifier("Blender fermé (personne sur le port de son module) : refus clair, avec le fichier du module à installer, rien n'est branché", ferme.statut === 400 && /ne répond pas sur le port de son module MCP/.test(ferme.message) && !(ferme.etat?.installes ?? []).some((c) => c.id === "blender"), ferme.message);
 
   const autre = await autreProgramme(PORT_BLENDER);
-  const refusAutre = await api(passerelle, "/helix/connecteurs/connecter", { id: "blender" });
+  const refusAutre = await api(passerelle, "/oxoai/connecteurs/connecter", { id: "blender" });
   await attendre(300);
   verifier(
     "un autre programme sur le port du module : refus « ce n'est pas Blender », le serveur n'est pas lancé et le programme ne reçoit rien",
@@ -568,7 +568,7 @@ try {
   await arreterAutre(autre);
 
   module = await fauxModule(PORT_BLENDER);
-  const brancheB = await api(passerelle, "/helix/connecteurs/connecter", { id: "blender" });
+  const brancheB = await api(passerelle, "/oxoai/connecteurs/connecter", { id: "blender" });
   const instB = (brancheB.etat?.installes ?? []).find((c) => c.id === "blender");
   verifier(
     `Blender reconnu : branché d'un clic, ses ${LECTURES_BLENDER.length + ECRITURES_BLENDER.length} outils listés`,
@@ -577,7 +577,7 @@ try {
   );
   const envServeur = lireJournal(JOURNAL_BLENDER).find((e) => e.demarre)?.env ?? {};
   verifier(
-    "le serveur de Blender a reçu la télémétrie coupée (trois variables), pas de vérification de mise à jour, et l'adresse du module écrite par Helix",
+    "le serveur de Blender a reçu la télémétrie coupée (trois variables), pas de vérification de mise à jour, et l'adresse du module écrite par OxoAI",
     envServeur.DISABLE_TELEMETRY === "1" && envServeur.BLENDER_MCP_DISABLE_TELEMETRY === "1" && envServeur.MCP_DISABLE_TELEMETRY === "1" && envServeur.BLENDERMCP_NO_UPDATE_CHECK === "1" && envServeur.BLENDER_HOST === "127.0.0.1" && envServeur.BLENDER_PORT === String(PORT_BLENDER),
     envServeur,
   );
@@ -623,21 +623,21 @@ try {
   await arreterAutre(intrus);
   const ferme2 = await chat(passerelle, [["blender__get_scene_info", {}]]);
   verifier("Blender fermé : l'appel échoue en disant que Blender ne répond pas", ferme2.fins[0]?.ok === false && /ne répond pas/.test(resultat(ferme2)), JSON.stringify(ferme2.fins));
-  const etatFerme = await api(passerelle, "/helix/connecteurs");
+  const etatFerme = await api(passerelle, "/oxoai/connecteurs");
   const ligneB = (etatFerme.installes ?? []).find((c) => c.id === "blender");
   verifier("l'écran des connecteurs dit l'état du moment : Blender ne répond pas", ligneB && (ligneB.running === false ? /ne répond pas/.test(ligneB.error ?? "") : true), ligneB);
 
   /*
    * Place limitée (captures de Medhi du 23/10/2026) : Roblox Studio branché,
    * modèle à 32 768 jetons, « crée un sol en bois dans Roblox Studio ». Tous
-   * les outils branchés ne tiennent pas : Helix les retirait tous, et le
+   * les outils branchés ne tiennent pas : OxoAI les retirait tous, et le
    * modèle disait ne pas avoir accès à Roblox Studio. Ici, les descriptions de
    * Roblox sont allongées (`LONG_ROBLOX`) jusqu'à dépasser la place.
    */
   const nbRobloxTous = LECTURES_ROBLOX.length + ECRITURES_ROBLOX.length;
   const demanderSol = async (caracteres) => {
     writeFileSync(LONG_ROBLOX, String(caracteres));
-    await api(passerelle, "/helix/connecteurs/connecter", { id: "roblox" });
+    await api(passerelle, "/oxoai/connecteurs/connecter", { id: "roblox" });
     const avant = DEMANDES_MODELE.length;
     const r = await chat(passerelle, [["roblox__execute_luau", { studio_id: "a1b2", datamodel_type: "Edit", code: "local p = Instance.new('Part') p.Material = Enum.Material.Wood p.Parent = workspace" }]], () => true, passerelle.A, "Crée un sol en bois dans Roblox Studio. ");
     const recu = DEMANDES_MODELE.slice(avant);
@@ -680,20 +680,20 @@ try {
     `${outilsNeutre.length} outils : ${outilsNeutre.join(",").slice(0, 300)} | ${neutre.texte.slice(0, 300)}`,
   );
   rmSync(LONG_ROBLOX);
-  await api(passerelle, "/helix/connecteurs/connecter", { id: "roblox" });
+  await api(passerelle, "/oxoai/connecteurs/connecter", { id: "roblox" });
 
-  // Ce que Helix aurait posé pour Blender (ici, un témoin) : effacé au retrait, et l'écran dit de décocher le module.
+  // Ce que OxoAI aurait posé pour Blender (ici, un témoin) : effacé au retrait, et l'écran dit de décocher le module.
   mkdirSync(join(DONNEES, "blender-mcp", "venv"), { recursive: true });
   writeFileSync(join(DONNEES, "blender-mcp", "version.txt"), "2.1.9\n");
-  const retraitR = await api(passerelle, "/helix/connecteurs/retirer", { id: "roblox" });
-  const retraitB = await api(passerelle, "/helix/connecteurs/retirer", { id: "blender" });
+  const retraitR = await api(passerelle, "/oxoai/connecteurs/retirer", { id: "roblox" });
+  const retraitB = await api(passerelle, "/oxoai/connecteurs/retirer", { id: "blender" });
   verifier(
-    "retirer Blender : l'environnement posé par Helix (<données>/blender-mcp) est effacé, et l'écran dit de décocher le module « MCP for Blender » (port ouvert sans mot de passe sinon)",
+    "retirer Blender : l'environnement posé par OxoAI (<données>/blender-mcp) est effacé, et l'écran dit de décocher le module « MCP for Blender » (port ouvert sans mot de passe sinon)",
     retraitB.statut === 200 && !existsSync(join(DONNEES, "blender-mcp")) && /décochez aussi le module « MCP for Blender »/.test(retraitB.message ?? "") && !/décochez/.test(retraitR.message ?? ""),
     `${retraitB.message} | ${existsSync(join(DONNEES, "blender-mcp"))}`,
   );
   const plusLa = await chat(passerelle, [["roblox__script_read", {}]]);
-  const etatFin = await api(passerelle, "/helix/connecteurs");
+  const etatFin = await api(passerelle, "/oxoai/connecteurs");
   verifier("retirés : plus dans la liste, plus aucun outil proposé au modèle", !(etatFin.installes ?? []).some((c) => c.id === "roblox" || c.id === "blender") && /OUTIL-ABSENT roblox__script_read/.test(plusLa.texte), plusLa.texte);
 
   const sorties = (() => {
@@ -744,7 +744,7 @@ process.exit(0);
   );
   let sortie = "";
   try {
-    sortie = execFileSync(process.execPath, [script, comptes.alice ?? "", comptes.collegue ?? ""], { encoding: "utf8", timeout: 60_000, env: { ...process.env, HELIX_CONFIG: PROFIL, HELIX_DATA_DIR: DONNEES, HELIX_WORKSPACE: ESPACE } });
+    sortie = execFileSync(process.execPath, [script, comptes.alice ?? "", comptes.collegue ?? ""], { encoding: "utf8", timeout: 60_000, env: { ...process.env, OXOAI_CONFIG: PROFIL, OXOAI_DATA_DIR: DONNEES, OXOAI_WORKSPACE: ESPACE } });
   } catch (err) {
     sortie = String(err?.stdout ?? "") + String(err?.stderr ?? err);
   }
@@ -766,11 +766,11 @@ process.exit(0);
 /* C. Le vrai serveur de Blender (réseau requis)                              */
 /* ------------------------------------------------------------------------- */
 
-if (process.env.HELIX_ESSAI_BLENDER_RESEAU === "1") {
-  console.log("\nC. Le vrai serveur de Blender : posé par Helix (empreintes), lancé contre le faux module, sorties piégées");
+if (process.env.OXOAI_ESSAI_BLENDER_RESEAU === "1") {
+  console.log("\nC. Le vrai serveur de Blender : posé par OxoAI (empreintes), lancé contre le faux module, sorties piégées");
   try {
-    for (const v of ["HELIX_ESSAI_BLENDER_SERVEUR", "HELIX_ESSAI_BLENDER_EXECUTABLE", "HELIX_ESSAI_BLENDER_PORT"]) delete process.env[v];
-    process.env.HELIX_DATA_DIR = join(AUX, "donnees-c");
+    for (const v of ["OXOAI_ESSAI_BLENDER_SERVEUR", "OXOAI_ESSAI_BLENDER_EXECUTABLE", "OXOAI_ESSAI_BLENDER_PORT"]) delete process.env[v];
+    process.env.OXOAI_DATA_DIR = join(AUX, "donnees-c");
     const b = await importer("gateway", "src", "blender.ts");
     const debut = Date.now();
     await b.assurerServeurBlender();
@@ -798,15 +798,15 @@ if (process.env.HELIX_ESSAI_BLENDER_RESEAU === "1") {
     const { command, args } = b.commandeBlender();
     const mandataire = `http://127.0.0.1:${portPiege}`;
     const transport = new StdioClientTransport({ command, args, stderr: "pipe", env: { ...getDefaultEnvironment(), ...b.envBlender(), BLENDER_PORT: String(portModule), HTTPS_PROXY: mandataire, HTTP_PROXY: mandataire, ALL_PROXY: mandataire, https_proxy: mandataire, http_proxy: mandataire } });
-    const client = new Client({ name: "essai-helix", version: "1.0.0" }, { capabilities: {} });
+    const client = new Client({ name: "essai-oxoai", version: "1.0.0" }, { capabilities: {} });
     await client.connect(transport, { timeout: 60_000 });
     const outils = (await client.listTools()).tools.map((o) => o.name).sort();
     const rb = await importer("gateway", "src", "blenderRegles.ts");
     const inconnus = outils.filter((n) => !rb.LECTURES_BLENDER.has(n) && !ECRITURES_BLENDER.includes(n));
-    verifier(`le vrai serveur liste ${outils.length} outils, tous connus du classement (les outils réservés aux « applications » ne sont pas servis à Helix)`, outils.length > 0 && inconnus.length === 0 && outils.includes("execute_blender_code") && !outils.some((n) => n.startsWith("viewport_")), { outils, inconnus });
+    verifier(`le vrai serveur liste ${outils.length} outils, tous connus du classement (les outils réservés aux « applications » ne sont pas servis à OxoAI)`, outils.length > 0 && inconnus.length === 0 && outils.includes("execute_blender_code") && !outils.some((n) => n.startsWith("viewport_")), { outils, inconnus });
     const r = await client.callTool({ name: "get_scene_info", arguments: {} });
     await attendre(2500);
-    verifier("un appel du vrai serveur arrive au faux module (127.0.0.1, port écrit par Helix)", recuModule.some((c) => c.type === "get_scene_info" || c.type === "execute_code" || c.type === "get_addon_info"), { recu: recuModule.slice(-4).map((c) => c.type), r: JSON.stringify(r).slice(0, 200) });
+    verifier("un appel du vrai serveur arrive au faux module (127.0.0.1, port écrit par OxoAI)", recuModule.some((c) => c.type === "get_scene_info" || c.type === "execute_code" || c.type === "get_addon_info"), { recu: recuModule.slice(-4).map((c) => c.type), r: JSON.stringify(r).slice(0, 200) });
     verifier("aucune tentative de sortie réseau du vrai serveur (télémétrie coupée) : le piège n'a rien reçu", piege.length === 0, piege);
     await client.close();
     await fermerServeur(faux);

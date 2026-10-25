@@ -582,7 +582,7 @@ export interface PrixCite {
  * Ce que l'écran montre d'un modèle : son nom, et le service qui le sert
  * (28/09/2026). Mon usage montrait l'identifiant technique
  * (« cle-3f9a…/gpt-4o-mini »), illisible pour qui a branché sa clé. Le service
- * est son nom dans Helix (celui donné à la clé) ; une clé retirée depuis ne
+ * est son nom dans OxoAI (celui donné à la clé) ; une clé retirée depuis ne
  * laisse que le nom du modèle.
  */
 export function designation(uid: string): { nom: string; service?: string } {

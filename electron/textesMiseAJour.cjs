@@ -5,7 +5,7 @@
  * « Vérification de la signature de l'éditeur… » ou une erreur en français
  * (27/09/2026). Le processus principal n'a pas le catalogue de l'interface :
  * une table, comme zoneNotification.cjs. La langue vient de l'interface
- * (`helix:langue`, main.cjs).
+ * (`oxoai:langue`, main.cjs).
  */
 
 const TEXTES = {

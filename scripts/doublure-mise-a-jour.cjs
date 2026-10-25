@@ -48,7 +48,7 @@ const attendre = async (fini) => {
   for (let i = 0; i < 400 && !fini(); i++) await new Promise((r) => setTimeout(r, 50));
 };
 const plist = (version) =>
-  `<?xml version="1.0" encoding="UTF-8"?>\n<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">\n<plist version="1.0"><dict><key>CFBundleExecutable</key><string>Helix</string><key>CFBundleIdentifier</key><string>fr.helix.plateforme</string><key>CFBundleShortVersionString</key><string>${version}</string></dict></plist>\n`;
+  `<?xml version="1.0" encoding="UTF-8"?>\n<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">\n<plist version="1.0"><dict><key>CFBundleExecutable</key><string>OxoAI</string><key>CFBundleIdentifier</key><string>com.oxoria.oxoai</string><key>CFBundleShortVersionString</key><string>${version}</string></dict></plist>\n`;
 /*
  * Un vrai programme (Mach-O) signé ad hoc, pour les scénarios « mac-code-… »
  * (seconde tournée, 28/09/2026) : une copie de /usr/bin/true, jamais lancée.
@@ -63,7 +63,7 @@ function signerProgramme(fichier, { durci = true, droits = ["com.apple.security.
 const PROGRAMME = "Contents/Frameworks/outil";
 
 async function fausseApplication(dossier, version) {
-  const app = path.join(dossier, "Helix.app");
+  const app = path.join(dossier, "OxoAI.app");
   for (const d of ["Contents/Resources", "Contents/MacOS"]) fs.mkdirSync(path.join(app, d), { recursive: true });
   fs.writeFileSync(path.join(app, "Contents/Info.plist"), plist(version));
   /*
@@ -71,15 +71,15 @@ async function fausseApplication(dossier, version) {
    * universel, jamais lancé) depuis le 28/09/2026 : la mise à jour lit son
    * processeur avant de rien remplacer (miseAJour.cjs, `autreProcesseur`).
    */
-  fs.copyFileSync("/usr/bin/true", path.join(app, "Contents/MacOS/Helix"));
-  signerProgramme(path.join(app, "Contents/MacOS/Helix"));
+  fs.copyFileSync("/usr/bin/true", path.join(app, "Contents/MacOS/OxoAI"));
+  signerProgramme(path.join(app, "Contents/MacOS/OxoAI"));
   fs.writeFileSync(path.join(app, "Contents/Resources/app.asar"), `application ${version}`);
   if (scenario.startsWith("mac-code")) {
     fs.mkdirSync(path.join(app, "Contents/Frameworks"), { recursive: true });
     fs.copyFileSync("/usr/bin/true", path.join(app, PROGRAMME));
     signerProgramme(path.join(app, PROGRAMME));
   }
-  await sig.signerApplication(app, cle, { identifiant: "fr.helix.plateforme", version });
+  await sig.signerApplication(app, cle, { identifiant: "com.oxoria.oxoai", version });
   return app;
 }
 
@@ -92,47 +92,47 @@ async function fausseApplication(dossier, version) {
   if (windows) {
     fs.writeFileSync(path.join(AUX, "ressources", sig.FICHIER_CLE), crypto.createPublicKey(cle).export({ type: "spki", format: "pem" }));
     const exe = Buffer.from("installateur 9.0.1");
-    const desc = { identifiant: "helix-plateforme", version: "9.0.1", fichier: "Helix-Setup-9.0.1-x64.exe", sha512: b64(exe), octets: exe.length };
+    const desc = { identifiant: "oxoai-plateforme", version: "9.0.1", fichier: "OxoAI-Setup-9.0.1-x64.exe", sha512: b64(exe), octets: exe.length };
     const manifeste = JSON.stringify({ version: "9.0.1", windows: { fichier: desc.fichier, sha512: desc.sha512, octets: desc.octets, signature: sig.signerInstallateur(cle, desc) } });
     let etape = "nouvelle";
     routeur = async (url) => {
       if (url.startsWith(DEPOT)) {
         if (etape === "coupure") throw new Error("net::ERR_INTERNET_DISCONNECTED");
-        return etape === "retiree" ? publication("v9.0.0", []) : publication("v9.0.1", [actif("helix-mise-a-jour.json", manifeste.length), actif(desc.fichier, exe.length)]);
+        return etape === "retiree" ? publication("v9.0.0", []) : publication("v9.0.1", [actif("oxoai-mise-a-jour.json", manifeste.length), actif(desc.fichier, exe.length)]);
       }
       if (url.endsWith(".json")) return new Response(manifeste);
       return new Response("", { status: 503 });
     };
     const m = miseAJour();
     await m.demarrerMiseAJour(() => true);
-    await canaux["helix:maj-verifier"]({});
+    await canaux["oxoai:maj-verifier"]({});
     resultat.annonce = { phase: dernier.phase, unClic: dernier.unClic };
     if (scenario === "win-retiree") {
       etape = "retiree";
-      await canaux["helix:maj-verifier"]({});
+      await canaux["oxoai:maj-verifier"]({});
       resultat.apresRetrait = dernier.phase;
       etape = "coupure";
-      await canaux["helix:maj-verifier"]({});
+      await canaux["oxoai:maj-verifier"]({});
       resultat.apresCoupure = dernier.phase;
     }
     // « Installer » : la source répond 503, rien ne se lance ; sur une annonce valable, « Réessayer » doit rester possible.
-    resultat.installer = await canaux["helix:maj-installer"]({});
+    resultat.installer = await canaux["oxoai:maj-installer"]({});
     await attendre(() => dernier.phase === "erreur");
-    resultat.installerEncore = await canaux["helix:maj-installer"]({});
+    resultat.installerEncore = await canaux["oxoai:maj-installer"]({});
     await attendre(() => dernier.phase === "erreur");
   } else {
     fs.mkdirSync(path.join(AUX, "tmp"), { recursive: true });
     const installee = await fausseApplication(path.join(AUX, "installee"), "9.0.0");
-    process.execPath = path.join(installee, "Contents", "MacOS", "Helix");
+    process.execPath = path.join(installee, "Contents", "MacOS", "OxoAI");
     const source = path.join(AUX, "source");
     fs.mkdirSync(source, { recursive: true });
     let nouvelle = await fausseApplication(path.join(AUX, "construite"), "9.0.1");
     if (scenario === "mac-lien") {
       // L'archive ne contient qu'un lien vers l'application authentique, posée ailleurs.
-      fs.symlinkSync(nouvelle, path.join(source, "Helix.app"));
+      fs.symlinkSync(nouvelle, path.join(source, "OxoAI.app"));
     } else {
-      fs.renameSync(nouvelle, path.join(source, "Helix.app"));
-      nouvelle = path.join(source, "Helix.app");
+      fs.renameSync(nouvelle, path.join(source, "OxoAI.app"));
+      nouvelle = path.join(source, "OxoAI.app");
     }
     // Le code authentique, re-signé ad hoc par la source : sans durcissement, ou avec un droit de plus. Le relevé signé ne change pas.
     if (scenario === "mac-code-sans-durci") signerProgramme(path.join(nouvelle, PROGRAMME), { durci: false });
@@ -142,25 +142,25 @@ async function fausseApplication(dossier, version) {
       const entete = Buffer.alloc(64);
       entete.writeUInt32BE(0xcffaedfe, 0);
       entete.writeUInt32LE(0x01000007, 4);
-      fs.writeFileSync(path.join(nouvelle, "Contents/MacOS/Helix"), entete, { mode: 0o755 });
-      await sig.signerApplication(nouvelle, cle, { identifiant: "fr.helix.plateforme", version: "9.0.1" });
+      fs.writeFileSync(path.join(nouvelle, "Contents/MacOS/OxoAI"), entete, { mode: 0o755 });
+      await sig.signerApplication(nouvelle, cle, { identifiant: "com.oxoria.oxoai", version: "9.0.1" });
     }
-    if (scenario.startsWith("mac-code")) resultat.releveInchange = (await sig.verifierApplication(nouvelle, sig.cleDeLApplication(installee), { identifiant: "fr.helix.plateforme", version: "9.0.1" })).ok;
+    if (scenario.startsWith("mac-code")) resultat.releveInchange = (await sig.verifierApplication(nouvelle, sig.cleDeLApplication(installee), { identifiant: "com.oxoria.oxoai", version: "9.0.1" })).ok;
     if (scenario === "mac-droits") {
       // L'application authentique, rendue modifiable par tous : droits 0777 et ACL « everyone ».
       for (const d of ["", "Contents", "Contents/Resources"]) fs.chmodSync(path.join(nouvelle, d), 0o777);
       fs.chmodSync(path.join(nouvelle, "Contents/Resources/app.asar"), 0o666);
       cp.execFileSync("/bin/chmod", ["+a", "everyone allow write,append,delete,add_file,add_subdirectory", path.join(nouvelle, "Contents/Resources")]);
     }
-    const zip = path.join(AUX, "Helix-9.0.1-arm64-mac.zip");
+    const zip = path.join(AUX, "OxoAI-9.0.1-arm64-mac.zip");
     cp.execFileSync("/usr/bin/ditto", ["-c", "-k", "--sequesterRsrc", source, zip]);
     const octets = fs.readFileSync(zip);
     // Sans fin : l'archive annoncée, puis des octets en plus, bien au-delà de la taille du manifeste.
     const servi = scenario === "mac-taille" ? Buffer.concat([octets, Buffer.alloc(8 * 1024 * 1024)]) : octets;
-    const manifeste = JSON.stringify({ version: "9.0.1", mac: { fichier: "Helix-9.0.1-arm64-mac.zip", sha512: b64(octets), octets: octets.length } });
+    const manifeste = JSON.stringify({ version: "9.0.1", mac: { fichier: "OxoAI-9.0.1-arm64-mac.zip", sha512: b64(octets), octets: octets.length } });
     resultat.servi = 0;
     routeur = async (url) => {
-      if (url.startsWith(DEPOT)) return publication("v9.0.1", [actif("helix-mise-a-jour.json", manifeste.length), actif("Helix-9.0.1-arm64-mac.zip", octets.length)]);
+      if (url.startsWith(DEPOT)) return publication("v9.0.1", [actif("oxoai-mise-a-jour.json", manifeste.length), actif("OxoAI-9.0.1-arm64-mac.zip", octets.length)]);
       if (url.endsWith(".json")) return new Response(manifeste);
       if (url.endsWith(".zip")) {
         let envoye = 0;
@@ -180,15 +180,15 @@ async function fausseApplication(dossier, version) {
     };
     const m = miseAJour();
     await m.demarrerMiseAJour(() => true);
-    await canaux["helix:maj-verifier"]({});
+    await canaux["oxoai:maj-verifier"]({});
     resultat.annonce = { phase: dernier.phase, unClic: dernier.unClic };
-    resultat.installer = await canaux["helix:maj-installer"]({});
+    resultat.installer = await canaux["oxoai:maj-installer"]({});
     await attendre(() => dernier.phase === "prete" || dernier.phase === "erreur");
     // Ce que le script d'installation aurait déplacé dans /Applications.
     const tmp = path.join(AUX, "tmp");
-    const restes = fs.readdirSync(tmp).filter((n) => n.startsWith("helix-maj-"));
+    const restes = fs.readdirSync(tmp).filter((n) => n.startsWith("oxoai-maj-"));
     resultat.restes = restes.length;
-    const extraite = restes.length ? path.join(tmp, restes[0], "extrait", "Helix.app") : null;
+    const extraite = restes.length ? path.join(tmp, restes[0], "extrait", "OxoAI.app") : null;
     if (extraite && fs.existsSync(extraite)) {
       resultat.lien = fs.lstatSync(extraite).isSymbolicLink();
       const listing = cp.execFileSync("/bin/ls", ["-leR", extraite], { encoding: "utf8" });

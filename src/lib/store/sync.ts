@@ -32,9 +32,9 @@ export const COLLECTIONS = [
 export type Collection = (typeof COLLECTIONS)[number];
 
 /** Événement émis quand l'instance a apporté des changements. */
-export const SYNCED = "helix:synced";
+export const SYNCED = "oxoai:synced";
 
-const PREFIX = "helix:";
+const PREFIX = "oxoai:";
 const POLL_MS = 4000;
 
 let online = false;
@@ -115,16 +115,16 @@ function writeLocal(collection: Collection, value: unknown): boolean {
  * rafraîchissent sans qu'aucun écran n'ait à connaître la synchronisation.
  */
 /** Émis quand la liste des comptes change (écran de connexion). */
-export const ACCOUNTS_CHANGED = "helix:accounts-changed";
+export const ACCOUNTS_CHANGED = "oxoai:accounts-changed";
 
 const CHANGE_EVENTS: Record<Collection, string> = {
   accounts: ACCOUNTS_CHANGED,
-  projects: "helix:projects-changed",
-  sessions: "helix:sessions-changed",
-  tasks: "helix:tasks-changed",
-  agents: "helix:agents-changed",
-  profiles: "helix:profile-changed",
-  competences: "helix:competences-changed",
+  projects: "oxoai:projects-changed",
+  sessions: "oxoai:sessions-changed",
+  tasks: "oxoai:tasks-changed",
+  agents: "oxoai:agents-changed",
+  profiles: "oxoai:profile-changed",
+  competences: "oxoai:competences-changed",
 };
 
 function announce(collections: Collection[]): void {
@@ -157,7 +157,7 @@ type Tirage =
  *    liste partielle), et la première modification poussait cette liste, que
  *    l'instance prenait pour la suppression des autres Chats.
  * 2. **Ce qui n'a pas pu partir est noté, et survit au redémarrage**
- *    (`helix:sync:a-pousser`). Tant qu'une collection a des modifications en
+ *    (`oxoai:sync:a-pousser`). Tant qu'une collection a des modifications en
  *    attente, la relecture ne remplace plus la copie du poste par celle de
  *    l'instance : elle les fusionne (par identifiant, le plus récent l'emporte,
  *    ce que le poste a seul est gardé), puis repousse le tout. Avant, un Chat
@@ -264,7 +264,7 @@ async function pull(collection: Collection): Promise<Tirage> {
   const ecrituresAvant = ecrituresLocales.get(collection) ?? 0;
   let payload: { value: unknown; revision: number };
   try {
-    const res = await apiFetch(`/helix/data/${collection}`);
+    const res = await apiFetch(`/oxoai/data/${collection}`);
     if (!res.ok) throw new Error(String(res.status));
     payload = (await res.json()) as { value: unknown; revision: number };
   } catch {
@@ -312,7 +312,7 @@ let groupesConnus: string | null = null;
 /** Relit les groupes de la personne ; vrai s'ils ont changé depuis la dernière relecture. */
 async function relireMesGroupes(): Promise<boolean> {
   try {
-    const res = await apiFetch("/helix/groupes");
+    const res = await apiFetch("/oxoai/groupes");
     if (!res.ok) return false;
     const { groupes } = (await res.json()) as { groupes: { id: string; estMembre: boolean }[] };
     const siens = groupes.filter((g) => g.estMembre).map((g) => g.id);
@@ -443,7 +443,7 @@ async function pousser(collection: Collection, reprise = false): Promise<boolean
   if (value === null) return false;
   pushing.add(collection);
   try {
-    const res = await apiFetch(`/helix/data/${collection}`, {
+    const res = await apiFetch(`/oxoai/data/${collection}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       // La version relue en dernier : l'instance refuse si elle a changé depuis (index.ts, `base`).
@@ -498,7 +498,7 @@ export function relireMaintenant(): Promise<void> {
 /** Compare les révisions et re-tire ce qui a changé sur un autre poste. */
 async function refresh(): Promise<void> {
   try {
-    const res = await apiFetch(`/helix/data`);
+    const res = await apiFetch(`/oxoai/data`);
     if (!res.ok) {
       /*
        * Une erreur de serveur ici vient de ce qui se tient devant l'instance
@@ -553,7 +553,7 @@ async function refresh(): Promise<void> {
  */
 export async function startSync(): Promise<void> {
   try {
-    const res = await apiFetch(`/helix/data`);
+    const res = await apiFetch(`/oxoai/data`);
     if (!res.ok) throw new Error(String(res.status));
     online = true;
   } catch {

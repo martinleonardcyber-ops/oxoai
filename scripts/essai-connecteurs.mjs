@@ -12,7 +12,7 @@
  * automatique, PKCE, retour, échange, outils) n'était vu que par morceaux ;
  * Google Drive, Google Agenda et Slack n'étaient essayés que jusqu'à la
  * première page de la connexion, jamais jusqu'à une lecture. La revérification
- * a trouvé cinq adresses MCP périmées et un transport que Helix ne parlait pas
+ * a trouvé cinq adresses MCP périmées et un transport que OxoAI ne parlait pas
  * (Webflow, SSE) : c'est ce que cet essai tient désormais.
  *
  * Comme essai-natifs.mjs : une passerelle neuve (dossier de données
@@ -340,7 +340,7 @@ const faux = serveurHttp(async (req, res) => {
   if (hote === "slack.com") {
     if (auth !== `Bearer ${SLACK}`) return reponse(res, 200, { ok: false, error: "invalid_auth" });
     const entetes = { "x-oauth-scopes": "channels:read,channels:history,users:read" };
-    if (p === "/api/auth.test") return reponse(res, 200, { ok: true, url: "https://essai.slack.com/", team: "Espace Essai", user: "helix", team_id: "T0ESSAI01", user_id: "U0HELIX01", bot_id: "B0ESSAI01" }, entetes);
+    if (p === "/api/auth.test") return reponse(res, 200, { ok: true, url: "https://essai.slack.com/", team: "Espace Essai", user: "oxoai", team_id: "T0ESSAI01", user_id: "U0OXOAI01", bot_id: "B0ESSAI01" }, entetes);
     if (p === "/api/users.conversations") return reponse(res, 200, { ok: true, channels: [{ id: "C0ESSAI01", name: "chantier-essai", is_private: false }], response_metadata: { next_cursor: "" } }, entetes);
     if (p === "/api/conversations.history") return reponse(res, 200, { ok: true, messages: [{ type: "message", user: "U0MARIE01", text: "Livraison du béton jeudi matin.", ts: `${Math.floor(Date.now() / 1000) - 3600}.000100` }], has_more: false }, entetes);
     if (p === "/api/users.info") return reponse(res, 200, { ok: true, user: { id: "U0MARIE01", name: "marie", real_name: "Marie Essai", profile: { display_name: "Marie", real_name: "Marie Essai" } } }, entetes);
@@ -355,9 +355,9 @@ await new Promise((ok) => faux.listen(PORT_FAUX, "127.0.0.1", ok));
 /* Instance jetable                                                           */
 /* ------------------------------------------------------------------------- */
 
-const DONNEES = mkdtempSync(join(tmpdir(), "helix-connecteurs-donnees-"));
-const AUX = mkdtempSync(join(tmpdir(), "helix-connecteurs-aux-"));
-const ESPACE = mkdtempSync(join(tmpdir(), "helix-connecteurs-espace-"));
+const DONNEES = mkdtempSync(join(tmpdir(), "oxoai-connecteurs-donnees-"));
+const AUX = mkdtempSync(join(tmpdir(), "oxoai-connecteurs-aux-"));
+const ESPACE = mkdtempSync(join(tmpdir(), "oxoai-connecteurs-espace-"));
 const PREALABLE = join(AUX, "prealable.mjs");
 /*
  * Le module préalable : ce qui part vers un hôte des services revient au faux
@@ -397,14 +397,14 @@ const PORT = await portLibre();
 const G = `http://127.0.0.1:${PORT}`;
 const ENV = {
   ...process.env,
-  HELIX_CONFIG: join(AUX, "profil.json"),
-  HELIX_GATEWAY_PORT: String(PORT),
-  HELIX_DATA_DIR: DONNEES,
-  HELIX_WORKSPACE: ESPACE,
-  HELIX_CODE_DIR: ESPACE,
-  HELIX_LMSTUDIO_URL: "http://127.0.0.1:9/v1",
-  HELIX_EXO_URL: "http://127.0.0.1:9/v1",
-  HELIX_GATEWAY_HOST: "127.0.0.1",
+  OXOAI_CONFIG: join(AUX, "profil.json"),
+  OXOAI_GATEWAY_PORT: String(PORT),
+  OXOAI_DATA_DIR: DONNEES,
+  OXOAI_WORKSPACE: ESPACE,
+  OXOAI_CODE_DIR: ESPACE,
+  OXOAI_LMSTUDIO_URL: "http://127.0.0.1:9/v1",
+  OXOAI_EXO_URL: "http://127.0.0.1:9/v1",
+  OXOAI_GATEWAY_HOST: "127.0.0.1",
 };
 const passerelle = spawn(process.execPath, ["--import", PREALABLE, join(RACINE, "gateway", "src", "index.ts")], { env: ENV, stdio: ["ignore", "pipe", "pipe"] });
 let journal = "";
@@ -427,16 +427,16 @@ if (!demarree) {
 }
 
 const JETON = readFileSync(join(DONNEES, "instance-token"), "utf8").trim();
-const avecJeton = { "Content-Type": "application/json", Authorization: `Bearer ${JETON}`, "X-Helix-Langue": "fr" };
+const avecJeton = { "Content-Type": "application/json", Authorization: `Bearer ${JETON}`, "X-OxoAI-Langue": "fr" };
 const appel = (chemin, options = {}) => fetch(`${G}${chemin}`, { redirect: "manual", ...options });
 const poster = (chemin, entetes, corps) => appel(chemin, { method: "POST", headers: entetes, body: JSON.stringify(corps ?? {}) });
-const premier = await (await poster("/helix/auth/create", avecJeton, { fullName: "Alice Essai", email: "alice@example.test", password: "Mot2PasseSolide!42" })).json();
-const A = { ...avecJeton, "X-Helix-Session": premier.session?.token };
+const premier = await (await poster("/oxoai/auth/create", avecJeton, { fullName: "Alice Essai", email: "alice@example.test", password: "Mot2PasseSolide!42" })).json();
+const A = { ...avecJeton, "X-OxoAI-Session": premier.session?.token };
 // Une collègue, membre sans droit d'administration (tournée des connecteurs du 28/09/2026, section II).
-const creeB = await (await poster("/helix/auth/create", A, { fullName: "Bruno Essai", email: "bruno@example.test", password: "Provisoire2Passe!11" })).json();
-const connB = await (await poster("/helix/auth/mot-de-passe-provisoire", avecJeton, { accountId: creeB.account?.id, password: "Provisoire2Passe!11", nouveau: "Bruno2PasseSolide!57" })).json();
-const B = { ...avecJeton, "X-Helix-Session": connB.session?.token };
-const installes = async () => (await (await appel("/helix/connecteurs", { headers: A })).json()).installes ?? [];
+const creeB = await (await poster("/oxoai/auth/create", A, { fullName: "Bruno Essai", email: "bruno@example.test", password: "Provisoire2Passe!11" })).json();
+const connB = await (await poster("/oxoai/auth/mot-de-passe-provisoire", avecJeton, { accountId: creeB.account?.id, password: "Provisoire2Passe!11", nouveau: "Bruno2PasseSolide!57" })).json();
+const B = { ...avecJeton, "X-OxoAI-Session": connB.session?.token };
+const installes = async () => (await (await appel("/oxoai/connecteurs", { headers: A })).json()).installes ?? [];
 /** La « personne » ouvre la page d'autorisation et dit oui : le service rend un code, lié au défi PKCE et à l'adresse de retour. */
 const accorder = async (adresse) => {
   const a = new URL(adresse);
@@ -450,12 +450,12 @@ console.log("\nI. Serveurs MCP distants : « Se connecter », de bout en bout");
 const branches = {};
 {
   // Jira et Confluence : inscription automatique, serveur d'autorisation d'Atlassian sur un autre hôte.
-  const depart = await (await poster("/helix/connecteurs/connecter", A, { id: "atlassian" })).json();
+  const depart = await (await poster("/oxoai/connecteurs/connecter", A, { id: "atlassian" })).json();
   const adresse = depart.adresse ? new URL(depart.adresse) : null;
   const inscrit = inscrits["auth.atlassian.com"];
   verifier(
     "Atlassian : les métadonnées sont lues à l'adresse du catalogue (/v2/mcp), l'instance s'inscrit elle-même auprès d'auth.atlassian.com, avec son adresse de retour",
-    depart.ok === true && Boolean(inscrit) && JSON.stringify(inscrit.meta.redirect_uris) === JSON.stringify([`${G}/helix/oauth/retour`]) && recues.some((x) => x.hote === "mcp.atlassian.com" && x.chemin === "/.well-known/oauth-protected-resource/v2/mcp"),
+    depart.ok === true && Boolean(inscrit) && JSON.stringify(inscrit.meta.redirect_uris) === JSON.stringify([`${G}/oxoai/oauth/retour`]) && recues.some((x) => x.hote === "mcp.atlassian.com" && x.chemin === "/.well-known/oauth-protected-resource/v2/mcp"),
     JSON.stringify(depart).slice(0, 300),
   );
   verifier(
@@ -469,10 +469,10 @@ const branches = {};
    * cinq minutes. Un refus au `state` inventé ne note rien.
    */
   const etatDemande = adresse?.searchParams.get("state") ?? "";
-  await appel(`/helix/oauth/retour?error=access_denied&state=${"z".repeat(32)}`);
-  const sansIssue = (await (await appel("/helix/connecteurs", { headers: A })).json()).issues ?? {};
-  const refusRetour = await appel(`/helix/oauth/retour?error=access_denied&state=${encodeURIComponent(etatDemande)}`);
-  const issueRefus = ((await (await appel("/helix/connecteurs", { headers: A })).json()).issues ?? {}).atlassian;
+  await appel(`/oxoai/oauth/retour?error=access_denied&state=${"z".repeat(32)}`);
+  const sansIssue = (await (await appel("/oxoai/connecteurs", { headers: A })).json()).issues ?? {};
+  const refusRetour = await appel(`/oxoai/oauth/retour?error=access_denied&state=${encodeURIComponent(etatDemande)}`);
+  const issueRefus = ((await (await appel("/oxoai/connecteurs", { headers: A })).json()).issues ?? {}).atlassian;
   verifier(
     "Atlassian : un refus dans la page du service est noté pour l'écran qui attend (issue en échec, message fixe), un refus au state inventé ne note rien",
     // 28/09/2026 : le message dit la cause et le remède (refusOauth.ts) plutôt que le seul code.
@@ -484,33 +484,33 @@ const branches = {};
    * connexions du 28/09/2026) : la personne recommence par « Se connecter »,
    * qui donne une nouvelle adresse, avec un nouveau state.
    */
-  const nouvelle = await (await poster("/helix/connecteurs/connecter", A, { id: "atlassian" })).json();
+  const nouvelle = await (await poster("/oxoai/connecteurs/connecter", A, { id: "atlassian" })).json();
   verifier("Atlassian : après un refus, « Se connecter » donne une nouvelle autorisation (l'ancienne ne sert plus)", Boolean(nouvelle.adresse) && new URL(nouvelle.adresse).searchParams.get("state") !== etatDemande, JSON.stringify(nouvelle).slice(0, 200));
   // Sans page d'autorisation (code d'avant la revérification), la suite échoue sans s'arrêter.
   const accord = nouvelle.adresse ? await accorder(nouvelle.adresse) : { code: "", state: "" };
-  const faux = await appel(`/helix/oauth/retour?code=${accord.code}&state=${"x".repeat(32)}`);
+  const faux = await appel(`/oxoai/oauth/retour?code=${accord.code}&state=${"x".repeat(32)}`);
   verifier("Atlassian : un retour avec un state inventé est refusé (400), rien n'est échangé", faux.status === 400 && !recues.some((x) => x.chemin === "/oauth/token"), faux.status);
   // Le navigateur que le service renvoie ne porte que sa propre langue (Accept-Language) : la page doit la suivre.
-  const retour = await appel(`/helix/oauth/retour?code=${encodeURIComponent(accord.code)}&state=${encodeURIComponent(accord.state)}`, { headers: { "Accept-Language": "fr-FR,fr;q=0.9,en;q=0.8" } });
+  const retour = await appel(`/oxoai/oauth/retour?code=${encodeURIComponent(accord.code)}&state=${encodeURIComponent(accord.state)}`, { headers: { "Accept-Language": "fr-FR,fr;q=0.9,en;q=0.8" } });
   const page = await retour.text();
   const echange = recues.find((x) => x.hote === "auth.atlassian.com" && x.chemin === "/oauth/token");
   verifier("Atlassian : le bon retour aboutit (le code s'échange avec le vérificateur PKCE gardé par l'instance), et la page le dit dans la langue du navigateur (elle était toujours en anglais)", retour.status === 200 && /branché/.test(page) && Boolean(echange) && new URLSearchParams(echange.corps).get("resource") === "https://mcp.atlassian.com/v2/mcp", `${retour.status} ${page.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").slice(0, 200)}`);
   const vu = (await installes()).find((c) => c.id === "atlassian");
   verifier("Atlassian : branché, serveur démarré, un outil listé par le transport « streamable » avec le jeton en Bearer", vu?.running === true && vu.toolCount === 1 && vu.distant === true && recues.some((x) => x.hote === "mcp.atlassian.com" && x.methode === "POST" && x.chemin === "/v2/mcp" && /tools\/list/.test(x.corps)), JSON.stringify(vu));
-  const issueFinale = ((await (await appel("/helix/connecteurs", { headers: A })).json()).issues ?? {}).atlassian;
+  const issueFinale = ((await (await appel("/oxoai/connecteurs", { headers: A })).json()).issues ?? {}).atlassian;
   verifier("Atlassian : après le bon retour, l'issue notée est un succès (le refus d'avant ne compte plus)", issueFinale?.ok === true, JSON.stringify(issueFinale));
   branches.atlassian = vu?.running === true;
-  const rejoue = await appel(`/helix/oauth/retour?code=${encodeURIComponent(accord.code)}&state=${encodeURIComponent(accord.state)}`);
+  const rejoue = await appel(`/oxoai/oauth/retour?code=${encodeURIComponent(accord.code)}&state=${encodeURIComponent(accord.state)}`);
   verifier("Atlassian : le même retour rejoué ne mène plus à rien (400)", rejoue.status === 400, rejoue.status);
 
   // Asana V2 : pas d'inscription automatique ; une « MCP app » déclarée chez Asana.
-  const sansAppli = await (await poster("/helix/connecteurs/connecter", A, { id: "asana" })).json();
+  const sansAppli = await (await poster("/oxoai/connecteurs/connecter", A, { id: "asana" })).json();
   verifier(
     "Asana : sans application déclarée, le message dit où la créer (console d'Asana) et quelle adresse de retour y mettre ; rien n'est demandé à Asana",
-    sansAppli.ok === false && /app\.asana\.com\/0\/my-apps/.test(sansAppli.message ?? "") && (sansAppli.message ?? "").includes(`${G}/helix/oauth/retour`) && !recues.some((x) => x.hote === "app.asana.com"),
+    sansAppli.ok === false && /app\.asana\.com\/0\/my-apps/.test(sansAppli.message ?? "") && (sansAppli.message ?? "").includes(`${G}/oxoai/oauth/retour`) && !recues.some((x) => x.hote === "app.asana.com"),
     sansAppli.message,
   );
-  const departAsana = await (await poster("/helix/connecteurs/connecter", A, { id: "asana", clientId: ASANA.id, clientSecret: ASANA.secret })).json();
+  const departAsana = await (await poster("/oxoai/connecteurs/connecter", A, { id: "asana", clientId: ASANA.id, clientSecret: ASANA.secret })).json();
   const adresseAsana = departAsana.adresse ? new URL(departAsana.adresse) : null;
   verifier(
     "Asana : avec l'identifiant de l'application, la page d'autorisation est celle d'Asana (/-/oauth_authorize), PKCE S256, et aucune inscription automatique n'est tentée",
@@ -519,7 +519,7 @@ const branches = {};
   );
   verifier("Asana : la réponse ne rend pas le secret de l'application", !JSON.stringify(departAsana).includes(ASANA.secret), "secret rendu");
   const accordAsana = departAsana.adresse ? await accorder(departAsana.adresse) : { code: "", state: "" };
-  const retourAsana = await appel(`/helix/oauth/retour?code=${encodeURIComponent(accordAsana.code)}&state=${encodeURIComponent(accordAsana.state)}`);
+  const retourAsana = await appel(`/oxoai/oauth/retour?code=${encodeURIComponent(accordAsana.code)}&state=${encodeURIComponent(accordAsana.state)}`);
   const vuAsana = (await installes()).find((c) => c.id === "asana");
   verifier("Asana : le code s'échange avec l'identifiant et le secret de l'application, le serveur V2 démarre avec un outil", retourAsana.status === 200 && vuAsana?.running === true && vuAsana.toolCount === 1, `${retourAsana.status} ${JSON.stringify(vuAsana)}`);
   branches.asana = vuAsana?.running === true;
@@ -532,21 +532,21 @@ const branches = {};
    * navigateur, servait encore dix minutes à qui voulait y brancher son propre
    * compte (tournée des connecteurs du 28/09/2026).
    */
-  const departRate = await (await poster("/helix/connecteurs/connecter", A, { id: "webflow" })).json();
+  const departRate = await (await poster("/oxoai/connecteurs/connecter", A, { id: "webflow" })).json();
   const accordRate = departRate.adresse ? await accorder(departRate.adresse) : { code: "", state: "" };
-  const rate = await appel(`/helix/oauth/retour?code=CODE-INVENTE&state=${encodeURIComponent(accordRate.state)}`);
-  const reprise = await appel(`/helix/oauth/retour?code=${encodeURIComponent(accordRate.code)}&state=${encodeURIComponent(accordRate.state)}`);
+  const rate = await appel(`/oxoai/oauth/retour?code=CODE-INVENTE&state=${encodeURIComponent(accordRate.state)}`);
+  const reprise = await appel(`/oxoai/oauth/retour?code=${encodeURIComponent(accordRate.code)}&state=${encodeURIComponent(accordRate.state)}`);
   verifier("Webflow : après un échange raté, le même state ne sert plus (400), même avec un bon code : rien n'est branché", rate.status === 400 && reprise.status === 400 && !(await installes()).some((c) => c.id === "webflow"), `${rate.status} ${reprise.status}`);
-  const departWf = await (await poster("/helix/connecteurs/connecter", A, { id: "webflow" })).json();
+  const departWf = await (await poster("/oxoai/connecteurs/connecter", A, { id: "webflow" })).json();
   const accordWf = departWf.adresse ? await accorder(departWf.adresse) : null;
-  const retourWf = accordWf ? await appel(`/helix/oauth/retour?code=${encodeURIComponent(accordWf.code)}&state=${encodeURIComponent(accordWf.state)}`) : { status: 0 };
+  const retourWf = accordWf ? await appel(`/oxoai/oauth/retour?code=${encodeURIComponent(accordWf.code)}&state=${encodeURIComponent(accordWf.state)}`) : { status: 0 };
   const vuWf = (await installes()).find((c) => c.id === "webflow");
   const postSse = recues.some((x) => x.hote === "mcp.webflow.com" && x.methode === "POST" && x.chemin === "/sse");
   const getSse = recues.some((x) => x.hote === "mcp.webflow.com" && x.methode === "GET" && x.chemin === "/sse" && x.entetes.authorization?.startsWith("Bearer "));
-  verifier("Webflow : le transport « streamable » est refusé (405) et Helix se replie sur SSE, à la même adresse, avec le jeton : branché, un outil", retourWf.status === 200 && vuWf?.running === true && vuWf.toolCount === 1 && postSse && getSse, `${retourWf.status} ${JSON.stringify(vuWf)} post=${postSse} get=${getSse}`);
+  verifier("Webflow : le transport « streamable » est refusé (405) et OxoAI se replie sur SSE, à la même adresse, avec le jeton : branché, un outil", retourWf.status === 200 && vuWf?.running === true && vuWf.toolCount === 1 && postSse && getSse, `${retourWf.status} ${JSON.stringify(vuWf)} post=${postSse} get=${getSse}`);
   branches.webflow = vuWf?.running === true;
 
-  const etat = await (await appel("/helix/connecteurs", { headers: A })).text();
+  const etat = await (await appel("/oxoai/connecteurs", { headers: A })).text();
   verifier("l'état des connecteurs ne contient ni jeton, ni secret, ni identifiant d'application", !SECRETS.test(etat) && !etat.includes(ASANA.secret) && !etat.includes("dcr-"), etat.match(SECRETS)?.[0] ?? "identifiant");
   const catalogue = JSON.parse(etat).catalogue ?? [];
   verifier("catalogue servi : Figma et Vercel présents, Asana demande une application", catalogue.some((e) => e.id === "figma") && catalogue.some((e) => e.id === "vercel") && catalogue.find((e) => e.id === "asana")?.oauth === "appli", catalogue.map((e) => e.id).join(", "));
@@ -555,7 +555,7 @@ const branches = {};
 /* ------------------------------------------------------------------------- */
 console.log("\nII. Google Drive, Google Agenda et Slack : connexion complète");
 {
-  const g = await poster("/helix/google/client", A, { clientId: GOOGLE.id, clientSecret: GOOGLE.secret });
+  const g = await poster("/oxoai/google/client", A, { clientId: GOOGLE.id, clientSecret: GOOGLE.secret });
   verifier("application Google de l'instance enregistrée", g.status === 200, g.status);
 
   /*
@@ -566,20 +566,20 @@ console.log("\nII. Google Drive, Google Agenda et Slack : connexion complète");
    */
   const refusesB = [];
   for (const [route, corps] of [
-    ["/helix/drive/connecter", {}],
-    ["/helix/drive/code", { adresse: "http://127.0.0.1:1/?state=x&code=y" }],
-    ["/helix/agenda/google/connecter", { ecriture: true }],
-    ["/helix/agenda/google/code", { adresse: "http://127.0.0.1:1/?state=x&code=y" }],
-    ["/helix/agenda/configurer", { url: "https://agenda.exemple.test/dav/", identifiant: "bruno", motDePasse: "x" }],
-    ["/helix/slack/configurer", { jeton: SLACK }],
+    ["/oxoai/drive/connecter", {}],
+    ["/oxoai/drive/code", { adresse: "http://127.0.0.1:1/?state=x&code=y" }],
+    ["/oxoai/agenda/google/connecter", { ecriture: true }],
+    ["/oxoai/agenda/google/code", { adresse: "http://127.0.0.1:1/?state=x&code=y" }],
+    ["/oxoai/agenda/configurer", { url: "https://agenda.exemple.test/dav/", identifiant: "bruno", motDePasse: "x" }],
+    ["/oxoai/slack/configurer", { jeton: SLACK }],
   ]) {
     const r = await poster(route, B, corps);
     refusesB.push(`${route} ${r.status}`);
   }
-  const lectureB = await appel("/helix/drive", { headers: B });
+  const lectureB = await appel("/oxoai/drive", { headers: B });
   verifier("une collègue (membre) ne peut ni brancher Drive, Google Agenda, un agenda CalDAV ou Slack, ni coller l'adresse de retour (403) ; elle lit l'état", refusesB.every((x) => x.endsWith(" 403")) && lectureB.status === 200 && !recues.some((x) => x.hote === "slack.com"), refusesB.join(", "));
 
-  for (const [svc, route] of [["drive", "/helix/drive"], ["agenda", "/helix/agenda/google"]]) {
+  for (const [svc, route] of [["drive", "/oxoai/drive"], ["agenda", "/oxoai/agenda/google"]]) {
     const depart = await (await poster(`${route}/connecter`, A, {})).json();
     const adresse = depart.url ? new URL(depart.url) : null;
     const retour = adresse?.searchParams.get("redirect_uri") ?? "";
@@ -596,16 +596,16 @@ console.log("\nII. Google Drive, Google Agenda et Slack : connexion complète");
     const texte = await bon.text();
     verifier(`${svc} : le bon retour aboutit (code échangé avec le vérificateur, compte lu avant tout enregistrement)`, bon.status === 200 && /alice@example\.test/.test(texte), `${bon.status} ${texte.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").slice(0, 200)}`);
   }
-  const drive = await (await appel("/helix/drive", { headers: A })).json();
+  const drive = await (await appel("/oxoai/drive", { headers: A })).json();
   verifier("Drive : l'état dit le compte branché, sans jeton", drive.configure === true && drive.compte === "alice@example.test" && !SECRETS.test(JSON.stringify(drive)), JSON.stringify(drive).slice(0, 200));
-  const agenda = await (await appel("/helix/agenda/google", { headers: A })).json();
+  const agenda = await (await appel("/oxoai/agenda/google", { headers: A })).json();
   verifier("Agenda : l'état dit le compte branché, en lecture seule", agenda.configure === true && agenda.compte === "alice@example.test" && agenda.ecriture !== true, JSON.stringify(agenda).slice(0, 200));
 
-  const slack = await (await poster("/helix/slack/configurer", A, { jeton: SLACK })).json();
+  const slack = await (await poster("/oxoai/slack/configurer", A, { jeton: SLACK })).json();
   const oublisB = [];
-  for (const route of ["/helix/drive/oublier", "/helix/agenda/google/oublier", "/helix/agenda/oublier", "/helix/slack/oublier"]) oublisB.push(`${route} ${(await poster(route, B, {})).status}`);
-  const driveApresB = await (await appel("/helix/drive", { headers: A })).json();
-  const slackApresB = await (await appel("/helix/slack", { headers: A })).json();
+  for (const route of ["/oxoai/drive/oublier", "/oxoai/agenda/google/oublier", "/oxoai/agenda/oublier", "/oxoai/slack/oublier"]) oublisB.push(`${route} ${(await poster(route, B, {})).status}`);
+  const driveApresB = await (await appel("/oxoai/drive", { headers: A })).json();
+  const slackApresB = await (await appel("/oxoai/slack", { headers: A })).json();
   verifier("une collègue ne peut pas débrancher le Drive, l'agenda ni le Slack de l'organisation (403) : ils restent branchés", oublisB.every((x) => x.endsWith(" 403")) && driveApresB.configure === true && slackApresB.configure === true, `${oublisB.join(", ")} drive=${driveApresB.configure} slack=${slackApresB.configure}`);
   verifier("Slack : le jeton de bot est essayé (auth.test), ses autorisations relues (lecture seule), les salons listés, puis enregistré", slack.ok === true && /Espace Essai/.test(slack.message ?? "") && /chantier-essai/.test(slack.message ?? ""), slack.message);
   verifier("Slack : la réponse ne rend pas le jeton", !JSON.stringify(slack).includes(SLACK), "jeton rendu");
@@ -693,11 +693,11 @@ const lecture = await enfant("lire");
 /* ------------------------------------------------------------------------- */
 console.log("\nIV. Débrancher, et rien de secret nulle part");
 {
-  const retrait = await (await poster("/helix/connecteurs/retirer", A, { id: "atlassian" })).json();
+  const retrait = await (await poster("/oxoai/connecteurs/retirer", A, { id: "atlassian" })).json();
   verifier("Atlassian retiré de l'instance", retrait.ok === true && !(await installes()).some((c) => c.id === "atlassian"), retrait.message);
   const apres = await enfant("apres");
   verifier("le retrait efface aussi l'autorisation (plus de jeton pour Atlassian) ; témoin : Asana garde le sien", apres.r.jetonsAtlassian === false && apres.r.jetonsAsana === true, JSON.stringify(apres.r));
-  for (const route of ["/helix/drive/oublier", "/helix/agenda/google/oublier", "/helix/slack/oublier"]) await poster(route, A, {});
+  for (const route of ["/oxoai/drive/oublier", "/oxoai/agenda/google/oublier", "/oxoai/slack/oublier"]) await poster(route, A, {});
 
   // Le disque : aucun jeton, secret ni code en clair, où que ce soit dans le dossier de données.
   const fuites = [];
@@ -721,7 +721,7 @@ console.log("\nIV. Débrancher, et rien de secret nulle part");
 
 /* ------------------------------------------------------------------------- */
 console.log("\nV. Courrier branché par « Se connecter avec Google » : IMAP en XOAUTH2, renouvellement");
-const COURRIER = mkdtempSync(join(tmpdir(), "helix-connecteurs-courrier-"));
+const COURRIER = mkdtempSync(join(tmpdir(), "oxoai-connecteurs-courrier-"));
 {
   /*
    * Un faux serveur IMAP en TLS (certificat fabriqué par tls.ts, accepté par ce
@@ -814,7 +814,7 @@ process.exit(0);
 `,
   );
   const r = await new Promise((fin) => {
-    const e = spawn(process.execPath, ["--import", PREALABLE, "--no-warnings", script], { env: { ...ENV, HELIX_CONFIG: join(COURRIER, "profil.json"), HELIX_DATA_DIR: COURRIER }, stdio: ["ignore", "pipe", "pipe"] });
+    const e = spawn(process.execPath, ["--import", PREALABLE, "--no-warnings", script], { env: { ...ENV, OXOAI_CONFIG: join(COURRIER, "profil.json"), OXOAI_DATA_DIR: COURRIER }, stdio: ["ignore", "pipe", "pipe"] });
     let texte = "";
     e.stdout.on("data", (b) => (texte += b));
     e.stderr.on("data", (b) => (texte += b));

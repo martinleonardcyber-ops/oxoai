@@ -1,5 +1,5 @@
 /**
- * Banc d'essai des pages écrites par Helix Code : la page est vraiment ouverte,
+ * Banc d'essai des pages écrites par OxoAI Code : la page est vraiment ouverte,
  * dans une fenêtre cachée, et on relève ce qu'un humain verrait en premier.
  *
  * Demandé par Medhi le 26/09/2026, après l'ERP d'essai : « le petit modèle doit
@@ -26,7 +26,7 @@
  * l'application garde à ces pages le droit Electron de lire les autres
  * fichiers du disque (fusible GrantFileProtocolExtraPrivileges), et une page
  * écrite par un modèle, ou le script d'un CDN qu'elle charge, aurait pu lire
- * ~/.helix puis l'envoyer au dehors. Elle est servie par un serveur éphémère
+ * ~/.oxoai puis l'envoyer au dehors. Elle est servie par un serveur éphémère
  * sur la boucle locale, qui ne sert que le dossier du projet (chemins réels,
  * liens symboliques compris) ; sous `http://127.0.0.1`, le navigateur refuse
  * tout `file://`. Les permissions (caméra, micro, notifications…) sont
@@ -272,7 +272,7 @@ function demarrerRendu() {
   const serveur = http.createServer((req, res) => {
     const refuser = (code) => { res.writeHead(code); res.end(); };
     if (req.method !== "POST" || req.url !== "/rendre") return refuser(404);
-    const recu = String(req.headers["x-helix-cle"] ?? "");
+    const recu = String(req.headers["x-oxoai-cle"] ?? "");
     if (recu.length !== cle.length || !crypto.timingSafeEqual(Buffer.from(recu), Buffer.from(cle))) return refuser(403);
     let corps = "";
     req.on("data", (c) => { corps += c; if (corps.length > 10_000) req.destroy(); });

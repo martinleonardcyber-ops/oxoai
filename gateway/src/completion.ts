@@ -45,13 +45,13 @@ export async function completer(
     /**
      * Réponse tenue à un schéma JSON (LM Studio : `response_format`, sortie
      * contrainte par grammaire). Ajouté le 26/09/2026 pour le plan des
-     * applications de Helix Code (application.ts) : un petit modèle libre
+     * applications de OxoAI Code (application.ts) : un petit modèle libre
      * d'écrire oublie une accolade une fois sur quelques-unes.
      */
     schema?: { nom: string; schema: Record<string, unknown> };
     /**
      * Ce modèle-là plutôt que celui de conversation : le plan d'une demande de
-     * Helix Code se fait avec le modèle choisi pour le code (sequenceCode.ts).
+     * OxoAI Code se fait avec le modèle choisi pour le code (sequenceCode.ts).
      */
     modele?: string;
     /** Second essai après une réponse coupée par la longueur : jamais de troisième. */
@@ -65,7 +65,7 @@ export async function completer(
   const backend = backendById(model.backendId);
   if (!backend) return { ok: false, message: tf("Moteur introuvable pour {0}.", model.id) };
   /*
-   * Un modèle téléchargé mais pas en mémoire : Helix le charge avec ses
+   * Un modèle téléchargé mais pas en mémoire : OxoAI le charge avec ses
    * réglages (backends.ts, `optionsDeChargement`), comme le Chat, au lieu de
    * laisser LM Studio le charger seul avec les siens (27/09/2026).
    */
@@ -130,7 +130,7 @@ export async function completer(
      * Un fournisseur qui refuse un champ (gpt-5 : `max_tokens` et
      * `temperature` ; Mistral : tout champ inconnu) : on retire ou renomme ce
      * que son refus nomme, et on rejoue, trois fois au plus (modelesCloud.ts,
-     * 27/09/2026). Le plan de Helix Code passe ici avec le modèle choisi.
+     * 27/09/2026). Le plan de OxoAI Code passe ici avec le modèle choisi.
      */
     for (let essai = 0; essai < 3 && reponse.status >= 400 && reponse.status < 500 && ![401, 403, 404, 408, 429].includes(reponse.status); essai++) {
       const correction = correctionPour(envoye, texteReponse);

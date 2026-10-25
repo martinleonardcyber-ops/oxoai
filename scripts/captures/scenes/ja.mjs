@@ -152,7 +152,7 @@ Millstoneに1kgあたり0.92ユーロ以下での再提示を依頼し、その�
     },
   ],
 
-  /** Helix Code : le projet, la demande, et la séance que joue le faux OpenCode. */
+  /** OxoAI Code : le projet, la demande, et la séance que joue le faux OpenCode. */
   code: {
     projet: "maple-rye-orders",
     fichiers: {

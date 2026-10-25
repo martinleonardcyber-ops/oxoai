@@ -249,7 +249,7 @@ await new Promise((ok) => faux.listen(PORT_FAUX, "127.0.0.1", ok));
 /* Instances jetables                                                         */
 /* ------------------------------------------------------------------------- */
 
-const AUX = mkdtempSync(join(tmpdir(), "helix-rechercheweb-aux-"));
+const AUX = mkdtempSync(join(tmpdir(), "oxoai-rechercheweb-aux-"));
 const TENTATIVES = join(AUX, "sorties-refusees.log");
 const PREALABLE = join(AUX, "prealable.mjs");
 writeFileSync(
@@ -294,7 +294,7 @@ syncBuiltinESMExports();
 );
 
 async function lancer(nom, profil) {
-  const donnees = mkdtempSync(join(tmpdir(), `helix-rechercheweb-${nom}-`));
+  const donnees = mkdtempSync(join(tmpdir(), `oxoai-rechercheweb-${nom}-`));
   const fichierProfil = join(AUX, `profil-${nom}.json`);
   writeFileSync(
     fichierProfil,
@@ -307,14 +307,14 @@ async function lancer(nom, profil) {
   const port = await portLibre();
   const env = {
     ...process.env,
-    HELIX_CONFIG: fichierProfil,
-    HELIX_GATEWAY_PORT: String(port),
-    HELIX_DATA_DIR: donnees,
-    HELIX_WORKSPACE: AUX,
-    HELIX_CODE_DIR: AUX,
-    HELIX_LMSTUDIO_URL: "http://127.0.0.1:9/v1",
-    HELIX_EXO_URL: "http://127.0.0.1:9/v1",
-    HELIX_GATEWAY_HOST: "127.0.0.1",
+    OXOAI_CONFIG: fichierProfil,
+    OXOAI_GATEWAY_PORT: String(port),
+    OXOAI_DATA_DIR: donnees,
+    OXOAI_WORKSPACE: AUX,
+    OXOAI_CODE_DIR: AUX,
+    OXOAI_LMSTUDIO_URL: "http://127.0.0.1:9/v1",
+    OXOAI_EXO_URL: "http://127.0.0.1:9/v1",
+    OXOAI_GATEWAY_HOST: "127.0.0.1",
   };
   const processus = spawn(process.execPath, ["--import", PREALABLE, join(RACINE, "gateway", "src", "index.ts")], { env, stdio: ["ignore", "pipe", "pipe"] });
   const inst = { nom, port, donnees, processus, journal: "", G: `http://127.0.0.1:${port}` };
@@ -329,9 +329,9 @@ async function lancer(nom, profil) {
     }
   }
   const jeton = readFileSync(join(donnees, "instance-token"), "utf8").trim();
-  const avecJeton = { "Content-Type": "application/json", Authorization: `Bearer ${jeton}`, "X-Helix-Langue": "fr" };
-  const cree = await (await fetch(`${inst.G}/helix/auth/create`, { method: "POST", headers: avecJeton, body: JSON.stringify({ fullName: "Alice Essai", email: "alice@example.test", password: "Mot2PasseSolide!42" }) })).json();
-  inst.A = { ...avecJeton, "X-Helix-Session": cree.session?.token };
+  const avecJeton = { "Content-Type": "application/json", Authorization: `Bearer ${jeton}`, "X-OxoAI-Langue": "fr" };
+  const cree = await (await fetch(`${inst.G}/oxoai/auth/create`, { method: "POST", headers: avecJeton, body: JSON.stringify({ fullName: "Alice Essai", email: "alice@example.test", password: "Mot2PasseSolide!42" }) })).json();
+  inst.A = { ...avecJeton, "X-OxoAI-Session": cree.session?.token };
   return inst;
 }
 
@@ -345,7 +345,7 @@ async function chat(inst, corps) {
     if (!ligne.startsWith("data: ") || ligne === "data: [DONE]") continue;
     try {
       const j = JSON.parse(ligne.slice(6));
-      if (j.helix) evenements.push(j.helix);
+      if (j.oxoai) evenements.push(j.oxoai);
       const d = j.choices?.[0]?.delta?.content;
       if (typeof d === "string") texte += d;
     } catch {
@@ -362,7 +362,7 @@ const tentatives = () => (existsSync(TENTATIVES) ? readFileSync(TENTATIVES, "utf
 try {
   /* ----------------------------------------------------------------------- */
   console.log("\nA. Rien ne part sans la bascule");
-  const etat = await (await fetch(`${principale.G}/helix/recherche-web`, { headers: principale.A })).json();
+  const etat = await (await fetch(`${principale.G}/oxoai/recherche-web`, { headers: principale.A })).json();
   verifier("l'instance dit la recherche sur le web permise, et nomme le moteur (DuckDuckGo)", etat.autorisee === true && etat.moteur === "DuckDuckGo", JSON.stringify(etat));
   const avant = recues.length;
   const sans = await chat(principale, { model: "essai-outils", tools: false, messages: question("Quelle est la hauteur de la tour Eiffel ?") });
@@ -444,7 +444,7 @@ try {
   /* ----------------------------------------------------------------------- */
   console.log("\nG. Aller-retour par un fichier (tournée finale de la 2026.928.6)");
   // « Tout approuver » : l'écriture du fichier ne demande rien ; c'est la règle de l'adresse déjà vue qui doit tenir.
-  await fetch(`${principale.G}/helix/approbation/niveau`, { method: "POST", headers: principale.A, body: JSON.stringify({ niveau: "tout" }) });
+  await fetch(`${principale.G}/oxoai/approbation/niveau`, { method: "POST", headers: principale.A, body: JSON.stringify({ niveau: "tout" }) });
   const avantAR = recuesDe("attaquant.essai.example").length;
   // Le serveur des fichiers démarre avec l'instance, en arrière-plan : on l'attend (vingt secondes au plus).
   let ar = await chat(principale, { model: "essai-outils", tools: true, web: true, messages: question("ALLERRETOUR : le code du client est MOT-SECRET-4411.") });
@@ -465,7 +465,7 @@ try {
     ouvert?.ok === false && /déjà vue/.test(ouvert.preview ?? "") && recuesDe("attaquant.essai.example").length === avantAR,
     `${JSON.stringify(ouvert)} ${recuesDe("attaquant.essai.example").length - avantAR} requête(s)`,
   );
-  await fetch(`${principale.G}/helix/approbation/niveau`, { method: "POST", headers: principale.A, body: JSON.stringify({ niveau: "modifications" }) });
+  await fetch(`${principale.G}/oxoai/approbation/niveau`, { method: "POST", headers: principale.A, body: JSON.stringify({ niveau: "modifications" }) });
 
   /*
    * La relève de la dernière version d'OpenClaw (installationOpenClaw.ts, `versionParue`) part
@@ -483,7 +483,7 @@ try {
 console.log("\nF. Profil qui interdit le web");
 const fermee = await lancer("fermee", { rechercheWeb: false });
 try {
-  const etat = await (await fetch(`${fermee.G}/helix/recherche-web`, { headers: fermee.A })).json();
+  const etat = await (await fetch(`${fermee.G}/oxoai/recherche-web`, { headers: fermee.A })).json();
   verifier("l'instance dit la recherche désactivée, et pourquoi (le profil de déploiement)", etat.autorisee === false && /profil de déploiement/.test(etat.raison ?? ""), JSON.stringify(etat));
   const avant = recues.length;
   const refus = await chat(fermee, { model: "essai-outils", tools: false, web: true, messages: question("Quelle est la hauteur de la tour Eiffel ?") });

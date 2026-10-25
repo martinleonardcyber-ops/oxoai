@@ -57,7 +57,7 @@ async function lireErreur(res: Response): Promise<string> {
 
 export async function etatImages(): Promise<EtatImages | null> {
   try {
-    const res = await apiFetch("/helix/images");
+    const res = await apiFetch("/oxoai/images");
     return res.ok ? ((await res.json()) as EtatImages) : null;
   } catch {
     return null;
@@ -73,9 +73,9 @@ async function action(chemin: string, modele?: IdModele): Promise<void> {
   if (!res.ok) throw new Error(await lireErreur(res));
 }
 
-export const installerImages = (modele: IdModele) => action("/helix/images/installer", modele);
-export const choisirModeleImage = (modele: IdModele) => action("/helix/images/choisir", modele);
-export const retirerModeleImage = (modele: IdModele) => action("/helix/images/desinstaller", modele);
+export const installerImages = (modele: IdModele) => action("/oxoai/images/installer", modele);
+export const choisirModeleImage = (modele: IdModele) => action("/oxoai/images/choisir", modele);
+export const retirerModeleImage = (modele: IdModele) => action("/oxoai/images/desinstaller", modele);
 
 /**
  * Crée une image et suit la création jusqu'au bout. `suivre` reçoit chaque
@@ -90,7 +90,7 @@ export async function creerImage(
   /** Le Chat de la demande : qui le voit verra l'image (gateway/src/images.ts, `imageVisible`). */
   chat?: string,
 ): Promise<ImageCreee> {
-  const res = await apiFetch("/helix/images/creer", {
+  const res = await apiFetch("/oxoai/images/creer", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ description, format, chat }),
@@ -101,7 +101,7 @@ export async function creerImage(
   while (tr.etat === "preparation" || tr.etat === "encours") {
     await new Promise((r) => setTimeout(r, 1000));
     if (signal?.aborted) throw new DOMException("arrêt", "AbortError");
-    const r = await apiFetch(`/helix/images/travail/${tr.id}`);
+    const r = await apiFetch(`/oxoai/images/travail/${tr.id}`);
     if (!r.ok) throw new Error(await lireErreur(r));
     tr = (await r.json()) as Travail;
     suivre(tr);
@@ -114,15 +114,15 @@ export async function creerImage(
 
 export async function etatVideos(): Promise<EtatImages | null> {
   try {
-    const res = await apiFetch("/helix/videos");
+    const res = await apiFetch("/oxoai/videos");
     return res.ok ? ((await res.json()) as EtatImages) : null;
   } catch {
     return null;
   }
 }
-export const installerVideos = (modele: string) => action("/helix/videos/installer", modele as IdModele);
-export const choisirModeleVideo = (modele: string) => action("/helix/videos/choisir", modele as IdModele);
-export const retirerModeleVideo = (modele: string) => action("/helix/videos/desinstaller", modele as IdModele);
+export const installerVideos = (modele: string) => action("/oxoai/videos/installer", modele as IdModele);
+export const choisirModeleVideo = (modele: string) => action("/oxoai/videos/choisir", modele as IdModele);
+export const retirerModeleVideo = (modele: string) => action("/oxoai/videos/desinstaller", modele as IdModele);
 
 /** Crée une vidéo et suit sa création, comme une image. */
 export async function creerVideo(
@@ -132,7 +132,7 @@ export async function creerVideo(
   signal?: AbortSignal,
   chat?: string,
 ): Promise<ImageCreee> {
-  const res = await apiFetch("/helix/videos/creer", {
+  const res = await apiFetch("/oxoai/videos/creer", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ description, format: format === "portrait" ? "portrait" : "paysage", chat }),
@@ -143,7 +143,7 @@ export async function creerVideo(
   while (tr.etat === "preparation" || tr.etat === "encours") {
     await new Promise((r) => setTimeout(r, 2000));
     if (signal?.aborted) throw new DOMException("arrêt", "AbortError");
-    const r = await apiFetch(`/helix/images/travail/${tr.id}`);
+    const r = await apiFetch(`/oxoai/images/travail/${tr.id}`);
     if (!r.ok) throw new Error(await lireErreur(r));
     tr = (await r.json()) as Travail;
     suivre(tr);
@@ -155,7 +155,7 @@ export async function creerVideo(
 /** L'image, en adresse locale à afficher. L'appelant libère l'adresse. */
 export async function urlImage(id: string): Promise<string | null> {
   try {
-    const res = await apiFetch(`/helix/images/fichier/${id}`);
+    const res = await apiFetch(`/oxoai/images/fichier/${id}`);
     return res.ok ? URL.createObjectURL(await res.blob()) : null;
   } catch {
     return null;

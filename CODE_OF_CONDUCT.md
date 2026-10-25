@@ -1,6 +1,6 @@
 # Code of conduct
 
-HelixAI is built by and for people who want to keep control of their own tools. We want its
+OxoAI is built by and for people who want to keep control of their own tools. We want its
 spaces (issues, discussions, pull requests, reviews) to be welcoming and useful to everyone,
 whatever their experience, background or language.
 
@@ -21,7 +21,7 @@ whatever their experience, background or language.
 ## Enforcement
 
 Maintainers may edit or remove contributions that break these rules, and may block people who
-repeat them. To report a problem, write to `support@helix-agence.fr`; reports are handled
+repeat them. To report a problem, open an issue on https://github.com/martinleonardcyber-ops/oxoai/issues; reports are handled
 confidentially.
 
 This code is inspired by the [Contributor Covenant](https://www.contributor-covenant.org).

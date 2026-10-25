@@ -19,7 +19,7 @@ import { t, tf } from "@/lib/i18n";
  * « Plus tard » masque la ligne pour cette liste de services, sur ce poste
  * seulement ; un service branché ensuite la fait revenir.
  */
-const CLE_MASQUEE = "helix.inviteOutils.masquee";
+const CLE_MASQUEE = "oxoai.inviteOutils.masquee";
 
 function lireMasquee(): string | null {
   try {

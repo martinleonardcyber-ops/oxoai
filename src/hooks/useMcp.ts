@@ -28,7 +28,7 @@ interface State {
  * d'afficher l'ancien dossier et l'ancienne liste d'outils jusqu'au prochain
  * démontage. Ce signal les remet d'accord.
  */
-export const MCP_CHANGE = "helix:mcp-change";
+export const MCP_CHANGE = "oxoai:mcp-change";
 
 /** Serveurs MCP et outils réellement disponibles pour l'agent. */
 export function useMcp() {
@@ -86,7 +86,7 @@ export function useMcp() {
       // Une nouvelle tentative efface le motif du refus précédent.
       setState((s) => ({ ...s, erreurWorkspace: undefined }));
       try {
-        const res = await apiFetch("/helix/mcp/workspace", {
+        const res = await apiFetch("/oxoai/mcp/workspace", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(

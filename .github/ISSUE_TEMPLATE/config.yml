@@ -1,8 +1,8 @@
 blank_issues_enabled: false
 contact_links:
   - name: Report a security vulnerability
-    url: https://github.com/medhiclb/HelixAI/security/advisories/new
+    url: https://github.com/martinleonardcyber-ops/oxoai/security/advisories/new
     about: Please report vulnerabilities privately, not in a public issue.
   - name: Ask a question
-    url: https://github.com/medhiclb/HelixAI/discussions
+    url: https://github.com/martinleonardcyber-ops/oxoai/discussions
     about: Questions, ideas and help with installation.

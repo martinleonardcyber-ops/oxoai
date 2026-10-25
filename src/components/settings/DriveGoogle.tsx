@@ -187,7 +187,7 @@ export function DriveGoogle({ onChange }: { onChange?: () => void } = {}) {
         {/*
           * L'application Google se saisit à l'écran depuis le 26/09/2026
           * (ClientGoogle.tsx), partagée avec Google Agenda ; le profil de
-          * déploiement (« google » dans helix.config.json) reste possible et
+          * déploiement (« google » dans oxoai.config.json) reste possible et
           * l'emporte.
           */}
         <FormulaireClientGoogle etat={clientGoogle} api="Google Drive API" onEnregistre={() => void relire()} />

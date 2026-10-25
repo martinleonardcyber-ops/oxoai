@@ -11,7 +11,7 @@ import {
   type Project,
 } from "@/lib/store/projects";
 
-const CHANGED = "helix:projects-changed";
+const CHANGED = "oxoai:projects-changed";
 
 function notify(): void {
   window.dispatchEvent(new Event(CHANGED));

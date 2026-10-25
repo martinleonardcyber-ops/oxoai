@@ -52,7 +52,7 @@ export async function listerBibliotheque(options: { vue?: string; dossier?: stri
   if (options.vue) p.set("vue", options.vue);
   if (options.dossier) p.set("dossier", options.dossier);
   if (options.q?.trim()) p.set("q", options.q.trim());
-  return lire(await apiFetch(`/helix/bibliotheque?${p}`));
+  return lire(await apiFetch(`/oxoai/bibliotheque?${p}`));
 }
 
 export async function creerDossier(d: {
@@ -63,7 +63,7 @@ export async function creerDossier(d: {
   emoji?: string;
   couleur?: Couleur;
 }): Promise<ElementBibliotheque> {
-  return (await lire<{ element: ElementBibliotheque }>(await poster("/helix/bibliotheque/dossiers", d))).element;
+  return (await lire<{ element: ElementBibliotheque }>(await poster("/oxoai/bibliotheque/dossiers", d))).element;
 }
 
 const TEXTES = ["txt", "md", "csv", "json", "html", "xml"];
@@ -100,7 +100,7 @@ export async function importerDocument(
   if (fichier.size === 0) throw new Error(tf("« {0} » est vide.", fichier.name));
   const texte = await texteDe(fichier);
   const r = await envoyerEnFlux<{ element: ElementBibliotheque }>(
-    "/helix/bibliotheque/documents",
+    "/oxoai/bibliotheque/documents",
     { nom: fichier.name, taille: fichier.size, texte, ...d },
     fichier,
     onProgression,
@@ -112,25 +112,25 @@ export async function modifierElement(
   id: string,
   d: Partial<{ nom: string; parentId: string | null; visibilite: Visibilite; groupes: string[]; emoji: string; couleur: Couleur | "" }>,
 ): Promise<ElementBibliotheque> {
-  return (await lire<{ element: ElementBibliotheque }>(await poster(`/helix/bibliotheque/${encodeURIComponent(id)}`, d))).element;
+  return (await lire<{ element: ElementBibliotheque }>(await poster(`/oxoai/bibliotheque/${encodeURIComponent(id)}`, d))).element;
 }
 
 export async function marquerFavori(id: string, favori: boolean): Promise<void> {
-  await lire(await poster(`/helix/bibliotheque/${encodeURIComponent(id)}/favori`, { favori }));
+  await lire(await poster(`/oxoai/bibliotheque/${encodeURIComponent(id)}/favori`, { favori }));
 }
 
 export async function supprimerElement(id: string): Promise<void> {
-  await lire(await poster(`/helix/bibliotheque/${encodeURIComponent(id)}/supprimer`, {}));
+  await lire(await poster(`/oxoai/bibliotheque/${encodeURIComponent(id)}/supprimer`, {}));
 }
 
 /** Le document, tel qu'il a été déposé, en `File` (pour un agent, ou pour l'enregistrer). */
 export async function recupererDocument(e: Pick<ElementBibliotheque, "id" | "nom">): Promise<File> {
-  const r = await apiFetch(`/helix/bibliotheque/${encodeURIComponent(e.id)}/contenu`);
+  const r = await apiFetch(`/oxoai/bibliotheque/${encodeURIComponent(e.id)}/contenu`);
   if (!r.ok) {
     const corps = (await r.json().catch(() => ({}))) as { error?: { message?: string } };
     throw new Error(corps.error?.message ?? tf("« {0} » est illisible.", e.nom));
   }
-  return new File([await r.blob()], e.nom, { type: r.headers.get("X-Helix-Type") ?? "application/octet-stream" });
+  return new File([await r.blob()], e.nom, { type: r.headers.get("X-OxoAI-Type") ?? "application/octet-stream" });
 }
 
 /** Enregistre un document sur le poste, sous son nom. */

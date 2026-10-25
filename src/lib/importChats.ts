@@ -213,7 +213,7 @@ export interface LogicielTrouve {
 
 export async function logicielsDuPoste(): Promise<LogicielTrouve[]> {
   try {
-    const res = await apiFetch("/helix/import/logiciels");
+    const res = await apiFetch("/oxoai/import/logiciels");
     if (!res.ok) return [];
     return ((await res.json()) as { logiciels: LogicielTrouve[] }).logiciels;
   } catch {
@@ -245,7 +245,7 @@ export async function lireLogiciel(id: string, suivre?: (lues: number, total: nu
   let source: Import["source"] = id as Import["source"];
   let depuis: number | null = 0;
   while (depuis !== null) {
-    const page: PageLogiciel = await lireReponse<PageLogiciel>(await apiFetch(`/helix/import/logiciel/${id}?depuis=${depuis}`));
+    const page: PageLogiciel = await lireReponse<PageLogiciel>(await apiFetch(`/oxoai/import/logiciel/${id}?depuis=${depuis}`));
     source = page.source;
     if (depuis === 0) instructions = page.instructions ?? "";
     for (const c of page.chats) chats.set(c.cle, c);
@@ -278,7 +278,7 @@ export async function completerChats(id: string, choisis: ChatImporte[], suivre?
       taille += c.taille;
     }
     const r = await lireReponse<{ chats: ChatImporte[]; restantes: string[] }>(
-      await apiFetch(`/helix/import/logiciel/${id}`, {
+      await apiFetch(`/oxoai/import/logiciel/${id}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ cles: lot }),

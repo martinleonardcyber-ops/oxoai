@@ -9,8 +9,8 @@ import { emplacementLlamaChoisi } from "./llamaCppBase.ts";
  * ── Pourquoi (revue de sécurité du 25/09/2026) ──────────────────────────────
  *
  * « Tout mon poste » prend le dossier personnel comme dossier de l'équipe, et
- * les données de l'instance sont par défaut dans `~/.helix/data`. Mesuré sur
- * une instance jetable : `GET /helix/espace/fichier?chemin=.helix/data/…`
+ * les données de l'instance sont par défaut dans `~/.oxoai/data`. Mesuré sur
+ * une instance jetable : `GET /oxoai/espace/fichier?chemin=.oxoai/data/…`
  * rendait 200 à n'importe quelle personne connectée, avec le jeton d'instance,
  * la configuration d'OpenClaw (son propre jeton) et la mémoire des employés.
  * La liste cachait les fichiers en point ; la lecture, elle, ne les refusait
@@ -38,10 +38,10 @@ import { emplacementLlamaChoisi } from "./llamaCppBase.ts";
 const reel = (p: string): string => (process.platform === "win32" ? realpathSync.native(p) : realpathSync(p));
 
 /** Dossier des données de l'instance, tel que la passerelle le calcule partout. */
-const dossierDonnees = (): string => process.env.HELIX_DATA_DIR ?? join(homedir(), ".helix", "data");
+const dossierDonnees = (): string => process.env.OXOAI_DATA_DIR ?? join(homedir(), ".oxoai", "data");
 
 /**
- * Les zones, en chemins absolus. Relues à chaque appel : `HELIX_DATA_DIR` et
+ * Les zones, en chemins absolus. Relues à chaque appel : `OXOAI_DATA_DIR` et
  * le dossier personnel ne changent pas en cours de route, mais une zone créée
  * après le démarrage (OpenClaw installé plus tard) doit valoir aussitôt.
  */
@@ -60,12 +60,12 @@ function calculerZones(): string[] {
   const maison = homedir();
   const donnees = dossierDonnees();
   const zones = [
-    // L'instance elle-même : base, jeton d'instance, OpenClaw de Helix
+    // L'instance elle-même : base, jeton d'instance, OpenClaw de OxoAI
     // (`<données>/openclaw`, employes.ts) et son moteur (`openclaw-moteur`).
     donnees,
-    join(maison, ".helix"),
+    join(maison, ".oxoai"),
     // Le dossier de travail d'OpenClaw installé par la personne : ce n'est pas
-    // celui de Helix, mais il porte ses jetons de canaux et de modèles.
+    // celui de OxoAI, mais il porte ses jetons de canaux et de modèles.
     join(maison, ".openclaw"),
     // Clés et identifiants.
     join(maison, ".ssh"),
@@ -87,7 +87,7 @@ function calculerZones(): string[] {
     join(maison, ".cursor"),
     /*
      * OpenCode (test d'intrusion du 27/09/2026) : `~/.opencode` est relu à
-     * chaque démarrage de l'agent de code de Helix, greffons compris (un
+     * chaque démarrage de l'agent de code de OxoAI, greffons compris (un
      * fichier `plugin/*.js` écrit par un agent y serait exécuté) ;
      * `~/.local/share/opencode` porte `auth.json`, les clés de fournisseurs de
      * la personne, et ses sessions.
@@ -97,13 +97,13 @@ function calculerZones(): string[] {
     // Trousseaux du système.
     join(maison, "Library", "Keychains"),
     // Profil de l'application de bureau (séance ouverte dans son stockage local).
-    join(maison, "Library", "Application Support", "Helix"),
-    join(maison, "Library", "Application Support", "helix-plateforme"),
+    join(maison, "Library", "Application Support", "OxoAI"),
+    join(maison, "Library", "Application Support", "oxoai-plateforme"),
     /*
      * Linux et Windows (audit du 27/09/2026). Linux : les trousseaux de GNOME,
      * les profils de Firefox et de Thunderbird (mots de passe, cookies), les
      * certificats de Chromium, les données des applications Flatpak. Windows :
-     * tout `AppData`, où vivent le profil de Helix (séance, cookies du bot de
+     * tout `AppData`, où vivent le profil de OxoAI (séance, cookies du bot de
      * réunion), les jetons de gh et de gcloud, les identifiants de Windows
      * (`Microsoft\Credentials`, `Protect`).
      */
@@ -136,7 +136,7 @@ function calculerZones(): string[] {
      */
     ...emplacementsDesModeles(maison),
   ];
-  if (process.env.HELIX_PROFIL_ESSAI) zones.push(process.env.HELIX_PROFIL_ESSAI);
+  if (process.env.OXOAI_PROFIL_ESSAI) zones.push(process.env.OXOAI_PROFIL_ESSAI);
   // Chacune sous sa forme réelle aussi : `/var` et `/private/var` sur macOS,
   // un dossier de données qui serait lui-même un lien.
   const toutes = new Set<string>();

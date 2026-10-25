@@ -6,33 +6,33 @@
  * semés dans le code pour qu'une traduction se résume, le jour venu, à fournir
  * un second objet de la même forme et à choisir selon `LANG`.
  *
- * Aucun nom de produit en dur : le nom affiché vient de `HELIX_NOM_PRODUIT`,
- * comme pour OpenCode (gateway/src/opencode.ts), et vaut « Helix » à défaut.
+ * Aucun nom de produit en dur : le nom affiché vient de `OXOAI_NOM_PRODUIT`,
+ * comme pour OpenCode (gateway/src/opencode.ts), et vaut « OxoAI » à défaut.
  * Pas de tiret cadratin dans ce qui s'affiche.
  */
 
-export const NOM = process.env.HELIX_NOM_PRODUIT?.trim() || "Helix";
+export const NOM = process.env.OXOAI_NOM_PRODUIT?.trim() || "OxoAI";
 
 export const T = {
   aide: `${NOM} en ligne de commande
 
 Utilisation :
-  helix                         Chat interactif (comme « helix chat »)
-  helix chat ["question"]       Chat ; sans question, conversation interactive
-  helix chat --outils           Chat avec les outils de l'instance (fichiers, connecteurs)
-  helix code ["demande"]        ${NOM} Code sur le dossier courant ; sans demande, interactif
-  helix connexion [--compte adresse@exemple.fr]
+  oxoai                         Chat interactif (comme « oxoai chat »)
+  oxoai chat ["question"]       Chat ; sans question, conversation interactive
+  oxoai chat --outils           Chat avec les outils de l'instance (fichiers, connecteurs)
+  oxoai code ["demande"]        ${NOM} Code sur le dossier courant ; sans demande, interactif
+  oxoai connexion [--compte adresse@exemple.fr]
                                 Se connecter avec son compte (mot de passe masqué)
-  helix deconnexion             Fermer la séance de ce terminal
-  helix modeles                 Modèles disponibles sur l'instance
-  helix outils                  Outils et connecteurs de l'instance
-  helix aide                    Cette aide
+  oxoai deconnexion             Fermer la séance de ce terminal
+  oxoai modeles                 Modèles disponibles sur l'instance
+  oxoai outils                  Outils et connecteurs de l'instance
+  oxoai aide                    Cette aide
 
 Options :
-  --adresse URL     Instance à utiliser (ou HELIX_ADRESSE). Défaut : http://127.0.0.1:8787
-  --jeton JETON     Jeton d'instance (ou HELIX_JETON). Défaut : celui de l'application
+  --adresse URL     Instance à utiliser (ou OXOAI_ADRESSE). Défaut : http://127.0.0.1:8787
+  --jeton JETON     Jeton d'instance (ou OXOAI_JETON). Défaut : celui de l'application
                     de cet ordinateur, lu seulement pour une adresse locale
-  --modele NOM      Modèle à utiliser (voir « helix modeles »)
+  --modele NOM      Modèle à utiliser (voir « oxoai modeles »)
   --effort NIVEAU   Code : aucun, faible, moyen, eleve ou max
   --dossier CHEMIN  Code : dossier du projet sur la machine de l'instance. Défaut, pour
                     une instance locale seulement : le dossier courant
@@ -52,13 +52,13 @@ Les actions qui demandent votre accord s'affichent ici et attendent votre répon
   // Instance et connexion
   injoignable: (adresse) =>
     `L'instance ne répond pas (${adresse}). Ouvrez l'application ${NOM} sur cet ordinateur, ou vérifiez --adresse.`,
-  sansJeton: `Aucun jeton d'instance : ouvrez l'application ${NOM} sur cet ordinateur, ou donnez --jeton (ou HELIX_JETON) pour une instance d'entreprise.`,
-  jetonRefuse: "L'instance refuse ce jeton d'instance. Vérifiez --jeton (ou HELIX_JETON).",
+  sansJeton: `Aucun jeton d'instance : ouvrez l'application ${NOM} sur cet ordinateur, ou donnez --jeton (ou OXOAI_JETON) pour une instance d'entreprise.`,
+  jetonRefuse: "L'instance refuse ce jeton d'instance. Vérifiez --jeton (ou OXOAI_JETON).",
   httpDistant: (adresse) =>
     `Adresse refusée : ${adresse} est en http sur une autre machine, le jeton et la séance y partiraient en clair. Utilisez https://.`,
   adresseInvalide: (adresse) => `Adresse d'instance illisible : ${adresse}`,
-  nonConnecte: "Vous n'êtes pas connecté sur ce terminal. Lancez : helix connexion",
-  seanceExpiree: "Votre séance a expiré ou a été fermée. Reconnectez-vous : helix connexion",
+  nonConnecte: "Vous n'êtes pas connecté sur ce terminal. Lancez : oxoai connexion",
+  seanceExpiree: "Votre séance a expiré ou a été fermée. Reconnectez-vous : oxoai connexion",
   aucunCompte: "Aucun compte sur cette instance. Créez-en un depuis l'application.",
   compteInconnu: (email) => `Aucun compte ne correspond à « ${email} ».`,
   choisirCompte: "Comptes de cette instance :",
@@ -89,13 +89,13 @@ Les actions qui demandent votre accord s'affichent ici et attendent votre répon
   outilsActifs: (liste) => `Outils : ${liste}`,
   aucunOutil: "Aucun outil n'est disponible sur l'instance en ce moment.",
   dossierOutils: (d) => `Fichiers : ${d} (le dossier de Cowork, choisi dans l'application)`,
-  outilsSansSeance: "Les outils font agir l'instance en votre nom : connectez-vous d'abord (helix connexion).",
+  outilsSansSeance: "Les outils font agir l'instance en votre nom : connectez-vous d'abord (oxoai connexion).",
   plan: (n) => `Plan en ${n} étape${n > 1 ? "s" : ""} :`,
   etape: (i, n, titre) => `Étape ${i}/${n} : ${titre}`,
   noteSansOutils:
     "Tu réponds dans un terminal. Dans cette conversation, tu n'as aucun outil : tu ne peux ni lire, ni créer, ni modifier " +
     "de fichier, ni agir sur quoi que ce soit en dehors de ta réponse écrite. Si on te le demande, dis-le franchement, " +
-    "sans prétendre l'avoir fait, et indique que « helix chat --outils » (outils de l'instance) ou « helix code » " +
+    "sans prétendre l'avoir fait, et indique que « oxoai chat --outils » (outils de l'instance) ou « oxoai code » " +
     "(agent de code sur le dossier courant) le permettent.",
   reponseVide: "(réponse vide)",
   chatReflexion: (duree) => `Le modèle réfléchit (${duree})...`,
@@ -106,7 +106,7 @@ Les actions qui demandent votre accord s'affichent ici et attendent votre répon
   codeSession: (dossier) => `${NOM} Code sur ${dossier}`,
   codeDossierDistant: (adresse) =>
     `L'instance ${adresse} n'est pas sur cet ordinateur : l'agent de code y travaille dans un dossier de SA machine, pas dans le dossier courant de ce poste. Donnez-le avec --dossier CHEMIN (un chemin sur le serveur de l'instance).`,
-  codeSansSeance: `${NOM} Code modifie vos fichiers : connectez-vous d'abord (helix connexion).`,
+  codeSansSeance: `${NOM} Code modifie vos fichiers : connectez-vous d'abord (oxoai connexion).`,
   codeNouvelleSession: "Nouvelle session de Code.",
   codeRelance: "L'agent n'avait pas démarré : la demande est repartie dans une nouvelle session.",
   codeFini: "L'agent a terminé sans réponse écrite.",
@@ -114,7 +114,7 @@ Les actions qui demandent votre accord s'affichent ici et attendent votre répon
   codeStatutRetente: (motif) => (motif ? `Le modèle n'a pas répondu (${motif}). Nouvelle tentative...` : "Le modèle n'a pas répondu. Nouvelle tentative..."),
   codeResume: "La conversation est longue : l'agent la résume pour continuer...",
   codeEchec: "L'agent de code a interrompu la tâche.",
-  // Pendant que le modèle n'a encore rien rendu (helix.statut, gateway/src/attenteModele.ts), mêmes mots que l'écran Code.
+  // Pendant que le modèle n'a encore rien rendu (oxoai.statut, gateway/src/attenteModele.ts), mêmes mots que l'écran Code.
   codeLecture: (detail, sousTache) => `${sousTache ? "Le modèle lit la demande de la sous-tâche" : "Le modèle lit la demande"} (${detail})...`,
   codeAttenteTour: (duree) => `Le modèle termine une autre demande avant celle-ci (${duree})...`,
   codeChargement: (duree) => `Le modèle se charge en mémoire (${duree})...`,
@@ -136,7 +136,7 @@ Les actions qui demandent votre accord s'affichent ici et attendent votre répon
     error: "Le modèle a signalé une erreur et s'est arrêté.",
     autre: "Le modèle s'est arrêté sans indiquer qu'il avait fini : la réponse peut être incomplète.",
   },
-  modeleCodeLibre: "Le modèle se choisit à l'ouverture : « helix code --modele NOM ». /nouveau rouvre une session avec le modèle donné.",
+  modeleCodeLibre: "Le modèle se choisit à l'ouverture : « oxoai code --modele NOM ». /nouveau rouvre une session avec le modèle donné.",
 
   // Approbations
   approbationTitre: "Accord demandé",
@@ -169,11 +169,11 @@ Les actions qui demandent votre accord s'affichent ici et attendent votre répon
   outilsCode: `aussi dans ${NOM} Code`,
   outilsNiveau: (n) =>
     `Accord demandé : ${n === "tout" ? "jamais (l'agent agit sans demander)" : n === "chaque" ? "avant chaque action, lectures comprises" : "avant chaque modification"}`,
-  outilsNiveauInconnu: "Niveau d'accord : connectez-vous pour le voir (helix connexion).",
+  outilsNiveauInconnu: "Niveau d'accord : connectez-vous pour le voir (oxoai connexion).",
 
   // Erreurs génériques
   refus: (statut) => `L'instance a refusé la demande (${statut}).`,
-  commandeInconnue: (c) => `Commande inconnue : ${c}. Voir « helix aide ».`,
+  commandeInconnue: (c) => `Commande inconnue : ${c}. Voir « oxoai aide ».`,
   optionSansValeur: (o) => `L'option ${o} attend une valeur.`,
   erreur: (m) => `Erreur : ${m}`,
 };

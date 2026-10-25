@@ -91,7 +91,7 @@ export interface Resultat {
 export async function etat(adresse?: string): Promise<EtatCourrier | null> {
   try {
     const requete = adresse ? `?adresse=${encodeURIComponent(adresse)}` : "";
-    const res = await apiFetch(`/helix/courrier${requete}`);
+    const res = await apiFetch(`/oxoai/courrier${requete}`);
     if (!res.ok) return null;
     return (await res.json()) as EtatCourrier;
   } catch {
@@ -108,7 +108,7 @@ export async function etat(adresse?: string): Promise<EtatCourrier | null> {
  */
 export async function configurer(compte: CompteASoumettre): Promise<Resultat> {
   try {
-    const res = await apiFetch("/helix/courrier/configurer", {
+    const res = await apiFetch("/oxoai/courrier/configurer", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(compte),
@@ -137,7 +137,7 @@ export async function configurer(compte: CompteASoumettre): Promise<Resultat> {
  */
 export async function reglerEnvoi(smtp: ServeurEnvoi | null): Promise<Resultat> {
   try {
-    const res = await apiFetch("/helix/courrier/envoi", {
+    const res = await apiFetch("/oxoai/courrier/envoi", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ smtp }),
@@ -159,7 +159,7 @@ export async function reglerEnvoi(smtp: ServeurEnvoi | null): Promise<Resultat> 
 /** Demander à chaque envoi (par défaut), ou envoyer sans confirmation là où les règles le permettent. */
 export async function reglerConfirmation(sansAccord: boolean): Promise<Resultat> {
   try {
-    const res = await apiFetch("/helix/courrier/confirmation", {
+    const res = await apiFetch("/oxoai/courrier/confirmation", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ sansAccord }),
@@ -175,7 +175,7 @@ export async function reglerConfirmation(sansAccord: boolean): Promise<Resultat>
 /** Retire le compte de l'instance. Les agents perdent aussitôt l'accès à la boîte. */
 export async function oublier(): Promise<Resultat> {
   try {
-    const res = await apiFetch("/helix/courrier/oublier", { method: "POST" });
+    const res = await apiFetch("/oxoai/courrier/oublier", { method: "POST" });
     const corps = (await res.json().catch(() => ({}))) as Partial<Resultat> & {
       error?: { message?: string };
     };
@@ -230,7 +230,7 @@ export async function connecterAvec(
     | { fournisseur: "google" | "microsoft"; application: "instance" },
 ): Promise<{ ok: true; url: string; redirection: string } | { ok: false; message: string }> {
   try {
-    const res = await apiFetch("/helix/courrier/oauth", {
+    const res = await apiFetch("/oxoai/courrier/oauth", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ adresse, reglage }),
@@ -256,7 +256,7 @@ export async function connecterAvec(
  */
 export async function collerRetourCourrier(adresse: string): Promise<{ ok: boolean; message: string }> {
   try {
-    const res = await apiFetch("/helix/courrier/oauth/coller", {
+    const res = await apiFetch("/oxoai/courrier/oauth/coller", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ adresse }),

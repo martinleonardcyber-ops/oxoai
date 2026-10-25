@@ -1,21 +1,26 @@
 {
-  "name": "helix-plateforme",
-  "nomAffiche": "Helix",
-  "depotMisesAJour": "medhiclb/HelixAI",
+  "name": "oxoai-plateforme",
+  "nomAffiche": "OxoAI",
+  "depotMisesAJour": "martinleonardcyber-ops/oxoai",
   "private": true,
   "version": "2026.1024.3",
   "license": "AGPL-3.0-only",
-  "description": "Plateforme d'IA souveraine, locale et open source",
-  "desktopName": "helix-plateforme.desktop",
+  "description": "OxoAI : ton espace de travail IA local et open source (dérivé de HelixAI)",
+  "desktopName": "oxoai-plateforme.desktop",
   "author": {
-    "name": "Medhi Clabaut (Helix Agence, SIREN 994 907 145)",
-    "email": "contact@helix-agence.fr",
-    "url": "https://helix-agence.fr"
+    "name": "martinleonardcyber-ops",
+    "url": "https://github.com/martinleonardcyber-ops/oxoai"
   },
+  "contributors": [
+    {
+      "name": "Medhi Clabaut (Helix Agence), auteur de HelixAI dont OxoAI est dérivé",
+      "url": "https://github.com/medhiclb/HelixAI"
+    }
+  ],
   "type": "module",
   "main": "electron/main.cjs",
   "bin": {
-    "helix": "cli/helix.mjs"
+    "oxoai": "cli/oxoai.mjs"
   },
   "scripts": {
     "dev": "vite",
@@ -52,7 +57,7 @@
     "react-router-dom": "^7.18.2"
   },
   "build": {
-    "appId": "fr.helix.plateforme",
+    "appId": "com.oxoria.oxoai",
     "afterSign": "scripts/signature/signer-mise-a-jour.cjs",
     "afterPack": "scripts/signature/cle-windows.cjs",
     "electronFuses": {
@@ -60,12 +65,12 @@
       "enableNodeOptionsEnvironmentVariable": false,
       "enableNodeCliInspectArguments": false
     },
-    "copyright": "Copyright © 2026 Medhi Clabaut — Helix Agence, SIREN 994 907 145",
-    "productName": "Helix",
+    "copyright": "Copyright © 2026 Medhi Clabaut (HelixAI) et martinleonardcyber-ops (OxoAI) · AGPL-3.0",
+    "productName": "OxoAI",
     "protocols": {
-      "name": "Invitation Helix",
+      "name": "Invitation OxoAI",
       "schemes": [
-        "helix"
+        "oxoai"
       ],
       "role": "Viewer"
     },
@@ -119,9 +124,9 @@
       "entitlementsInherit": "build/entitlements.mac.plist",
       "notarize": false,
       "extendInfo": {
-        "NSAppleEventsUsageDescription": "Helix pilote le clavier de votre Mac pour réaliser les actions que vous approuvez dans Cowork.",
-        "NSSystemAdministrationUsageDescription": "Helix a besoin de l'Accessibilité pour déplacer la souris et saisir au clavier, uniquement pour les actions que vous approuvez.",
-        "NSMicrophoneUsageDescription": "Helix utilise le micro pour la dictée et l'enregistrement des réunions. Le son est transcrit par votre instance, sans service extérieur."
+        "NSAppleEventsUsageDescription": "OxoAI pilote le clavier de votre Mac pour réaliser les actions que vous approuvez dans Cowork.",
+        "NSSystemAdministrationUsageDescription": "OxoAI a besoin de l'Accessibilité pour déplacer la souris et saisir au clavier, uniquement pour les actions que vous approuvez.",
+        "NSMicrophoneUsageDescription": "OxoAI utilise le micro pour la dictée et l'enregistrement des réunions. Le son est transcrit par votre instance, sans service extérieur."
       },
       "icon": "build/icon.png",
       "artifactName": "${productName}-${version}-${arch}-mac.${ext}"
@@ -154,7 +159,7 @@
       "deleteAppDataOnUninstall": false,
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
-      "artifactName": "Helix-Setup-${version}-${arch}.${ext}"
+      "artifactName": "OxoAI-Setup-${version}-${arch}.${ext}"
     },
     "deb": {
       "depends": [

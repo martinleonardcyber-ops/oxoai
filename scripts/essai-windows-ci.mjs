@@ -5,9 +5,9 @@
  * ── Mode d'emploi ───────────────────────────────────────────────────────────
  *
  *   npm run build
- *   npx electron-builder --win dir --x64 --publish never   (HELIX_SANS_CLE_EDITEUR=1)
- *   set HELIX_ESSAI_MACHINE_JETABLE=1
- *   node scripts/essai-windows-ci.mjs [--app release\win-unpacked\Helix.exe]
+ *   npx electron-builder --win dir --x64 --publish never   (OXOAI_SANS_CLE_EDITEUR=1)
+ *   set OXOAI_ESSAI_MACHINE_JETABLE=1
+ *   node scripts/essai-windows-ci.mjs [--app release\win-unpacked\OxoAI.exe]
  *                                     [--modele qwen3-1.7b] [--sortie essai-windows-sortie]
  *                                     [--delai-minutes 45]
  *
@@ -20,7 +20,7 @@
  * La 2026.928.6 a cassé la mise en route des modèles locaux sous Windows chez
  * plusieurs personnes (PROJET.md § 3.21), et rien n'avait jamais été essayé
  * sur un vrai Windows. Cet essai fait le parcours d'une personne, avec
- * l'APPLICATION EMPAQUETÉE (`win-unpacked\Helix.exe`) : le défaut « Timed out
+ * l'APPLICATION EMPAQUETÉE (`win-unpacked\OxoAI.exe`) : le défaut « Timed out
  * waiting for LM Studio daemon to start » n'existe que lorsque la passerelle
  * vit dans le `utilityProcess` d'Electron, jamais avec `node gateway/src`.
  *
@@ -28,7 +28,7 @@
  *  2. le compte administrateur est créé (instance neuve), comme au premier
  *     lancement ;
  *  3. le moteur est installé comme par le bouton « Installer le moteur » de
- *     l'écran de mise en route (`POST /helix/provision/moteur`), conditions de
+ *     l'écran de mise en route (`POST /oxoai/provision/moteur`), conditions de
  *     LM Studio acceptées (accord de Medhi du 28/09/2026, pour cet usage
  *     interne de test), avec le plus léger des modèles (`model`, pour limiter
  *     le téléchargement), puis suivi jusqu'à « prêt » ;
@@ -39,10 +39,10 @@
  *     la même question : c'est là que le service doit être relevé par
  *     l'application empaquetée ;
  *  6. la réflexion du modèle (29/09/2026) : le flux brut d'une question qui
- *     fait réfléchir, au moteur seul, par le relais et par le Chat de Helix,
+ *     fait réfléchir, au moteur seul, par le relais et par le Chat de OxoAI,
  *     pour le modèle de l'essai et `--reflexion-modeles` (scripts/essai-reflexion-ci.mjs) ;
- *  7. la commande `helix` (04/10/2026) : mise en place comme par l'écran
- *     (`helix.cmd`, PATH du compte), lancée depuis un nouveau PowerShell qui
+ *  7. la commande `oxoai` (04/10/2026) : mise en place comme par l'écran
+ *     (`oxoai.cmd`, PATH du compte), lancée depuis un nouveau PowerShell qui
  *     relit ce PATH, pour un compte « Moumoune & Kiki Élodie », puis retirée
  *     (le PATH du compte de la machine jetable est modifié, puis rendu) ;
  *  8. réussi ou non, dans `--sortie` : le journal de cet essai, celui de
@@ -51,11 +51,11 @@
  *
  * ── Ce que l'essai touche ───────────────────────────────────────────────────
  *
- * Données et profil de l'application : jetables (`HELIX_DATA_DIR`,
- * `HELIX_PROFIL_ESSAI`, clé en fichier par `HELIX_CONFIG`), dans le dossier
+ * Données et profil de l'application : jetables (`OXOAI_DATA_DIR`,
+ * `OXOAI_PROFIL_ESSAI`, clé en fichier par `OXOAI_CONFIG`), dans le dossier
  * temporaire. Mais le moteur de LM Studio s'installe là où il s'installe chez
  * tout le monde, dans `%USERPROFILE%\.lmstudio`, et ses conditions sont
- * acceptées : d'où `HELIX_ESSAI_MACHINE_JETABLE=1`, exigé pour ne jamais le
+ * acceptées : d'où `OXOAI_ESSAI_MACHINE_JETABLE=1`, exigé pour ne jamais le
  * lancer par mégarde sur un vrai poste.
  */
 import { spawn, spawnSync } from "node:child_process";
@@ -72,7 +72,7 @@ const option = (nom, defaut) => {
   const i = process.argv.indexOf(`--${nom}`);
   return i > 0 && process.argv[i + 1] ? process.argv[i + 1] : defaut;
 };
-const APP = resolve(option("app", join(RACINE, "release", "win-unpacked", "Helix.exe")));
+const APP = resolve(option("app", join(RACINE, "release", "win-unpacked", "OxoAI.exe")));
 const MODELE = option("modele", "qwen3-1.7b");
 const SORTIE = resolve(option("sortie", join(RACINE, "essai-windows-sortie")));
 const DELAI_MS = Number(option("delai-minutes", "45")) * 60_000;
@@ -85,10 +85,10 @@ if (process.platform !== "win32") {
   console.log("Essai prévu pour Windows seulement (application win-unpacked, moteur de LM Studio pour Windows).");
   process.exit(2);
 }
-if (process.env.HELIX_ESSAI_MACHINE_JETABLE !== "1") {
+if (process.env.OXOAI_ESSAI_MACHINE_JETABLE !== "1") {
   console.log(
     "Cet essai installe le moteur de LM Studio dans %USERPROFILE%\\.lmstudio et en accepte les conditions : " +
-      "il ne tourne que sur une machine jetable, déclarée par HELIX_ESSAI_MACHINE_JETABLE=1.",
+      "il ne tourne que sur une machine jetable, déclarée par OXOAI_ESSAI_MACHINE_JETABLE=1.",
   );
   process.exit(2);
 }
@@ -123,11 +123,11 @@ const attendre = (ms) => new Promise((r) => setTimeout(r, ms));
 
 /* ── Le poste jetable ───────────────────────────────────────────────────── */
 
-const TMP = join(process.env.RUNNER_TEMP || tmpdir(), `helix-essai-windows-${Date.now()}`);
+const TMP = join(process.env.RUNNER_TEMP || tmpdir(), `oxoai-essai-windows-${Date.now()}`);
 const DONNEES = join(TMP, "donnees");
 const PROFIL = join(TMP, "profil-application");
 for (const d of [DONNEES, PROFIL]) mkdirSync(d, { recursive: true });
-const CONFIG = join(TMP, "helix.config.json");
+const CONFIG = join(TMP, "oxoai.config.json");
 writeFileSync(CONFIG, JSON.stringify({ chiffrement: "fichier" }));
 const LMSTUDIO = join(homedir(), ".lmstudio");
 
@@ -142,13 +142,13 @@ function lancerApplication() {
     cwd: dirname(APP),
     env: {
       ...process.env,
-      HELIX_DATA_DIR: DONNEES,
-      HELIX_CONFIG: CONFIG,
-      HELIX_PROFIL_ESSAI: PROFIL,
-      // L'application lit le jeton de l'instance ici (main.cjs) : le même que la passerelle écrit dans HELIX_DATA_DIR.
-      HELIX_TOKEN_FILE: join(DONNEES, "instance-token"),
+      OXOAI_DATA_DIR: DONNEES,
+      OXOAI_CONFIG: CONFIG,
+      OXOAI_PROFIL_ESSAI: PROFIL,
+      // L'application lit le jeton de l'instance ici (main.cjs) : le même que la passerelle écrit dans OXOAI_DATA_DIR.
+      OXOAI_TOKEN_FILE: join(DONNEES, "instance-token"),
       // Aucune mise à jour cherchée ni posée pendant l'essai.
-      HELIX_SANS_MISE_A_JOUR: "1",
+      OXOAI_SANS_MISE_A_JOUR: "1",
       // La sortie de Chromium aussi, dans le journal de l'application.
       ELECTRON_ENABLE_LOGGING: "1",
     },
@@ -178,8 +178,8 @@ let SEANCE = "";
 const entetes = () => ({
   "Content-Type": "application/json",
   Authorization: `Bearer ${JETON}`,
-  "X-Helix-Langue": "fr",
-  ...(SEANCE ? { "X-Helix-Session": SEANCE } : {}),
+  "X-OxoAI-Langue": "fr",
+  ...(SEANCE ? { "X-OxoAI-Session": SEANCE } : {}),
 });
 async function appel(chemin, corps, delaiMs = 30_000) {
   const r = await fetch(`${G}${chemin}`, {
@@ -211,13 +211,13 @@ async function etapes() {
   dire("2. Le compte administrateur (instance neuve)");
   // Mot de passe tiré au hasard à chaque essai, jamais écrit nulle part : il ne sert qu'à cette instance jetable.
   const motDePasse = `Essai-${randomBytes(12).toString("base64url")}-9a`;
-  const compte = await appel("/helix/auth/create", { fullName: "Administrateur essai", email: "admin@essai-windows.test", password: motDePasse });
+  const compte = await appel("/oxoai/auth/create", { fullName: "Administrateur essai", email: "admin@essai-windows.test", password: motDePasse });
   SEANCE = compte.json.session?.token ?? "";
   if (!verifier("le premier compte est créé, et sa séance ouverte", compte.statut === 200 && Boolean(SEANCE), `${compte.statut} ${compte.texte.slice(0, 300)}`)) return;
 
   /* 3. Le moteur, puis le modèle */
   dire("3. L'écran de mise en route : le moteur, puis le modèle");
-  const avant = await appel("/helix/provision");
+  const avant = await appel("/oxoai/provision");
   dire(`   machine : ${JSON.stringify(avant.json.hardware)}`);
   dire(`   conseillé : ${avant.json.recommended?.key} ; moteur : ${avant.json.moteur} ; déjà installé : ${avant.json.moteurInstalle}`);
   dire(`   possibles : ${(avant.json.possibles ?? []).map((m) => m.key).join(", ")}`);
@@ -227,7 +227,7 @@ async function etapes() {
   /*
    * Suivi comme l'écran (useProvision.ts) : le flux de la mise en route,
    * ouvert avant la demande, et rien d'autre tant qu'elle tourne. Relire
-   * `/helix/provision` toutes les trois secondes, comme le faisait la première
+   * `/oxoai/provision` toutes les trois secondes, comme le faisait la première
    * version de cet essai, n'est pas neutre : chaque lecture cherche les
    * modèles (`discover`), ce qui relance le serveur de LM Studio s'il ne
    * répond pas ; l'essai réparait ainsi lui-même ce qu'il devait voir (essai
@@ -235,9 +235,9 @@ async function etapes() {
    */
   const arretFlux = new AbortController();
   const minuterie = setTimeout(() => arretFlux.abort(), DELAI_MS);
-  const flux = await fetch(`${G}/helix/provision/stream`, { headers: entetes(), signal: arretFlux.signal });
+  const flux = await fetch(`${G}/oxoai/provision/stream`, { headers: entetes(), signal: arretFlux.signal });
   if (!verifier("le flux de la mise en route s'ouvre", flux.ok && Boolean(flux.body), flux.status)) return;
-  const lance = await appel("/helix/provision/moteur", { conditionsAcceptees: true, model: MODELE });
+  const lance = await appel("/oxoai/provision/moteur", { conditionsAcceptees: true, model: MODELE });
   if (!verifier("installation du moteur acceptée (202)", lance.statut === 202, `${lance.statut} ${lance.texte.slice(0, 400)}`)) return;
 
   const declaration = join(LMSTUDIO, ".internal", "llmster-install-location.json");
@@ -293,7 +293,7 @@ async function etapes() {
   if (!verifier(`la mise en route arrive à « prêt » (en moins de ${DELAI_MS / 60_000} min)`, etat?.phase === "ready", JSON.stringify(etat))) return;
   verifier(`le modèle prêt est celui demandé (${MODELE})`, etat.model === MODELE, etat.model);
   // Puis l'écran relit l'état, une fois (useProvision.ts, `load`).
-  const apres = await appel("/helix/provision");
+  const apres = await appel("/oxoai/provision");
   verifier("l'écran relu : moteur installé, un modèle de Chat présent", apres.json.moteurInstalle === true && apres.json.hasChatModel === true, apres.texte.slice(0, 400));
 
   /* 4. Une question au Chat */
@@ -306,7 +306,7 @@ async function etapes() {
     writeFileSync(join(SORTIE, nom), `${r.stdout ?? ""}${r.stderr ? `\n-- stderr --\n${r.stderr}` : ""}`);
     /*
      * Une seule copie du modèle en mémoire après la mise en route et une
-     * question (essai du 28/09/2026 : deux, l'une chargée par Helix, l'autre
+     * question (essai du 28/09/2026 : deux, l'une chargée par OxoAI, l'autre
      * par LM Studio à la question d'essai posée sous un autre nom).
      */
     if (nom === "lms-ps.json") {
@@ -356,8 +356,8 @@ async function etapes() {
   const sonde = await fetch(`${G}/health`, { signal: AbortSignal.timeout(10_000) }).then((r) => r.ok, () => false);
   const dureeSonde = Date.now() - t1;
   verifier("pendant le réveil de LM Studio, /health répond sans l'attendre (moins de 3 s)", sonde && dureeSonde < 3000, `${sonde} en ${dureeSonde} ms`);
-  // La séance survit à la fermeture de l'application, comme pour une personne qui rouvre Helix.
-  const relu = await appel("/helix/provision");
+  // La séance survit à la fermeture de l'application, comme pour une personne qui rouvre OxoAI.
+  const relu = await appel("/oxoai/provision");
   verifier("la séance ouverte hier sert encore", relu.statut === 200, `${relu.statut} ${relu.texte.slice(0, 200)}`);
   if (!(await questionAuChat("2", 3 * 60_000))) return;
   // Au-delà de ce que l'application attend (40 sondes), elle a soit vu sa passerelle, soit abandonné en le disant.
@@ -367,10 +367,10 @@ async function etapes() {
   /*
    * 6. La réflexion du modèle (29/09/2026) : sous Windows, le Chat n'en
    * affichait ni le texte ni le temps. Le flux brut d'une question qui fait
-   * réfléchir, au moteur seul puis à travers Helix, pour chaque modèle ; le
-   * Chat de Helix doit la rendre séparée (scripts/essai-reflexion-ci.mjs).
+   * réfléchir, au moteur seul puis à travers OxoAI, pour chaque modèle ; le
+   * Chat de OxoAI doit la rendre séparée (scripts/essai-reflexion-ci.mjs).
    */
-  dire("6. La réflexion du modèle : moteur seul, relais de Helix, Chat de Helix");
+  dire("6. La réflexion du modèle : moteur seul, relais de OxoAI, Chat de OxoAI");
   await essaiReflexion({ G, entetes, dire, verifier, sortie: SORTIE, modeles: MODELES_REFLEXION });
 }
 
@@ -406,7 +406,7 @@ async function questionAuChat(n, attenteMs = 0) {
   const t00 = Date.now();
   let liste = [];
   for (;;) {
-    const modeles = await appel("/helix/models").catch(() => ({ json: {} }));
+    const modeles = await appel("/oxoai/models").catch(() => ({ json: {} }));
     liste = modeles.json.models ?? [];
     if (liste.some((m) => nomDuModele(m.id) === MODELE) || Date.now() - t00 >= attenteMs) break;
     await attendre(5000);
@@ -561,7 +561,7 @@ function garderLesJournaux() {
   }
 }
 
-/* ── 7. La commande helix (04/10/2026) ──────────────────────────────────── */
+/* ── 7. La commande oxoai (04/10/2026) ──────────────────────────────────── */
 
 const POWERSHELL = join(process.env.SystemRoot || "C:\\Windows", "System32", "WindowsPowerShell", "v1.0", "powershell.exe");
 
@@ -599,21 +599,21 @@ function pathDuCompte() {
 function nouveauTerminal(commande, { machine = false, enPlus = "", env = {} } = {}) {
   const path =
     (machine ? "[Environment]::GetEnvironmentVariable('Path', 'Machine') + ';' + " : "") +
-    "[Environment]::GetEnvironmentVariable('Path', 'User') + ';' + $env:SystemRoot + '\\System32' + ';' + $env:HELIX_ESSAI_EN_PLUS";
-  return powershell(`$env:Path = ${path}; ${commande}; exit $LASTEXITCODE`, { HELIX_ESSAI_EN_PLUS: enPlus, ...env });
+    "[Environment]::GetEnvironmentVariable('Path', 'User') + ';' + $env:SystemRoot + '\\System32' + ';' + $env:OXOAI_ESSAI_EN_PLUS";
+  return powershell(`$env:Path = ${path}; ${commande}; exit $LASTEXITCODE`, { OXOAI_ESSAI_EN_PLUS: enPlus, ...env });
 }
 
 /**
- * La commande `helix` mise en place comme par le bouton « Mettre en place »
+ * La commande `oxoai` mise en place comme par le bouton « Mettre en place »
  * (electron/ligneDeCommande.cjs, chargé hors d'Electron), pour un compte au
  * nom difficile (« Moumoune & Kiki Élodie » : espace, `&`, accent), puis
  * lancée depuis un nouveau PowerShell qui relit le PATH du compte :
  *  a. avec le Node du PATH ;
  *  b. sans aucun Node : le lanceur le dit, code 127 ;
- *  c. avec le Node que Helix pose (`openclaw-moteur\node\node.exe`), seul ;
+ *  c. avec le Node que OxoAI pose (`openclaw-moteur\node\node.exe`), seul ;
  *  d. un lanceur dont le script est dans un dossier accentué hors du compte
  *     (le chemin reste écrit en toutes lettres : passage de la console en UTF-8) ;
- *  e. `helix outils` contre l'instance de l'essai : le jeton et le port lus
+ *  e. `oxoai outils` contre l'instance de l'essai : le jeton et le port lus
  *     dans les données, comme sur un poste ;
  *  f. « Retirer » : le lanceur et l'entrée du PATH s'en vont, le PATH du
  *     compte revient à l'identique, type compris.
@@ -621,86 +621,86 @@ function nouveauTerminal(commande, { machine = false, enPlus = "", env = {} } = 
  * LOCALAPPDATA qui le désignent, pour le module comme pour le lanceur.
  */
 async function essaiLigneDeCommande() {
-  dire("7. La commande helix : mise en place comme l'écran, puis lancée depuis un nouveau PowerShell");
+  dire("7. La commande oxoai : mise en place comme l'écran, puis lancée depuis un nouveau PowerShell");
   const cliApp = join(dirname(APP), "resources", "cli");
-  if (!verifier("le paquet porte la ligne de commande (resources\\cli\\helix.mjs)", existsSync(join(cliApp, "helix.mjs")), cliApp)) return;
+  if (!verifier("le paquet porte la ligne de commande (resources\\cli\\oxoai.mjs)", existsSync(join(cliApp, "oxoai.mjs")), cliApp)) return;
   const compte = join(TMP, "Moumoune & Kiki Élodie");
   const local = join(compte, "AppData", "Local");
-  const cliCompte = join(local, "Programs", "Helix & Cie", "resources", "cli");
+  const cliCompte = join(local, "Programs", "OxoAI & Cie", "resources", "cli");
   cpSync(cliApp, cliCompte, { recursive: true });
   const avant = pathDuCompte();
   dire(`   PATH du compte avant : ${avant.genre}, ${avant.valeur.length} caractères`);
   if (!verifier("le PATH du compte se lit dans le registre", avant.lu, avant.genre)) return;
 
-  const sauve = { USERPROFILE: process.env.USERPROFILE, LOCALAPPDATA: process.env.LOCALAPPDATA, APPDATA: process.env.APPDATA, HELIX_DATA_DIR: process.env.HELIX_DATA_DIR };
+  const sauve = { USERPROFILE: process.env.USERPROFILE, LOCALAPPDATA: process.env.LOCALAPPDATA, APPDATA: process.env.APPDATA, OXOAI_DATA_DIR: process.env.OXOAI_DATA_DIR };
   process.env.USERPROFILE = compte;
   process.env.LOCALAPPDATA = local;
   process.env.APPDATA = join(compte, "AppData", "Roaming");
-  delete process.env.HELIX_DATA_DIR;
+  delete process.env.OXOAI_DATA_DIR;
   const compteEnv = { USERPROFILE: compte, LOCALAPPDATA: local, APPDATA: process.env.APPDATA };
   try {
     const ligneDeCommande = createRequire(import.meta.url)(join(RACINE, "electron", "ligneDeCommande.cjs"));
-    const scriptCli = join(cliCompte, "helix.mjs");
+    const scriptCli = join(cliCompte, "oxoai.mjs");
     const pose = await ligneDeCommande.installer({ script: scriptCli });
-    const lanceur = join(compte, ".helix", "bin", "helix.cmd");
+    const lanceur = join(compte, ".oxoai", "bin", "oxoai.cmd");
     dire(`   état rendu : ${JSON.stringify({ ...pose, node: pose.node })}`);
-    verifier("« Mettre en place » : helix.cmd posé dans le dossier du compte, à jour, dossier dans le PATH du compte", pose.installe && pose.aJour && pose.ligneAjoutee && pose.dansLePath && !pose.erreurPath && existsSync(lanceur), JSON.stringify(pose));
+    verifier("« Mettre en place » : oxoai.cmd posé dans le dossier du compte, à jour, dossier dans le PATH du compte", pose.installe && pose.aJour && pose.ligneAjoutee && pose.dansLePath && !pose.erreurPath && existsSync(lanceur), JSON.stringify(pose));
     const contenu = existsSync(lanceur) ? readFileSync(lanceur, "utf8") : "";
-    writeFileSync(join(SORTIE, "helix.cmd.txt"), contenu);
-    verifier("le lanceur désigne le compte par ses variables (%USERPROFILE%, %LOCALAPPDATA%), pas en toutes lettres", contenu.includes("%LOCALAPPDATA%\\Programs\\Helix & Cie") && contenu.includes("%USERPROFILE%\\.helix\\data") && !contenu.includes("Élodie"), contenu.slice(0, 600));
+    writeFileSync(join(SORTIE, "oxoai.cmd.txt"), contenu);
+    verifier("le lanceur désigne le compte par ses variables (%USERPROFILE%, %LOCALAPPDATA%), pas en toutes lettres", contenu.includes("%LOCALAPPDATA%\\Programs\\OxoAI & Cie") && contenu.includes("%USERPROFILE%\\.oxoai\\data") && !contenu.includes("Élodie"), contenu.slice(0, 600));
     const apres = pathDuCompte();
-    verifier("PATH du compte : l'ancienne valeur, prolongée de notre seul dossier, type gardé", apres.genre === avant.genre.replace("absent", "ExpandString") && apres.valeur.startsWith(avant.valeur) && apres.valeur.slice(avant.valeur.length).replace(/^;/, "") === join(compte, ".helix", "bin"), `${apres.genre} …${apres.valeur.slice(-200)}`);
+    verifier("PATH du compte : l'ancienne valeur, prolongée de notre seul dossier, type gardé", apres.genre === avant.genre.replace("absent", "ExpandString") && apres.valeur.startsWith(avant.valeur) && apres.valeur.slice(avant.valeur.length).replace(/^;/, "") === join(compte, ".oxoai", "bin"), `${apres.genre} …${apres.valeur.slice(-200)}`);
     const deNouveau = await ligneDeCommande.installer({ script: scriptCli });
     verifier("une seconde mise en place n'ajoute pas le dossier une deuxième fois", pathDuCompte().valeur === apres.valeur && deNouveau.installe, pathDuCompte().valeur.slice(-200));
 
     // a. Le Node du PATH (celui qui fait tourner cet essai), mis après le PATH du compte.
-    const parPath = nouveauTerminal("helix --version", { enPlus: dirname(process.execPath), env: compteEnv });
-    dire(`   a. helix --version (Node du PATH) : code ${parPath.code}, « ${parPath.sortie} » ${parPath.erreur.slice(0, 300)}`);
-    verifier("a. un nouveau PowerShell trouve helix par le PATH du compte, avec le Node du PATH", parPath.code === 0 && /CLI \d+\.\d+\.\d+/.test(parPath.sortie), `${parPath.code} ${parPath.sortie} ${parPath.erreur.slice(0, 300)}`);
-    const parCmd = nouveauTerminal("cmd.exe /d /c helix --version", { enPlus: dirname(process.execPath), env: compteEnv });
+    const parPath = nouveauTerminal("oxoai --version", { enPlus: dirname(process.execPath), env: compteEnv });
+    dire(`   a. oxoai --version (Node du PATH) : code ${parPath.code}, « ${parPath.sortie} » ${parPath.erreur.slice(0, 300)}`);
+    verifier("a. un nouveau PowerShell trouve oxoai par le PATH du compte, avec le Node du PATH", parPath.code === 0 && /CLI \d+\.\d+\.\d+/.test(parPath.sortie), `${parPath.code} ${parPath.sortie} ${parPath.erreur.slice(0, 300)}`);
+    const parCmd = nouveauTerminal("cmd.exe /d /c oxoai --version", { enPlus: dirname(process.execPath), env: compteEnv });
     verifier("a. de même depuis l'Invite de commandes", parCmd.code === 0 && /CLI \d+\.\d+\.\d+/.test(parCmd.sortie), `${parCmd.code} ${parCmd.sortie} ${parCmd.erreur.slice(0, 300)}`);
 
-    // b. Aucun Node : ni dans le PATH (compte et System32 seulement), ni celui de Helix. Sauf si le PATH du compte de la machine en a déjà un.
+    // b. Aucun Node : ni dans le PATH (compte et System32 seulement), ni celui de OxoAI. Sauf si le PATH du compte de la machine en a déjà un.
     const nodeDuCompte = nouveauTerminal("if (Get-Command node.exe -ErrorAction SilentlyContinue) { exit 0 } else { exit 9 }", { env: compteEnv });
     if (nodeDuCompte.code === 9) {
-      const sansNode = nouveauTerminal("helix --version", { env: compteEnv });
-      dire(`   b. helix --version (aucun Node) : code ${sansNode.code}, ${sansNode.erreur.slice(0, 300)}`);
+      const sansNode = nouveauTerminal("oxoai --version", { env: compteEnv });
+      dire(`   b. oxoai --version (aucun Node) : code ${sansNode.code}, ${sansNode.erreur.slice(0, 300)}`);
       verifier("b. sans Node, le lanceur le dit (code 127), sans planter", sansNode.code === 127 && /Node 20/.test(sansNode.erreur), `${sansNode.code} ${sansNode.sortie} ${sansNode.erreur.slice(0, 300)}`);
-    } else dire("   b. le PATH du compte de cette machine a déjà un Node : les cas « aucun Node » et « Node de Helix seul » ne sont pas concluants");
+    } else dire("   b. le PATH du compte de cette machine a déjà un Node : les cas « aucun Node » et « Node de OxoAI seul » ne sont pas concluants");
 
-    // c. Le Node de Helix seul, à sa place (`<données>\openclaw-moteur\node\node.exe`).
-    const prive = join(compte, ".helix", "data", "openclaw-moteur", "node", "node.exe");
+    // c. Le Node de OxoAI seul, à sa place (`<données>\openclaw-moteur\node\node.exe`).
+    const prive = join(compte, ".oxoai", "data", "openclaw-moteur", "node", "node.exe");
     mkdirSync(dirname(prive), { recursive: true });
     copyFileSync(process.execPath, prive);
-    const parPrive = nouveauTerminal("helix --version", { env: compteEnv });
-    dire(`   c. helix --version (Node de Helix) : code ${parPrive.code}, « ${parPrive.sortie} » ${parPrive.erreur.slice(0, 300)}`);
-    verifier("c. sans Node dans le PATH, le lanceur prend celui que Helix pose", parPrive.code === 0 && /CLI \d+\.\d+\.\d+/.test(parPrive.sortie), `${parPrive.code} ${parPrive.sortie} ${parPrive.erreur.slice(0, 300)}`);
+    const parPrive = nouveauTerminal("oxoai --version", { env: compteEnv });
+    dire(`   c. oxoai --version (Node de OxoAI) : code ${parPrive.code}, « ${parPrive.sortie} » ${parPrive.erreur.slice(0, 300)}`);
+    verifier("c. sans Node dans le PATH, le lanceur prend celui que OxoAI pose", parPrive.code === 0 && /CLI \d+\.\d+\.\d+/.test(parPrive.sortie), `${parPrive.code} ${parPrive.sortie} ${parPrive.erreur.slice(0, 300)}`);
     const etatPrive = await ligneDeCommande.etat({ script: scriptCli });
     verifier("c. l'écran voit ce Node comme celui de l'application", etatPrive.node === "prive", etatPrive.node);
 
     // d. Un script dans un dossier accentué hors du compte : écrit en toutes lettres dans le lanceur.
     const ailleurs = join(TMP, "Applis é & 100% Cie", "cli");
     cpSync(cliApp, ailleurs, { recursive: true });
-    const lanceurAilleurs = join(TMP, "helix-ailleurs.cmd");
-    writeFileSync(lanceurAilleurs, ligneDeCommande.contenuLanceurWindows({ script: join(ailleurs, "helix.mjs") }));
-    const accents = nouveauTerminal("& $env:HELIX_ESSAI_LANCEUR --version", { env: { ...compteEnv, HELIX_ESSAI_LANCEUR: lanceurAilleurs } });
+    const lanceurAilleurs = join(TMP, "oxoai-ailleurs.cmd");
+    writeFileSync(lanceurAilleurs, ligneDeCommande.contenuLanceurWindows({ script: join(ailleurs, "oxoai.mjs") }));
+    const accents = nouveauTerminal("& $env:OXOAI_ESSAI_LANCEUR --version", { env: { ...compteEnv, OXOAI_ESSAI_LANCEUR: lanceurAilleurs } });
     dire(`   d. lanceur au script accentué : code ${accents.code}, « ${accents.sortie} » ${accents.erreur.slice(0, 300)}`);
     verifier("d. un chemin accentué, avec & et %, écrit en toutes lettres dans le lanceur, mène bien au script", accents.code === 0 && /CLI \d+\.\d+\.\d+/.test(accents.sortie), `${accents.code} ${accents.sortie} ${accents.erreur.slice(0, 300)}`);
 
     // e. Contre l'instance de l'essai, si elle répond encore : jeton et port lus dans ses données.
     const vivante = await fetch(`${G}/health`, { signal: AbortSignal.timeout(3000) }).then((r) => r.ok, () => false);
     if (vivante) {
-      const outils = nouveauTerminal("helix outils", { env: { ...compteEnv, HELIX_DATA_DIR: DONNEES } });
-      writeFileSync(join(SORTIE, "helix-outils.txt"), `${outils.code}\n${outils.sortie}\n-- stderr --\n${outils.erreur}`);
-      verifier("e. helix outils parle à l'instance de ce poste (jeton et port lus dans ses données)", outils.code === 0 && /Outils et connecteurs/.test(outils.sortie), `${outils.code} ${outils.sortie.slice(0, 200)} ${outils.erreur.slice(0, 300)}`);
-    } else dire("   e. l'instance de l'essai ne répond plus : helix outils n'est pas essayé");
+      const outils = nouveauTerminal("oxoai outils", { env: { ...compteEnv, OXOAI_DATA_DIR: DONNEES } });
+      writeFileSync(join(SORTIE, "oxoai-outils.txt"), `${outils.code}\n${outils.sortie}\n-- stderr --\n${outils.erreur}`);
+      verifier("e. oxoai outils parle à l'instance de ce poste (jeton et port lus dans ses données)", outils.code === 0 && /Outils et connecteurs/.test(outils.sortie), `${outils.code} ${outils.sortie.slice(0, 200)} ${outils.erreur.slice(0, 300)}`);
+    } else dire("   e. l'instance de l'essai ne répond plus : oxoai outils n'est pas essayé");
 
     // f. Retirer.
     const retire = await ligneDeCommande.retirer({ script: scriptCli });
     const fin = pathDuCompte();
-    verifier("f. « Retirer » : helix.cmd enlevé, PATH du compte revenu à l'identique (valeur et type)", !retire.installe && !existsSync(lanceur) && fin.valeur === avant.valeur && (fin.genre === avant.genre || (avant.genre === "absent" && fin.genre === "absent")), `${fin.genre} …${fin.valeur.slice(-200)}`);
-    const plusLa = nouveauTerminal("if (Get-Command helix -ErrorAction SilentlyContinue) { exit 0 } else { exit 9 }", { env: compteEnv });
-    verifier("f. un nouveau PowerShell ne trouve plus helix", plusLa.code === 9, `${plusLa.code} ${plusLa.sortie}`);
+    verifier("f. « Retirer » : oxoai.cmd enlevé, PATH du compte revenu à l'identique (valeur et type)", !retire.installe && !existsSync(lanceur) && fin.valeur === avant.valeur && (fin.genre === avant.genre || (avant.genre === "absent" && fin.genre === "absent")), `${fin.genre} …${fin.valeur.slice(-200)}`);
+    const plusLa = nouveauTerminal("if (Get-Command oxoai -ErrorAction SilentlyContinue) { exit 0 } else { exit 9 }", { env: compteEnv });
+    verifier("f. un nouveau PowerShell ne trouve plus oxoai", plusLa.code === 9, `${plusLa.code} ${plusLa.sortie}`);
   } finally {
     for (const [nom, valeur] of Object.entries(sauve)) {
       if (valeur === undefined) delete process.env[nom];
@@ -714,11 +714,11 @@ try {
 } catch (err) {
   verifier("l'essai s'est déroulé sans exception", false, err?.stack ?? err);
 } finally {
-  // La commande helix, que le parcours ait abouti ou non ; avant l'arrêt de l'application, pour « helix outils ».
+  // La commande oxoai, que le parcours ait abouti ou non ; avant l'arrêt de l'application, pour « oxoai outils ».
   try {
     await essaiLigneDeCommande();
   } catch (err) {
-    verifier("7. l'essai de la commande helix s'est déroulé sans exception", false, err?.stack ?? err);
+    verifier("7. l'essai de la commande oxoai s'est déroulé sans exception", false, err?.stack ?? err);
   }
   dire(`Durée : ${((Date.now() - debut) / 60_000).toFixed(1)} min.`);
   arreterApplication();

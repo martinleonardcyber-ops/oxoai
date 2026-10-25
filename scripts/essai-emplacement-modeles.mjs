@@ -40,7 +40,7 @@ const portLibre = () =>
 const attendre = (ms) => new Promise((r) => setTimeout(r, ms));
 
 // Chemin réel : sous macOS, le dossier temporaire est derrière un lien (/var → /private/var).
-const TMP = realpathSync(mkdtempSync(join(tmpdir(), "helix-essai-emplacement-")));
+const TMP = realpathSync(mkdtempSync(join(tmpdir(), "oxoai-essai-emplacement-")));
 const MAISON = join(TMP, "maison");
 const BIN = join(TMP, "bin");
 const ESPACE = join(TMP, "espace-agents");
@@ -92,19 +92,19 @@ async function demarrer(moteur, donnees) {
       HOME: MAISON,
       USERPROFILE: MAISON,
       LANG: "C",
-      HELIX_CONFIG: join(TMP, "profil.json"),
-      HELIX_DATA_DIR: DONNEES,
-      HELIX_GATEWAY_PORT: String(port),
-      HELIX_WORKSPACE: ESPACE,
-      HELIX_MOTEUR: moteur,
+      OXOAI_CONFIG: join(TMP, "profil.json"),
+      OXOAI_DATA_DIR: DONNEES,
+      OXOAI_GATEWAY_PORT: String(port),
+      OXOAI_WORKSPACE: ESPACE,
+      OXOAI_MOTEUR: moteur,
       // Le même d'un démarrage à l'autre, comme le port habituel (8795) : un serveur laissé par la passerelle précédente y est retrouvé.
-      HELIX_LLAMACPP_PORT: String(portsLlama.get(donnees) ?? portsLlama.set(donnees, await portLibre()).get(donnees)),
-      HELIX_LMSTUDIO_URL: "http://127.0.0.1:9/v1",
-      HELIX_EXO_URL: "http://127.0.0.1:9/v1",
+      OXOAI_LLAMACPP_PORT: String(portsLlama.get(donnees) ?? portsLlama.set(donnees, await portLibre()).get(donnees)),
+      OXOAI_LMSTUDIO_URL: "http://127.0.0.1:9/v1",
+      OXOAI_EXO_URL: "http://127.0.0.1:9/v1",
       // Jamais l'application LM Studio de la machine (/Applications) : un dossier vide.
-      HELIX_APPS_DIR: join(TMP, "Applications"),
-      HELIX_OPENCODE_BIN: join(BIN, "opencode"),
-      HELIX_RTK_BIN: join(BIN, "rtk"),
+      OXOAI_APPS_DIR: join(TMP, "Applications"),
+      OXOAI_OPENCODE_BIN: join(BIN, "opencode"),
+      OXOAI_RTK_BIN: join(BIN, "rtk"),
     },
     stdio: ["ignore", "pipe", "pipe"],
   });
@@ -131,21 +131,21 @@ async function arreter() {
 }
 
 // En français, quel que soit l'environnement qui lance l'essai : les messages attendus sont comparés en français.
-const entetes = (seance) => ({ "Content-Type": "application/json", Authorization: `Bearer ${JETON}`, "X-Helix-Langue": "fr", ...(seance ? { "X-Helix-Session": seance } : {}) });
+const entetes = (seance) => ({ "Content-Type": "application/json", Authorization: `Bearer ${JETON}`, "X-OxoAI-Langue": "fr", ...(seance ? { "X-OxoAI-Session": seance } : {}) });
 const appel = async (chemin, seance, corps) => {
   const r = await fetch(`${G}${chemin}`, corps === undefined ? { headers: entetes(seance) } : { method: "POST", headers: entetes(seance), body: JSON.stringify(corps) });
   return { statut: r.status, json: await r.json().catch(() => ({})) };
 };
-const choisir = (seance, dossier) => appel("/helix/emplacement-modeles", seance, { dossier });
-const etat = async (seance) => (await appel("/helix/emplacement-modeles", seance)).json;
+const choisir = (seance, dossier) => appel("/oxoai/emplacement-modeles", seance, { dossier });
+const etat = async (seance) => (await appel("/oxoai/emplacement-modeles", seance)).json;
 
 /** L'administrateur (premier compte) et une collègue (créée par lui, son mot de passe choisi ensuite). */
 async function comptes() {
-  const admin = await appel("/helix/auth/create", null, { fullName: "Admin Essai", email: "admin@example.test", password: "Admin2Essai!Solide42" });
+  const admin = await appel("/oxoai/auth/create", null, { fullName: "Admin Essai", email: "admin@example.test", password: "Admin2Essai!Solide42" });
   const seanceAdmin = admin.json.session?.token ?? "";
-  const cree = await appel("/helix/auth/create", seanceAdmin, { fullName: "Collègue", email: "collegue@example.test", password: "Provisoire2Essai!11" });
+  const cree = await appel("/oxoai/auth/create", seanceAdmin, { fullName: "Collègue", email: "collegue@example.test", password: "Provisoire2Essai!11" });
   const id = cree.json.account?.id;
-  const change = await appel("/helix/auth/mot-de-passe-provisoire", null, { accountId: id, password: "Provisoire2Essai!11", nouveau: "Collegue2Essai!Solide57" });
+  const change = await appel("/oxoai/auth/mot-de-passe-provisoire", null, { accountId: id, password: "Provisoire2Essai!11", nouveau: "Collegue2Essai!Solide57" });
   return { admin: seanceAdmin, membre: change.json.session?.token ?? "" };
 }
 
@@ -153,7 +153,7 @@ async function comptes() {
 function protege(chemin) {
   const code = `const z = await import(${JSON.stringify(join(RACINE, "gateway", "src", "zonesProtegees.ts"))}); console.log(z.estProtege(${JSON.stringify(chemin)}) ? "PROTEGE" : "LIBRE");`;
   const r = spawnSync(process.execPath, ["--input-type=module", "-e", code], {
-    env: { PATH, HOME: MAISON, HELIX_DATA_DIR: DONNEES, HELIX_CONFIG: join(TMP, "profil.json") },
+    env: { PATH, HOME: MAISON, OXOAI_DATA_DIR: DONNEES, OXOAI_CONFIG: join(TMP, "profil.json") },
     encoding: "utf8",
   });
   return (r.stdout + r.stderr).trim();
@@ -228,7 +228,7 @@ try {
   const { admin, membre } = await comptes();
   verifier("les deux comptes s'ouvrent (administrateur, collègue)", Boolean(admin && membre), `${admin.length} ${membre.length}`);
 
-  const sansSeance = await fetch(`${G}/helix/emplacement-modeles`, { headers: { Authorization: `Bearer ${JETON}` } });
+  const sansSeance = await fetch(`${G}/oxoai/emplacement-modeles`, { headers: { Authorization: `Bearer ${JETON}` } });
   verifier("lire l'emplacement demande une séance (401)", sansSeance.status === 401, sansSeance.status);
   const e0 = await etat(admin);
   verifier("l'emplacement habituel est ~/.lmstudio, choix libre (rien d'installé)", e0.moteur === "lmstudio" && e0.dossier === join(MAISON, ".lmstudio") && e0.parDefaut === true && e0.changement === "libre", JSON.stringify(e0).slice(0, 300));
@@ -238,7 +238,7 @@ try {
 
   const parMembre = await choisir(membre, DISQUE_D);
   verifier("une collègue (non administratrice) ne choisit pas l'emplacement (403), rien n'est écrit", parMembre.statut === 403 && !existsSync(POINTEUR) && !existsSync(join(DISQUE_D, "LM Studio")), `${parMembre.statut} ${existsSync(POINTEUR)}`);
-  const verifMembre = await appel("/helix/emplacement-modeles/verifier", membre, { dossier: DISQUE_D });
+  const verifMembre = await appel("/oxoai/emplacement-modeles/verifier", membre, { dossier: DISQUE_D });
   verifier("une collègue ne sonde pas non plus les disques de la machine (403)", verifMembre.statut === 403, verifMembre.statut);
 
   const refus = async (nom, dossier, motif) => {
@@ -258,7 +258,7 @@ try {
   await refus("lien symbolique vers l'espace des agents : jugé comme sa cible, refusé", lien, /espace de travail des agents/);
   rmSync(lien);
 
-  const verif = await appel("/helix/emplacement-modeles/verifier", admin, { dossier: DISQUE_D });
+  const verif = await appel("/oxoai/emplacement-modeles/verifier", admin, { dossier: DISQUE_D });
   verifier("vérifier un dossier rend sa place libre sans rien créer", verif.statut === 200 && verif.json.libre > 0 && !existsSync(join(DISQUE_D, "LM Studio")), `${verif.statut} ${JSON.stringify(verif.json)}`);
 
   const ok = await choisir(admin, DISQUE_D);
@@ -274,7 +274,7 @@ try {
 
   // Rechoisir le même dossier (revue du 28/09/2026) : son sous-dossier est une zone protégée, il était refusé comme tel.
   const memeD = await choisir(admin, DISQUE_D);
-  const verifMeme = await appel("/helix/emplacement-modeles/verifier", admin, { dossier: DISQUE_D });
+  const verifMeme = await appel("/oxoai/emplacement-modeles/verifier", admin, { dossier: DISQUE_D });
   verifier(
     "rechoisir le dossier déjà retenu : accepté sans rien changer (200), pas « protégé »",
     memeD.statut === 200 && memeD.json.dossier === attendu && readFileSync(POINTEUR, "utf8") === attendu && verifMeme.statut === 200 && verifMeme.json.actuel === true,
@@ -301,13 +301,13 @@ try {
   writeFileSync(join(MAISON, ".lmstudio", "bin", "lms"), "#!/bin/sh\nexit 1\n", { mode: 0o755 });
   const e3 = await etat(admin);
   verifier("moteur posé ailleurs qu'à l'emplacement choisi : l'écran le dit, et propose de revenir", /et non à l'emplacement choisi/.test(e3.alerte ?? "") && e3.revenir === true, JSON.stringify(e3).slice(0, 400));
-  const provision = (await appel("/helix/provision", admin)).json;
+  const provision = (await appel("/oxoai/provision", admin)).json;
   verifier("l'écran de mise en route ne le compte pas comme installé", provision.moteurInstalle === false, provision.moteurInstalle);
   if (process.platform !== "darwin" || process.arch === "arm64") {
-    const install = await appel("/helix/provision/moteur", admin, { conditionsAcceptees: true });
+    const install = await appel("/oxoai/provision/moteur", admin, { conditionsAcceptees: true });
     let fin = {};
     for (let i = 0; i < 40; i++) {
-      fin = (await appel("/helix/provision", admin)).json.state ?? {};
+      fin = (await appel("/oxoai/provision", admin)).json.state ?? {};
       if (fin.phase === "error") break;
       await attendre(250);
     }
@@ -371,7 +371,7 @@ try {
       return d;
     };
     // Le même dossier, rechoisi avec un modèle posé (revue du 28/09/2026) : il était refusé (« pas vide », « protégé »).
-    const vMeme = await appel("/helix/emplacement-modeles/verifier", s, { dossier: DISQUE_D });
+    const vMeme = await appel("/oxoai/emplacement-modeles/verifier", s, { dossier: DISQUE_D });
     const cMeme = await choisir(s, DISQUE_D);
     verifier(
       "modèles posés, même dossier rechoisi : rien à déplacer (200), rien ne bouge",
@@ -411,7 +411,7 @@ try {
         return null;
       }
     };
-    const petit = monter("HelixPetit", "64m");
+    const petit = monter("OxoAIPetit", "64m");
     if (petit) {
       const dp = await choisir(s, petit);
       const finp = await suivre();
@@ -421,7 +421,7 @@ try {
         `${dp.statut} ${JSON.stringify(finp)}`,
       );
     }
-    volume = monter("HelixEssai", "3g");
+    volume = monter("OxoAIEssai", "3g");
     if (volume) {
       const modelesV = join(volume, "modeles-llamacpp");
       const d2 = await choisir(s, volume);
@@ -434,7 +434,7 @@ try {
           fin2.phase === "fini" &&
           createHash("sha256").update(readFileSync(join(modelesV, partiel))).digest("hex") === empreinte &&
           !existsSync(join(modelesE, partiel)) &&
-          !readdirSync(modelesV).some((n) => n.endsWith(".copie-helix")),
+          !readdirSync(modelesV).some((n) => n.endsWith(".copie-oxoai")),
         `${d2.statut} ${JSON.stringify(fin2)} ${readdirSync(modelesV).join(",")}`,
       );
 
@@ -502,13 +502,13 @@ try {
     const suivreMiseEnRoute = async () => {
       let e = {};
       for (let i = 0; i < 120; i++) {
-        e = (await appel("/helix/provision", s)).json.state ?? {};
+        e = (await appel("/oxoai/provision", s)).json.state ?? {};
         if (e.phase === "error" || e.phase === "ready" || e.phase === "downloading") return e;
         await attendre(250);
       }
       return e;
     };
-    const lance = await appel("/helix/provision/start", s, { model: "qwen3-8b" });
+    const lance = await appel("/oxoai/provision/start", s, { model: "qwen3-8b" });
     const e1 = await suivreMiseEnRoute();
     verifier(
       "moteur qui ne démarre pas : la mise en route s'arrête et le dit, sans télécharger le modèle suivant",
@@ -522,9 +522,9 @@ try {
      * avec elle.
      */
     writeFileSync(faux, Buffer.concat([Buffer.from([0xcf, 0xfa, 0xed, 0xfe, 0x07, 0x00, 0x00, 0x01]), randomBytes(4096)]), { mode: 0o755 });
-    await appel("/helix/provision/start", s, { model: "qwen3-8b" });
+    await appel("/oxoai/provision/start", s, { model: "qwen3-8b" });
     const e2 = await suivreMiseEnRoute();
-    const ecran = await appel("/helix/provision", s);
+    const ecran = await appel("/oxoai/provision", s);
     verifier(
       "moteur que le système ne sait pas lancer : l'écran répond (200), la mise en route dit que le moteur ne répond pas",
       ecran.statut === 200 && e2.phase === "error" && /ne répond pas/.test(e2.error ?? ""),
@@ -538,7 +538,7 @@ try {
      * « Bonjour » à l'essai de santé), et de faux modèles posés sous leur nom
      * du catalogue : aucun téléchargement. Puis la passerelle tuée net : le
      * serveur qu'elle laisse est arrêté et remplacé au redémarrage (il était
-     * gardé, ne voyait pas un modèle posé depuis, et survivait à Helix).
+     * gardé, ne voyait pas un modèle posé depuis, et survivait à OxoAI).
      */
     if (process.execPath.includes(" ")) {
       console.log("  (Node dans un chemin avec espace : pas de faux llama-server par script, cette partie est sautée)");
@@ -553,15 +553,15 @@ try {
       const suivrePret = async () => {
         let e = {};
         for (let i = 0; i < 240; i++) {
-          e = (await appel("/helix/provision", s)).json.state ?? {};
+          e = (await appel("/oxoai/provision", s)).json.state ?? {};
           if (e.phase === "error" || e.phase === "ready") return e;
           await attendre(250);
         }
         return e;
       };
-      await appel("/helix/provision/start", s, { model: "qwen3-1.7b" });
+      await appel("/oxoai/provision/start", s, { model: "qwen3-1.7b" });
       const p1 = await suivrePret();
-      const statut1 = (await appel("/helix/provision", s)).json;
+      const statut1 = (await appel("/oxoai/provision", s)).json;
       verifier(
         "emplacement choisi puis mise en route : le modèle posé là est chargé, essayé, prêt, et le Chat a un modèle",
         cg.statut === 200 && p1.phase === "ready" && statut1.hasChatModel === true && readFileSync(join(DONNEES, "llamacpp", "modeles.ini"), "utf8").includes(join(modelesG, "Qwen3-1.7B-Q8_0.gguf")),
@@ -573,7 +573,7 @@ try {
       verifier("passerelle tuée net : son llama-server reste (orphelin)", avant.length === 1 && vivant(avant[0]), avant.join(","));
       writeFileSync(join(modelesG, "Qwen3-4B-Q4_K_M.gguf"), "faux modèle");
       await demarrer("llamacpp", DONNEES);
-      await appel("/helix/provision/start", s, { model: "qwen3-4b" });
+      await appel("/oxoai/provision/start", s, { model: "qwen3-4b" });
       const p2 = await suivrePret();
       const apres = fauxServeurs();
       verifier(
@@ -607,7 +607,7 @@ try {
       /* déjà démonté */
     }
   }
-  if (echecs.length && process.env.HELIX_ESSAI_BAVARD) console.log(journal.slice(-4000));
+  if (echecs.length && process.env.OXOAI_ESSAI_BAVARD) console.log(journal.slice(-4000));
   rmSync(TMP, { recursive: true, force: true });
 }
 console.log(`\n${reussis} vérification(s) réussie(s), ${echecs.length} échec(s).`);

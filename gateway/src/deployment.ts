@@ -5,12 +5,12 @@ import type { Role } from "./types.ts";
 /**
  * Profil de déploiement client.
  *
- * Helix est installé par l'intégrateur, réglé sur le matériel et les usages de
+ * OxoAI est installé par l'intégrateur, réglé sur le matériel et les usages de
  * chaque client (cluster de Mac Studio, poste isolé, serveur mutualisé). Ce
  * fichier prime sur toute détection automatique : ce que l'intégrateur écrit
  * ici fait foi.
  *
- * Fichier : `helix.config.json` à la racine, ou chemin donné par HELIX_CONFIG.
+ * Fichier : `oxoai.config.json` à la racine, ou chemin donné par OXOAI_CONFIG.
  * Absent, la passerelle retombe sur la détection automatique (ADR-009).
  */
 
@@ -85,11 +85,11 @@ export interface DeploymentProfile {
   chiffrement?: "trousseau" | "fichier" | false;
   /**
    * Autoriser l'ajout d'un connecteur MCP dont la commande n'est pas au
-   * catalogue de Helix.
+   * catalogue de OxoAI.
    *
    * Absent ou `false` — le défaut, et la seule valeur raisonnable pour une
    * instance partagée : seuls les connecteurs du catalogue s'installent, et
-   * leur commande vient de Helix, jamais de la requête. `true` ouvre l'exécution
+   * leur commande vient de OxoAI, jamais de la requête. `true` ouvre l'exécution
    * d'une commande arbitraire à quiconque détient une séance sur l'instance :
    * c'est de l'exécution de code sur la machine de l'entreprise. À ne mettre que
    * pour brancher un serveur MCP interne, sur une instance dont on maîtrise qui
@@ -111,7 +111,7 @@ export interface DeploymentProfile {
    * Client OAuth Google de **cette entreprise**, pour le connecteur Google
    * Drive (gateway/src/drive.ts).
    *
-   * Aucun identifiant n'est livré avec Helix, et c'est voulu : un client OAuth
+   * Aucun identifiant n'est livré avec OxoAI, et c'est voulu : un client OAuth
    * commun à toutes les installations ferait de l'agence l'éditeur d'une
    * application Google qui lit le Drive de tous ses clients, avec la
    * vérification annuelle payante qu'impose la portée `drive.readonly`, et un
@@ -125,14 +125,14 @@ export interface DeploymentProfile {
    */
   google?: { clientId?: string; clientSecret?: string };
   /**
-   * Employés OpenClaw (employes.ts). Helix cherche OpenClaw tout seul (PATH,
+   * Employés OpenClaw (employes.ts). OxoAI cherche OpenClaw tout seul (PATH,
    * nvm, Homebrew) ; `chemin` impose un exécutable précis, `port` déplace
    * l'instance dédiée si 18800 est pris sur la machine.
    */
   openclaw?: {
     chemin?: string;
     port?: number;
-    /** Version d'OpenClaw installée par Helix (défaut : celle qu'Helix a éprouvée). */
+    /** Version d'OpenClaw installée par OxoAI (défaut : celle qu'OxoAI a éprouvée). */
     version?: string;
     /** Version de Node installée pour OpenClaw (défaut : dernière 24 LTS). */
     node?: string;
@@ -171,7 +171,7 @@ export interface DeploymentProfile {
    * la passerelle refuse aussi une demande qui la réclamerait quand même.
    *
    * Ne touche ni au palier « étendu » des employés OpenClaw ni à la recherche
-   * web de Helix Code, qui ont leurs propres réglages.
+   * web de OxoAI Code, qui ont leurs propres réglages.
    */
   rechercheWeb?: boolean;
 }
@@ -182,9 +182,9 @@ const DEFAULT_PROFILE: DeploymentProfile = {
 };
 
 function locate(): string | null {
-  const explicit = process.env.HELIX_CONFIG;
+  const explicit = process.env.OXOAI_CONFIG;
   if (explicit && existsSync(explicit)) return explicit;
-  const local = resolvePath(process.cwd(), "helix.config.json");
+  const local = resolvePath(process.cwd(), "oxoai.config.json");
   return existsSync(local) ? local : null;
 }
 
@@ -215,13 +215,13 @@ export function deployment(): DeploymentProfile {
     cached = { ...DEFAULT_PROFILE, ...parsed };
     ecrits = new Set(Object.keys(parsed));
     console.log(
-      `[helix] profil de déploiement chargé : ${path}` +
+      `[oxoai] profil de déploiement chargé : ${path}` +
         (parsed.client ? ` (client : ${parsed.client})` : ""),
     );
     return cached;
   } catch (err) {
     console.error(
-      `[helix] profil de déploiement illisible (${path}), retour aux valeurs par défaut :`,
+      `[oxoai] profil de déploiement illisible (${path}), retour aux valeurs par défaut :`,
       err instanceof Error ? err.message : err,
     );
     cached = DEFAULT_PROFILE;

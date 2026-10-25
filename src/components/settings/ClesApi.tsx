@@ -454,7 +454,7 @@ function Documentation({ etat }: { etat: EtatClesApi }) {
       <section className="space-y-2">
         <h4 className="text-sm font-medium text-foreground">{t("Bases de connaissances")}</h4>
         <p className="text-sm text-muted-foreground">
-          {t("Le champ connaissances reçoit les identifiants des bases à consulter : les passages proches de la question sont donnés au modèle, avec vos droits, comme dans le Chat. Sans flux, la réponse les rend dans helix.sources.")}
+          {t("Le champ connaissances reçoit les identifiants des bases à consulter : les passages proches de la question sont donnés au modèle, avec vos droits, comme dans le Chat. Sans flux, la réponse les rend dans oxoai.sources.")}
         </p>
         <BlocCode code={exemples.bases} libelle={t("l'exemple avec une base")} />
         {bases && bases.length > 0 && (

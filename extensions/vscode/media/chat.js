@@ -1,4 +1,4 @@
-// Page du Chat Helix dans VS Code. Aucun appel réseau ici : tout passe par l'extension.
+// Page du Chat OxoAI dans VS Code. Aucun appel réseau ici : tout passe par l'extension.
 (() => {
   const vscode = acquireVsCodeApi();
   const fil = document.getElementById("fil");
@@ -11,7 +11,7 @@
   let reflexionDepuis = 0;
   /** Arrivée du premier morceau de la réponse : une réflexion requalifiée commence là. */
   let premierMorceau = 0;
-  /** « chat » : le Chat de l'instance ; « code » : Helix Code sur le dossier ouvert. */
+  /** « chat » : le Chat de l'instance ; « code » : OxoAI Code sur le dossier ouvert. */
   let mode = "chat";
   const ongletChat = document.getElementById("onglet-chat");
   const ongletCode = document.getElementById("onglet-code");
@@ -19,7 +19,7 @@
     mode = m;
     ongletChat.setAttribute("aria-selected", String(m === "chat"));
     ongletCode.setAttribute("aria-selected", String(m === "code"));
-    saisie.placeholder = m === "code" ? "Demandez à Helix Code de modifier le projet…" : "Demandez à Helix…";
+    saisie.placeholder = m === "code" ? "Demandez à OxoAI Code de modifier le projet…" : "Demandez à OxoAI…";
     joindre.parentElement.style.visibility = m === "code" ? "hidden" : "visible";
   };
   ongletChat.addEventListener("click", () => choisir("chat"));
@@ -85,7 +85,7 @@
       ajouter("personne", rendu(m.texte) + (m.fichier ? `<span class="piece">${echapper(m.fichier)}</span>` : ""));
       texteEnCours = "";
       reflexionDepuis = 0;
-      enCours = ajouter("helix attente", "…");
+      enCours = ajouter("oxoai attente", "…");
       occupe(true);
     } else if (m.type === "reflexion" && enCours?.classList.contains("attente")) {
       if (!reflexionDepuis) reflexionDepuis = Date.now();
@@ -109,7 +109,7 @@
       enCours.innerHTML = rendu(texteEnCours);
       fil.scrollTop = fil.scrollHeight;
     } else if (m.type === "code" && enCours) {
-      // Helix Code : ses actions s'empilent au-dessus de sa réponse.
+      // OxoAI Code : ses actions s'empilent au-dessus de sa réponse.
       enCours.classList.remove("attente");
       if (enCours.textContent === "…") enCours.innerHTML = "";
       // Le modèle lit la demande, attend son tour ou se charge : une ligne qui se réécrit, retirée dès qu'il répond.

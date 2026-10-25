@@ -2,7 +2,7 @@ import { createHash, randomInt, timingSafeEqual } from "node:crypto";
 import { db } from "./db.ts";
 import { journaliser } from "./audit.ts";
 import { nomProduit, NomProduit } from "./marque.ts";
-import { envoiActif, envoyerDeHelix } from "./courrier.ts";
+import { envoiActif, envoyerDeOxoAI } from "./courrier.ts";
 import { t } from "./langue.ts";
 
 /**
@@ -24,7 +24,7 @@ import { t } from "./langue.ts";
  * adresse, valable sept jours, et bon une seule fois. Avec lui, et lui seul,
  * la personne fait tout elle-même :
  *
- *   1. elle rattache son poste (`/helix/invitations/accepter` lui remet le
+ *   1. elle rattache son poste (`/oxoai/invitations/accepter` lui remet le
  *      jeton d'instance, qu'elle n'a donc jamais à recopier) ;
  *   2. elle ouvre son compte et **choisit son propre mot de passe** —
  *      personne d'autre ne l'a connu ;
@@ -185,7 +185,7 @@ export async function inviter(
   let motif: string | undefined;
   if (envoiActif()) {
     try {
-      const r = await envoyerDeHelix(
+      const r = await envoyerDeOxoAI(
         email,
         objetDuMail(nomInvitant),
         texteDuMail(nomInvitant, adresseInstance, code, autresAdresses),
@@ -227,7 +227,7 @@ const objetDuMail = (nomInvitant: string): string =>
  *
  * Recopier une adresse **et** un code, c'est deux occasions de se tromper, et
  * c'est la marche que les gens ratent. L'application s'enregistre auprès du
- * système comme ouvrant les liens `helix:` : cliquer suffit alors, et les deux
+ * système comme ouvrant les liens `oxoai:` : cliquer suffit alors, et les deux
  * champs arrivent remplis. Quand le clic ne marche pas — {@link
  * https://www.rfc-editor.org/rfc/rfc7595 un schéma privé ne s'ouvre que si
  * l'application est installée} — le lien reste collable dans le champ
@@ -240,11 +240,11 @@ const objetDuMail = (nomInvitant: string): string =>
  */
 export function lienDInvitation(adresse: string, code: string): string {
   const champs = new URLSearchParams({ a: adresse, c: code });
-  return `helix://rejoindre#${champs.toString()}`;
+  return `oxoai://rejoindre#${champs.toString()}`;
 }
 
 /**
- * Texte du mail. Écrit ici, jamais par un modèle : ce que Helix envoie en son
+ * Texte du mail. Écrit ici, jamais par un modèle : ce que OxoAI envoie en son
  * propre nom doit être relisible ligne à ligne dans le dépôt.
  */
 function texteDuMail(
@@ -255,7 +255,7 @@ function texteDuMail(
 ): string {
   /*
    * Le nom du produit s'insère dans des phrases : en marque blanche il vaut
-   * « Helix », « Atlas »… mais sans nom transmis, le repli est « l'application ».
+   * « OxoAI », « Atlas »… mais sans nom transmis, le repli est « l'application ».
    * Les tournures ci-dessous doivent rester justes dans les deux cas — d'où
    * « l'instance de … » plutôt que « son instance … », qui donnait « son
    * instance l'application ».
@@ -269,7 +269,7 @@ function texteDuMail(
     ``,
     /*
      * Tournures sans accord : sans marque transmise, le repli de `nomProduit`
-     * est « l'application », féminin, là où « Helix » est masculin. « … est
+     * est « l'application », féminin, là où « OxoAI » est masculin. « … est
      * installé » donnait « L'application est installé ». On écrit donc des
      * phrases qui tiennent dans les deux cas.
      */

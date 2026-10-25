@@ -1,5 +1,5 @@
 /**
- * Redéfinir le mot de passe d'un compte Helix, depuis le poste.
+ * Redéfinir le mot de passe d'un compte OxoAI, depuis le poste.
  *
  * Il n'existe pas de « mot de passe oublié » par courriel : l'instance ne sait
  * pas envoyer de courrier, et n'a personne à qui le demander. La seule autorité
@@ -41,7 +41,7 @@ import { apercuEffacement, effacerCompte } from "../src/effacement.ts";
  * les séances, et les réécrirait par-dessus.
  */
 async function instanceEnMarche(): Promise<boolean> {
-  const port = Number(process.env.HELIX_GATEWAY_PORT ?? 8787);
+  const port = Number(process.env.OXOAI_GATEWAY_PORT ?? 8787);
   try {
     const r = await fetch(`http://127.0.0.1:${port}/health`, { signal: AbortSignal.timeout(1500) });
     return r.ok;
@@ -112,7 +112,7 @@ function demander(question: string): Promise<string> {
 async function principal(): Promise<void> {
   const comptes = await publicAccounts();
   if (comptes.length === 0) {
-    console.log("Aucun compte sur cette instance. Ouvrez Helix : le premier compte s'y crée.");
+    console.log("Aucun compte sur cette instance. Ouvrez OxoAI : le premier compte s'y crée.");
     return;
   }
 
@@ -210,7 +210,7 @@ async function principal(): Promise<void> {
 
   console.log(`\nMot de passe redéfini pour ${compte.email}.`);
   console.log("Le changement est inscrit au journal d'audit.");
-  console.log("Quittez Helix puis rouvrez-le pour vous connecter.\n");
+  console.log("Quittez OxoAI puis rouvrez-le pour vous connecter.\n");
 }
 
 principal().catch((err: unknown) => {

@@ -74,7 +74,7 @@ export async function groupesDe(qui: string): Promise<string[]> {
   try {
     return (await charger()).filter((g) => g.membres.includes(qui)).map((g) => g.id);
   } catch (err) {
-    console.error(`[helix] groupes illisibles, ignorés pour les droits : ${(err as Error).message}`);
+    console.error(`[oxoai] groupes illisibles, ignorés pour les droits : ${(err as Error).message}`);
     return [];
   }
 }

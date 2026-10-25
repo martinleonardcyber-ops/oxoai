@@ -1,5 +1,5 @@
 name: Feature request
-description: Suggest something HelixAI should do.
+description: Suggest something OxoAI should do.
 labels: ["enhancement"]
 body:
   - type: textarea
@@ -17,4 +17,4 @@ body:
   - type: markdown
     attributes:
       value: |
-        Before a large change, please check [PROJET.md](https://github.com/medhiclb/HelixAI/blob/main/PROJET.md): some directions have already been decided or ruled out, with their reasons.
+        Before a large change, please check [PROJET.md](https://github.com/martinleonardcyber-ops/oxoai/blob/main/PROJET.md): some directions have already been decided or ruled out, with their reasons.

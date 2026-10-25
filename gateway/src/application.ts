@@ -7,7 +7,7 @@ import { t, tf } from "./langue.ts";
 import { echapperRegex } from "./texteBrut.ts";
 
 /**
- * Les applications de gestion de Helix Code, faites en plusieurs étapes.
+ * Les applications de gestion de OxoAI Code, faites en plusieurs étapes.
  *
  * Demandé par Medhi le 26/09/2026 : « le petit modèle […] doit faire un beau
  * logiciel même si ça prend du temps », avec pour exemple l'écran d'un ERP
@@ -22,7 +22,7 @@ import { echapperRegex } from "./texteBrut.ts";
  *  1. le plan : les parties de l'application et leurs champs, en JSON tenu
  *     par un schéma (réponse contrainte, une seule forme possible) ;
  *  2. les exemples : quelques fiches réalistes par partie, une partie à la fois ;
- *  3. l'interface : écrite par Helix, pas par le modèle, à partir du plan
+ *  3. l'interface : écrite par OxoAI, pas par le modèle, à partir du plan
  *     (gateway/application : un moteur éprouvé, aux couleurs du design
  *     choisi par design.ts) ;
  *  4. les règles du métier : l'agent de code complète un seul petit fichier
@@ -306,7 +306,7 @@ export async function planifierApplication(
   qui: string,
   statut: (message: string) => void,
 ): Promise<PlanApplication | null> {
-  statut(t("Helix prépare l'application, étape 1 sur 4 : le plan des parties et des champs..."));
+  statut(t("OxoAI prépare l'application, étape 1 sur 4 : le plan des parties et des champs..."));
   const r = await completer(
     [
       { role: "system", content: CONSIGNE_PLAN },
@@ -326,7 +326,7 @@ export async function planifierApplication(
 
   const exemples: Record<string, Record<string, unknown>[]> = {};
   for (const [i, p] of plan.modules.entries()) {
-    statut(tf("Helix prépare l'application, étape 2 sur 4 : les exemples de « {0} » ({1} sur {2})...", p.nom, i + 1, plan.modules.length));
+    statut(tf("OxoAI prépare l'application, étape 2 sur 4 : les exemples de « {0} » ({1} sur {2})...", p.nom, i + 1, plan.modules.length));
     const fiches = await exemplesDe(plan, p, demande, qui);
     // Faute de réponse, des fiches sobres plutôt que rien : la page doit montrer ce qu'elle fait.
     exemples[p.cle] = nettoyerFiches(p, fiches ?? Array.from({ length: 4 }, () => ({})), i + 1);
@@ -434,7 +434,7 @@ export function theme(design: Design | undefined): string {
     "--police-texte": policeTexte,
   };
   return `/*
- * Couleurs et polices de l'application, préparées par Helix${design ? ` (style « ${design.style} » pour « ${design.produit} »)` : ""}.
+ * Couleurs et polices de l'application, préparées par OxoAI${design ? ` (style « ${design.style} » pour « ${design.produit} »)` : ""}.
  * C'est le fichier à modifier pour changer l'allure ; le reste de la mise en page est dans app.css.
  */
 :root {
@@ -463,15 +463,15 @@ function resumePlan(plan: PlanApplication): string {
 
 ${plan.sousTitre}
 
-Application préparée par Helix en plusieurs étapes : le plan ci-dessous, des fiches d'exemple, puis l'interface complète.
+Application préparée par OxoAI en plusieurs étapes : le plan ci-dessous, des fiches d'exemple, puis l'interface complète.
 Elle s'ouvre avec \`index.html\`, sans serveur. Les données sont enregistrées sur le poste (localStorage du navigateur).
 
 ## Les fichiers
 
-- \`app/plan.js\` : les parties, leurs champs et les fiches d'exemple (\`window.PLAN\`), écrits par Helix.
+- \`app/plan.js\` : les parties, leurs champs et les fiches d'exemple (\`window.PLAN\`), écrits par OxoAI.
 - \`app/metier.js\` : les règles du métier. \`champs\` ajoute des champs aux parties (l'interface suit), \`completer\` remplit les champs calculés, \`valider\` contrôle avant l'enregistrement, \`indicateurs\` donne des chiffres au tableau de bord.
 - \`app/theme.css\` : les couleurs et les polices.
-- \`index.html\`, \`app/app.js\`, \`app/app.css\` : le moteur et la mise en page, écrits par Helix. Ils marchent : ne pas les réécrire.
+- \`index.html\`, \`app/app.js\`, \`app/app.css\` : le moteur et la mise en page, écrits par OxoAI. Ils marchent : ne pas les réécrire.
 
 ## Les parties
 
@@ -506,7 +506,7 @@ export function ecrireApplication(dossier: string, plan: PlanApplication, design
     ["app/app.js", modele.app],
     ["app/app.css", modele.css],
     ["app/theme.css", theme(design)],
-    ["app/plan.js", `/* Plan de l'application, préparé par Helix : parties, champs et fiches d'exemple. Voir app/PLAN.md. */\nwindow.PLAN = ${JSON.stringify(plan, null, 2)};\n`],
+    ["app/plan.js", `/* Plan de l'application, préparé par OxoAI : parties, champs et fiches d'exemple. Voir app/PLAN.md. */\nwindow.PLAN = ${JSON.stringify(plan, null, 2)};\n`],
     ["app/metier.js", modele.metier],
     ["app/PLAN.md", resumePlan(plan)],
   ];
@@ -514,7 +514,7 @@ export function ecrireApplication(dossier: string, plan: PlanApplication, design
   return fichiers.map(([nom]) => nom);
 }
 
-/** Une application déjà préparée par Helix dans ce dossier (la suite d'une conversation). */
+/** Une application déjà préparée par OxoAI dans ce dossier (la suite d'une conversation). */
 export function applicationPreparee(dossier: string): boolean {
   return existsSync(join(dossier, "app", "plan.js")) && existsSync(join(dossier, "app", "app.js"));
 }
@@ -538,8 +538,8 @@ export function consigneApplication(plan: PlanApplication | null, dossier: strin
     "",
     "---",
     plan
-      ? `Helix a déjà construit l'application « ${plan.nom} » pour cette demande, en plusieurs étapes : le plan (${plan.modules.map((p) => p.nom).join(", ")}), des fiches d'exemple, puis l'interface complète (tableau de bord, menu, filtres, recherche, tri, pages, fiche détaillée avec les éléments liés, ajout, modification, suppression, export, enregistrement sur le poste). Un programme l'a vérifiée.`
-      : "Helix a déjà construit l'application de ce dossier (voir app/PLAN.md).",
+      ? `OxoAI a déjà construit l'application « ${plan.nom} » pour cette demande, en plusieurs étapes : le plan (${plan.modules.map((p) => p.nom).join(", ")}), des fiches d'exemple, puis l'interface complète (tableau de bord, menu, filtres, recherche, tri, pages, fiche détaillée avec les éléments liés, ajout, modification, suppression, export, enregistrement sur le poste). Un programme l'a vérifiée.`
+      : "OxoAI a déjà construit l'application de ce dossier (voir app/PLAN.md).",
     `Le dossier du projet est ${dossier}. Les chemins ci-dessous (app/PLAN.md, app/metier.js…) sont relatifs à ce dossier : app/PLAN.md est ${join(dossier, "app", "PLAN.md")} et app/metier.js est ${join(dossier, "app", "metier.js")}. Jamais /app/… : ce serait un autre dossier, hors du projet.`,
     "Ton travail, dans cet ordre, une étape après l'autre :",
     "1. Lis app/PLAN.md, puis app/metier.js.",

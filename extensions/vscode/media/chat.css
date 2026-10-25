@@ -5,7 +5,7 @@ body { margin: 0; padding: 0; display: flex; flex-direction: column; height: 100
 .message { line-height: 1.55; word-wrap: break-word; }
 .personne { align-self: flex-end; max-width: 90%; padding: 8px 10px; border-radius: 10px; background: var(--vscode-input-background); border: 1px solid var(--vscode-input-border, transparent); }
 .piece { display: block; margin-top: 4px; font-size: 0.85em; color: var(--vscode-descriptionForeground); }
-.helix.attente { color: var(--vscode-descriptionForeground); }
+.oxoai.attente { color: var(--vscode-descriptionForeground); }
 .erreur { color: var(--vscode-errorForeground); }
 code { font-family: var(--vscode-editor-font-family); font-size: 0.95em; background: var(--vscode-textCodeBlock-background); padding: 1px 4px; border-radius: 4px; }
 .bloc { position: relative; margin: 8px 0; }

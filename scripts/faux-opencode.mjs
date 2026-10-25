@@ -116,11 +116,11 @@ const serveur = http.createServer((req, res) => {
     }
     if (chemin === "/config/providers") {
       const config = JSON.parse(readFileSync(join(process.env.OPENCODE_CONFIG_DIR ?? "", "opencode.json"), "utf8"));
-      return json({ providers: [{ id: "helix", models: config.provider?.helix?.models ?? {} }] });
+      return json({ providers: [{ id: "oxoai", models: config.provider?.oxoai?.models ?? {} }] });
     }
     if (chemin === "/session/status") return json({});
     if (chemin === "/api/session/active") return json({ data: {} });
-    if (chemin === "/mcp/helix/connect") return json(true);
+    if (chemin === "/mcp/oxoai/connect") return json(true);
     if (chemin === "/session" && req.method === "POST") {
       const nouvelle = id("ses");
       dossiers.set(nouvelle, url.searchParams.get("directory") ?? "");

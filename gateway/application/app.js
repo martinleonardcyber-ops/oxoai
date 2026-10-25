@@ -1,5 +1,5 @@
 /*
- * Moteur de l'application, écrit par Helix (gateway/application/app.js).
+ * Moteur de l'application, écrit par OxoAI (gateway/application/app.js).
  *
  * Tout ce qui est propre au métier est ailleurs :
  *  - app/plan.js : les parties de l'application, leurs champs et les exemples ;
@@ -13,7 +13,7 @@
   var PLAN = window.PLAN;
   var METIER = window.Metier || {};
   var PAR_PAGE = 12;
-  var CLE_STOCKAGE = "helix-app:" + (PLAN.cle || PLAN.nom);
+  var CLE_STOCKAGE = "oxoai-app:" + (PLAN.cle || PLAN.nom);
 
   /* ---------------- Icônes ---------------- */
   var ICONES = {

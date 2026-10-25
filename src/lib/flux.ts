@@ -32,7 +32,7 @@ const REPRISE_MAX_MS = 30_000;
  */
 export async function billet(): Promise<string | null> {
   try {
-    const res = await apiFetch("/helix/flux/ticket", { method: "POST" });
+    const res = await apiFetch("/oxoai/flux/ticket", { method: "POST" });
     if (!res.ok) return null;
     const corps = (await res.json()) as { billet?: string };
     return corps.billet ?? null;

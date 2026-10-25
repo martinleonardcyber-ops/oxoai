@@ -1,5 +1,31 @@
 # Droits et licence
 
+## OxoAI, version modifiée de HelixAI
+
+OxoAI est une **version modifiée** de [HelixAI](https://github.com/medhiclb/HelixAI),
+créée par Medhi Clabaut (Helix Agence) et publiée sous GNU AGPL-3.0. Comme
+l'exige l'article 5 de cette licence :
+
+- **Ce qui a changé**, depuis le 25/10/2026 : le nom (OxoAI), l'icône, le logo
+  et la couleur d'accent ; l'identifiant de l'application et ses dossiers de
+  données, pour ne pas se mélanger avec un HelixAI installé sur la même
+  machine ; les mises à jour, qui viennent de ce dépôt et sont signées par sa
+  propre clé ; les contacts (les tickets GitHub remplacent les adresses de
+  l'agence) ; l'écran d'abonnement, retiré. Le détail est dans l'historique
+  Git de ce dépôt.
+- **Licence** : OxoAI reste sous GNU AGPL-3.0 ([LICENSE](LICENSE)). Son code
+  complet est publié sur https://github.com/martinleonardcyber-ops/oxoai.
+- **Droits** : les droits d'auteur sur le code d'origine restent à Medhi
+  Clabaut, ci-dessous ; ceux des modifications appartiennent à leurs auteurs.
+  « Helix » et « HelixAI » désignent le projet d'origine, auquel OxoAI n'est
+  pas affilié.
+
+```
+Copyright (C) 2026 martinleonardcyber-ops, pour les modifications d'OxoAI
+```
+
+## Le projet d'origine, HelixAI
+
 HelixAI est publié sous **GNU Affero General Public License, version 3**
 ([LICENSE](LICENSE)).
 

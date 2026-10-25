@@ -213,12 +213,12 @@ export function SeancesEtJournal() {
   const [conservation, setConservation] = useState<number | null>(null);
 
   const charger = useCallback(() => {
-    void apiFetch("/helix/auth/sessions")
+    void apiFetch("/oxoai/auth/sessions")
       .then((r) => (r.ok ? r.json() : null))
       .then((d: { sessions?: Seance[] } | null) => setSeances(d?.sessions ?? []))
       .catch(() => setSeances([]));
 
-    void apiFetch("/helix/audit?limite=50")
+    void apiFetch("/oxoai/audit?limite=50")
       .then((r) => (r.ok ? r.json() : null))
       .then(
         (
@@ -240,7 +240,7 @@ export function SeancesEtJournal() {
   useEffect(charger, [charger]);
 
   const fermer = async (id: string) => {
-    await apiFetch("/helix/auth/revoke", {
+    await apiFetch("/oxoai/auth/revoke", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ id }),

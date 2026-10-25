@@ -188,7 +188,7 @@ export function basculerPourMoi(c: Competence, user: User, allumer: boolean): vo
   if (allumer) avant.delete(c.id);
   else avant.add(c.id);
   saveProfile({ ...profil, competencesEteintes: [...avant] });
-  window.dispatchEvent(new Event("helix:profile-changed"));
+  window.dispatchEvent(new Event("oxoai:profile-changed"));
 }
 
 /* ---- Exemples ------------------------------------------------------------ */

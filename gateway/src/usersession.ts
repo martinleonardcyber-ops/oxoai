@@ -87,7 +87,7 @@ async function charger(): Promise<StoredSession[]> {
         const abime = /abîmée/.test((err as Error).message);
         const garde = abime ? await Promise.resolve(db().mettreDeCote?.("authSessions")).catch(() => null) : null;
         if (!garde) sansEcriture = true;
-        console.error(`[helix] séances de connexion illisibles (${(err as Error).message}) : ${garde ? `gardées dans ${garde}, ` : "laissées en place, "}chacun se reconnecte.`);
+        console.error(`[oxoai] séances de connexion illisibles (${(err as Error).message}) : ${garde ? `gardées dans ${garde}, ` : "laissées en place, "}chacun se reconnecte.`);
         cache = [];
       }
       return cache;

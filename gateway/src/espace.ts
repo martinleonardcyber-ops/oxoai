@@ -8,7 +8,7 @@ import { estProtege } from "./zonesProtegees.ts";
 /**
  * Parcourir le dossier de travail de l'équipe, et en relire un fichier.
  *
- * Sert au bouton « Depuis Helix » : confier à un agent un document qui est
+ * Sert au bouton « Depuis OxoAI » : confier à un agent un document qui est
  * déjà dans le dossier de l'équipe, sans passer par le Finder. Le périmètre est
  * celui que les agents ont déjà (le serveur de fichiers MCP, `mcp.ts`) : rien
  * hors du dossier de travail. Chaque chemin est résolu par `realpath` (liens
@@ -43,7 +43,7 @@ function resoudre(relatif: string): Resultat<{ racine: string; reel: string }> {
   /*
    * Aucun segment en point (revue du 25/09/2026). La liste les cachait déjà ;
    * la lecture ne les refusait pas, et avec « Tout mon poste » le dossier de
-   * l'équipe est le dossier personnel : `.helix/data/instance-token` se lisait
+   * l'équipe est le dossier personnel : `.oxoai/data/instance-token` se lisait
    * en 200 par n'importe quelle personne connectée. Un dossier caché n'est pas
    * un document d'équipe.
    */

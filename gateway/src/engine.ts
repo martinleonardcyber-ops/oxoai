@@ -16,7 +16,7 @@ const exec = promisify(execFile);
 /**
  * Installation du moteur d'exécution des modèles.
  *
- * Helix ne sait pas faire tourner un modèle tout seul : il s'appuie sur LM
+ * OxoAI ne sait pas faire tourner un modèle tout seul : il s'appuie sur LM
  * Studio. Demander à l'utilisateur d'aller le chercher lui-même, c'est lui
  * demander de comprendre une plomberie qui ne le regarde pas — et c'est là que
  * la plupart des installations s'arrêtent.
@@ -27,7 +27,7 @@ const exec = promisify(execFile);
  * avant d'être ouverte (plus bas).
  *
  * Les Mac à processeur Intel n'ont pas de moteur : LM Studio n'existe que pour
- * les Mac à puce Apple. Jusqu'au 27/09/2026, Helix y téléchargeait
+ * les Mac à puce Apple. Jusqu'au 27/09/2026, OxoAI y téléchargeait
  * l'application LM Studio d'après le catalogue Homebrew, sans version figée ni
  * empreinte écrite ici ; ce catalogue ne décrit plus que l'application pour
  * puce Apple (`depends_on arch: arm64`, relevé le 27/09/2026), qu'un Mac Intel
@@ -35,8 +35,8 @@ const exec = promisify(execFile);
  * (audit de la chaîne d'approvisionnement du 27/09/2026).
  *
  * Depuis le 28/09/2026, ces Mac ont le moteur ouvert, llama.cpp, posé par
- * Helix à la place de LM Studio (llamaCpp.ts) : la route d'installation du
- * moteur n'arrive plus ici pour eux, sauf si `HELIX_MOTEUR=lmstudio` le
+ * OxoAI à la place de LM Studio (llamaCpp.ts) : la route d'installation du
+ * moteur n'arrive plus ici pour eux, sauf si `OXOAI_MOTEUR=lmstudio` le
  * demande, et le refus ci-dessous reste alors vrai.
  */
 
@@ -111,11 +111,11 @@ async function telecharger(
 
 /**
  * Emplacements où l'application peut se trouver, du plus général au plus
- * personnel. `HELIX_APPS_DIR` permet d'installer ailleurs — utile pour vérifier
+ * personnel. `OXOAI_APPS_DIR` permet d'installer ailleurs — utile pour vérifier
  * une installation sans toucher à celle de la machine.
  */
 function emplacements(): string[] {
-  const force = process.env.HELIX_APPS_DIR;
+  const force = process.env.OXOAI_APPS_DIR;
   if (force) return [force];
   return ["/Applications", join(homedir(), "Applications")];
 }
@@ -153,7 +153,7 @@ function installationDeclaree(fichier: "app-install-location.json" | "llmster-in
 
 /**
  * Mac à puce Apple où `lms` est là mais sans moteur qu'il sache démarrer :
- * l'application LM Studio posée par une version précédente de Helix, jamais
+ * l'application LM Studio posée par une version précédente de OxoAI, jamais
  * ouverte (vu sur un MacBook le 27/09/2026, deux fois). Le moteur y compte
  * comme absent : l'écran de mise en route propose de l'installer, et c'est le
  * moteur sans interface qui est posé, à côté de l'application.
@@ -181,7 +181,7 @@ export function moteurAPoser(): boolean {
  * Signalé le 23/10/2026 par une utilisatrice : « à chaque fois que je
  * l'utilise, il ouvre automatiquement Bionic », qui lui réclame ensuite un
  * abonnement. Bionic est l'application d'agent d'Element Labs, séparée de
- * LM Studio (lmstudio.ai/docs/bionic, lu le 23/10/2026). Helix n'ouvre ni
+ * LM Studio (lmstudio.ai/docs/bionic, lu le 23/10/2026). OxoAI n'ouvre ni
  * l'une ni l'autre ; c'est `lms` qui démarre un moteur quand aucun ne tourne.
  * D'après son code ouvert (lmstudio-js, `findOrStartLlmster.ts`, lu le
  * 23/10/2026) : il cherche d'abord un service à l'écoute (`/lms-status` sur les
@@ -190,17 +190,17 @@ export function moteurAPoser(): boolean {
  * défaut celui de `app-install-location.json`, c'est-à-dire l'application de
  * bureau, avec `--run-as-service`. Chez elle, l'application (ou Bionic, si
  * c'est lui qui s'est déclaré là) démarre donc à chaque commande `lms` que
- * Helix lance quand rien ne tourne, et s'affiche : hypothèse, ni Bionic ni son
+ * OxoAI lance quand rien ne tourne, et s'affiche : hypothèse, ni Bionic ni son
  * poste n'ont été vus.
  *
  * D'où le choix de la personne (Réglages, Modèles locaux, et la mise en
  * route), retenu par l'instance (reglagesMoteur.ts) :
- *  - aucun choix : Helix se branche sur LM Studio s'il tourne déjà, et ne
+ *  - aucun choix : OxoAI se branche sur LM Studio s'il tourne déjà, et ne
  *    lance aucune commande qui le réveillerait sinon (backends.ts,
  *    `reveilPermis`) ; l'écran demande ;
- *  - « application » : comme avant le 23/10/2026, Helix démarre le service de
+ *  - « application » : comme avant le 23/10/2026, OxoAI démarre le service de
  *    l'application quand il en a besoin ;
- *  - « sansFenetre » : Helix pose llmster à côté (même dossier de LM Studio,
+ *  - « sansFenetre » : OxoAI pose llmster à côté (même dossier de LM Studio,
  *    donc mêmes modèles, rien de retéléchargé), et `lms` le préfère alors.
  */
 export type ChoixMoteurLmStudio = "application" | "sansFenetre";
@@ -221,7 +221,7 @@ export function seuleApplicationDeclaree(): boolean {
   return installationDeclaree("app-install-location.json") && !installationDeclaree("llmster-install-location.json");
 }
 
-/** Le moteur sans fenêtre est-il déclaré (posé par Helix ou par l'installateur de l'éditeur) ? */
+/** Le moteur sans fenêtre est-il déclaré (posé par OxoAI ou par l'installateur de l'éditeur) ? */
 export const llmsterDeclare = (): boolean => installationDeclaree("llmster-install-location.json");
 
 /** L'application de bureau est-elle déclarée (seule ou à côté de llmster) ? */
@@ -262,7 +262,7 @@ export function applicationLmStudio(): string | null {
 
 /**
  * Le moteur est-il le moteur sans interface (llmster) ? Sous Windows et Linux,
- * toujours ; sur macOS, quand llmster est posé (par Helix, sur un Mac à puce
+ * toujours ; sur macOS, quand llmster est posé (par OxoAI, sur un Mac à puce
  * Apple) et que l'application LM Studio n'a jamais servi. Une application qui a
  * déjà servi garde la main : c'est elle que partagent les autres logiciels de la
  * machine (un agent personnel, LM Studio lui-même).
@@ -275,15 +275,15 @@ export function moteurSansInterface(): boolean {
 }
 
 /**
- * Le moteur est-il celui de Helix, et de lui seul (16/10/2026) ? Le moteur
+ * Le moteur est-il celui de OxoAI, et de lui seul (16/10/2026) ? Le moteur
  * sans interface déclaré (`llmster-install-location.json`), et aucune
  * application LM Studio déclarée sur la machine (`app-install-location.json`),
- * sur tout système. Sert à décider si Helix peut recharger un modèle chargé
+ * sur tout système. Sert à décider si OxoAI peut recharger un modèle chargé
  * avec une trop petite taille de conversation (backends.ts,
  * `agrandirLaConversation`) : l'application LM Studio de la personne, et ce
  * qu'elle y a chargé, ne sont jamais touchées.
  */
-export function moteurGereParHelix(): boolean {
+export function moteurGereParOxoAI(): boolean {
   return installationDeclaree("llmster-install-location.json") && !installationDeclaree("app-install-location.json");
 }
 
@@ -301,7 +301,7 @@ export async function installerMoteur(
   if (dejaLa && !moteurAPoser()) return dejaLa;
   /*
    * Mac à puce Apple aussi, depuis le 27/09/2026 : l'application LM Studio
-   * posée par Helix n'avait jamais été ouverte, et `lms` refusait alors de
+   * posée par OxoAI n'avait jamais été ouverte, et `lms` refusait alors de
    * démarrer son service (« daemon is not running and no valid installation
    * could be found », vu sur un MacBook). Le moteur sans interface démarre
    * sans elle. Les Mac Intel n'ont ni l'un ni l'autre (en-tête du fichier).
@@ -322,7 +322,7 @@ export async function installerMoteur(
  * Linux et Windows (27/09/2026, demandé par Medhi : « tout s'installe en
  * automatique » sur les trois systèmes), puis Mac à puce Apple le même jour
  * (l'application LM Studio jamais ouverte ne démarrait pas). LM Studio publie pour eux un moteur
- * sans interface, llmster, avec le même outil `lms` : c'est lui que Helix
+ * sans interface, llmster, avec le même outil `lms` : c'est lui que OxoAI
  * installe, comme le fait l'installateur officiel de l'éditeur
  * (lmstudio.ai/install.sh et install.ps1), mais sans exécuter de script
  * téléchargé :
@@ -341,7 +341,7 @@ export async function installerMoteur(
  * ne peut plus faire installer autre chose. Sur Mac Intel, rien n'est installé (pas de
  * moteur LM Studio pour eux). Essayé dans un Ubuntu 24.04
  * (conteneur) et installé sur macOS à la main ; pas encore sur une vraie machine
- * Windows ni Linux, ni démarré par Helix sur un Mac.
+ * Windows ni Linux, ni démarré par OxoAI sur un Mac.
  */
 
 /*
@@ -412,7 +412,7 @@ export const lmsDeLlmster = (): string => join(dossierLmStudio(), "bin", process
  * (lmstudio-js, `lms-common-server/src/findLMStudioHome.ts`, lu le
  * 28/09/2026) lit ce fichier pour trouver son dossier tout entier (moteur,
  * téléchargements en cours dans `.internal/temp-downloads`, modèles), et
- * l'écrit vers `~/.lmstudio` s'il manque. Helix l'écrit donc avant la
+ * l'écrit vers `~/.lmstudio` s'il manque. OxoAI l'écrit donc avant la
  * première installation, jamais après (emplacementModeles.ts) : llmster se
  * pose alors directement sur le disque choisi. Que llmster lui-même suive le
  * pointeur à l'amorce n'a pas été vu avec le vrai llmster : d'où les deux
@@ -433,8 +433,8 @@ export function pointeurLmStudio(): string | null {
 }
 
 /**
- * Le pointeur désigne-t-il un autre dossier que celui que Helix suit ? Disque
- * débranché, dossier effacé, ou refusé par `dossierLmStudio` : Helix
+ * Le pointeur désigne-t-il un autre dossier que celui que OxoAI suit ? Disque
+ * débranché, dossier effacé, ou refusé par `dossierLmStudio` : OxoAI
  * installerait ou chercherait ailleurs que LM Studio lui-même.
  */
 export function pointeurNonSuivi(): string | null {
@@ -446,7 +446,7 @@ export function pointeurNonSuivi(): string | null {
 /**
  * Où LM Studio est-il déjà en place sur ce compte (moteur, application
  * déclarée, ou modèles) ? Rend le dossier, ou null s'il n'y a rien : c'est
- * seulement alors que Helix peut encore choisir où il ira.
+ * seulement alors que OxoAI peut encore choisir où il ira.
  */
 export function lmStudioEnPlace(): string | null {
   const candidats = [...new Set([dossierLmStudio(), dossierLmStudioHabituel(), join(homedir(), ".cache", "lm-studio")].map((d) => resolve(d)))];
@@ -507,7 +507,7 @@ export function placeMoteurLlmster(): number {
 
 /**
  * Avant de télécharger, et après l'amorce : llmster doit être (ou aller) là
- * où Helix le cherche. Sinon, une erreur claire, et pas un nouvel essai de
+ * où OxoAI le cherche. Sinon, une erreur claire, et pas un nouvel essai de
  * 600 Mo à chaque clic.
  */
 /**
@@ -588,7 +588,7 @@ function nomLlmster(version: string): { nom: string; extension: string } {
 
 /*
  * Linux : le moteur a besoin de `libatomic` (et, en pratique, de `libgomp`).
- * Une installation minimale ne les a pas, et Helix ne passe pas
+ * Une installation minimale ne les a pas, et OxoAI ne passe pas
  * administrateur : il le dit, avec la commande à lancer.
  */
 function bibliothequesManquantes(): string[] {
@@ -612,7 +612,7 @@ function bibliothequesManquantes(): string[] {
  * Lance `llmster bootstrap` comme le fait l'installateur officiel : variables
  * de l'installateur, dossier de l'archive ouverte, sortie lue au fil de l'eau
  * sans limite (seules les 8 000 dernières lettres sont gardées). Dix minutes
- * au plus : un service qui garderait la sortie ouverte ne bloque pas Helix.
+ * au plus : un service qui garderait la sortie ouverte ne bloque pas OxoAI.
  */
 export function amorcer(amorce: string): Promise<{ code: number | null; signal: NodeJS.Signals | null; fin: string }> {
   return new Promise((resolve) => {
@@ -683,7 +683,7 @@ async function installerLlmster(onProgress: (p: EngineProgress) => void): Promis
    * contenu y sont aussi, pas sur le disque principal qui n'a pas la place.
    */
   const ailleurs = resolve(dossierLmStudio()) !== resolve(dossierLmStudioHabituel());
-  const racineTravail = ailleurs ? dossierLmStudio() : (process.env.HELIX_DATA_DIR ?? join(homedir(), ".helix", "data"));
+  const racineTravail = ailleurs ? dossierLmStudio() : (process.env.OXOAI_DATA_DIR ?? join(homedir(), ".oxoai", "data"));
   await mkdir(racineTravail, { recursive: true, mode: 0o700 });
   const travail = await mkdtemp(join(racineTravail, ".moteur-"));
   try {
@@ -705,7 +705,7 @@ async function installerLlmster(onProgress: (p: EngineProgress) => void): Promis
       } catch (err) {
         dernierEchec = err;
         await rm(archive, { force: true }).catch(() => {});
-        if (n !== noms[noms.length - 1]) console.warn(`[helix] moteur ${n} refusé, essai de la version ordinaire :`, err instanceof Error ? err.message : err);
+        if (n !== noms[noms.length - 1]) console.warn(`[oxoai] moteur ${n} refusé, essai de la version ordinaire :`, err instanceof Error ? err.message : err);
       }
     }
     if (!installe) throw dernierEchec instanceof Error ? dernierEchec : new Error(String(dernierEchec));
@@ -722,7 +722,7 @@ async function installerLlmster(onProgress: (p: EngineProgress) => void): Promis
      * Lancé jusqu'ici par `execFile`, dont la mémoire de sortie est bornée à
      * 1 Mo : au-delà, le programme est arrêté net. Vu chez plusieurs personnes
      * sous Windows (2026.928.6) : `lms.exe` était déjà copié, la déclaration de
-     * l'installation (`llmster-install-location.json`) jamais écrite, et Helix,
+     * l'installation (`llmster-install-location.json`) jamais écrite, et OxoAI,
      * qui ne regardait que `lms.exe`, passait au modèle ; chaque téléchargement
      * finissait sur « LM Studio daemon is not running and no valid installation
      * could be found ». L'installateur officiel (install.ps1) laisse la sortie
@@ -732,12 +732,12 @@ async function installerLlmster(onProgress: (p: EngineProgress) => void): Promis
      */
     for (let essai = 1; essai <= 2; essai++) {
       const issue = await amorcer(amorce);
-      if (issue.code !== 0) console.warn(`[helix] llmster bootstrap (essai ${essai}) : code ${issue.code ?? issue.signal}, fin de sortie : ${issue.fin.slice(-600)}`);
+      if (issue.code !== 0) console.warn(`[oxoai] llmster bootstrap (essai ${essai}) : code ${issue.code ?? issue.signal}, fin de sortie : ${issue.fin.slice(-600)}`);
       if (existsSync(lmsDeLlmster()) && !moteurAPoser()) break;
       if (essai === 2) {
         const autrePart = incoherenceEmplacement(true);
         if (autrePart) throw new Error(autrePart);
-        console.error(`[helix] moteur posé mais non déclaré : ${diagnosticInstallation()}`);
+        console.error(`[oxoai] moteur posé mais non déclaré : ${diagnosticInstallation()}`);
         throw new Error(
           existsSync(lmsDeLlmster())
             ? t("Le moteur s'est installé, mais LM Studio ne le reconnaît pas. Réessayez ; si cela se répète, installez LM Studio depuis lmstudio.ai et ouvrez-le une fois.")
@@ -752,7 +752,7 @@ async function installerLlmster(onProgress: (p: EngineProgress) => void): Promis
     if (!existsSync(lms)) throw new Error(t("Le moteur s'est installé, mais son outil `lms` est introuvable. Réessayez, ou installez LM Studio depuis lmstudio.ai."));
     /*
      * Mac : `lms` ne trouve le moteur que par sa déclaration
-     * (`llmster-install-location.json`). Absente, Helix redemanderait
+     * (`llmster-install-location.json`). Absente, OxoAI redemanderait
      * l'installation en boucle, 600 Mo à chaque fois (revue du 27/09/2026).
      */
     preparerDossiersLlmster();

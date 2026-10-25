@@ -4,7 +4,7 @@
  * ── Pourquoi ────────────────────────────────────────────────────────────────
  *
  * Constat du 25/09/2026 (Medhi, Qwen3 8B dans LM Studio, contexte de 28 160
- * jetons) : une tâche de Helix Code attendait plus de deux minutes avant le
+ * jetons) : une tâche de OxoAI Code attendait plus de deux minutes avant le
  * premier mot. Relevé dans le journal de LM Studio le même jour : une demande
  * d'OpenCode de 18 141 jetons lue en 146,9 s (123 jetons par seconde), parce
  * que le modèle, partagé avec d'autres programmes et réglé pour une seule

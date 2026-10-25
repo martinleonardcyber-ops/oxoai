@@ -12,16 +12,16 @@ import { estProtege } from "./zonesProtegees.ts";
 import { t, tf } from "./langue.ts";
 
 /**
- * Contrôle automatique de ce que Helix Code vient d'écrire, et relance de
+ * Contrôle automatique de ce que OxoAI Code vient d'écrire, et relance de
  * l'agent tant que ce n'est pas propre.
  *
  * Demandé par Medhi le 26/09/2026 : « le petit modèle doit produire un bon
- * niveau de logiciel, même si c'est long, sinon personne n'utilisera Helix
+ * niveau de logiciel, même si c'est long, sinon personne n'utilisera OxoAI
  * Code ». Essai du même jour, ERP pour cabinet d'avocat avec Qwen3 8B :
  * l'agent annonçait une application « fonctionnelle » ; son script ne
  * compilait pas (`document,getElementById`), puis, corrigée, elle s'ouvrait
  * sur une page blanche, onglets blanc sur gris, listes figées. L'agent ne
- * s'en rendait compte que si on le lui disait. Désormais Helix le lui dit
+ * s'en rendait compte que si on le lui disait. Désormais OxoAI le lui dit
  * lui-même, à la fin de chaque tour :
  *  1. contrôle statique des fichiers web modifiés pendant le tour
  *     (controleWeb.ts : syntaxe, fichiers liés, fonctions appelées, éléments
@@ -59,7 +59,7 @@ export function consigneLangue(demande: string): string {
 }
 
 /** Le début de chaque relance : sessionsCode.ts s'en sert pour ne pas l'afficher comme un message de la personne. */
-export const ENTETE_RELANCE = "[Contrôle automatique de Helix] Le travail n'est pas terminé : un programme a vérifié les fichiers (et, selon le projet, essayé les pages ou lancé les tests), et a trouvé ces problèmes :";
+export const ENTETE_RELANCE = "[Contrôle automatique de OxoAI] Le travail n'est pas terminé : un programme a vérifié les fichiers (et, selon le projet, essayé les pages ou lancé les tests), et a trouvé ces problèmes :";
 
 /*
  * La méthode jointe à chaque demande de code (index.ts), quel que soit le
@@ -73,11 +73,11 @@ export const METHODE_CODE = [
   "",
   "",
   "---",
-  "Méthode de travail (Helix), pour un travail juste du premier coup :",
+  "Méthode de travail (OxoAI), pour un travail juste du premier coup :",
   "- Avant de modifier un fichier, lis-le. Un fichier de moins de 300 lignes : réécris-le EN ENTIER avec write, plutôt qu'avec edit. Un fichier plus long : edit, en recopiant exactement le texte à remplacer, lu juste avant.",
   "- Un morceau à la fois : un fichier complet et juste, puis le suivant. Relis chaque fichier écrit.",
   "- N'utilise que des fonctions, des champs et des fichiers qui existent vraiment : vérifie-les dans le code avant de t'en servir.",
-  "- Un programme (script, outil, bibliothèque, API) : écris aussi ses tests automatiques (pytest ou unittest en Python, node --test ou le script « test » en JavaScript). Helix les lance après toi, dans un bac à sable sans réseau, et te renvoie ce qui échoue.",
+  "- Un programme (script, outil, bibliothèque, API) : écris aussi ses tests automatiques (pytest ou unittest en Python, node --test ou le script « test » en JavaScript). OxoAI les lance après toi, dans un bac à sable sans réseau, et te renvoie ce qui échoue.",
   "- Ne dis « fait », « corrigé » ou « testé » que pour ce que tu as vraiment fait. Un programme contrôlera ton travail après toi et te renverra ce qui ne va pas.",
 ].join("\n");
 
@@ -99,7 +99,7 @@ interface Suivi {
 }
 const suivis = new Map<string, Suivi>();
 
-/** Une demande de la personne (pas une relance de Helix) : nouveau travail, compteur à zéro. */
+/** Une demande de la personne (pas une relance de OxoAI) : nouveau travail, compteur à zéro. */
 export function nouvelleDemandeCode(sessionID: string): void {
   const s = suivis.get(sessionID);
   if (s?.enRelance) {
@@ -279,7 +279,7 @@ async function problemesAutres(dossier: string, depuis: number): Promise<{ probl
   const python = touches.filter((x) => x.endsWith(".py"));
   if (python.length > 0) {
     const r = await new Promise<string>((resolve) => {
-      // Sous Windows, `python3` n'existe pas : le Python que Helix a posé, s'il l'a posé (pythonPrive.ts).
+      // Sous Windows, `python3` n'existe pas : le Python que OxoAI a posé, s'il l'a posé (pythonPrive.ts).
       execFile(process.platform === "win32" ? (pythonPrive() ?? "python") : "python3", ["-I", "-B", "-c", ANALYSE_PYTHON, dossier, ...python], { timeout: 30_000, maxBuffer: 2_000_000 }, (err, stdout) => resolve(err ? "" : stdout));
     });
     try {
@@ -310,13 +310,13 @@ interface RapportRendu {
 
 /** Essaie une page dans le navigateur de l'application ; `null` si l'application ne le prête pas (passerelle seule). */
 async function essayerPage(fichier: string, racine: string): Promise<RapportRendu | null> {
-  const url = process.env.HELIX_RENDU_URL;
-  const cle = process.env.HELIX_RENDU_CLE;
+  const url = process.env.OXOAI_RENDU_URL;
+  const cle = process.env.OXOAI_RENDU_CLE;
   if (!url || !cle) return null;
   try {
     const r = await fetch(`${url}/rendre`, {
       method: "POST",
-      headers: { "Content-Type": "application/json", "X-Helix-Cle": cle },
+      headers: { "Content-Type": "application/json", "X-OxoAI-Cle": cle },
       // La racine du projet : la page n'est servie que depuis là (electron/rendu.cjs).
       body: JSON.stringify({ fichier, racine }),
       signal: AbortSignal.timeout(40_000),
@@ -397,7 +397,7 @@ export async function controlerTourCode(
     if ("sans" in r) return { commande: "", reussi: false, nonLances: true };
     if (!r.reussi) {
       problemes.push(
-        `Les tests du projet échouent (${r.commande}, lancés par Helix dans un bac à sable, sans réseau). Fin de la sortie :\n${r.sortie.slice(-1800)}\nCorrige le programme ; si c'est le test qui se trompe, corrige le test.`,
+        `Les tests du projet échouent (${r.commande}, lancés par OxoAI dans un bac à sable, sans réseau). Fin de la sortie :\n${r.sortie.slice(-1800)}\nCorrige le programme ; si c'est le test qui se trompe, corrige le test.`,
       );
     }
     return { commande: r.commande, reussi: r.reussi };
@@ -416,7 +416,7 @@ export async function controlerTourCode(
     fichiers += r.fichiers;
     for (const x of r.problemes) if (!problemes.includes(x)) problemes.push(x);
   }
-  // Une application préparée par Helix (application.ts) : ses règles du métier, vérifiées sur le plan.
+  // Une application préparée par OxoAI (application.ts) : ses règles du métier, vérifiées sur le plan.
   if (applicationPreparee(dossier)) {
     let prepareeCeTour = false;
     try {
@@ -476,7 +476,7 @@ export async function apresTourCode(
     if (!enCours) return false;
     const suite = etapeSuivante(sessionID);
     if (!suite) {
-      statut(tf("Plan de Helix terminé : les {0} étapes sont faites et contrôlées.", enCours.total));
+      statut(tf("Plan de OxoAI terminé : les {0} étapes sont faites et contrôlées.", enCours.total));
       return true;
     }
     suivi!.tours = 0;
@@ -518,7 +518,7 @@ export async function apresTourCode(
     const enCours = sequenceEnCours(sessionID);
     if (enCours) {
       oublierSequence(sessionID);
-      statut(tf("Plan de Helix arrêté à l'étape {0} sur {1} : les problèmes ci-dessus restent à régler.", enCours.courante + 1, enCours.total));
+      statut(tf("Plan de OxoAI arrêté à l'étape {0} sur {1} : les problèmes ci-dessus restent à régler.", enCours.courante + 1, enCours.total));
     }
     console.log(`[code] contrôle automatique : ${r.problemes.length} problème(s) restent après ${TOURS_MAX} tours.`);
     return;
@@ -531,7 +531,7 @@ export async function apresTourCode(
   const definies = r.problemes.some((x) => /n'est définie/.test(x)) ? [...new Set((r.dossiers ?? []).flatMap(fonctionsDefinies))] : [];
   const texte = [
     // Le texte en toutes lettres : le relevé des traductions (scripts/i18n-passerelle.mjs) ne lit que les chaînes écrites dans t().
-    t("[Contrôle automatique de Helix] Le travail n'est pas terminé : un programme a vérifié les fichiers (et, selon le projet, essayé les pages ou lancé les tests), et a trouvé ces problèmes :"),
+    t("[Contrôle automatique de OxoAI] Le travail n'est pas terminé : un programme a vérifié les fichiers (et, selon le projet, essayé les pages ou lancé les tests), et a trouvé ces problèmes :"),
     ...r.problemes.map((x) => `- ${x}`),
     ...(definies.length > 0 ? ["", tf("Fonctions qui existent vraiment dans les scripts : {0}. Écris celles qui manquent, ou appelle celles-ci.", definies.join(", "))] : []),
     "",

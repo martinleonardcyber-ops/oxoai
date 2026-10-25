@@ -40,7 +40,7 @@ export function MoteurLmStudio({ onChange, miseEnRoute = false }: { onChange?: (
   const [suivi, setSuivi] = useState<{ phase: string; message: string; error?: string } | null>(null);
 
   const charger = useCallback(() => {
-    void apiFetch("/helix/moteur-lmstudio")
+    void apiFetch("/oxoai/moteur-lmstudio")
       .then(async (r) => (r.ok ? ((await r.json()) as EtatMoteur) : Promise.reject(new Error(await refus(r)))))
       .then(setEtat)
       .catch((err: unknown) => setErreur(err instanceof Error ? err.message : String(err)));
@@ -52,7 +52,7 @@ export function MoteurLmStudio({ onChange, miseEnRoute = false }: { onChange?: (
   useEffect(() => {
     if (!enCours) return;
     const id = window.setInterval(() => {
-      void apiFetch("/helix/provision")
+      void apiFetch("/oxoai/provision")
         .then((r) => (r.ok ? r.json() : null))
         .then((d: { state?: { phase: string; message: string; error?: string } } | null) => {
           if (!d?.state) return;
@@ -83,7 +83,7 @@ export function MoteurLmStudio({ onChange, miseEnRoute = false }: { onChange?: (
     setOccupe(true);
     setErreur(null);
     try {
-      const r = await apiFetch("/helix/moteur-lmstudio", {
+      const r = await apiFetch("/oxoai/moteur-lmstudio", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ choix }),
@@ -91,7 +91,7 @@ export function MoteurLmStudio({ onChange, miseEnRoute = false }: { onChange?: (
       if (!r.ok) throw new Error(await refus(r));
       // Le moteur sans fenêtre n'est pas encore posé : la route d'installation, conditions acceptées, sans enchaîner sur un modèle.
       if (choix === "sansFenetre" && !enPlace) {
-        const i = await apiFetch("/helix/provision/moteur", {
+        const i = await apiFetch("/oxoai/provision/moteur", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ conditionsAcceptees: true, sansModele: true }),

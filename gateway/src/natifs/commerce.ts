@@ -129,7 +129,7 @@ interface Definition {
 }
 
 /*
- * Versions d'API, à relever à chaque version de Helix :
+ * Versions d'API, à relever à chaque version de OxoAI :
  *  - Shopify : « 2026-07 », dernière stable, prise en charge jusqu'au
  *    16/07/2027 (https://shopify.dev/docs/api/usage/versioning) ;
  *  - Salesforce : « v66.0 » (Spring '26). La v68.0 (Winter '27) se déploie en
@@ -176,7 +176,7 @@ export const DEFINITIONS: Record<IdCommerce, Definition> = {
    * PKCE (les External Client Apps l'exigent pour un client public, et il vaut
    * aussi pour un client confidentiel). `api` ouvre l'API REST, `refresh_token`
    * garde la connexion ; Salesforce n'a pas de portée « lecture seule » :
-   * l'écriture n'est donc qu'une case de Helix, qui ne propose alors que la
+   * l'écriture n'est donc qu'une case de OxoAI, qui ne propose alors que la
    * note (et ne sait rien envoyer d'autre, voir `PERMIS`).
    */
   salesforce: {
@@ -996,7 +996,7 @@ function memeEtat(a: string, b: string): boolean {
 export const estEtatCommerce = (etat: string): boolean => etat.startsWith(PREFIXE_ETAT);
 
 /** L'adresse de retour à déclarer chez le service : la route publique de l'instance, telle que le navigateur l'atteint. */
-export const adresseDeRetour = (base: string): string => `${base.replace(/\/+$/, "")}/helix/oauth/retour`;
+export const adresseDeRetour = (base: string): string => `${base.replace(/\/+$/, "")}/oxoai/oauth/retour`;
 
 /** Lance l'accord dans le navigateur. `base` vient de `adresseVue` (index.ts), qui n'accepte qu'un nom d'hôte bien formé. */
 export async function demarrer(brutId: unknown, qui: string, base: string, brutEcriture: unknown): Promise<{ ok: boolean; message: string; url?: string }> {
@@ -1047,7 +1047,7 @@ export async function demarrer(brutId: unknown, qui: string, base: string, brutE
   return { ok: true, message: tf("Autorisez l'accès dans la page de {0} qui s'ouvre. Cette demande expire dans dix minutes.", def.nom), url: `${consentement}?${p.toString()}` };
 }
 
-/** Le retour du service, par la route publique de l'instance (index.ts, `/helix/oauth/retour`, aiguillée par le préfixe du `state`). */
+/** Le retour du service, par la route publique de l'instance (index.ts, `/oxoai/oauth/retour`, aiguillée par le préfixe du `state`). */
 export async function recevoir(parametres: URLSearchParams): Promise<{ ok: boolean; message: string; nom?: string }> {
   const recu = parametres.get("state") ?? "";
   const f = [...flux.values()].find((x) => memeEtat(recu, x.etat));
@@ -1055,12 +1055,12 @@ export async function recevoir(parametres: URLSearchParams): Promise<{ ok: boole
   if (!f) return { ok: false, message: t("Cette réponse ne correspond à aucune demande de connexion en cours : elle est ignorée.") };
   /*
    * Le navigateur qui revient du service n'envoie pas la langue de l'écran
-   * (ni `X-Helix-Langue`, ni `?langue=`) : l'issue, relue ensuite par le
+   * (ni `X-OxoAI-Langue`, ni `?langue=`) : l'issue, relue ensuite par le
    * panneau de l'administrateur, était écrite en anglais (vu à l'écran le
    * 28/09/2026, en français). Elle est écrite dans la langue de qui a lancé
    * la connexion.
    */
-  return avecLangueDe({ "x-helix-langue": f.langue }, new URL("http://instance/"), () => conclureRetour(f, parametres));
+  return avecLangueDe({ "x-oxoai-langue": f.langue }, new URL("http://instance/"), () => conclureRetour(f, parametres));
 }
 
 async function conclureRetour(f: Flux, parametres: URLSearchParams): Promise<{ ok: boolean; message: string; nom?: string }> {
@@ -1326,7 +1326,7 @@ export async function etat(base: string): Promise<EtatCommerce[]> {
 }
 
 /**
- * Les routes `/helix/commerce…` (index.ts n'y ajoute que la séance et
+ * Les routes `/oxoai/commerce…` (index.ts n'y ajoute que la séance et
  * l'adresse vue). Lire l'état : une séance. Enregistrer, brancher,
  * débrancher : l'administrateur, comme pour les connexions natives : un compte
  * branché vaut pour toute l'instance.

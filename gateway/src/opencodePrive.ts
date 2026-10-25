@@ -10,7 +10,7 @@ import { renommer } from "./processus.ts";
 import { tarDuSysteme } from "./pythonPrive.ts";
 
 /**
- * OpenCode, le moteur de l'écran Code, posé par Helix.
+ * OpenCode, le moteur de l'écran Code, posé par OxoAI.
  *
  * Demandé par Medhi le 27/09/2026 (« tout s'installe seul non ? ») : l'écran
  * Code affichait une commande à taper (`curl … | bash`, ou `npm install -g`
@@ -23,7 +23,7 @@ import { tarDuSysteme } from "./pythonPrive.ts";
  * fichier téléchargé), aucun script exécuté. L'archive contient un seul
  * exécutable, posé dans `<données>/opencode/<version>/`, pour ce compte : ni
  * droits d'administration, ni PATH modifié. La 1.18.32 est celle avec laquelle
- * Helix Code tourne sur le Mac de développement.
+ * OxoAI Code tourne sur le Mac de développement.
  *
  * Plusieurs variantes par système (02/10/2026). Signalé par Medhi : sous
  * Linux, l'écran Code restait sur l'installation d'OpenCode avec « Réessayer ».
@@ -35,7 +35,7 @@ import { tarDuSysteme } from "./pythonPrive.ts";
  * « baseline », et une bibliothèque C trop ancienne ou absente (Linux ancien,
  * Alpine), pour laquelle il publie une variante « musl », qui ne dépend pas de
  * celle du système. Cause non vue sur le poste de Medhi : supposée.
- * Helix essaie donc la variante ordinaire, puis les autres, dans cet ordre,
+ * OxoAI essaie donc la variante ordinaire, puis les autres, dans cet ordre,
  * **seulement** si la précédente s'est téléchargée et vérifiée mais ne
  * démarre pas ; une panne de réseau ou une empreinte fausse arrête tout. Les
  * empreintes sont celles que GitHub publie pour chaque fichier de la version
@@ -75,14 +75,14 @@ const ARCHIVES: Record<string, Archive[]> = {
 };
 
 const cible = () => `${process.platform}-${process.arch}`;
-const racine = () => join(process.env.HELIX_DATA_DIR ?? join(homedir(), ".helix", "data"), "opencode");
+const racine = () => join(process.env.OXOAI_DATA_DIR ?? join(homedir(), ".oxoai", "data"), "opencode");
 const dossierVersion = () => join(racine(), VERSION);
 const nomExecutable = () => (process.platform === "win32" ? "opencode.exe" : "opencode");
 
-/** L'OpenCode posé par Helix (chemin de l'exécutable, qu'il existe ou non). */
-export const opencodeDeHelix = (): string => join(dossierVersion(), nomExecutable());
+/** L'OpenCode posé par OxoAI (chemin de l'exécutable, qu'il existe ou non). */
+export const opencodeDeOxoAI = (): string => join(dossierVersion(), nomExecutable());
 
-/** Helix sait-il poser OpenCode ici ? La raison sinon. */
+/** OxoAI sait-il poser OpenCode ici ? La raison sinon. */
 export function opencodeInstallable(): string | null {
   return ARCHIVES[cible()] ? null : tf("OpenCode n'est pas publié pour ce système ({0}).", cible());
 }
@@ -100,7 +100,7 @@ let enCours: Promise<string> | null = null;
 
 /** Pose OpenCode s'il ne l'est pas ; une installation à la fois. Rend l'exécutable. */
 export function installerOpencode(): Promise<string> {
-  if (existsSync(opencodeDeHelix())) return Promise.resolve(opencodeDeHelix());
+  if (existsSync(opencodeDeOxoAI())) return Promise.resolve(opencodeDeOxoAI());
   if (!enCours) {
     Object.assign(etat, { enCours: true, pourcent: 0, erreur: null });
     enCours = installer()
@@ -135,12 +135,12 @@ async function installer(): Promise<string> {
   for (const [rang, attendu] of variantes.entries()) {
     try {
       const exe = await poserVariante(attendu, tar, rang, variantes.length);
-      if (rang > 0) console.log(`[helix] OpenCode : la variante ${attendu.fichier} démarre ici (${essais.join(" ; ")}).`);
+      if (rang > 0) console.log(`[oxoai] OpenCode : la variante ${attendu.fichier} démarre ici (${essais.join(" ; ")}).`);
       return exe;
     } catch (err) {
       if (!(err instanceof NeDemarrePas)) throw err;
       essais.push(`${attendu.fichier} : ${err.detail || "aucune version rendue"}`);
-      console.warn(`[helix] OpenCode : ${attendu.fichier} ne démarre pas ici (${err.detail || "aucune version rendue"}).`);
+      console.warn(`[oxoai] OpenCode : ${attendu.fichier} ne démarre pas ici (${err.detail || "aucune version rendue"}).`);
     }
   }
   // Ce que le système a répondu à la dernière variante (« Illegal instruction », « GLIBC_2.34 not found ») : de quoi chercher.
@@ -204,8 +204,8 @@ async function poserVariante(attendu: Archive, tar: string, rang: number, total:
     mkdirSync(racine(), { recursive: true, mode: 0o700 });
     renommer(extrait, dossierVersion());
     etat.pourcent = 100;
-    console.log(`[helix] OpenCode ${VERSION} posé dans ${dossierVersion()} (${attendu.fichier}).`);
-    return opencodeDeHelix();
+    console.log(`[oxoai] OpenCode ${VERSION} posé dans ${dossierVersion()} (${attendu.fichier}).`);
+    return opencodeDeOxoAI();
   } finally {
     rmSync(travail, { recursive: true, force: true });
   }

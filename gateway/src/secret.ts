@@ -21,16 +21,16 @@ import { t } from "./langue.ts";
  *
  * ⚠ Ce que cela ne protège pas : un attaquant qui obtient la session de
  * l'utilisateur — logiciel malveillant sous son compte, accès physique à une
- * machine déverrouillée — accède au trousseau comme Helix. Le chiffrement au
+ * machine déverrouillée — accède au trousseau comme OxoAI. Le chiffrement au
  * repos protège le disque, pas une session compromise.
  */
 
-const SERVICE = "fr.helix.instance";
+const SERVICE = "fr.oxoai.instance";
 const COMPTE = "cle-donnees";
 
 /** Repli hors macOS : la clé sur disque, avec les permissions les plus strictes. */
 const cheminCleFichier = () =>
-  join(process.env.HELIX_DATA_DIR ?? join(homedir(), ".helix", "data"), ".cle");
+  join(process.env.OXOAI_DATA_DIR ?? join(homedir(), ".oxoai", "data"), ".cle");
 
 let cache: Buffer | null = null;
 
@@ -105,7 +105,7 @@ function ecrireTrousseau(cle: Buffer): boolean {
       "security",
       /*
        * Pas de `-T ""` ici : cette option vide la liste des applications
-       * autorisées, ce qui bloque **aussi** Helix et rend les données
+       * autorisées, ce qui bloque **aussi** OxoAI et rend les données
        * illisibles. L'entrée reste donc accessible aux outils du compte, ce qui
        * est le comportement attendu — la protection vient de la session
        * macOS, pas d'une liste d'applications.
@@ -194,19 +194,19 @@ export function cleDonnees(): Buffer | null {
        */
       const relue = lireTrousseau();
       if (relue.etat === "trouvee" && relue.cle.equals(nouvelle)) {
-        console.log("[helix] clé de chiffrement créée dans le trousseau.");
+        console.log("[oxoai] clé de chiffrement créée dans le trousseau.");
         cache = nouvelle;
         return cache;
       }
       console.warn(
-        "[helix] la clé écrite dans le trousseau n'est pas relisible : " +
+        "[oxoai] la clé écrite dans le trousseau n'est pas relisible : " +
           "les données restent en clair plutôt que de devenir irrécupérables.",
       );
       return null;
     }
     console.warn(
-      "[helix] trousseau inaccessible : les données restent en clair. " +
-        "Réglez « chiffrement »: \"fichier\" dans helix.config.json pour chiffrer quand même.",
+      "[oxoai] trousseau inaccessible : les données restent en clair. " +
+        "Réglez « chiffrement »: \"fichier\" dans oxoai.config.json pour chiffrer quand même.",
     );
     return null;
   }
@@ -315,7 +315,7 @@ function lireCleExistante(chemin: string): Buffer {
  * lisible le temps que `migrerChiffrement` la réécrive.
  */
 interface Coffre {
-  helixChiffre: 1 | 2;
+  oxoaiChiffre: 1 | 2;
   iv: string;
   tag: string;
   donnees: string;
@@ -324,13 +324,13 @@ interface Coffre {
 const estCoffre = (v: unknown): v is Coffre =>
   typeof v === "object" &&
   v !== null &&
-  ((v as Coffre).helixChiffre === 1 || (v as Coffre).helixChiffre === 2);
+  ((v as Coffre).oxoaiChiffre === 1 || (v as Coffre).oxoaiChiffre === 2);
 
 /** La valeur est-elle déjà chiffrée dans la forme actuelle, liée à sa place ? */
 export const estChiffreLie = (v: unknown): boolean =>
-  estCoffre(v) && v.helixChiffre === 2;
+  estCoffre(v) && v.oxoaiChiffre === 2;
 
-const donneesAssociees = (place: string) => Buffer.from(`helix:${place}`, "utf8");
+const donneesAssociees = (place: string) => Buffer.from(`oxoai:${place}`, "utf8");
 
 /**
  * Chiffre une valeur. AES-256-GCM : le contenu est illisible **et** toute
@@ -350,7 +350,7 @@ export function chiffrer(valeur: unknown, place?: string): unknown {
   ]);
 
   return {
-    helixChiffre: place ? 2 : 1,
+    oxoaiChiffre: place ? 2 : 1,
     iv: iv.toString("base64"),
     tag: chiffreur.getAuthTag().toString("base64"),
     donnees: donnees.toString("base64"),
@@ -366,7 +366,7 @@ export function chiffrer(valeur: unknown, place?: string): unknown {
  */
 export function dechiffrer(valeur: unknown, place?: string): unknown {
   if (!estCoffre(valeur)) return valeur;
-  if (valeur.helixChiffre === 2 && !place) {
+  if (valeur.oxoaiChiffre === 2 && !place) {
     throw new Error("Données chiffrées liées à une place, lues sans elle.");
   }
 
@@ -380,7 +380,7 @@ export function dechiffrer(valeur: unknown, place?: string): unknown {
 
   try {
     const dechiffreur = createDecipheriv("aes-256-gcm", cle, Buffer.from(valeur.iv, "base64"));
-    if (valeur.helixChiffre === 2) dechiffreur.setAAD(donneesAssociees(place as string));
+    if (valeur.oxoaiChiffre === 2) dechiffreur.setAAD(donneesAssociees(place as string));
     dechiffreur.setAuthTag(Buffer.from(valeur.tag, "base64"));
     const clair = Buffer.concat([
       dechiffreur.update(Buffer.from(valeur.donnees, "base64")),

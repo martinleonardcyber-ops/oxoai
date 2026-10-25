@@ -21,7 +21,7 @@ import ar from "../i18n/ar.json" with { type: "json" };
  *
  * La passerelle sert plusieurs postes à la fois, qui peuvent lire dans sept
  * langues différentes. Une langue « de l'instance » serait donc fausse pour
- * quelqu'un. Chaque requête porte la sienne (`X-Helix-Langue`, posé par
+ * quelqu'un. Chaque requête porte la sienne (`X-OxoAI-Langue`, posé par
  * `authHeaders()` côté écran), et `AsyncLocalStorage` la rend lisible depuis
  * n'importe quelle profondeur d'appel sans la passer en paramètre à trois cents
  * endroits. C'est du Node standard : la passerelle reste sans dépendance.
@@ -74,7 +74,7 @@ export function avecLangueDe<T>(
   adresse: URL,
   travail: () => T,
 ): T {
-  const entete = entetes["x-helix-langue"];
+  const entete = entetes["x-oxoai-langue"];
   const navigateur = entetes["accept-language"];
   const brut =
     (Array.isArray(entete) ? entete[0] : entete) ??
@@ -82,7 +82,7 @@ export function avecLangueDe<T>(
     adresse.searchParams.get("langue") ??
     /*
      * Revérification des connecteurs du 28/09/2026 : la page publique de retour
-     * d'une autorisation (`/helix/oauth/retour`) est ouverte par le navigateur
+     * d'une autorisation (`/oxoai/oauth/retour`) est ouverte par le navigateur
      * que le service renvoie, sans en-tête de l'application. Elle s'affichait
      * donc toujours en anglais, même à qui venait de cliquer « Se connecter »
      * en français. La langue du navigateur, faute de mieux.

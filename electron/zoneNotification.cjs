@@ -14,7 +14,7 @@
  * premier avis le dit.
  *
  * Les textes suivent la langue de l'écran, que l'interface donne au démarrage
- * (`helix:langue`).
+ * (`oxoai:langue`).
  */
 
 const { Menu, Notification, Tray, nativeImage } = require("electron");
@@ -180,7 +180,7 @@ function installerZoneNotification({ nom, icone, langue, montrer, quitter }) {
     const image = nativeImage.createFromPath(icone);
     tray = new Tray(image);
   } catch (err) {
-    console.error("[helix] icône de la zone de notification impossible :", err?.message ?? err);
+    console.error("[oxoai] icône de la zone de notification impossible :", err?.message ?? err);
     return null;
   }
 

@@ -1,5 +1,5 @@
-import helixMark from "@/assets/helix-mark.png";
-import helixLogo from "@/assets/helix-logo.png";
+import oxoaiMark from "@/assets/oxoai-mark.png";
+import oxoaiLogo from "@/assets/oxoai-logo.png";
 import { t } from "@/lib/i18n";
 
 /**
@@ -36,7 +36,7 @@ export interface Features {
    * L'écran d'abonnement aux modèles hébergés.
    *
    * Éteint par défaut, dans les deux éditions : une entreprise qui installe
-   * HelixAI chez elle n'a rien à acheter, et lui présenter une offre
+   * OxoAI chez elle n'a rien à acheter, et lui présenter une offre
    * commerciale dans ses propres réglages serait déplacé. Il s'allume par
    * `featureOverrides` dans la version distribuée par le prestataire qui,
    * lui, vend l'hébergement.
@@ -117,38 +117,39 @@ export interface Branding {
 }
 
 export const branding: Branding = {
-  name: "Helix",
-  shortName: "helix",
-  tagline: t("Des agents IA souverains pour votre entreprise"),
+  name: "OxoAI",
+  shortName: "oxoai",
+  tagline: t("Votre espace de travail IA, sur votre machine"),
   // Lue dans package.json à la construction : ne pas l'écrire à la main.
-  version: __HELIX_VERSION__,
+  version: __OXOAI_VERSION__,
   edition: "complete",
-  // Version du prestataire, qui propose l'hébergement des modèles. À retirer
-  // pour un client en marque blanche : il installe chez lui, il n'achète rien.
-  featureOverrides: { abonnement: true },
+  // OxoAI ne vend rien : pas d'écran d'abonnement aux modèles hébergés.
   logo: {
     // Images importées comme modules : l'outil de construction en calcule
     // l'adresse. C'est le seul moyen fiable — un chemin écrit à la main casse
     // soit sur une route imbriquée (« /parametres/profil »), soit une fois
     // l'application empaquetée et chargée depuis le disque.
     // Pour rebrander : remplacer les fichiers dans `src/assets/`.
-    wordmark: helixLogo,
-    mark: helixMark,
-    alt: "Helix",
+    wordmark: oxoaiLogo,
+    mark: oxoaiMark,
+    alt: "OxoAI",
   },
   urls: {
-    instance: "https://app.helix-agence.fr",
-    marketing: "https://helix-agence.fr",
+    // Pas d'instance hébergée ni de site commercial : OxoAI s'installe chez soi.
+    instance: "",
+    marketing: "",
     // Le dépôt public (27/09/2026) ; « latest » mène toujours à la dernière version publiée.
-    releases: "https://github.com/medhiclb/HelixAI/releases/latest",
-    sourceCode: "https://github.com/medhiclb/HelixAI",
-    dpoEmail: "dpo@helix-agence.fr",
-    supportEmail: "support@helix-agence.fr",
+    releases: "https://github.com/martinleonardcyber-ops/oxoai/releases/latest",
+    sourceCode: "https://github.com/martinleonardcyber-ops/oxoai",
+    // Vides : l'aide passe par les tickets GitHub, et les écrans qui proposent
+    // un mail ou un DPO ne s'affichent que si une adresse est renseignée ici.
+    dpoEmail: "",
+    supportEmail: "",
   },
   footer: {
-    copyright: `© ${new Date().getFullYear()} Helix Agence`,
-    // Nom commercial d'une micro-entreprise : le titulaire des droits est son exploitant (COPYRIGHT.md).
-    legalName: "Helix Agence",
+    copyright: `© ${new Date().getFullYear()} OxoAI · d'après HelixAI de Medhi Clabaut (Helix Agence)`,
+    // Dérivé de HelixAI (AGPL-3.0) : les droits d'origine restent à son auteur (COPYRIGHT.md).
+    legalName: "OxoAI",
   },
 };
 

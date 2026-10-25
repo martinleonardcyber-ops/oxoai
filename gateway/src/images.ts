@@ -110,7 +110,7 @@ interface ModeleImage {
   options: string[];
   /** Plus fine d'abord : on prend la première qui tient sur la machine. */
   variantes: Variante[];
-  /** Essayé de bout en bout avec Helix. Les autres sont proposés, marqués comme tels. */
+  /** Essayé de bout en bout avec OxoAI. Les autres sont proposés, marqués comme tels. */
   verifie: boolean;
   readonly atout: string;
 }
@@ -301,10 +301,10 @@ const RAISON_GLIBC = () =>
 /* Emplacements                                                        */
 /* ------------------------------------------------------------------ */
 
-const racine = () => process.env.HELIX_IMAGES_DIR ?? join(homedir(), ".helix", "images");
+const racine = () => process.env.OXOAI_IMAGES_DIR ?? join(homedir(), ".oxoai", "images");
 const dossierMoteur = (m: Moteur) => join(racine(), "moteur", m.version);
 const dossierModeles = () => join(racine(), "modeles");
-const donnees = () => process.env.HELIX_DATA_DIR ?? join(homedir(), ".helix", "data");
+const donnees = () => process.env.OXOAI_DATA_DIR ?? join(homedir(), ".oxoai", "data");
 const dossierCreees = () => join(donnees(), "images");
 const index = () => join(dossierCreees(), "index.json");
 
@@ -546,7 +546,7 @@ export function installerImages(qui: string, id: string): Promise<void> {
     installation = { modele: m.id, etape: "telechargement", message: t("Téléchargement du moteur d'images..."), fait: 0, total };
 
     for (const a of archives) {
-      const tmp = join(tmpdir(), `helix-images-${randomBytes(4).toString("hex")}.zip`);
+      const tmp = join(tmpdir(), `oxoai-images-${randomBytes(4).toString("hex")}.zip`);
       await telecharger(a.url, tmp, a.sha256, a.taille, suivre(t("Téléchargement du moteur d'images...")));
       try {
         await extraire(tmp, dossierMoteur(moteur));
@@ -804,7 +804,7 @@ export async function lancerCreation(description: string, format: Format, qui: s
  *    images par seconde ; dès 32 Go ou une carte de 16 Go.
  * Pas sur le processeur seul : il y passerait des heures.
  *
- * Pas encore essayés de bout en bout avec Helix (il faut les télécharger) :
+ * Pas encore essayés de bout en bout avec OxoAI (il faut les télécharger) :
  * `verifie: false`. L'écran ne le dit plus depuis le 28/09/2026 (PROJET.md
  * § 3.16).
  */
@@ -1011,7 +1011,7 @@ async function installerMoteurSiBesoin(moteur: Moteur, avancer: (fait: number) =
   const archives = [{ url: moteur.archive, sha256: moteur.sha256, taille: moteur.taille }, ...(moteur.complement ? [{ url: moteur.complement.archive, sha256: moteur.complement.sha256, taille: moteur.complement.taille }] : [])];
   let fait = 0;
   for (const a of archives) {
-    const tmp = join(tmpdir(), `helix-images-${randomBytes(4).toString("hex")}.zip`);
+    const tmp = join(tmpdir(), `oxoai-images-${randomBytes(4).toString("hex")}.zip`);
     await telecharger(a.url, tmp, a.sha256, a.taille, (f) => avancer(fait + f));
     try {
       await extraire(tmp, dossierMoteur(moteur));

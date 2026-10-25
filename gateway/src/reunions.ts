@@ -129,7 +129,7 @@ const TITRE_MAX = 120;
 export const LIEN_MEET = /^https:\/\/meet\.google\.com\/[a-z]{3}-[a-z]{4}-[a-z]{3}(\?[^\s#]*)?$/i;
 const LIEN_MEET_DANS_TEXTE = /https:\/\/meet\.google\.com\/[a-z]{3}-[a-z]{4}-[a-z]{3}/i;
 
-const dossier = () => join(process.env.HELIX_DATA_DIR ?? join(homedir(), ".helix", "data"), "reunions");
+const dossier = () => join(process.env.OXOAI_DATA_DIR ?? join(homedir(), ".oxoai", "data"), "reunions");
 const cheminAudio = (id: string) => join(dossier(), `${id}.audio`);
 const cheminTranscription = (id: string) => join(dossier(), `${id}.transcription`);
 

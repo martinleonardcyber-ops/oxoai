@@ -20,7 +20,7 @@ import { phraseLangue } from "./plan.ts";
  *  2. **La place** : jusqu'à 200 000 caractères par fichier partaient tels
  *     quels, quelle que soit la taille de conversation du modèle chargé
  *     (32 768 jetons sur un poste de 16 Go, 4 096 chez LM Studio pour un
- *     modèle chargé sans Helix). Au-delà, le moteur refusait, ou coupait
+ *     modèle chargé sans OxoAI). Au-delà, le moteur refusait, ou coupait
  *     lui-même au milieu, en silence.
  *  3. **La question suivante** : le texte ne partait qu'avec la question qui
  *     portait le fichier ; « et la page 3 ? » arrivait sans lui.

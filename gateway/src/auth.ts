@@ -19,8 +19,8 @@ import type http from "node:http";
  */
 
 const TOKEN_PATH =
-  process.env.HELIX_TOKEN_FILE ??
-  join(process.env.HELIX_DATA_DIR ?? join(homedir(), ".helix", "data"), "instance-token");
+  process.env.OXOAI_TOKEN_FILE ??
+  join(process.env.OXOAI_DATA_DIR ?? join(homedir(), ".oxoai", "data"), "instance-token");
 
 /** Où le jeton est écrit, en lecture seule pour son propriétaire. */
 export const cheminDuJeton = (): string => TOKEN_PATH;
@@ -38,7 +38,7 @@ const PUBLIC_PATHS = new Set([
    * de vie d'une autorisation — et le vérificateur PKCE, qui n'a jamais quitté
    * l'instance. Elle ne rend qu'une page à lire ; aucune donnée n'en sort.
    */
-  "/helix/oauth/retour",
+  "/oxoai/oauth/retour",
   /*
    * Rattachement d'un poste par code d'invitation (invitations.ts).
    *
@@ -47,7 +47,7 @@ const PUBLIC_PATHS = new Set([
    * une fois — et la route est limitée en débit (debit.ts). Sans code valide,
    * elle ne rend rien.
    */
-  "/helix/invitations/rejoindre",
+  "/oxoai/invitations/rejoindre",
   /*
    * Notifications de WhatsApp (natifs/messageries.ts, 28/09/2026) : c'est Meta
    * qui appelle, sans jeton ni séance. Ce qui protège la route : la signature
@@ -55,7 +55,7 @@ const PUBLIC_PATHS = new Set([
    * vérifiée avant toute lecture, et le jeton de vérification de l'abonnement,
    * tiré au sort par l'instance. Elle ne rend que « reçu ».
    */
-  "/helix/messageries/whatsapp/webhook",
+  "/oxoai/messageries/whatsapp/webhook",
 ]);
 
 let token: string | null = null;
@@ -63,8 +63,8 @@ let token: string | null = null;
 export function instanceToken(): string {
   if (token) return token;
 
-  if (process.env.HELIX_TOKEN) {
-    token = process.env.HELIX_TOKEN;
+  if (process.env.OXOAI_TOKEN) {
+    token = process.env.OXOAI_TOKEN;
     return token;
   }
 
@@ -80,7 +80,7 @@ export function instanceToken(): string {
     chmodSync(TOKEN_PATH, 0o600);
   } catch (err) {
     console.error(
-      "[helix] jeton non enregistré (il changera au prochain démarrage) :",
+      "[oxoai] jeton non enregistré (il changera au prochain démarrage) :",
       err instanceof Error ? err.message : err,
     );
   }
@@ -122,7 +122,7 @@ export function authorise(req: http.IncomingMessage, url: URL, path: string): bo
    * Un billet de flux vaut les deux jetons.
    *
    * Il n'a pu être obtenu que par une requête portant le jeton d'instance
-   * **et** une séance ouverte (`POST /helix/flux/ticket`). Le présenter prouve
+   * **et** une séance ouverte (`POST /oxoai/flux/ticket`). Le présenter prouve
    * donc les deux, et évite de faire voyager l'un ou l'autre dans l'adresse
    * d'un flux, où `EventSource` ne sait pas poser d'en-tête (flux.ts). On se
    * contente ici de vérifier : c'est `demandeur()` qui le consomme.

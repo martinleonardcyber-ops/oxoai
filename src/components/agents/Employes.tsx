@@ -1349,7 +1349,7 @@ function Reglages({
                 }
               : {}),
           });
-          window.dispatchEvent(new Event("helix:agents-changed"));
+          window.dispatchEvent(new Event("oxoai:agents-changed"));
         }
         return r;
       },

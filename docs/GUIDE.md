@@ -1,4 +1,4 @@
-# HelixAI : guide technique
+# OxoAI : guide technique
 
 Plateforme d'agents IA **open source**, en marque blanche, en logiciel de bureau :
 chaque organisation installe sa propre instance, chez elle. Elle réunit une interface
@@ -6,10 +6,10 @@ React, une **passerelle modèles** locale (`gateway/`) et une enveloppe **Electr
 lance la passerelle au démarrage. Interface en **sept langues** (français, anglais, chinois, japonais,
 espagnol, allemand, arabe), au choix de chacun (Réglages, Préférences) ; en arabe, l'écran se lit de droite à gauche.
 
-Contributions : [CONTRIBUTING.md](../CONTRIBUTING.md) et [CLA.md](../CLA.md).
+Contributions : [CONTRIBUTING.md](../CONTRIBUTING.md).
 
 Sous licence **[GNU AGPL-3.0](../LICENSE)** : lisez, installez, modifiez, redistribuez,
-vendez. En retour, qui distribue HelixAI ou **le propose comme service en ligne** doit
+vendez. En retour, qui distribue OxoAI ou **le propose comme service en ligne** doit
 publier le code de sa version, modifications comprises, sous la même licence.
 Explications et portée dans [COPYRIGHT.md](../COPYRIGHT.md).
 
@@ -21,7 +21,7 @@ bibliothèque, les réunions transcrites sur la machine et le bot de réunion, l
 branchement d'une trentaine de services (dont douze en un clic, par autorisation dans
 le navigateur), la synchronisation de plusieurs postes vers une instance, et depuis le
 25/09/2026 les bases de connaissances citées dans le Chat, la ligne de commande
-`helix` et l'entraînement d'un petit modèle sur Mac. Depuis le 27/09/2026 : les documents
+`oxoai` et l'entraînement d'un petit modèle sur Mac. Depuis le 27/09/2026 : les documents
 joints lus par tout modèle (mesurés contre sa place, lus en parties au besoin), les durées
 des réponses, un essai de chaque modèle local sur le poste, une couche d'aide aux petits
 modèles, les modèles des clés d'API,
@@ -42,7 +42,7 @@ npm install
 npm run app
 ```
 
-Lance Helix en application de bureau : elle compile puis démarre **sa propre
+Lance OxoAI en application de bureau : elle compile puis démarre **sa propre
 passerelle**, crée son espace de travail au premier lancement, et s'arrête
 proprement à la fermeture. Aucun terminal à gérer.
 
@@ -56,7 +56,7 @@ npm run verifier:signature # contrôle signature, durcissement, Gatekeeper, nota
 
 Mode d'emploi de la signature, pas à pas : [`SIGNATURE.md`](../SIGNATURE.md) § 1.
 
-Génère `release/Helix-<version>-<arch>.dmg` et `.zip` (macOS). Windows et Linux se
+Génère `release/OxoAI-<version>-<arch>.dmg` et `.zip` (macOS). Windows et Linux se
 fabriquent depuis ce même Mac, après `npm run build` (27/09/2026) :
 
 ```bash
@@ -64,9 +64,9 @@ npx electron-builder --win nsis --x64 --publish never
 npx electron-builder --linux AppImage deb --x64 --publish never
 ```
 
-Ils donnent `release/Helix-Setup-<version>-x64.exe` (installateur NSIS pour le compte, sans
+Ils donnent `release/OxoAI-Setup-<version>-x64.exe` (installateur NSIS pour le compte, sans
 droits d'administration, en français, anglais ou chinois selon Windows),
-`release/helix-plateforme_<version>_amd64.deb` et `release/Helix-<version>.AppImage`. La
+`release/oxoai-plateforme_<version>_amd64.deb` et `release/OxoAI-<version>.AppImage`. La
 chaîne NSIS récente (`toolsets.nsis` 1.2.1) est nécessaire sur un Mac Apple Silicon sans
 Rosetta ; l'AppImage prend le runtime statique (`toolsets.appimage` 1.0.3, noté bêta par
 electron-builder), qui se passe de libfuse2. Le `.deb` tire les bibliothèques du moteur
@@ -75,7 +75,7 @@ installe avec lui. Il pose aussi le bac à sable de Chromium et son profil AppAr
 l'AppImage n'a pas (sur Ubuntu 24.04, l'AppImage démarre sans bac à sable).
 L'installeur embarque
 l'interface, la passerelle compilée (`dist-gateway/index.cjs`) et l'icône. La
-passerelle tourne dans le runtime Node d'Electron : **lancer Helix et converser
+passerelle tourne dans le runtime Node d'Electron : **lancer OxoAI et converser
 ne demande aucune installation de Node**.
 
 Deux capacités font exception et s'appuient sur des programmes présents sur la
@@ -83,9 +83,9 @@ machine :
 
 | Capacité | Ce qu'elle exige | Sans cela |
 |---|---|---|
-| Outils fichiers (MCP) | `npx` | Sans lui (ou sous Windows, où c'est un `.cmd`), Helix le lance par un vrai Node : celui du système, sinon son Node officiel, posé au besoin (nodejs.org, empreinte vérifiée). Hors ligne et sans Node : pas d'outils |
-| Écran Code | OpenCode : celui que Helix pose seul, en arrière-plan, depuis le 27/09/2026 (1.18.32, empreinte SHA-256 écrite dans le code, `<données>/opencode/`), sinon `HELIX_OPENCODE_BIN`, `~/.opencode/bin/opencode` ou le `PATH`. Codex, second moteur facultatif, n'est jamais installé par Helix | Hors ligne, ou sur un poste rattaché : l'écran Code propose « Installer OpenCode » (administrateur), et rappelle la commande manuelle |
-| Modèles locaux | LM Studio | L'écran de mise en route l'installe, sans intervention : son moteur sans interface (llmster 0.0.25-1, empreinte SHA-512 écrite dans le code) sur Mac à puce Apple, Windows et Linux ; sur un Mac où l'application LM Studio a déjà servi, c'est elle qui sert ; sur Mac Intel, llama.cpp à la place (moteur ouvert, MIT, b11146, `<données>/llamacpp/`, modèles Qwen3 GGUF épinglés ; `HELIX_MOTEUR=llamacpp` le choisit ailleurs sur macOS). L'emplacement se choisit (voir « Emplacement du moteur et des modèles ») |
+| Outils fichiers (MCP) | `npx` | Sans lui (ou sous Windows, où c'est un `.cmd`), OxoAI le lance par un vrai Node : celui du système, sinon son Node officiel, posé au besoin (nodejs.org, empreinte vérifiée). Hors ligne et sans Node : pas d'outils |
+| Écran Code | OpenCode : celui que OxoAI pose seul, en arrière-plan, depuis le 27/09/2026 (1.18.32, empreinte SHA-256 écrite dans le code, `<données>/opencode/`), sinon `OXOAI_OPENCODE_BIN`, `~/.opencode/bin/opencode` ou le `PATH`. Codex, second moteur facultatif, n'est jamais installé par OxoAI | Hors ligne, ou sur un poste rattaché : l'écran Code propose « Installer OpenCode » (administrateur), et rappelle la commande manuelle |
+| Modèles locaux | LM Studio | L'écran de mise en route l'installe, sans intervention : son moteur sans interface (llmster 0.0.25-1, empreinte SHA-512 écrite dans le code) sur Mac à puce Apple, Windows et Linux ; sur un Mac où l'application LM Studio a déjà servi, c'est elle qui sert ; sur Mac Intel, llama.cpp à la place (moteur ouvert, MIT, b11146, `<données>/llamacpp/`, modèles Qwen3 GGUF épinglés ; `OXOAI_MOTEUR=llamacpp` le choisit ailleurs sur macOS). L'emplacement se choisit (voir « Emplacement du moteur et des modèles ») |
 
 Dans le Chat et dans Cowork, un message envoyé pendant qu'une réponse s'écrit ne la coupe
 pas : il entre dans la file d'attente de ce Chat, affichée au-dessus de la zone de saisie
@@ -111,14 +111,14 @@ sans lui, il n'y a simplement pas de chiffre.
 « Essai Windows » (`.github/workflows/essai-windows.yml`) : sur une machine Windows neuve
 (`windows-latest`), il construit l'application (`npm run build`, puis
 `electron-builder --win dir --x64`, sans signature ni publication), lance
-**l'application empaquetée** `release\win-unpacked\Helix.exe` avec des données et un profil
+**l'application empaquetée** `release\win-unpacked\OxoAI.exe` avec des données et un profil
 jetables, et fait le parcours d'une personne par la passerelle, comme l'écran de mise en
 route : compte administrateur, installation du moteur de LM Studio (conditions acceptées
 pour cet usage interne d'essai), Qwen3 1.7B jusqu'à « prêt », une question au Chat en flux,
 puis l'application quittée, le service de LM Studio arrêté comme après un redémarrage,
 l'application rouverte et la même question. Le pilotage est dans
 `scripts/essai-windows-ci.mjs` (mode d'emploi en tête du fichier) ; il refuse de tourner
-ailleurs que sous Windows, et sans `HELIX_ESSAI_MACHINE_JETABLE=1`, puisqu'il pose le
+ailleurs que sous Windows, et sans `OXOAI_ESSAI_MACHINE_JETABLE=1`, puisqu'il pose le
 moteur dans `%USERPROFILE%\.lmstudio`.
 
 Il part tout seul à chaque poussée sur `main` qui touche `gateway/`, `electron/`, `src/` ou
@@ -138,7 +138,7 @@ de l'application, `passerelle.log`, la liste de `%USERPROFILE%\.lmstudio` et de 
 les réponses du Chat et le journal d'audit de l'instance jetable.
 
 Sur un poste Windows, `passerelle.log` (la sortie de la passerelle, 5 Mo au plus, l'ancien
-gardé en `.1`) est dans `%APPDATA%\helix-plateforme\logs\` : c'est le premier fichier à
+gardé en `.1`) est dans `%APPDATA%\oxoai-plateforme\logs\` : c'est le premier fichier à
 demander à une personne dont le moteur ne démarre pas.
 
 ### Emplacement du moteur et des modèles
@@ -149,16 +149,16 @@ un autre disque (un D: sous Windows, un disque externe sur Mac) :
 - **Avant l'installation**, sur l'écran de mise en route : l'emplacement, la place libre sur ce
   disque et la place nécessaire (moteur, modèle conseillé, 1 Go de marge), puis « Changer ». Dans
   l'application, le sélecteur de dossier du système ; dans un navigateur, ou pour une instance
-  distante, un champ où écrire le chemin sur la machine de l'instance. Avec LM Studio, Helix écrit
+  distante, un champ où écrire le chemin sur la machine de l'instance. Avec LM Studio, OxoAI écrit
   alors `~/.lmstudio-home-pointer` vers `<dossier choisi>/LM Studio` : moteur, téléchargements en
   cours et modèles y vont. Avec llama.cpp (Mac Intel), les modèles vont dans
   `<dossier choisi>/modeles-llamacpp` ; le moteur (11 Mo) reste dans les données de l'instance.
-- **Après l'installation**, dans Réglages, Modèles locaux. llama.cpp : Helix déplace les modèles
+- **Après l'installation**, dans Réglages, Modèles locaux. llama.cpp : OxoAI déplace les modèles
   (renommage sur le même disque ; sinon copie, taille vérifiée, puis effacement des originaux ; rien
-  n'est effacé si la copie échoue). LM Studio déjà installé : Helix ne déplace pas le dossier d'un
-  LM Studio qui tourne. À la main : quitter Helix et LM Studio, `"<dossier>/bin/lms" daemon down`,
+  n'est effacé si la copie échoue). LM Studio déjà installé : OxoAI ne déplace pas le dossier d'un
+  LM Studio qui tourne. À la main : quitter OxoAI et LM Studio, `"<dossier>/bin/lms" daemon down`,
   déplacer tout le dossier, écrire son nouveau chemin (seul sur une ligne) dans
-  `~/.lmstudio-home-pointer`, rouvrir Helix. Pour les nouveaux modèles seulement, le réglage « My
+  `~/.lmstudio-home-pointer`, rouvrir OxoAI. Pour les nouveaux modèles seulement, le réglage « My
   Models › Change » de l'application LM Studio suffit, mais les téléchargements en cours passent
   encore par le disque principal (`.internal/temp-downloads` du dossier de LM Studio).
 
@@ -171,10 +171,10 @@ qu'Apple n'a pas pu le vérifier (« Ouvrir quand même ») et `spctl` le refuse
 L'installation en une commande (`scripts/installer-macos.sh`) évite l'avertissement : elle
 télécharge l'image disque de la dernière publication par le Terminal, la vérifie contre
 `SHA256SUMS.txt` de la même publication, vérifie la signature de code
-(`codesign --verify --deep --strict`), attend que Helix soit fermé, puis copie
+(`codesign --verify --deep --strict`), attend que OxoAI soit fermé, puis copie
 l'application à côté avant de la mettre en place dans Applications (ou `~/Applications`).
 Limite : l'empreinte vient de la même publication que l'image. Non signée par Apple,
-l'application voit aussi macOS redemander l'accès à sa clé du trousseau (« Helix Safe
+l'application voit aussi macOS redemander l'accès à sa clé du trousseau (« OxoAI Safe
 Storage ») une fois à chaque nouvelle version. Tout est prêt pour la signature et la
 notarisation (`npm run package:signe`) ; il manque le certificat Apple, voir
 [`SIGNATURE.md`](../SIGNATURE.md). La mise à jour **automatique** en dépend aussi. Sans elle,
@@ -185,13 +185,13 @@ l'éditeur est bonne avec la clé de l'application qui tourne (SIGNATURE.md § 4
 
 Le paquet ferme trois fusibles d'Electron (`build.electronFuses` de `package.json`) :
 `NODE_OPTIONS`, `--inspect` et, depuis le 28/09/2026, RunAsNode. `ELECTRON_RUN_AS_NODE=1`
-ne fait donc plus du binaire de Helix un Node que n'importe quel programme du poste
-pourrait lancer avec les autorisations de Helix (SECURITE.md, § 52 « RunAsNode fermé ») ;
-lancé depuis le terminal de VS Code, qui définit cette variable, Helix s'ouvre
+ne fait donc plus du binaire de OxoAI un Node que n'importe quel programme du poste
+pourrait lancer avec les autorisations de OxoAI (SECURITE.md, § 52 « RunAsNode fermé ») ;
+lancé depuis le terminal de VS Code, qui définit cette variable, OxoAI s'ouvre
 normalement. La passerelle tourne dans un `utilityProcess` (`electron/passerelle.cjs`),
-la commande `helix` avec un vrai Node (celui que Helix pose, sinon celui du système en
+la commande `oxoai` avec un vrai Node (celui que OxoAI pose, sinon celui du système en
 version 20 ou plus). Relu le 28/09/2026 sur des paquets fabriqués (`--mac dir`,
-`--win dir`, `--linux dir`) : `npx @electron/fuses read --app release/mac-arm64/Helix.app`
+`--win dir`, `--linux dir`) : `npx @electron/fuses read --app release/mac-arm64/OxoAI.app`
 dit « RunAsNode is Disabled » sur les trois.
 
 ⚠ **LM Studio**, le moteur installé par défaut, est un logiciel fermé dont les
@@ -218,29 +218,29 @@ L'interface est sur `http://localhost:5173`, la passerelle sur
 
 ### Ligne de commande
 
-`helix` (`cli/helix.mjs`, Node 20 ou plus, sans dépendance) parle à l'instance comme
+`oxoai` (`cli/oxoai.mjs`, Node 20 ou plus, sans dépendance) parle à l'instance comme
 l'interface : il affiche, et transmet vos réponses ; modèles, outils, barrière
 d'approbation et journal restent ceux de l'instance. Sur un poste qui a le dépôt :
-`npm link` (ou `node cli/helix.mjs`). Avec l'application : Réglages > Installer les
-apps > CLI > « Mettre en place », qui pose `~/.local/bin/helix` (depuis le 25/09/2026) ;
-sous Windows (depuis le 04/10/2026), `%USERPROFILE%\.helix\bin\helix.cmd`, et ce dossier
+`npm link` (ou `node cli/oxoai.mjs`). Avec l'application : Réglages > Installer les
+apps > CLI > « Mettre en place », qui pose `~/.local/bin/oxoai` (depuis le 25/09/2026) ;
+sous Windows (depuis le 04/10/2026), `%USERPROFILE%\.oxoai\bin\oxoai.cmd`, et ce dossier
 ajouté au PATH du compte (pas de droit d'administrateur ; « Retirer » enlève les deux). Ouvrir
 ensuite un nouveau PowerShell ou une nouvelle Invite de commandes.
 
 ```
-helix                          Chat interactif
-helix chat "question"          Une question, une réponse (aussi : cat notes.txt | helix chat "résume")
-helix chat --outils            Chat avec les outils de l'instance ; séance requise
-helix code "demande"           Helix Code sur le dossier courant (sans demande : interactif)
-helix connexion [--compte adresse@exemple.fr]
-helix deconnexion
-helix modeles                  Modèles de l'instance
-helix outils                   Groupes d'outils et niveau d'accord de l'instance
-helix aide
+oxoai                          Chat interactif
+oxoai chat "question"          Une question, une réponse (aussi : cat notes.txt | oxoai chat "résume")
+oxoai chat --outils            Chat avec les outils de l'instance ; séance requise
+oxoai code "demande"           OxoAI Code sur le dossier courant (sans demande : interactif)
+oxoai connexion [--compte adresse@exemple.fr]
+oxoai deconnexion
+oxoai modeles                  Modèles de l'instance
+oxoai outils                   Groupes d'outils et niveau d'accord de l'instance
+oxoai aide
 ```
 
-Options : `--adresse URL` (ou `HELIX_ADRESSE`, défaut `http://127.0.0.1:8787`),
-`--jeton` (ou `HELIX_JETON` ; à défaut, le jeton de l'application du poste, lu
+Options : `--adresse URL` (ou `OXOAI_ADRESSE`, défaut `http://127.0.0.1:8787`),
+`--jeton` (ou `OXOAI_JETON` ; à défaut, le jeton de l'application du poste, lu
 seulement pour une adresse locale), `--modele`, `--effort`, `--outils`. Dans une
 conversation : `/nouveau`, `/modele [NOM]`, `/aide`, `/quitter` (ou Ctrl+D) ; Ctrl+C
 arrête la réponse en cours. Une demande d'accord s'affiche en entier, « Autoriser ?
@@ -251,29 +251,29 @@ seulement.
 
 ### Extension VS Code
 
-`extensions/vscode/` (version 0.2.6, sans dépendance) : le Chat de l'instance et Helix Code
-dans VS Code. **Installation** : le paquet `helix-ai-0.2.6.vsix` est joint à chaque version
-GitHub (https://github.com/medhiclb/HelixAI/releases/latest) ; dans VS Code, vue Extensions,
+`extensions/vscode/` (version 0.2.6, sans dépendance) : le Chat de l'instance et OxoAI Code
+dans VS Code. **Installation** : le paquet `oxoai-ai-0.2.6.vsix` est joint à chaque version
+GitHub (https://github.com/martinleonardcyber-ops/oxoai/releases/latest) ; dans VS Code, vue Extensions,
 menu « … » en haut de la vue, « Install from VSIX… », puis le fichier. Une version plus
 récente s'installe de la même façon, par-dessus. Le paquet se refait avec `vsce package` dans
 `extensions/vscode/` (les `.vsix` sont ignorés par git).
 
-- Icône Helix dans la barre d'activité : onglets **Chat** (« Joindre le fichier ouvert »,
+- Icône OxoAI dans la barre d'activité : onglets **Chat** (« Joindre le fichier ouvert »,
   coché par défaut ; « Insérer » au-dessus de chaque bloc de code, qui remplace la sélection
-  ou insère au curseur) et **Code** (Helix Code sur le dossier ouvert, accords dans une
+  ou insère au curseur) et **Code** (OxoAI Code sur le dossier ouvert, accords dans une
   fenêtre « Autoriser » / « Refuser »).
-- Commandes : « Helix : expliquer la sélection » et « Helix : améliorer la sélection » (aussi
-  au clic droit sur du code sélectionné), « Helix : nouveau Chat », « Helix : se connecter
-  (pour Helix Code) », « Helix : se déconnecter ».
-- Réglages : `helix.adresse` (défaut `http://127.0.0.1:8787`, `https` exigé hors de cet
-  ordinateur), `helix.jeton` (vide : lu dans `~/.helix/data/instance-token`, seulement pour le
-  port de l'application), `helix.modele` (vide : Auto). Les deux premiers sont de portée
+- Commandes : « OxoAI : expliquer la sélection » et « OxoAI : améliorer la sélection » (aussi
+  au clic droit sur du code sélectionné), « OxoAI : nouveau Chat », « OxoAI : se connecter
+  (pour OxoAI Code) », « OxoAI : se déconnecter ».
+- Réglages : `oxoai.adresse` (défaut `http://127.0.0.1:8787`, `https` exigé hors de cet
+  ordinateur), `oxoai.jeton` (vide : lu dans `~/.oxoai/data/instance-token`, seulement pour le
+  port de l'application), `oxoai.modele` (vide : Auto). Les deux premiers sont de portée
   machine : le `.vscode/settings.json` d'un dépôt ne les change pas, et l'extension ne
   s'active que dans un espace de travail de confiance.
-- Le Chat se contente du jeton d'instance ; l'onglet Code exige une séance (« Helix : se
+- Le Chat se contente du jeton d'instance ; l'onglet Code exige une séance (« OxoAI : se
   connecter » : compte, mot de passe, code si la double authentification est active), gardée
   par adresse dans le coffre de VS Code, et l'instance de cet ordinateur (sinon :
-  `helix code --dossier`).
+  `oxoai code --dossier`).
 - Pendant la réflexion du modèle, la vue dit « Le modèle réfléchit (N s)… » (0.2.5, comme le
   code de la question, désormais mis en forme, et le bouton « Insérer », posé au-dessus du
   code).
@@ -293,11 +293,11 @@ Elle découvre automatiquement les moteurs disponibles :
 
 | Backend | URL par défaut | Variable d'environnement |
 |---|---|---|
-| Cluster **exo** | `http://localhost:52415/v1` | `HELIX_EXO_URL` |
-| **LM Studio** | `http://localhost:1234/v1` | `HELIX_LMSTUDIO_URL` |
+| Cluster **exo** | `http://localhost:52415/v1` | `OXOAI_EXO_URL` |
+| **LM Studio** | `http://localhost:1234/v1` | `OXOAI_LMSTUDIO_URL` |
 
 D'autres backends OpenAI-compatibles (cloud européen, second cluster) s'ajoutent
-par `backends` dans `helix.config.json`.
+par `backends` dans `oxoai.config.json`.
 
 Une personne peut aussi brancher **sa propre clé** (Réglages, Modèles cloud) : Mistral,
 Scaleway, OVHcloud, IONOS, OpenAI, Anthropic, Google Gemini, OpenRouter, Groq, DeepSeek,
@@ -318,11 +318,11 @@ d'erreur du Chat passe à la ligne n'importe où plutôt que de déborder (29/09
 Pour le Chat, il suffit que **LM Studio tourne avec son serveur local activé** et qu'un
 modèle de conversation soit installé. Si le serveur local est éteint, la passerelle
 tente de le démarrer elle-même (`lms server start`) et le referme à la fermeture de
-Helix si c'est elle qui l'avait allumé. La passerelle classe les modèles par rôle
+OxoAI si c'est elle qui l'avait allumé. La passerelle classe les modèles par rôle
 (chat, code, vision, gui, embed), préfère un modèle déjà chargé, et relaie le canal de
 raisonnement des modèles qui en émettent un (Qwen3, Kimi Thinking…). Depuis le 27/09/2026,
 ce qui est en mémoire, c'est `lms ps` qui le dit : un modèle que LM Studio liste sans
-l'avoir chargé (chargement à la demande) est chargé par Helix, avec ses réglages
+l'avoir chargé (chargement à la demande) est chargé par OxoAI, avec ses réglages
 (`--context-length 32768`, `--parallel 1` au processeur seul, `--gpu off` sous Windows et
 Linux sans carte NVIDIA), puis passe l'essai de `santeModeles.ts`.
 
@@ -335,44 +335,44 @@ Toutes exigent le jeton d'instance, sauf `GET /` et `GET /health`. Celles marqu�
 | Route | Rôle | Séance |
 |---|---|---|
 | `GET /`, `GET /health` | Contrôle de présence. Sans jeton, ne renvoie que la présence du service | non |
-| `GET /v1/models`, `GET /helix/models` | Catalogue des modèles, avec leurs rôles. `/v1/models` accepte aussi une clé d'API seule | non |
+| `GET /v1/models`, `GET /oxoai/models` | Catalogue des modèles, avec leurs rôles. `/v1/models` accepte aussi une clé d'API seule | non |
 | `POST /v1/chat/completions` | OpenAI-compatible. Accepte en plus `role`, `effort`, `tools` et `connaissances` ; accepte aussi une clé d'API seule (voir « Clés d'API ») | si `tools: true` |
-| `POST /helix/models/load` | Charge un modèle en mémoire | oui |
-| `GET /helix/provision`, `GET /helix/provision/stream` | État et progression de la mise en route ; `modeles` : tout le catalogue libre pour la page Modèles, avec `installe` et, pour ceux qui ne tiennent pas, `tropLourd` (raison chiffrée) | non |
-| `POST /helix/provision/moteur` | Installe le moteur de LM Studio (llmster sur Mac à puce Apple, Windows et Linux ; llama.cpp sur Mac Intel, sans conditions à accepter) ; administrateur seul, une installation à la fois, conditions de LM Studio acceptées | oui |
-| `POST /helix/provision/start` | Télécharge et charge un modèle du catalogue (`{ "model": "<clé>", "role": "chat" \| "gui" }`) ; 409 avec la raison si le modèle nommé ne tient pas sur la machine | oui |
-| `GET /helix/emplacement-modeles` | Où vont le moteur et les modèles, place libre, place nécessaire, ce qui peut changer | oui |
-| `POST /helix/emplacement-modeles` | Choisit l'emplacement (`{ "dossier": "D:\\IA" }`, ou `null` pour l'habituel) ; déplace les modèles de llama.cpp s'il y en a ; administrateur seul, au journal | oui |
-| `POST /helix/emplacement-modeles/verifier` | Juge un dossier sans rien changer (sous-dossier qui serait créé, place libre) ; administrateur seul | oui |
-| `POST /helix/auth/create`, `POST /helix/auth/verify` | Création de compte, connexion | voir ci-dessous |
-| `POST /helix/auth/premier-mot-de-passe` | Premier mot de passe d'un compte créé avant 0.9.0, une seule fois | non |
-| `POST /helix/auth/deux-facteurs` | Second pas de la connexion : défi remis par `verify` et code | non |
-| `GET /helix/auth/deux-facteurs/etat`, `POST …/preparer`, `…/activer`, `…/desactiver`, `…/codes` | Réglage de la double authentification de la personne connectée | oui |
-| `GET /helix/export` | Export RGPD des données de la personne connectée | oui |
-| `GET /helix/compte/effacement`, `POST /helix/compte/effacer` | Aperçu puis suppression de son propre compte | oui |
-| `POST /helix/auth/deux-facteurs/inscription`, `…/inscription/activer` | Activation imposée du second facteur à la connexion (défi d'inscription) | non |
-| `GET /helix/auth/sessions`, `POST /helix/auth/revoke` | Séances ouvertes, révocation | oui |
-| `GET /helix/data` | Révisions par collection, sans contenu | non |
-| `GET`/`PUT /helix/data/<collection>` | Lecture et écriture d'une collection | oui, sauf lecture de `accounts` |
-| `GET /helix/audit` | Journal d'audit et vérification de sa chaîne | oui |
-| `GET /helix/mcp`, `POST /helix/mcp/toggle`, `POST /helix/mcp/workspace` | Serveurs d'outils et espace de travail | oui pour les deux `POST` |
-| `GET /helix/code`, `GET /helix/code/events` | État du moteur, flux d'évènements d'une session | non |
-| `GET /helix/dossiers`, `POST /helix/code/session`, `POST /helix/code/prompt`, `POST /helix/code/interrupt` | Écran Code (OpenCode) | oui |
-| `GET /helix/code/sessions`, `GET`/`DELETE /helix/code/sessions/<id>` | Sessions de Code de la personne, avec `enCours` ; historique relu chez OpenCode ; retrait de la liste (409 tant que la session travaille) | oui |
-| `GET /helix/codex`, `POST /helix/codex/connexion`, `…/connexion/annuler`, `…/tache`, `…/arreter` | Codex avec le compte ChatGPT du propriétaire du poste : état, `codex login`, tâche en flux, arrêt (SECURITE.md § 30). Refusé hors de l'application de bureau, sur une instance partagée, hors de la boucle locale, sans compte administrateur ou par clé d'API | oui |
-| `GET /helix/computer`, `GET /helix/computer/events` | État du contrôle de l'écran, flux des approbations | non |
-| `POST /helix/computer/action`, `POST /helix/computer/approve` | Demander et approuver une action d'écran | oui |
-| `GET /helix/atelier` | Diagnostic de l'atelier bureautique de Cowork | non |
-| `POST /helix/atelier/preparer`, `POST /helix/atelier/verifier` | Installer et vérifier l'atelier | oui |
-| `GET`/`POST /helix/employes`, `POST /helix/employes/<id>`, `…/supprimer`, `…/message`, `GET …/message/<travail>`, `…/echanges`, `…/activite`, `POST …/missions/<m>/lancer` | Employés OpenClaw : équipe, déploiement, conversation, activité (SECURITE.md § 14) | oui |
+| `POST /oxoai/models/load` | Charge un modèle en mémoire | oui |
+| `GET /oxoai/provision`, `GET /oxoai/provision/stream` | État et progression de la mise en route ; `modeles` : tout le catalogue libre pour la page Modèles, avec `installe` et, pour ceux qui ne tiennent pas, `tropLourd` (raison chiffrée) | non |
+| `POST /oxoai/provision/moteur` | Installe le moteur de LM Studio (llmster sur Mac à puce Apple, Windows et Linux ; llama.cpp sur Mac Intel, sans conditions à accepter) ; administrateur seul, une installation à la fois, conditions de LM Studio acceptées | oui |
+| `POST /oxoai/provision/start` | Télécharge et charge un modèle du catalogue (`{ "model": "<clé>", "role": "chat" \| "gui" }`) ; 409 avec la raison si le modèle nommé ne tient pas sur la machine | oui |
+| `GET /oxoai/emplacement-modeles` | Où vont le moteur et les modèles, place libre, place nécessaire, ce qui peut changer | oui |
+| `POST /oxoai/emplacement-modeles` | Choisit l'emplacement (`{ "dossier": "D:\\IA" }`, ou `null` pour l'habituel) ; déplace les modèles de llama.cpp s'il y en a ; administrateur seul, au journal | oui |
+| `POST /oxoai/emplacement-modeles/verifier` | Juge un dossier sans rien changer (sous-dossier qui serait créé, place libre) ; administrateur seul | oui |
+| `POST /oxoai/auth/create`, `POST /oxoai/auth/verify` | Création de compte, connexion | voir ci-dessous |
+| `POST /oxoai/auth/premier-mot-de-passe` | Premier mot de passe d'un compte créé avant 0.9.0, une seule fois | non |
+| `POST /oxoai/auth/deux-facteurs` | Second pas de la connexion : défi remis par `verify` et code | non |
+| `GET /oxoai/auth/deux-facteurs/etat`, `POST …/preparer`, `…/activer`, `…/desactiver`, `…/codes` | Réglage de la double authentification de la personne connectée | oui |
+| `GET /oxoai/export` | Export RGPD des données de la personne connectée | oui |
+| `GET /oxoai/compte/effacement`, `POST /oxoai/compte/effacer` | Aperçu puis suppression de son propre compte | oui |
+| `POST /oxoai/auth/deux-facteurs/inscription`, `…/inscription/activer` | Activation imposée du second facteur à la connexion (défi d'inscription) | non |
+| `GET /oxoai/auth/sessions`, `POST /oxoai/auth/revoke` | Séances ouvertes, révocation | oui |
+| `GET /oxoai/data` | Révisions par collection, sans contenu | non |
+| `GET`/`PUT /oxoai/data/<collection>` | Lecture et écriture d'une collection | oui, sauf lecture de `accounts` |
+| `GET /oxoai/audit` | Journal d'audit et vérification de sa chaîne | oui |
+| `GET /oxoai/mcp`, `POST /oxoai/mcp/toggle`, `POST /oxoai/mcp/workspace` | Serveurs d'outils et espace de travail | oui pour les deux `POST` |
+| `GET /oxoai/code`, `GET /oxoai/code/events` | État du moteur, flux d'évènements d'une session | non |
+| `GET /oxoai/dossiers`, `POST /oxoai/code/session`, `POST /oxoai/code/prompt`, `POST /oxoai/code/interrupt` | Écran Code (OpenCode) | oui |
+| `GET /oxoai/code/sessions`, `GET`/`DELETE /oxoai/code/sessions/<id>` | Sessions de Code de la personne, avec `enCours` ; historique relu chez OpenCode ; retrait de la liste (409 tant que la session travaille) | oui |
+| `GET /oxoai/codex`, `POST /oxoai/codex/connexion`, `…/connexion/annuler`, `…/tache`, `…/arreter` | Codex avec le compte ChatGPT du propriétaire du poste : état, `codex login`, tâche en flux, arrêt (SECURITE.md § 30). Refusé hors de l'application de bureau, sur une instance partagée, hors de la boucle locale, sans compte administrateur ou par clé d'API | oui |
+| `GET /oxoai/computer`, `GET /oxoai/computer/events` | État du contrôle de l'écran, flux des approbations | non |
+| `POST /oxoai/computer/action`, `POST /oxoai/computer/approve` | Demander et approuver une action d'écran | oui |
+| `GET /oxoai/atelier` | Diagnostic de l'atelier bureautique de Cowork | non |
+| `POST /oxoai/atelier/preparer`, `POST /oxoai/atelier/verifier` | Installer et vérifier l'atelier | oui |
+| `GET`/`POST /oxoai/employes`, `POST /oxoai/employes/<id>`, `…/supprimer`, `…/message`, `GET …/message/<travail>`, `…/echanges`, `…/activite`, `POST …/missions/<m>/lancer` | Employés OpenClaw : équipe, déploiement, conversation, activité (SECURITE.md § 14) | oui |
 | `…/canaux` (`GET`, `POST`), `…/canaux/<type>/retirer`, `…/canaux/whatsapp/qr`, `…/demandes`, `…/demandes/<canal>/<code>/accepter` | Messageries d'un employé, liaison WhatsApp par QR, personnes à accepter | oui |
-| `GET`/`POST /helix/fournisseurs`, `POST …/essayer`, `POST …/<id>`, `…/<id>/supprimer` | Clés de modèles cloud (SECURITE.md § 15) | oui |
-| `POST /helix/employes/<id>/outils` | Serveur d'outils MCP de l'employé, appelé par l'instance OpenClaw (clé `X-Helix-Cle`) | non, clé |
-| `GET`/`POST /helix/connaissances`, `GET …/documents`, `POST …/chercher`, `GET`/`POST …/<id>`, `POST …/<id>/{documents,retirer,reindexer,supprimer}` | Bases de connaissances (SECURITE.md § 22.2) ; champ `connaissances` du corps de `POST /v1/chat/completions` | oui |
-| `GET /helix/entrainement`, `GET …/projet?id=`, `POST …/{installer,desinstaller,projets,renommer,exemples,importer,generer,lancer,arreter,comparer,publier,retirer,supprimer}` | Entraîner un modèle (SECURITE.md § 22.3) | oui |
-| `/helix/code/outils` | Connecteurs servis par MCP à l'agent de code de l'instance (jeton et clé `X-Helix-Cle`, SECURITE.md § 22.4) | non, clé |
-| `GET`/`POST /helix/cles-api`, `POST …/<id>` (renommer), `POST …/<id>/revoquer` | Clés d'API personnelles : liste (avec les adresses de l'API réellement servies), création, renommage, révocation (SECURITE.md § 23) | oui |
-| `GET /helix/usage`, `POST /helix/usage/tarif` | Mon usage : consommation de la personne, coût par modèle (tarif saisi, sinon prix publié par son fournisseur, marqué estimé) ; saisie ou retrait d'un tarif | oui |
+| `GET`/`POST /oxoai/fournisseurs`, `POST …/essayer`, `POST …/<id>`, `…/<id>/supprimer` | Clés de modèles cloud (SECURITE.md § 15) | oui |
+| `POST /oxoai/employes/<id>/outils` | Serveur d'outils MCP de l'employé, appelé par l'instance OpenClaw (clé `X-OxoAI-Cle`) | non, clé |
+| `GET`/`POST /oxoai/connaissances`, `GET …/documents`, `POST …/chercher`, `GET`/`POST …/<id>`, `POST …/<id>/{documents,retirer,reindexer,supprimer}` | Bases de connaissances (SECURITE.md § 22.2) ; champ `connaissances` du corps de `POST /v1/chat/completions` | oui |
+| `GET /oxoai/entrainement`, `GET …/projet?id=`, `POST …/{installer,desinstaller,projets,renommer,exemples,importer,generer,lancer,arreter,comparer,publier,retirer,supprimer}` | Entraîner un modèle (SECURITE.md § 22.3) | oui |
+| `/oxoai/code/outils` | Connecteurs servis par MCP à l'agent de code de l'instance (jeton et clé `X-OxoAI-Cle`, SECURITE.md § 22.4) | non, clé |
+| `GET`/`POST /oxoai/cles-api`, `POST …/<id>` (renommer), `POST …/<id>/revoquer` | Clés d'API personnelles : liste (avec les adresses de l'API réellement servies), création, renommage, révocation (SECURITE.md § 23) | oui |
+| `GET /oxoai/usage`, `POST /oxoai/usage/tarif` | Mon usage : consommation de la personne, coût par modèle (tarif saisi, sinon prix publié par son fournisseur, marqué estimé) ; saisie ou retrait d'un tarif | oui |
 
 #### Clés d'API
 
@@ -381,14 +381,14 @@ jeton d'instance **et** la séance, sur `GET /v1/models` et `POST /v1/chat/compl
 seulement, au nom de sa titulaire (ses modèles, ses bases, sa consommation, son
 journal). Elle se présente dans `Authorization: Bearer hlx_…`, jamais dans l'adresse.
 Toute autre route répond 403 à une clé ; `tools: true` aussi ; 60 requêtes par minute
-et par clé (`HELIX_CLE_API_PAR_MINUTE`). Sans `stream: true`, la réponse est un objet
+et par clé (`OXOAI_CLE_API_PAR_MINUTE`). Sans `stream: true`, la réponse est un objet
 `chat.completion` ; avec, le flux du moteur tel quel. `POST /v1/embeddings` n'est pas
 servi.
 
 ```sh
-export HELIX_API_KEY=hlx_…
+export OXOAI_API_KEY=hlx_…
 curl http://localhost:8787/v1/chat/completions \
-  -H "Authorization: Bearer $HELIX_API_KEY" -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $OXOAI_API_KEY" -H "Content-Type: application/json" \
   -d '{"model": "lmstudio/qwen3-8b", "messages": [{"role": "user", "content": "Bonjour"}], "connaissances": ["kb_…"]}'
 ```
 
@@ -396,7 +396,7 @@ curl http://localhost:8787/v1/chat/completions \
 import os
 from openai import OpenAI
 
-client = OpenAI(base_url="http://localhost:8787/v1", api_key=os.environ["HELIX_API_KEY"])
+client = OpenAI(base_url="http://localhost:8787/v1", api_key=os.environ["OXOAI_API_KEY"])
 r = client.chat.completions.create(
     model="lmstudio/qwen3-8b",
     messages=[{"role": "user", "content": "Bonjour"}],
@@ -405,7 +405,7 @@ r = client.chat.completions.create(
 print(r.choices[0].message.content)
 ```
 
-Les passages cités reviennent, sans flux, dans `helix.sources`. L'identifiant du modèle
+Les passages cités reviennent, sans flux, dans `oxoai.sources`. L'identifiant du modèle
 est le champ `id` de `GET /v1/models`. Depuis une autre machine, l'API n'est joignable
 que si l'instance est ouverte aux collègues ; elle chiffre alors avec un certificat
 auto-signé (`<données>/tls/instance-cert.pem`, à donner à `curl --cacert`). Vérifié le
@@ -415,29 +415,29 @@ auto-signé (`<données>/tls/instance-cert.pem`, à donner à `curl --cacert`). 
 
 | Variable | Effet | Défaut |
 |---|---|---|
-| `HELIX_GATEWAY_PORT` | Port d'écoute | `8787` |
-| `HELIX_GATEWAY_HOST` | Interface d'écoute | `127.0.0.1`, ou `0.0.0.0` si `share: true` |
-| `HELIX_CONFIG` | Chemin du profil de déploiement | `./helix.config.json` |
-| `HELIX_DATA_DIR` | Données, jeton, journal, TLS, clé `.cle`, et l'atelier Cowork (sous-dossier `cowork`) | `~/.helix/data` |
-| `HELIX_TOKEN` | Jeton d'instance imposé | tiré au sort au premier démarrage |
-| `HELIX_TOKEN_FILE` | Fichier du jeton | `<données>/instance-token` |
-| `HELIX_WORKSPACE` | Espace de travail de l'agent | `workspace` du profil, sinon `~/Helix` |
-| `HELIX_CODE_DIR` | Dossier de départ de l'écran Code | `workspace` du profil, sinon `~/Helix` |
-| `HELIX_EXO_URL`, `HELIX_LMSTUDIO_URL` | Adresses des backends | voir tableau ci-dessus |
-| `HELIX_DECHARGEMENT_GPU` | Part du modèle confiée à la carte graphique par `lms load --gpu` : `auto` (LM Studio décide), `off`, `max` ou un nombre entre 0 et 1 | `off` sous Windows et Linux sans carte NVIDIA, sinon LM Studio décide |
-| `HELIX_OPENCODE_BIN` | OpenCode à utiliser : quand elle est posée, Helix n'installe pas le sien | aucune |
-| `HELIX_CODEX_BIN` | Programme `codex` à utiliser pour l'écran Code, avant le `PATH`, Homebrew, `~/.local/bin`, npm global, Volta, Bun et nvm ; jamais sous `~/.codex` | cherché |
-| `HELIX_BUREAU` | Posée à `1` par l'application de bureau pour sa passerelle : sans elle, Codex n'est pas proposé (un serveur n'est le poste de personne). Ne pas la poser à la main sur un serveur | absente |
-| `HELIX_SANS_MISE_A_JOUR` | `1` : l'application ne contacte aucune source de mise à jour (ni serveur de l'agence, ni instance, ni GitHub) | absente |
-| `HELIX_ESSAI_MODELE_MS` | Délai de la courte question d'essai posée à un modèle local après son chargement (`santeModeles.ts`) ; dépassé, l'essai est « sans conclusion » et le modèle gardé. Le résultat de chaque essai est dans `modeles-sur-cette-machine.json`, dossier des données (l'effacer fait tout réessayer) | `180000` |
-| `HELIX_MAX_ETAPES` | Plafond d'allers-retours d'outils | `30` |
-| `HELIX_BUDGET_ETAPE` | Actions accordées à une étape d'un travail découpé, 4 au moins (à défaut : 8, 14 ou 20 selon la taille du modèle) | selon le modèle |
-| `HELIX_CAPTURE_LARGEUR` | Largeur de la capture envoyée au modèle | `1024` |
-| `HELIX_CUA_URL`, `HELIX_CUA_CONTAINER`, `HELIX_CUA_KEY` | Serveur cua du mode `sandbox` | `http://127.0.0.1:8000` |
-| `HELIX_APPS_DIR` | Où installer l'application LM Studio (Mac Intel seulement : ailleurs, c'est llmster, dans `~/.lmstudio`) | `/Applications`, sinon `~/Applications` |
-| `HELIX_MOTEUR` | Moteur local : `llamacpp` (llama.cpp, d'office sur Mac Intel, sur demande ailleurs sur macOS) ou `lmstudio` | selon la machine |
-| `HELIX_LLAMACPP_PORT` | Port du serveur llama.cpp, sur 127.0.0.1 | `8795` |
-| `HELIX_GATEWAY_URL` | Cible du proxy Vite en développement | `http://localhost:8787` |
+| `OXOAI_GATEWAY_PORT` | Port d'écoute | `8787` |
+| `OXOAI_GATEWAY_HOST` | Interface d'écoute | `127.0.0.1`, ou `0.0.0.0` si `share: true` |
+| `OXOAI_CONFIG` | Chemin du profil de déploiement | `./oxoai.config.json` |
+| `OXOAI_DATA_DIR` | Données, jeton, journal, TLS, clé `.cle`, et l'atelier Cowork (sous-dossier `cowork`) | `~/.oxoai/data` |
+| `OXOAI_TOKEN` | Jeton d'instance imposé | tiré au sort au premier démarrage |
+| `OXOAI_TOKEN_FILE` | Fichier du jeton | `<données>/instance-token` |
+| `OXOAI_WORKSPACE` | Espace de travail de l'agent | `workspace` du profil, sinon `~/OxoAI` |
+| `OXOAI_CODE_DIR` | Dossier de départ de l'écran Code | `workspace` du profil, sinon `~/OxoAI` |
+| `OXOAI_EXO_URL`, `OXOAI_LMSTUDIO_URL` | Adresses des backends | voir tableau ci-dessus |
+| `OXOAI_DECHARGEMENT_GPU` | Part du modèle confiée à la carte graphique par `lms load --gpu` : `auto` (LM Studio décide), `off`, `max` ou un nombre entre 0 et 1 | `off` sous Windows et Linux sans carte NVIDIA, sinon LM Studio décide |
+| `OXOAI_OPENCODE_BIN` | OpenCode à utiliser : quand elle est posée, OxoAI n'installe pas le sien | aucune |
+| `OXOAI_CODEX_BIN` | Programme `codex` à utiliser pour l'écran Code, avant le `PATH`, Homebrew, `~/.local/bin`, npm global, Volta, Bun et nvm ; jamais sous `~/.codex` | cherché |
+| `OXOAI_BUREAU` | Posée à `1` par l'application de bureau pour sa passerelle : sans elle, Codex n'est pas proposé (un serveur n'est le poste de personne). Ne pas la poser à la main sur un serveur | absente |
+| `OXOAI_SANS_MISE_A_JOUR` | `1` : l'application ne contacte aucune source de mise à jour (ni serveur de l'agence, ni instance, ni GitHub) | absente |
+| `OXOAI_ESSAI_MODELE_MS` | Délai de la courte question d'essai posée à un modèle local après son chargement (`santeModeles.ts`) ; dépassé, l'essai est « sans conclusion » et le modèle gardé. Le résultat de chaque essai est dans `modeles-sur-cette-machine.json`, dossier des données (l'effacer fait tout réessayer) | `180000` |
+| `OXOAI_MAX_ETAPES` | Plafond d'allers-retours d'outils | `30` |
+| `OXOAI_BUDGET_ETAPE` | Actions accordées à une étape d'un travail découpé, 4 au moins (à défaut : 8, 14 ou 20 selon la taille du modèle) | selon le modèle |
+| `OXOAI_CAPTURE_LARGEUR` | Largeur de la capture envoyée au modèle | `1024` |
+| `OXOAI_CUA_URL`, `OXOAI_CUA_CONTAINER`, `OXOAI_CUA_KEY` | Serveur cua du mode `sandbox` | `http://127.0.0.1:8000` |
+| `OXOAI_APPS_DIR` | Où installer l'application LM Studio (Mac Intel seulement : ailleurs, c'est llmster, dans `~/.lmstudio`) | `/Applications`, sinon `~/Applications` |
+| `OXOAI_MOTEUR` | Moteur local : `llamacpp` (llama.cpp, d'office sur Mac Intel, sur demande ailleurs sur macOS) ou `lmstudio` | selon la machine |
+| `OXOAI_LLAMACPP_PORT` | Port du serveur llama.cpp, sur 127.0.0.1 | `8795` |
+| `OXOAI_GATEWAY_URL` | Cible du proxy Vite en développement | `http://localhost:8787` |
 | `VITE_GATEWAY_URL` | Instance imposée à la construction de l'interface | aucune |
 
 ### Outils (MCP)
@@ -449,26 +449,26 @@ jusqu'à la réponse finale. L'activité est tracée dans la conversation.
 
 Le budget d'allers-retours s'adapte au modèle : 30 étapes en exécution directe
 pour un modèle de moins de 14 milliards de paramètres, 40 jusqu'à 45 milliards,
-50 au-delà. Ce budget est **plafonné par `HELIX_MAX_ETAPES`, qui vaut 30 par
+50 au-delà. Ce budget est **plafonné par `OXOAI_MAX_ETAPES`, qui vaut 30 par
 défaut** : 40 et 50 ne sont atteints que si la variable est relevée. Pour un
 petit modèle, c'est **le modèle qui juge** si une demande doit être découpée en
 étapes, chacune avec son propre budget, plus court (8, 14 ou 20 selon la taille,
-ou `HELIX_BUDGET_ETAPE`) ; une étape trop grosse est redécoupée, et une étape qui
+ou `OXOAI_BUDGET_ETAPE`) ; une étape trop grosse est redécoupée, et une étape qui
 modifie est contrôlée sur l'état réel. Trois étapes avant la
 limite, l'agent est invité à conclure et à rendre compte plutôt que d'être coupé
 net. Le barème complet est dans [`ARCHITECTURE.md`](../ARCHITECTURE.md), ADR-012.
 
 Serveur par défaut : accès **fichiers** limité à un espace de travail explicite. Il est
 lancé par `npx -y @modelcontextprotocol/server-filesystem <espace>` : le `npx` de la
-machine, sinon celui du Node que Helix pose (27/09/2026), et, au tout premier lancement,
+machine, sinon celui du Node que OxoAI pose (27/09/2026), et, au tout premier lancement,
 un accès au registre npm pour récupérer ce paquet.
 
 ```bash
-HELIX_WORKSPACE=/chemin/vers/dossier npm run gateway
+OXOAI_WORKSPACE=/chemin/vers/dossier npm run gateway
 ```
 
-Par défaut : `~/Helix`. L'espace se change ensuite depuis l'interface, par le
-sélecteur de dossier de macOS (`POST /helix/mcp/workspace`). Le chemin est validé
+Par défaut : `~/OxoAI`. L'espace se change ensuite depuis l'interface, par le
+sélecteur de dossier de macOS (`POST /oxoai/mcp/workspace`). Le chemin est validé
 côté instance : tout dossier est admis, disque externe compris, sauf les
 emplacements du système et la racine du disque.
 
@@ -486,7 +486,7 @@ emplacements du système et la racine du disque.
 
 **Google Drive** : l'entreprise crée son propre client OAuth sur console.cloud.google.com
 (API Google Drive activée ; audience « Interne » sous Google Workspace ; client de type
-« Application de bureau »), puis l'inscrit dans `helix.config.json` :
+« Application de bureau »), puis l'inscrit dans `oxoai.config.json` :
 `"google": { "clientId": "…", "clientSecret": "…" }`, et redémarre l'instance. On
 branche ensuite depuis Réglages, Connecteurs : le navigateur s'ouvre pour l'accord.
 **Slack** : on crée l'application depuis le manifeste affiché à l'écran
@@ -522,7 +522,7 @@ l'application par un super administrateur de la page (« Settings », « Verify 
 développement, LinkedIn permet 500 appels par jour pour l'application et 100 par personne,
 et chaque outil de page
 coûte un appel plus un par page. Les deux lignes partagent l'adresse de retour
-(`/helix/oauth/retour`). Essai : `scripts/essai-natifs.mjs` (lancé par `npm run securite`).
+(`/oxoai/oauth/retour`). Essai : `scripts/essai-natifs.mjs` (lancé par `npm run securite`).
 
 **Palmier Pro** (29/09/2026, `gateway/src/palmier.ts`, `gateway/src/palmierRegles.ts`) :
 monteur vidéo pour macOS 26 sur Mac à puce Apple, d'un autre éditeur, avec génération de
@@ -619,16 +619,16 @@ activé par l'administrateur), supprimer un événement, programmer une tâche. 
 [`SECURITE.md`](../SECURITE.md), § 6.2 et § 28.
 
 **Tâches programmées** (`gateway/src/tachesProgrammees.ts`) : routes
-`/helix/taches-programmees` (séance exigée, chacun les siennes) ; exécution par la route
+`/oxoai/taches-programmees` (séance exigée, chacun les siennes) ; exécution par la route
 du Chat sur la boucle locale, avec une clé tirée au sort à chaque démarrage.
 
-**Vidéos** (`gateway/src/images.ts`) : routes `/helix/videos` (état, `installer`,
-`choisir`, `desinstaller`, `creer`) ; suivi et fichier par `/helix/images/travail/<id>` et
-`/helix/images/fichier/<id>`, servi en `video/webm`.
+**Vidéos** (`gateway/src/images.ts`) : routes `/oxoai/videos` (état, `installer`,
+`choisir`, `desinstaller`, `creer`) ; suivi et fichier par `/oxoai/images/travail/<id>` et
+`/oxoai/images/fichier/<id>`, servi en `video/webm`.
 
-**Mises à jour signées** : `npm run cle:editeur` une fois (clé dans `~/.helix-editeur/`,
+**Mises à jour signées** : `npm run cle:editeur` une fois (clé dans `~/.oxoai-editeur/`,
 hors du dépôt), puis chaque `npm run package` signe l'application ; sans la clé, la
-fabrication s'arrête, sauf `HELIX_SANS_CLE_EDITEUR=1`. Détail dans
+fabrication s'arrête, sauf `OXOAI_SANS_CLE_EDITEUR=1`. Détail dans
 [`SIGNATURE.md`](../SIGNATURE.md), § 4.
 
 ### Atelier bureautique de Cowork
@@ -650,7 +650,7 @@ Trois garanties, appliquées par le code de la passerelle
 - la liste des paquets est **figée dans le code**. Le modèle ne décide rien, et
   aucune chaîne de commande n'est construite depuis une entrée utilisateur ;
 - tout est installé dans un environnement **isolé** sous
-  `<HELIX_DATA_DIR>/cowork` (par défaut `~/.helix/cowork`) : un environnement
+  `<OXOAI_DATA_DIR>/cowork` (par défaut `~/.oxoai/cowork`) : un environnement
   virtuel Python et un préfixe npm. Ni les installations globales, ni le `PATH`,
   ni les projets ne sont touchés ;
 - **aucun droit administrateur** n'est demandé.
@@ -688,9 +688,9 @@ en forme fine ou une conversion de format sortent de ce périmètre.
 
 ### Profil de déploiement client
 
-Helix est installé par l'intégrateur, réglé sur le matériel et les usages de chaque client.
-Copiez [`helix.config.example.json`](../helix.config.example.json) en `helix.config.json`
-(ou pointez `HELIX_CONFIG` ailleurs) : **ce fichier prime sur toute détection automatique**.
+OxoAI est installé par l'intégrateur, réglé sur le matériel et les usages de chaque client.
+Copiez [`oxoai.config.example.json`](../oxoai.config.example.json) en `oxoai.config.json`
+(ou pointez `OXOAI_CONFIG` ailleurs) : **ce fichier prime sur toute détection automatique**.
 
 Il permet de fixer, par client :
 
@@ -708,13 +708,13 @@ Il permet de fixer, par client :
   séance (SECURITE.md § 2.1) ;
 - `database` pour une instance **PostgreSQL** : le pilote est livré avec l'application,
   et la base est chiffrée comme les fichiers.
-- `openclaw` pour les **agents toujours actifs** : Helix installe OpenClaw lui-même à
+- `openclaw` pour les **agents toujours actifs** : OxoAI installe OpenClaw lui-même à
   la première mise en service et propose ses mises à jour ; `version` et `node` fixent
   les versions installées, `chemin` impose un exécutable OpenClaw déjà présent (sous
-  Windows, le `openclaw.cmd` posé par npm ou le script `openclaw.mjs` : Helix lance
+  Windows, le `openclaw.cmd` posé par npm ou le script `openclaw.mjs` : OxoAI lance
   Node sur ce script, jamais le `.cmd`), `port` déplace l'instance dédiée (18800 par
   défaut). Sous Windows, deux modules d'OpenClaw demandent les bibliothèques Visual C++
-  de Microsoft (`VCRUNTIME140.dll`) : quand elles manquent, Helix télécharge et vérifie
+  de Microsoft (`VCRUNTIME140.dll`) : quand elles manquent, OxoAI télécharge et vérifie
   le paquet officiel de Microsoft, puis Windows demande l'autorisation d'administrateur
   pour l'installer ; sur un compte sans ce droit, l'administrateur du PC l'installe
   depuis https://learn.microsoft.com/cpp/windows/latest-supported-vc-redist. Aucun
@@ -726,14 +726,14 @@ Sans ce fichier, la passerelle profile la machine et se débrouille seule.
 
 ## Ce qui sort de la machine, et ce qui n'en sort jamais
 
-C'est le cœur de la promesse Helix, et il vaut mieux le dire exactement.
+C'est le cœur de la promesse OxoAI, et il vaut mieux le dire exactement.
 
 **Ne sortent jamais de la machine, ni de l'instance :**
 
 - les **conversations**, les documents joints, les fichiers lus ou écrits par l'agent ;
 - l'**inférence** elle-même : les requêtes partent vers les backends déclarés, qui sont
   par défaut `localhost:1234` (LM Studio) et `localhost:52415` (cluster exo) ;
-- les **comptes**, profils, projets, tâches et agents, qui vivent dans `~/.helix/data`
+- les **comptes**, profils, projets, tâches et agents, qui vivent dans `~/.oxoai/data`
   ou dans la base PostgreSQL de l'entreprise ;
 - les **captures d'écran** du mode `hote`, qui vont au modèle local et nulle part ailleurs ;
 - aucun service d'authentification, de télémétrie ou d'analytique n'est contacté. La
@@ -746,19 +746,19 @@ C'est le cœur de la promesse Helix, et il vaut mieux le dire exactement.
 |---|---|---|
 | `registry.npmjs.org` | `npm install`, puis au premier démarrage du serveur d'outils, lancé par `npx` | Récupérer le code du serveur MCP fichiers, qui n'est pas empaqueté |
 | `llmster.lmstudio.ai` | Bouton « Installer le moteur » (Mac à puce Apple, Windows, Linux) | Télécharger le moteur sans interface de LM Studio, version épinglée (0.0.25-1) ; l'empreinte SHA-512 écrite dans le code est vérifiée avant ouverture ; rien n'est lu en ligne pour choisir la version |
-| `api.github.com`, puis `github.com` (publications du dépôt, `depotMisesAJour` dans `package.json`) | Poste installé seul (ni serveur de l'agence dans le paquet, ni instance) : peu après le lancement, puis toutes les six heures ; `HELIX_SANS_MISE_A_JOUR=1` l'arrête | Savoir si une version plus récente est publiée. Sur macOS, sur le clic de la personne, télécharger l'archive décrite par `helix-mise-a-jour.json` (empreinte SHA-512, puis signature de l'éditeur vérifiée avec la clé de l'application installée). Sous Windows (x64), le manifeste est lu aussi à chaque vérification ; sur le clic de la personne, l'installateur `Helix-Setup-<version>-x64.exe` qu'il décrit est téléchargé (GitHub redirige vers son stockage de fichiers), vérifié de même (SHA-512, signature de l'éditeur), puis lancé en silence (SECURITE.md § 29.11). Sous Linux, et sous Windows sans partie Windows signée, rien n'est téléchargé par Helix : la fenêtre ouvre le paquet dans le navigateur |
-| `github.com` (anomalyco/opencode) | Sans clic depuis le 27/09/2026 : au démarrage de la passerelle et après la mise en route du modèle, si aucun OpenCode n'est sur la machine ; à l'ouverture de l'écran Code par l'administrateur ; « Réessayer » ou « Installer OpenCode » sur cet écran. Jamais quand un OpenCode existe déjà (`HELIX_OPENCODE_BIN` compris), ni avec `"autoProvision": false` dans le profil (sauf clic de l'administrateur), ni depuis un poste rattaché | OpenCode 1.18.32, archive vérifiée par son empreinte SHA-256 écrite dans le code, avant ouverture |
+| `api.github.com`, puis `github.com` (publications du dépôt, `depotMisesAJour` dans `package.json`) | Poste installé seul (ni serveur de l'agence dans le paquet, ni instance) : peu après le lancement, puis toutes les six heures ; `OXOAI_SANS_MISE_A_JOUR=1` l'arrête | Savoir si une version plus récente est publiée. Sur macOS, sur le clic de la personne, télécharger l'archive décrite par `oxoai-mise-a-jour.json` (empreinte SHA-512, puis signature de l'éditeur vérifiée avec la clé de l'application installée). Sous Windows (x64), le manifeste est lu aussi à chaque vérification ; sur le clic de la personne, l'installateur `OxoAI-Setup-<version>-x64.exe` qu'il décrit est téléchargé (GitHub redirige vers son stockage de fichiers), vérifié de même (SHA-512, signature de l'éditeur), puis lancé en silence (SECURITE.md § 29.11). Sous Linux, et sous Windows sans partie Windows signée, rien n'est téléchargé par OxoAI : la fenêtre ouvre le paquet dans le navigateur |
+| `github.com` (anomalyco/opencode) | Sans clic depuis le 27/09/2026 : au démarrage de la passerelle et après la mise en route du modèle, si aucun OpenCode n'est sur la machine ; à l'ouverture de l'écran Code par l'administrateur ; « Réessayer » ou « Installer OpenCode » sur cet écran. Jamais quand un OpenCode existe déjà (`OXOAI_OPENCODE_BIN` compris), ni avec `"autoProvision": false` dans le profil (sauf clic de l'administrateur), ni depuis un poste rattaché | OpenCode 1.18.32, archive vérifiée par son empreinte SHA-256 écrite dans le code, avant ouverture |
 | `github.com` (python-build-standalone) | Atelier, dictée ou entraînement, sur une machine sans Python qui convienne | CPython 3.12.14 autonome, publication épinglée, empreinte SHA-256 écrite dans le code |
 | `pypi.org`, `files.pythonhosted.org` | Préparation de l'atelier, installation de la dictée | Les bibliothèques de documents et de transcription, dépendances comprises, à versions figées : pip refuse tout fichier dont l'empreinte n'est pas dans `gateway/src/atelier-paquets.json` (`--require-hashes`) |
 | `registry.npmjs.org` (atelier) | Préparation de l'atelier | Les six bibliothèques Node et leurs dépendances, posées par `npm ci --ignore-scripts` depuis le fichier de verrouillage de `atelier-paquets.json` (empreinte SHA-512 de chaque archive) |
 | `huggingface.co` (dictée) | Installation de la dictée | Le modèle Whisper, à une révision épinglée ; l'empreinte de chaque fichier est vérifiée après le téléchargement |
 | `nodejs.org` | Atelier sans npm sur la machine, ou premier serveur d'outils sans `npx` | Le même Node officiel que pour OpenClaw, archive vérifiée par son empreinte |
-| Catalogue de modèles de LM Studio (HuggingFace) | Téléchargement d'un modèle (`lms get`) | Récupérer les poids. Ce trafic est le fait de LM Studio, que Helix pilote en ligne de commande |
-| `registry.npmjs.org`, via OpenCode | Premier usage de l'écran Code | OpenCode charge l'adaptateur `@ai-sdk/openai-compatible` déclaré dans la configuration écrite par Helix |
+| Catalogue de modèles de LM Studio (HuggingFace) | Téléchargement d'un modèle (`lms get`) | Récupérer les poids. Ce trafic est le fait de LM Studio, que OxoAI pilote en ligne de commande |
+| `registry.npmjs.org`, via OpenCode | Premier usage de l'écran Code | OpenCode charge l'adaptateur `@ai-sdk/openai-compatible` déclaré dans la configuration écrite par OxoAI |
 | `pypi.org` et `registry.npmjs.org` | Bouton « Préparer l'atelier » de Cowork | Télécharger les bibliothèques bureautiques (Word, Excel, PowerPoint, PDF). La liste des paquets est figée dans le code de la passerelle, l'utilisateur la voit avant d'accepter |
 | `pypi.org` et `huggingface.co` | Installation de la dictée ou de la transcription des réunions, sur demande | Le moteur de transcription, puis le modèle Whisper adapté à la machine, à une révision figée. Ensuite, la transcription tourne hors ligne |
 | `registry.npmjs.org` | Page Agents, au plus deux fois par jour | Lire le numéro de la dernière version publiée d'OpenClaw, pour la dire à l'écran. Rien n'est envoyé |
-| `nodejs.org`, puis `registry.npmjs.org` | Bouton « Installer OpenClaw », ou premier déploiement d'un employé | Un Node.js officiel (archive vérifiée par son empreinte SHA-256 ; `.zip` sous Windows, x64 ou arm64), puis OpenClaw à la version éprouvée, dans `<données>/openclaw-moteur`. Sous Windows, Helix pose et lance OpenClaw en natif, sans WSL ni tâche planifiée (`node.exe openclaw.mjs`) ; les commandes d'un employé, au palier Libre, passent par PowerShell |
+| `nodejs.org`, puis `registry.npmjs.org` | Bouton « Installer OpenClaw », ou premier déploiement d'un employé | Un Node.js officiel (archive vérifiée par son empreinte SHA-256 ; `.zip` sous Windows, x64 ou arm64), puis OpenClaw à la version éprouvée, dans `<données>/openclaw-moteur`. Sous Windows, OxoAI pose et lance OpenClaw en natif, sans WSL ni tâche planifiée (`node.exe openclaw.mjs`) ; les commandes d'un employé, au palier Libre, passent par PowerShell |
 | `download.visualstudio.microsoft.com` | Windows seulement : installation d'OpenClaw (ou bouton « Installer les bibliothèques de Microsoft » de la page Agents) quand `VCRUNTIME140.dll` manque dans System32, ou est plus ancienne que celle qu'OpenClaw demande | Le « Microsoft Visual C++ Redistributable » officiel, x64 ou arm64, à une adresse versionnée écrite dans le code (14.51.36247.0) ; taille, empreinte SHA-256 et signature Authenticode de Microsoft vérifiées avant le lancement. Windows demande l'autorisation d'administrateur (UAC) ; sans elle, rien n'est installé et l'écran donne la page officielle de Microsoft. Rien n'est envoyé |
 | `registry.npmjs.org` | Premier employé au palier Étendu, premier branchement de WhatsApp, Discord, Slack ou Mattermost | Extensions officielles d'OpenClaw (recherche web DuckDuckGo, messageries), installées dans le dossier de l'instance |
 | Le serveur de mise à jour **de l'agence** | Au lancement puis toutes les six heures, si une adresse est inscrite dans le paquet | Savoir si une version plus récente existe, et la télécharger si l'application est signée. Rien d'autre n'est envoyé que la requête du fichier `latest-mac.yml` (SIGNATURE.md § 4) |
@@ -768,7 +768,7 @@ métier, aucune conversation, aucun identifiant ne les accompagne. Une fois
 l'installation faite, une instance fonctionne sans accès à Internet.
 
 **Sortent uniquement si quelqu'un le décide :** un backend cloud ajouté par l'intégrateur
-dans `helix.config.json`, ou un fournisseur dont une personne a branché la clé
+dans `oxoai.config.json`, ou un fournisseur dont une personne a branché la clé
 (Réglages, Modèles cloud), reçoit les conversations envoyées à ses modèles. Chaque
 modèle affiche où il tourne, et aucun modèle cloud n'est choisi d'office. Un employé au
 palier Étendu consulte le web (recherche DuckDuckGo, pages lues) ; un employé branché
@@ -777,16 +777,16 @@ Mattermost). Dans l'écran Code, le **propriétaire du poste** peut choisir **Co
 (27/09/2026, PROJET.md § 3.14) : c'est alors le programme `codex` d'OpenAI, installé et
 connecté par la personne, qui parle à OpenAI lui-même, aux États-Unis, avec le compte
 ChatGPT de la personne. Il y envoie la demande et ce qu'il lit sur le poste pour la
-traiter ; la connexion (`codex login`) se fait dans le navigateur, chez OpenAI. Helix ne
+traiter ; la connexion (`codex login`) se fait dans le navigateur, chez OpenAI. OxoAI ne
 voit passer ni ce trafic ni aucun jeton, ne lit rien dans `~/.codex`, et n'installe pas
 Codex. Hors de ce choix, rien ne part chez OpenAI. Le **bot de réunion** entre dans une réunion Google Meet
 (meet.google.com) quand quelqu'un l'y envoie : le son y est capté, puis transcrit sur la
 machine ; rien ne part chez un service d'enregistrement. C'est un
-choix explicite, jamais un défaut. La configuration d'OpenCode écrite par Helix
+choix explicite, jamais un défaut. La configuration d'OpenCode écrite par OxoAI
 désactive d'ailleurs tous les fournisseurs distants (`opencode`, `anthropic`, `openai`,
 `google`, `openrouter`) ainsi que la mise à jour automatique, pour qu'aucun repli
 silencieux n'envoie le code du client ailleurs. Celle de l'instance OpenClaw des
-employés fait de même : seuls les fournisseurs pointant sur la passerelle Helix
+employés fait de même : seuls les fournisseurs pointant sur la passerelle OxoAI
 existent (`models.mode: replace`), les extensions des fournisseurs distants sont
 désactivées, et la télémétrie, la vérification de mise à jour, le catalogue de modèles
 distant et l'annonce sur le réseau local sont coupés.
@@ -828,11 +828,11 @@ l'instance n'envoie pas de courrier. L'administrateur du poste qui héberge l'in
 lance l'outil de récupération, embarqué dans l'application, avec Node 20 ou plus :
 
 ```bash
-node "/Applications/Helix.app/Contents/Resources/dist-gateway/motdepasse.cjs"
+node "/Applications/OxoAI.app/Contents/Resources/dist-gateway/motdepasse.cjs"
 ```
 
-(le nom `Helix` est celui de l'application livrée au client). Sans Node sur le poste,
-celui que Helix pose fait l'affaire (`~/.helix/data/openclaw-moteur/node/bin/node`, ou
+(le nom `OxoAI` est celui de l'application livrée au client). Sans Node sur le poste,
+celui que OxoAI pose fait l'affaire (`~/.oxoai/data/openclaw-moteur/node/bin/node`, ou
 `node\node.exe` sous Windows ;
 Réglages, Ligne de commande, « Mettre en place » le pose s'il manque). Jusqu'au
 28/09/2026, l'outil tournait avec le binaire de l'application (`ELECTRON_RUN_AS_NODE=1`) :
@@ -873,11 +873,11 @@ conversations, tâches, agents). Deux stockages :
 
 | Stockage | Quand | Configuration | Chiffrement au repos |
 |---|---|---|---|
-| **Fichiers JSON** (défaut) | poste isolé, petite équipe | aucune, `~/.helix/data` (ou `HELIX_DATA_DIR`) | oui, AES-256-GCM |
-| **PostgreSQL** | usage concurrent réel | `"database"` dans `helix.config.json` | non, à confier au chiffrement du serveur |
+| **Fichiers JSON** (défaut) | poste isolé, petite équipe | aucune, `~/.oxoai/data` (ou `OXOAI_DATA_DIR`) | oui, AES-256-GCM |
+| **PostgreSQL** | usage concurrent réel | `"database"` dans `oxoai.config.json` | non, à confier au chiffrement du serveur |
 
 ```json
-{ "database": "postgresql://helix:motdepasse@192.168.1.50:5432/helix" }
+{ "database": "postgresql://oxoai:motdepasse@192.168.1.50:5432/oxoai" }
 ```
 
 Le pilote `pg` n'est pas installé par défaut : `npm i pg` sur la machine qui héberge
@@ -906,7 +906,7 @@ qui l'héberge écoute sur le réseau, sert en TLS, et les autres postes la vise
 son adresse. Sur une installation isolée, « partagé » signifie « partagé entre les
 comptes de cette machine ».
 
-Deux façons de l'ouvrir : `"share": true` dans `helix.config.json`, réservé à
+Deux façons de l'ouvrir : `"share": true` dans `oxoai.config.json`, réservé à
 l'intégrateur d'une instance d'entreprise, ou l'interrupteur **Réglages → Profil →
 « Ouvrir l'instance à mes collègues »**, qui demande le mot de passe et le rôle
 d'administrateur. Dans les deux cas l'instance chiffre dès qu'elle écoute, et le
@@ -917,18 +917,18 @@ jeton reste exigé : ouvrir l'écoute n'ouvre pas l'accès.
 **Réglages → Profil → Inviter un collègue.** Une adresse email, un bouton. La
 personne reçoit un lien : un clic ouvre son application avec l'adresse et le code
 déjà remplis, et elle confirme. Le rattachement n'est jamais automatique, parce
-qu'un lien `helix://` peut venir d'ailleurs que du mail attendu (`SECURITE.md` § 19).
+qu'un lien `oxoai://` peut venir d'ailleurs que du mail attendu (`SECURITE.md` § 19).
 
 L'écran range les adresses de la machine selon ce qu'elles permettent :
 
 | Où est le collègue | Ce qu'il faut | État |
 |---|---|---|
 | Même réseau (même Wi-Fi, même câble) | rien, l'adresse suffit | fonctionne |
-| Ailleurs, avec un VPN ou un réseau privé (Tailscale, WireGuard) | le tunnel monté des deux côtés ; Helix le détecte et affiche l'adresse | fonctionne |
+| Ailleurs, avec un VPN ou un réseau privé (Tailscale, WireGuard) | le tunnel monté des deux côtés ; OxoAI le détecte et affiche l'adresse | fonctionne |
 | Ailleurs, sans lien privé | un lien privé entre les deux réseaux | l'écran le dit, et déconseille d'ouvrir un port sur la box |
 | À toute heure | une machine qui ne s'éteint pas | instance dédiée |
 
-Helix **détecte** le réseau privé que vous avez monté et s'en sert ; il n'en installe
+OxoAI **détecte** le réseau privé que vous avez monté et s'en sert ; il n'en installe
 pas. Un tunnel clés en main suppose un service de rendez-vous entre les machines,
 donc un tiers au milieu d'une plateforme qui existe pour ne pas en avoir.
 
@@ -961,7 +961,7 @@ Cowork peut voir l'écran, déplacer la souris et saisir au clavier. **Désactiv
 par défaut.** Sur un poste autonome, la personne l'active elle-même : bouton
 « Écran » de Cowork, ou Réglages, Contrôle de l'écran, « Activer sur ce Mac », sous
 mot de passe, approbation de chaque action toujours exigée. L'intégrateur peut aussi
-le fixer dans `helix.config.json`, et son choix fait alors foi ; sur une instance
+le fixer dans `oxoai.config.json`, et son choix fait alors foi ; sur une instance
 partagée, c'est la seule voie.
 
 ```json
@@ -975,11 +975,11 @@ partagée, c'est la seule voie.
 | `hote` | la machine réelle | livré et vérifié sur macOS |
 
 Le mode `sandbox` suppose une VM démarrée (`lume run`) et un serveur cua qui écoute sur
-`http://127.0.0.1:8000` (`HELIX_CUA_URL`). Sans elle, chaque action renvoie une erreur
+`http://127.0.0.1:8000` (`OXOAI_CUA_URL`). Sans elle, chaque action renvoie une erreur
 explicite.
 
 En mode `hote` sur macOS, rien n'est à installer, mais **deux autorisations
-système** sont à accorder à Helix, dans Réglages Système → Confidentialité et
+système** sont à accorder à OxoAI, dans Réglages Système → Confidentialité et
 sécurité :
 
 1. **Enregistrement de l'écran** — pour voir. Relancer l'application ensuite.
@@ -988,7 +988,7 @@ sécurité :
 L'état se vérifie dans **Réglages → Contrôle de l'écran**, qui affiche ce qui
 manque et propose un essai de capture. L'application lit l'autorisation
 d'enregistrer l'écran sans la demander (`systemPreferences.getMediaAccessStatus`) :
-macOS n'ouvre plus sa demande à chaque lancement (27/09/2026). Tant que Helix n'a
+macOS n'ouvre plus sa demande à chaque lancement (27/09/2026). Tant que OxoAI n'a
 jamais tenté de capture, elle compte comme « pas encore demandée » (macOS répond
 « refusé » avant toute demande), et macOS la demande à la première capture
 (première action de l'agent, ou essai de capture). Passerelle lancée seule, sans
@@ -1041,15 +1041,15 @@ dans les composants.**
 1. **`src/config/branding.ts`** — nom produit, logos, URLs, version, pied de page, contacts.
    Changer ces valeurs suffit à rebrander toute l'application.
    ```ts
-   name:    "Helix",                      // nom affiché partout
+   name:    "OxoAI",                      // nom affiché partout
    logo:  { wordmark, mark, alt },        // visuels importés depuis src/assets/
    urls:  { instance, marketing, releases, dpoEmail, supportEmail },
-   version: __HELIX_VERSION__,           // lue dans package.json, ne pas l'écrire
+   version: __OXOAI_VERSION__,           // lue dans package.json, ne pas l'écrire
    ```
 2. **`src/assets/`** — remplacer les visuels réellement consommés par `branding.ts` :
-   - `helix-mark.png` : le mark seul (hélice), affiché au centre de l'accueil et dans la
+   - `oxoai-mark.png` : le mark seul (hélice), affiché au centre de l'accueil et dans la
      barre latérale. C'est le seul visuel affiché par défaut ;
-   - `helix-logo.png` : logo complet avec texte, exposé sous `logo.wordmark` mais non
+   - `oxoai-logo.png` : logo complet avec texte, exposé sous `logo.wordmark` mais non
      utilisé par les composants livrés.
    Les marks sont des traces filaires noires sur fond blanc, affichées en
    `mix-blend-multiply` (le blanc disparaît sur les surfaces claires). Un nouveau client
@@ -1063,7 +1063,7 @@ dans les composants.**
    espacements. Toutes les couleurs sont des tokens HSL consommés via Tailwind
    (`hsl(var(--token) / alpha)`). **Aucune valeur hexadécimale en dur hors de ce fichier.**
 
-### Charte Helix (par défaut)
+### Charte OxoAI (par défaut)
 
 | Rôle | Token | Valeur |
 |------|-------|--------|
@@ -1098,7 +1098,7 @@ src/
                             SegmentedTabs, Field, InfoBox, EmptyState, Avatar, Logo…
     chat/                   Composer, ModelPicker, ContextSelectors, MessageList,
                             ShareSessionModal, ScreenAccessChip…
-    agents/                 Fiche d'un agent (employé OpenClaw), canaux, « Depuis Helix »
+    agents/                 Fiche d'un agent (employé OpenClaw), canaux, « Depuis OxoAI »
     cowork/                 Panneau Cowork, approbations d'écran, PreparerCowork
     onboarding/             Écran de mise en route (moteur, modèle, progression)
     settings/               Coquille des paramètres, séances et journal, apparence
@@ -1118,11 +1118,11 @@ gateway/src/                Passerelle : routage par rôle, outils, écran, donn
                             comptes, séances, chiffrement, audit, TLS, plan
                             d'étapes, atelier bureautique, agents OpenClaw,
                             groupes, bibliothèque, réunions
-cli/helix.mjs               Ligne de commande « helix » (textes dans cli/textes.mjs)
+cli/oxoai.mjs               Ligne de commande « oxoai » (textes dans cli/textes.mjs)
 electron/main.cjs           Processus principal : lance la passerelle, CSP, TOFU TLS
 electron/botReunion.cjs     Bot de réunion (fenêtre cachée), et son préchargement
 electron/sourceGithub.cjs   Publications GitHub, source des mises à jour d'un poste installé seul
-electron/nomTrousseau.cjs   macOS : clé du trousseau au nom de « Helix », reprise de l'ancienne
+electron/nomTrousseau.cjs   macOS : clé du trousseau au nom de « OxoAI », reprise de l'ancienne
 electron/pressePapiers.cjs  Copie dans le presse-papiers par le processus principal
 ```
 
@@ -1131,10 +1131,10 @@ Modules ajoutés les 27 et 28/09/2026, côté passerelle (`gateway/src/`) :
 | Module | Rôle |
 |---|---|
 | `documentsJoints.ts` | Documents joints au Chat : balisés, mesurés contre la taille de conversation chargée, lus en entier ou en parties (24 au plus), gardés pour la question suivante |
-| `historique.ts` | La conversation tient dans la place du modèle : Helix retire les plus anciens échanges, un tour entier à la fois, jamais la consigne ni la question, et le dit ; les étapes d'un travail découpé reçoivent les derniers échanges |
+| `historique.ts` | La conversation tient dans la place du modèle : OxoAI retire les plus anciens échanges, un tour entier à la fois, jamais la consigne ni la question, et le dit ; les étapes d'un travail découpé reçoivent les derniers échanges |
 | `santeModeles.ts` | Essai de chaque modèle local sur ce poste (« Réponds seulement : bonjour ») et réponses coupées en cours d'usage ; un modèle qui répond mal n'est plus choisi d'office (`modeles-sur-cette-machine.json`) |
-| `petitsModeles.ts` | Aide aux petits modèles (8,5 milliards ou moins) : appels d'outils réparés, syntaxe vérifiée après chaque écriture, lecture exigée avant de réécrire, consignes et outils réduits, agent `helix-petit` d'OpenCode |
-| `codex.ts`, `codexGarde.ts` | Codex dans l'écran Code : détection, connexion, tâches et routes `/helix/codex*` ; qui y a droit, quel bac à sable, conversion du flux |
+| `petitsModeles.ts` | Aide aux petits modèles (8,5 milliards ou moins) : appels d'outils réparés, syntaxe vérifiée après chaque écriture, lecture exigée avant de réécrire, consignes et outils réduits, agent `oxoai-petit` d'OpenCode |
+| `codex.ts`, `codexGarde.ts` | Codex dans l'écran Code : détection, connexion, tâches et routes `/oxoai/codex*` ; qui y a droit, quel bac à sable, conversion du flux |
 | `modelesCloud.ts` | Dialectes des fournisseurs cloud (listes, capacités, champs refusés, raisonnement, erreurs) |
 | `notesModeles.ts` | Notes ECI d'Epoch AI (CC BY 4.0), recopiées telles quelles, avec leur attribution |
 | `prixPublies.ts` | Prix publiés par les fournisseurs sur leurs pages de prix, avec la date du relevé |
@@ -1183,7 +1183,7 @@ l'agent d'orchestration par défaut. Aucun tiret cadratin dans les textes affich
   parties au besoin, gardés pour la question suivante), historique des conversations,
   partage d'une conversation, durée de chaque réponse (réflexion, étapes, premier mot) ;
 - Modèles locaux : un essai sur le poste à l'installation ou au premier chargement, et un
-  modèle qui répond mal cède la place (27/09/2026) ; conversation raccourcie par Helix
+  modèle qui répond mal cède la place (27/09/2026) ; conversation raccourcie par OxoAI
   quand elle dépasse la place chargée ; aide aux petits modèles dans Cowork et Code ;
 - Cowork : boucle d'outils fichiers avec découpage en étapes adapté au modèle,
   choix du dossier de travail, contrôle de l'écran avec approbations, préparation
@@ -1202,7 +1202,7 @@ l'agent d'orchestration par défaut. Aucun tiret cadratin dans les textes affich
   Gemini » (le produit « Gemini » seul ne contient que les Gems) ; format JSON
   conseillé (« Plusieurs formats »), HTML lu aussi ; archive .zip. On dépose
   l'archive telle quelle, ou `MyActivity.json` / `MyActivity.html`. Google exporte
-  un journal de questions (réponse et date), pas des conversations : Helix regroupe
+  un journal de questions (réponse et date), pas des conversations : OxoAI regroupe
   par le lien de conversation que Google range avec chaque question, sinon par
   proximité dans le temps (moins de 30 minutes), et l'écran dit lequel. Pas de
   titres (chaque Chat prend sa première question), ni images, ni fichiers joints
@@ -1210,7 +1210,7 @@ l'agent d'orchestration par défaut. Aucun tiret cadratin dans les textes affich
   et n'est jamais réimporté ni écrasé ; s'il a grandi dans un export plus récent,
   on peut en ajouter une copie complète à côté. Code : `src/lib/importGemini.ts`,
   essai `node scripts/essai-import-gemini.mjs` ;
-- Extension VS Code (`extensions/vscode/`, 0.2.6) : Chat, Helix Code sur le dossier
+- Extension VS Code (`extensions/vscode/`, 0.2.6) : Chat, OxoAI Code sur le dossier
   ouvert, expliquer ou améliorer une sélection ; paquet `.vsix` joint à chaque version
   GitHub (voir « Extension VS Code » plus haut) ;
 - **Bases de connaissances** (RAG, 25/09/2026) : dans Fichiers, onglet « Bases de
@@ -1222,11 +1222,11 @@ l'agent d'orchestration par défaut. Aucun tiret cadratin dans les textes affich
   consultent aussi, dans ce qui est ouvert à toute l'équipe, et, pour un agent
   personnel dont rien ne sort vers d'autres, dans ce qui est partagé aux groupes de
   son propriétaire ;
-- **Ligne de commande `helix`** (25/09/2026) : Chat et Helix Code dans un terminal,
+- **Ligne de commande `oxoai`** (25/09/2026) : Chat et OxoAI Code dans un terminal,
   avec les outils et la barrière d'approbation de l'instance (voir « Ligne de
   commande » plus haut). Livrée avec l'application empaquetée depuis le 25/09/2026
   (macOS, et le `.deb` sous Linux ; pas sous Windows ni avec l'AppImage). Les
-  connecteurs (serveurs MCP, courrier, Drive…) marchent aussi dans Helix Code depuis
+  connecteurs (serveurs MCP, courrier, Drive…) marchent aussi dans OxoAI Code depuis
   le 25/09/2026, derrière la même barrière ;
 - **Entraîner un modèle** (Réglages, 25/09/2026) : apprendre à un petit modèle
   ouvert (Qwen3, Apache 2.0) les faits de son organisation à partir d'exemples, le

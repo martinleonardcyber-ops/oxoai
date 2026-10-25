@@ -56,7 +56,7 @@ export interface LigneModele extends Compteurs {
   uid: string;
   /** Son nom, sans l'identifiant de la clé ou du service (absent d'une instance plus ancienne). */
   nom?: string;
-  /** Le service qui le sert, tel que nommé dans Helix. */
+  /** Le service qui le sert, tel que nommé dans OxoAI. */
   service?: string;
   backend: string;
   local: boolean;
@@ -87,7 +87,7 @@ export interface Rapport {
 
 export async function lireRapport(periode: Periode): Promise<Rapport | null> {
   try {
-    const res = await apiFetch(`/helix/usage?periode=${periode}`);
+    const res = await apiFetch(`/oxoai/usage?periode=${periode}`);
     return res.ok ? ((await res.json()) as Rapport) : null;
   } catch {
     return null;
@@ -105,7 +105,7 @@ export async function definirTarif(
   devise: Devise = "EUR",
 ): Promise<{ ok: boolean; raison?: string }> {
   try {
-    const res = await apiFetch("/helix/usage/tarif", {
+    const res = await apiFetch("/oxoai/usage/tarif", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ modele, entree, sortie, devise }),

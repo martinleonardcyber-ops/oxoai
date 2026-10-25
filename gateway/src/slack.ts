@@ -13,7 +13,7 @@ import {
 import { lister, t, tf } from "./langue.ts";
 
 /**
- * Connecteur Slack de Helix, en lecture seule.
+ * Connecteur Slack de OxoAI, en lecture seule.
  *
  * **La voie retenue : une application Slack créée par l'entreprise elle-même,
  * dans son propre espace, et son jeton de bot (`xoxb-`).** Trois raisons, et
@@ -619,7 +619,7 @@ export async function configurer(
     return {
       ok: false,
       message:
-        t("Le chiffrement des données n'est pas actif sur cette machine : le jeton Slack ne sera pas enregistré en clair. Réglez « chiffrement » dans helix.config.json, puis recommencez."),
+        t("Le chiffrement des données n'est pas actif sur cette machine : le jeton Slack ne sera pas enregistré en clair. Réglez « chiffrement » dans oxoai.config.json, puis recommencez."),
     };
   }
 

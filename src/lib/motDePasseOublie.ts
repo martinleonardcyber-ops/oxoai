@@ -34,23 +34,23 @@ export interface EtatRecuperation {
   deuxFacteursActive: boolean;
 }
 
-export const lireEtatRecuperation = () => appeler<EtatRecuperation>("/helix/auth/codes-recuperation");
+export const lireEtatRecuperation = () => appeler<EtatRecuperation>("/oxoai/auth/codes-recuperation");
 
 export const creerCodesRecuperation = (password: string, code?: string) =>
-  appeler<{ codes: string[] }>("/helix/auth/codes-recuperation", { password, ...(code ? { code } : {}) });
+  appeler<{ codes: string[] }>("/oxoai/auth/codes-recuperation", { password, ...(code ? { code } : {}) });
 
 /* ---- Réinitialisation par un administrateur ---- */
 
 /** Les comptes qui administrent aussi l'instance : l'écran ne les propose pas. */
 export const comptesAdministrateurs = () =>
-  appeler<{ administrateurs: string[] }>("/helix/auth/reinitialiser").then((r) => r.administrateurs ?? []);
+  appeler<{ administrateurs: string[] }>("/oxoai/auth/reinitialiser").then((r) => r.administrateurs ?? []);
 
 export const reinitialiserCollegue = (demande: {
   accountId: string;
   password: string;
   code?: string;
   retirerDeuxFacteurs: boolean;
-}) => appeler<{ provisoire: string; expire: string; deuxFacteursRetire: boolean }>("/helix/auth/reinitialiser", demande);
+}) => appeler<{ provisoire: string; expire: string; deuxFacteursRetire: boolean }>("/oxoai/auth/reinitialiser", demande);
 
 /* ---- La machine de l'instance (application de bureau) ---- */
 
@@ -134,7 +134,7 @@ export async function oublierBilanRepartir(): Promise<void> {
 }
 
 const pont = (): PontMotDePasseOublie | undefined =>
-  (window as unknown as { helix?: { motDePasseOublie?: PontMotDePasseOublie } }).helix?.motDePasseOublie;
+  (window as unknown as { oxoai?: { motDePasseOublie?: PontMotDePasseOublie } }).oxoai?.motDePasseOublie;
 
 /**
  * La reconnaissance par l'ordinateur est-elle possible ici ? Seulement dans

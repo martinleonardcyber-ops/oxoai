@@ -12,7 +12,7 @@ import { t, tf } from "@/lib/i18n";
 /**
  * Centre de notifications.
  *
- * Ce que Helix a le droit de signaler : ce qui s'est vraiment produit et que
+ * Ce que OxoAI a le droit de signaler : ce qui s'est vraiment produit et que
  * la personne n'a pas pu voir, parce qu'elle était sur un autre écran ou
  * ailleurs. Rien d'inventé, rien de promotionnel, aucune relance.
  *
@@ -47,7 +47,7 @@ const MAX = 50;
 const abonnes = new Set<() => void>();
 let demarre = false;
 
-const cle = (): string => `helix:notifications:${currentUser().id}`;
+const cle = (): string => `oxoai:notifications:${currentUser().id}`;
 
 function lire(): Notification[] {
   try {
@@ -124,7 +124,7 @@ interface EtatMaj {
 }
 
 function pontMaj(): PontMiseAJour | undefined {
-  return (window as unknown as { helix?: { miseAJour?: PontMiseAJour } }).helix?.miseAJour;
+  return (window as unknown as { oxoai?: { miseAJour?: PontMiseAJour } }).oxoai?.miseAJour;
 }
 
 function suivreMiseAJour(): void {
@@ -309,7 +309,7 @@ function suivrePartages(): void {
   };
   regarder();
   window.addEventListener(SESSIONS_CHANGED, regarder);
-  window.addEventListener("helix:synced", regarder);
+  window.addEventListener("oxoai:synced", regarder);
 }
 
 /** À appeler une fois, une personne connectée. Les appels suivants ne font rien. */

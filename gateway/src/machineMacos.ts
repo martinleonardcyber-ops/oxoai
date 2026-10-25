@@ -13,7 +13,7 @@ const exec = promisify(execFile);
  * doté, par Lume (le moteur de machines virtuelles de cua, fondé sur la
  * virtualisation d'Apple). Même rôle que le bureau Linux de machine.ts : un
  * ordinateur à part, où l'agent clique et tape, relié à la personne par un
- * seul dossier, `~/Helix/Machine`.
+ * seul dossier, `~/OxoAI/Machine`.
  *
  * **Jamais éprouvée de bout en bout** (24/09/2026) : le Mac de développement a
  * 16 Go de mémoire, il en faut 32. Chaque pièce vient de la documentation et
@@ -45,7 +45,7 @@ const EMPREINTE_LUME = "af5d0556763a7f0116153c220aaabe44974e775091ac57e38da2abb2
 const EQUIPE_LUME = "YCK386LBJ7";
 
 /** Nom de la machine dans Lume. */
-export const VM = "helix-machine-macos";
+export const VM = "oxoai-machine-macos";
 /** Port du serveur cua, dans la machine. */
 const PORT_CUA = 8000;
 /** Le dossier d'échange, vu de l'intérieur du Mac virtuel. */
@@ -61,7 +61,7 @@ const BASE_LO = `https://downloadarchive.documentfoundation.org/libreoffice/old/
 const LO = { url: `${BASE_LO}/LibreOffice_${VERSION_LO}_MacOS_aarch64.dmg`, sha: "57ddee0f8ef2d06fd7a9b0e3cf191107e6cb97ec03f0a7f6b137f732e251fde2" };
 const LO_FR = { url: `${BASE_LO}/LibreOffice_${VERSION_LO}_MacOS_aarch64_langpack_fr.dmg`, sha: "d7d48d859c5f645b2a9a15ff32d9fe853788e8ebc33f9fd869272d31ad3da96f" };
 /** Changer le numéro réinstalle la bureautique au prochain démarrage. */
-const MARQUE_BUREAUTIQUE = "~/.helix-bureautique-1";
+const MARQUE_BUREAUTIQUE = "~/.oxoai-bureautique-1";
 
 /*
  * Préréglages propres au Mac, en plus de ceux du bureau Linux (machine.ts) :
@@ -84,8 +84,8 @@ export const MEMOIRE_MACOS_GO = 8;
 export const DISQUE_MACOS_GO = 60;
 
 const env = () => ({ ...process.env, LUME_TELEMETRY_ENABLED: "false" });
-const dossierLume = () => process.env.HELIX_LUME_DIR ?? join(homedir(), ".helix", "lume");
-const binaireHelix = () => join(dossierLume(), "lume.app", "Contents", "MacOS", "lume");
+const dossierLume = () => process.env.OXOAI_LUME_DIR ?? join(homedir(), ".oxoai", "lume");
+const binaireOxoAI = () => join(dossierLume(), "lume.app", "Contents", "MacOS", "lume");
 
 /* ------------------------------------------------------------------ */
 /* Ce que ce Mac peut porter                                           */
@@ -121,7 +121,7 @@ export function imagePour(v: [number, number] | null): string | null {
 /* Lume                                                                */
 /* ------------------------------------------------------------------ */
 
-const CANDIDATS = () => [binaireHelix(), join(homedir(), ".local", "bin", "lume"), "/opt/homebrew/bin/lume", "/usr/local/bin/lume"];
+const CANDIDATS = () => [binaireOxoAI(), join(homedir(), ".local", "bin", "lume"), "/opt/homebrew/bin/lume", "/usr/local/bin/lume"];
 
 export async function trouverLume(): Promise<string | null> {
   if (process.platform !== "darwin") return null;
@@ -138,7 +138,7 @@ export async function trouverLume(): Promise<string | null> {
 }
 
 /**
- * Installe Lume pour Helix, dans ~/.helix/lume : l'archive publiée, vérifiée
+ * Installe Lume pour OxoAI, dans ~/.oxoai/lume : l'archive publiée, vérifiée
  * par empreinte, puis par sa signature (l'équipe de Cua AI). Rien n'est
  * installé ailleurs, aucun service n'est ajouté au démarrage du Mac.
  */
@@ -149,7 +149,7 @@ export async function installerLume(): Promise<string> {
   if (createHash("sha256").update(archive).digest("hex") !== EMPREINTE_LUME) {
     throw new Error(t("L'archive de Lume ne correspond pas à la version attendue : installation refusée."));
   }
-  const tmp = join(tmpdir(), `helix-lume-${process.pid}.tar.gz`);
+  const tmp = join(tmpdir(), `oxoai-lume-${process.pid}.tar.gz`);
   writeFileSync(tmp, archive, { mode: 0o600 });
   try {
     rmSync(join(dossierLume(), "lume.app"), { recursive: true, force: true });
@@ -165,7 +165,7 @@ export async function installerLume(): Promise<string> {
     rmSync(app, { recursive: true, force: true });
     throw new Error(t("Lume n'est pas signé par son éditeur : installation refusée."));
   }
-  return binaireHelix();
+  return binaireOxoAI();
 }
 
 interface InfoVm {
@@ -250,25 +250,25 @@ function scriptBureautique(xcdCommun: string): string {
   return [
     "set -e",
     "cd /tmp",
-    `curl -fsSL -o helix-lo.dmg '${LO.url}'`,
-    `echo '${LO.sha}  helix-lo.dmg' | shasum -a 256 -c -`,
+    `curl -fsSL -o oxoai-lo.dmg '${LO.url}'`,
+    `echo '${LO.sha}  oxoai-lo.dmg' | shasum -a 256 -c -`,
     'M=$(mktemp -d)',
-    'hdiutil attach -nobrowse -readonly -mountpoint "$M" helix-lo.dmg',
+    'hdiutil attach -nobrowse -readonly -mountpoint "$M" oxoai-lo.dmg',
     "rm -rf /Applications/LibreOffice.app",
     'cp -R "$M/LibreOffice.app" /Applications/',
     'hdiutil detach "$M" || true',
     "R=/Applications/LibreOffice.app/Contents/Resources/registry",
-    `echo '${xcdCommun}' | base64 -D > "$R/helix.xcd"`,
-    `echo '${XCD_MACOS}' | base64 -D > "$R/helix-macos.xcd"`,
+    `echo '${xcdCommun}' | base64 -D > "$R/oxoai.xcd"`,
+    `echo '${XCD_MACOS}' | base64 -D > "$R/oxoai-macos.xcd"`,
     "set +e",
-    `curl -fsSL -o helix-fr.dmg '${LO_FR.url}' && echo '${LO_FR.sha}  helix-fr.dmg' | shasum -a 256 -c - && {`,
-    '  F=$(mktemp -d); hdiutil attach -nobrowse -readonly -mountpoint "$F" helix-fr.dmg',
+    `curl -fsSL -o oxoai-fr.dmg '${LO_FR.url}' && echo '${LO_FR.sha}  oxoai-fr.dmg' | shasum -a 256 -c - && {`,
+    '  F=$(mktemp -d); hdiutil attach -nobrowse -readonly -mountpoint "$F" oxoai-fr.dmg',
     '  T=$(find "$F" -name tarball.tar.bz2 | head -1)',
     '  [ -n "$T" ] && tar -xjf "$T" -C /Applications/LibreOffice.app',
     '  hdiutil detach "$F"',
     "}",
     "xattr -dr com.apple.quarantine /Applications/LibreOffice.app 2>/dev/null",
-    "rm -f helix-lo.dmg helix-fr.dmg",
+    "rm -f oxoai-lo.dmg oxoai-fr.dmg",
     `touch ${MARQUE_BUREAUTIQUE}`,
   ].join("\n");
 }
@@ -340,14 +340,14 @@ export async function demarrerMacos(dossierEchange: string, xcdCommun: string, a
   if (!installee.stdout.includes("oui")) {
     avancer("construction", t("Installation de la bureautique dans la machine (environ 300 Mo)..."));
     const script = Buffer.from(scriptBureautique(xcdCommun)).toString("base64");
-    await commande(url, `echo '${script}' | base64 -D > /tmp/helix-bureautique.sh && (nohup bash /tmp/helix-bureautique.sh > /tmp/helix-bureautique.log 2>&1 &)`);
+    await commande(url, `echo '${script}' | base64 -D > /tmp/oxoai-bureautique.sh && (nohup bash /tmp/oxoai-bureautique.sh > /tmp/oxoai-bureautique.log 2>&1 &)`);
     let fini = false;
     for (let i = 0; i < 180 && !fini; i++) {
       await pause(5000);
       fini = (await commande(url, `test -f ${MARQUE_BUREAUTIQUE} && echo oui`)).stdout.includes("oui");
     }
     if (!fini) {
-      const journal = (await commande(url, "tail -3 /tmp/helix-bureautique.log")).stdout.trim();
+      const journal = (await commande(url, "tail -3 /tmp/oxoai-bureautique.log")).stdout.trim();
       throw new Error(tf("La bureautique n'a pas pu s'installer dans la machine. {0}", journal));
     }
   }

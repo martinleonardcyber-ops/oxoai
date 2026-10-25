@@ -157,7 +157,7 @@ export function TachesProgrammees() {
             <Field label={t("Titre")}>
               <Input value={formulaire.titre} onChange={(e) => setFormulaire({ ...formulaire, titre: e.target.value })} placeholder={t("Revue des mails du lundi")} />
             </Field>
-            <Field label={t("Consigne")} hint={t("Ce que Helix doit faire à chaque fois, aussi précisément qu'à un collègue.")}>
+            <Field label={t("Consigne")} hint={t("Ce que OxoAI doit faire à chaque fois, aussi précisément qu'à un collègue.")}>
               <textarea
                 className="min-h-[88px] w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground"
                 value={formulaire.consigne}

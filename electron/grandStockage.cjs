@@ -37,7 +37,7 @@ const CLES = new Set(["sessions"]);
 /** Copies gardées quand une collection rétrécit brutalement (voir `poser`). */
 const COPIES_MAX = 3;
 
-const dossier = () => path.join(process.env.HELIX_DATA_DIR ?? path.join(os.homedir(), ".helix"), "poste");
+const dossier = () => path.join(process.env.OXOAI_DATA_DIR ?? path.join(os.homedir(), ".oxoai"), "poste");
 const chemin = (cle) => path.join(dossier(), `${cle}.enc`);
 
 // Pas le chiffrement de Chromium à clé connue de tous (Linux sans trousseau) : voir chiffrementPoste.cjs.

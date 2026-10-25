@@ -33,7 +33,7 @@ import { detecterVisualCpp, installerVisualCpp } from "./visualCpp.ts";
  *  1. un Node officiel (24.22.1 LTS, épinglé avec ses empreintes, ou la version
  *     du profil), dont l'archive est vérifiée avant d'être ouverte ;
  *  2. OpenClaw installé par le npm de ce Node, dans ce même dossier, à la
- *     version qu'Helix a éprouvée (ou celle du profil), sans aucun script
+ *     version qu'OxoAI a éprouvée (ou celle du profil), sans aucun script
  *     d'installation (`--ignore-scripts`, depuis le 29/09/2026 : voir
  *     `argumentsInstallation`) ;
  *  3. les scripts d'installation d'OpenClaw lui-même, et eux seuls, lancés par
@@ -56,7 +56,7 @@ import { detecterVisualCpp, installerVisualCpp } from "./visualCpp.ts";
  * openclaw.mjs`, jamais par son `.cmd`.
  */
 
-/** Version d'OpenClaw sur laquelle la configuration écrite par Helix a été éprouvée. */
+/** Version d'OpenClaw sur laquelle la configuration écrite par OxoAI a été éprouvée. */
 export const VERSION_OPENCLAW_EPROUVEE = "2026.9.4";
 
 /**
@@ -84,17 +84,17 @@ export const VERSION_OPENCLAW_EPROUVEE = "2026.9.4";
 export const DEPENDANCES_NPM_AVANT = "2026-09-27T00:00:00.000Z";
 
 const racine = () =>
-  join(process.env.HELIX_DATA_DIR ?? join(homedir(), ".helix", "data"), "openclaw-moteur");
+  join(process.env.OXOAI_DATA_DIR ?? join(homedir(), ".oxoai", "data"), "openclaw-moteur");
 
 /**
- * Lanceur d'OpenClaw installé par Helix (disposition « préfixe global » du
+ * Lanceur d'OpenClaw installé par OxoAI (disposition « préfixe global » du
  * Node privé) : `node/bin/openclaw`, ou `node\openclaw.cmd` sous Windows. Il
  * sert à le reconnaître ; sous Windows, on lance `node.exe openclaw.mjs`
  * (`lancementGere`).
  */
 export const binaireGere = () => dispositionNode(join(racine(), "node"), platform()).lanceurOpenClaw;
 
-/** Comment lancer l'OpenClaw de Helix (null s'il n'est pas installé). */
+/** Comment lancer l'OpenClaw de OxoAI (null s'il n'est pas installé). */
 export const lancementGere = (): Lancement | null => lancementOpenClaw(binaireGere(), platform(), existsSync, () => null);
 
 export type Etape = "repos" | "preparation" | "visualcpp" | "node" | "openclaw" | "verification" | "termine" | "erreur";
@@ -202,7 +202,7 @@ async function telecharger(url: string, delaiMs: number): Promise<Response> {
  * Node épinglé, avec l'empreinte SHA-256 de chaque archive écrite ici (revue
  * de sécurité du 27/09/2026, relevées ce jour-là dans `SHASUMS256.txt` de
  * nodejs.org ; 24.22.1 le 24/10/2026, correctif de sécurité des certificats
- * compromis d'octobre 2026, exigé par OpenClaw depuis sa 2026.10.6) : avant, Helix prenait la dernière 24 LTS publiée et son
+ * compromis d'octobre 2026, exigé par OpenClaw depuis sa 2026.10.6) : avant, OxoAI prenait la dernière 24 LTS publiée et son
  * empreinte sur le même serveur. Une version imposée par le profil
  * (`openclaw.node`) reste possible : c'est alors l'exploitant qui la choisit,
  * et son empreinte est lue dans `SHASUMS256.txt`.
@@ -347,7 +347,7 @@ async function installerPaquet(version: string): Promise<string> {
    * même chose en passant par `env node`. Préfixe global écrit en toutes
    * lettres (28/09/2026) : un `.npmrc` de la personne (`prefix=`), ou
    * `%APPDATA%\npm` sous Windows, aurait posé OpenClaw ailleurs que là où
-   * Helix le cherche.
+   * OxoAI le cherche.
    */
   const prefixe = join(racine(), "node");
   const d = dispositionNode(prefixe, platform());
@@ -402,7 +402,7 @@ async function installerPaquet(version: string): Promise<string> {
   return trouvee;
 }
 
-/** Version d'OpenClaw qu'Helix installe : celle du profil, sinon celle qu'il a éprouvée. */
+/** Version d'OpenClaw qu'OxoAI installe : celle du profil, sinon celle qu'il a éprouvée. */
 export const versionVisee = () => deployment().openclaw?.version ?? VERSION_OPENCLAW_EPROUVEE;
 
 /** « 2026.9.10 » est plus récente que « 2026.9.4 » : comparaison nombre par nombre, pas en texte. */
@@ -420,8 +420,8 @@ let releve: Promise<void> | null = null;
  * Dernière version publiée d'OpenClaw (registre npm, étiquette « latest »),
  * pour dire à l'écran qu'elle existe. Relue en arrière-plan au plus deux fois
  * par jour, sans jamais faire attendre l'écran ; `null` tant qu'on ne sait pas
- * (ou hors ligne). Helix ne l'installe pas d'office : il installe la version
- * qu'il a éprouvée, et c'est une mise à jour d'Helix qui fait avancer celle-ci.
+ * (ou hors ligne). OxoAI ne l'installe pas d'office : il installe la version
+ * qu'il a éprouvée, et c'est une mise à jour d'OxoAI qui fait avancer celle-ci.
  */
 export function versionParue(): string | null {
   if (!releve && (!parue || Date.now() - parue.at > 12 * 3_600_000)) {

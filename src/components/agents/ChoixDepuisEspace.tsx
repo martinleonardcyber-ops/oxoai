@@ -10,7 +10,7 @@ import { listerBibliotheque, recupererDocument } from "@/lib/bibliotheque";
 import { t, tf } from "@/lib/i18n";
 
 /**
- * « Depuis Helix » : confier à un agent un document que l'instance a déjà,
+ * « Depuis OxoAI » : confier à un agent un document que l'instance a déjà,
  * sans passer par le Finder. Deux sources : la bibliothèque (ce que chacun
  * voit selon sa visibilité) et le dossier de travail de l'équipe (celui que
  * les agents voient déjà). Seuls les formats qu'un agent sait lire sont
@@ -31,7 +31,7 @@ const EXTENSIONS = new Set(ACCEPT_DOCUMENTS.split(",").map((e) => e.replace(".",
 const lisible = (nom: string) => EXTENSIONS.has((nom.split(".").pop() ?? "").toLowerCase());
 
 async function listerEspace(chemin: string): Promise<Entree[]> {
-  const r = await apiFetch(`/helix/espace?chemin=${encodeURIComponent(chemin)}`);
+  const r = await apiFetch(`/oxoai/espace?chemin=${encodeURIComponent(chemin)}`);
   const corps = (await r.json().catch(() => ({}))) as {
     entrees?: { nom: string; chemin: string; dossier: boolean; taille?: number }[];
     error?: { message?: string };
@@ -41,7 +41,7 @@ async function listerEspace(chemin: string): Promise<Entree[]> {
 }
 
 async function recupererEspace(e: Entree): Promise<File> {
-  const r = await apiFetch(`/helix/espace/fichier?chemin=${encodeURIComponent(e.cle)}`);
+  const r = await apiFetch(`/oxoai/espace/fichier?chemin=${encodeURIComponent(e.cle)}`);
   if (!r.ok) {
     const corps = (await r.json().catch(() => ({}))) as { error?: { message?: string } };
     throw new Error(corps.error?.message ?? `${e.nom} illisible.`);

@@ -7,7 +7,7 @@ export const ROLES: Role[] = ["chat", "code", "vision", "gui", "embed"];
 export type BackendKind = "lmstudio" | "llamacpp" | "exo" | "openai-compatible";
 
 /**
- * Un moteur de modèles posé sur cette machine par Helix : LM Studio, ou
+ * Un moteur de modèles posé sur cette machine par OxoAI : LM Studio, ou
  * llama.cpp sur un Mac Intel (llamaCpp.ts, 28/09/2026). Ce qui vaut pour « le
  * modèle local » (outils allégés, taille de conversation connue, essai de
  * santé, découpage des tâches) vaut pour les deux ; ce qui passe par `lms`
@@ -126,15 +126,15 @@ export interface ChatMessage {
 export interface ChatRequest {
   /** Modèle explicite (`uid` ou identifiant brut). Prioritaire sur `role`. */
   model?: string;
-  /** Extension Helix : laisser la passerelle choisir le modèle du rôle. */
+  /** Extension OxoAI : laisser la passerelle choisir le modèle du rôle. */
   role?: Role;
   messages: ChatMessage[];
   stream?: boolean;
   temperature?: number;
   max_tokens?: number;
-  /** Extension Helix : niveau d'effort de raisonnement issu de l'UI. */
+  /** Extension OxoAI : niveau d'effort de raisonnement issu de l'UI. */
   effort?: "aucun" | "faible" | "moyen" | "eleve" | "max";
-  /** Extension Helix : autoriser l'agent à utiliser les outils MCP. */
+  /** Extension OxoAI : autoriser l'agent à utiliser les outils MCP. */
   tools?: boolean;
   [key: string]: unknown;
 }

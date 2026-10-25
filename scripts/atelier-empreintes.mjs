@@ -44,7 +44,7 @@ const DICTEE = ["faster-whisper>=1.1,<2"];
  */
 const CONTRAINTES = ['onnxruntime<1.24 ; python_version == "3.10"', 'onnxruntime<1.20 ; python_version < "3.10"'];
 
-const travail = mkdtempSync(join(tmpdir(), "helix-atelier-empreintes-"));
+const travail = mkdtempSync(join(tmpdir(), "oxoai-atelier-empreintes-"));
 function resoudre(noms) {
   const entree = join(travail, "entree.in");
   const contraintes = join(travail, "contraintes.txt");
@@ -74,7 +74,7 @@ const NODE = { docx: "9.7.2", pptxgenjs: "4.0.1", "@e965/xlsx": "0.20.3", mammot
 function verrouNode() {
   const dossier = join(travail, "node");
   mkdirSync(dossier, { recursive: true });
-  writeFileSync(join(dossier, "package.json"), JSON.stringify({ name: "helix-atelier", version: "1.0.0", private: true, dependencies: NODE }));
+  writeFileSync(join(dossier, "package.json"), JSON.stringify({ name: "oxoai-atelier", version: "1.0.0", private: true, dependencies: NODE }));
   execFileSync("npm", ["install", "--package-lock-only", "--ignore-scripts", "--lockfile-version", "2", "--no-audit", "--no-fund"], { cwd: dossier, stdio: ["ignore", "ignore", "inherit"] });
   const verrou = JSON.parse(readFileSync(join(dossier, "package-lock.json"), "utf8"));
   for (const [chemin, p] of Object.entries(verrou.packages ?? {})) {

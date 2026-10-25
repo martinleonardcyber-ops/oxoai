@@ -53,7 +53,7 @@ export const ENTETES_SECURITE = {
  *
  * Quatre cas légitimes, et rien d'autre :
  *
- *  - **l'application de bureau** sert son interface sous `helix://app` depuis
+ *  - **l'application de bureau** sert son interface sous `oxoai://app` depuis
  *    la 0.23.0 (`electron/main.cjs`, `servirInterface`). Aucune page du web ne
  *    peut porter cette origine : le schéma n'existe que dans l'application ;
  *  - **une application de bureau antérieure** chargeait la sienne depuis
@@ -71,7 +71,7 @@ export const ENTETES_SECURITE = {
  * ne change rien pour eux, puisque seul un navigateur lit cet en-tête.
  */
 /** Origine de l'interface servie par l'application de bureau (electron/main.cjs). */
-const ORIGINE_APPLICATION = "helix://app";
+const ORIGINE_APPLICATION = "oxoai://app";
 
 function origineAutorisee(req: http.IncomingMessage): string | null {
   const origine = req.headers.origin;
@@ -80,7 +80,7 @@ function origineAutorisee(req: http.IncomingMessage): string | null {
   /*
    * L'interface de l'application de bureau, depuis la 0.23.0.
    *
-   * Elle est servie par l'application elle-même sous `helix://app`, une
+   * Elle est servie par l'application elle-même sous `oxoai://app`, une
    * origine qu'aucune page du web ne peut porter : le schéma n'existe que
    * dans l'application, déclaré par son propre processus. L'admettre revient
    * donc à admettre l'interface livrée, et rien d'autre. Le jeton d'instance

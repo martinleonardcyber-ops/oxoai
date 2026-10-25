@@ -8,7 +8,7 @@ import { plateformePoste } from "./plateforme";
  *
  * Deux moitiés, et une règle qui les tient ensemble : **le son ne va qu'à
  * l'instance**. Ce module capture le micro avec `MediaRecorder`, envoie
- * l'enregistrement à `POST /helix/dictee`, et rend le texte. La transcription
+ * l'enregistrement à `POST /oxoai/dictee`, et rend le texte. La transcription
  * elle-même tourne dans l'instance, par Whisper, sans réseau.
  *
  * Ce qui est volontairement absent : la reconnaissance vocale intégrée au
@@ -61,7 +61,7 @@ export const DICTEE_MAX_SECONDES = 5 * 60;
 /** État de la dictée sur l'instance. `null` si l'instance ne répond pas. */
 export async function etat(): Promise<DiagnosticDictee | null> {
   try {
-    const res = await apiFetch("/helix/dictee");
+    const res = await apiFetch("/oxoai/dictee");
     if (!res.ok) return null;
     return (await res.json()) as DiagnosticDictee;
   } catch {
@@ -77,7 +77,7 @@ export async function etat(): Promise<DiagnosticDictee | null> {
  * l'atelier (`EventSource` ne sait pas envoyer de POST).
  */
 export async function installer(onProgres: (p: ProgresDictee) => void): Promise<BilanDictee> {
-  const res = await apiFetch("/helix/dictee/installer", {
+  const res = await apiFetch("/oxoai/dictee/installer", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ accord: true }),
@@ -130,7 +130,7 @@ export async function installer(onProgres: (p: ProgresDictee) => void): Promise<
 export async function transcrire(son: Blob): Promise<Transcription> {
   let res: Response;
   try {
-    res = await apiFetch("/helix/dictee?langue=fr", {
+    res = await apiFetch("/oxoai/dictee?langue=fr", {
       method: "POST",
       headers: { "Content-Type": son.type || "application/octet-stream" },
       body: son,

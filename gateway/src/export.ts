@@ -31,7 +31,7 @@ import { lister as tachesProgrammeesDe } from "./tachesProgrammees.ts";
  *    ni codes de secours, ni jeton de séance, ni mot de passe de connecteur.
  */
 
-const FORMAT = "helix-export";
+const FORMAT = "oxoai-export";
 const VERSION = 1;
 
 const tableau = (v: unknown): Record<string, unknown>[] =>

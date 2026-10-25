@@ -53,14 +53,14 @@ function verifier(nom, condition, obtenu) {
   }
 }
 
-const ICI = mkdtempSync(join(tmpdir(), "helix-essai-memoire-"));
+const ICI = mkdtempSync(join(tmpdir(), "oxoai-essai-memoire-"));
 const BIN = join(ICI, "bin");
 mkdirSync(BIN);
 const INTERNE = join(ICI, "maison", ".lmstudio", ".internal");
 mkdirSync(INTERNE, { recursive: true });
 mkdirSync(join(ICI, "espace"));
 symlinkSync(process.execPath, join(BIN, "node"));
-// L'application LM Studio de la personne : Helix ne recharge pas le modèle, il garde ses 4 096 jetons.
+// L'application LM Studio de la personne : OxoAI ne recharge pas le modèle, il garde ses 4 096 jetons.
 writeFileSync(join(INTERNE, "llmster-install-location.json"), JSON.stringify({ path: process.execPath, argv: [], cwd: join(ICI, "maison") }));
 writeFileSync(join(INTERNE, "app-install-location.json"), JSON.stringify({ path: process.execPath }));
 const MINISTRAL = "mistralai/ministral-3-3b";
@@ -152,19 +152,19 @@ const ENV = {
   HOME: join(ICI, "maison"),
   TMPDIR: tmpdir(),
   FAUX_LMS_DIR: ICI,
-  HELIX_CONFIG: join(ICI, "profil.json"),
-  HELIX_DATA_DIR: DONNEES,
-  HELIX_WORKSPACE: join(ICI, "espace"),
-  HELIX_GATEWAY_HOST: "127.0.0.1",
-  HELIX_LMSTUDIO_URL: `http://127.0.0.1:${PORT_LM}/v1`,
-  HELIX_EXO_URL: "http://127.0.0.1:9/v1",
-  HELIX_OPENCODE_BIN: "/usr/bin/true",
+  OXOAI_CONFIG: join(ICI, "profil.json"),
+  OXOAI_DATA_DIR: DONNEES,
+  OXOAI_WORKSPACE: join(ICI, "espace"),
+  OXOAI_GATEWAY_HOST: "127.0.0.1",
+  OXOAI_LMSTUDIO_URL: `http://127.0.0.1:${PORT_LM}/v1`,
+  OXOAI_EXO_URL: "http://127.0.0.1:9/v1",
+  OXOAI_OPENCODE_BIN: "/usr/bin/true",
   // Le résumé au repos, s'il devait partir, partirait vite : l'essai vérifie qu'il ne part pas sur ce « petit PC ».
-  HELIX_MEMOIRE_REPOS_MS: "800",
+  OXOAI_MEMOIRE_REPOS_MS: "800",
 };
 const passerelle = spawn(process.execPath, ["--experimental-strip-types", "--no-warnings", join(ICI, "lancer.mjs")], {
   cwd: RACINE,
-  env: { ...ENV, HELIX_GATEWAY_PORT: String(PORT) },
+  env: { ...ENV, OXOAI_GATEWAY_PORT: String(PORT) },
   stdio: ["ignore", "pipe", "pipe"],
 });
 let journal = "";
@@ -185,31 +185,31 @@ try {
 } catch {
   /* passerelle muette : les contrôles le diront */
 }
-const avecJeton = { "Content-Type": "application/json", Authorization: `Bearer ${JETON}`, "X-Helix-Langue": "fr" };
+const avecJeton = { "Content-Type": "application/json", Authorization: `Bearer ${JETON}`, "X-OxoAI-Langue": "fr" };
 const appel = (chemin, init = {}) => fetch(`${G}${chemin}`, init).catch(() => ({ ok: false, status: 0, json: async () => ({}), text: async () => "" }));
 
 // Deux personnes : l'administratrice (A), puis une collègue (B) créée par elle, qui choisit son mot de passe.
 const MDP_A = `Ess-${randomBytes(12).toString("hex")}!9`;
 const MDP_B = `Col-${randomBytes(12).toString("hex")}!7`;
-const creeA = await (await appel("/helix/auth/create", { method: "POST", headers: avecJeton, body: JSON.stringify({ fullName: "Essai", email: "essai@example.test", password: MDP_A }) })).json().catch(() => ({}));
+const creeA = await (await appel("/oxoai/auth/create", { method: "POST", headers: avecJeton, body: JSON.stringify({ fullName: "Essai", email: "essai@example.test", password: MDP_A }) })).json().catch(() => ({}));
 const SEANCE_A = creeA.session?.token ?? "";
 const ID_A = creeA.account?.id ?? "";
-const avecA = { ...avecJeton, "X-Helix-Session": SEANCE_A };
+const avecA = { ...avecJeton, "X-OxoAI-Session": SEANCE_A };
 const PROVISOIRE = `Prov-${randomBytes(8).toString("hex")}!3`;
-const creeB = await (await appel("/helix/auth/create", { method: "POST", headers: avecA, body: JSON.stringify({ fullName: "Collègue", email: "collegue@example.test", password: PROVISOIRE }) })).json().catch(() => ({}));
+const creeB = await (await appel("/oxoai/auth/create", { method: "POST", headers: avecA, body: JSON.stringify({ fullName: "Collègue", email: "collegue@example.test", password: PROVISOIRE }) })).json().catch(() => ({}));
 const ID_B = creeB.account?.id ?? "";
 const connexionB = await (
-  await appel("/helix/auth/mot-de-passe-provisoire", { method: "POST", headers: avecJeton, body: JSON.stringify({ accountId: ID_B, password: PROVISOIRE, nouveau: MDP_B }) })
+  await appel("/oxoai/auth/mot-de-passe-provisoire", { method: "POST", headers: avecJeton, body: JSON.stringify({ accountId: ID_B, password: PROVISOIRE, nouveau: MDP_B }) })
 ).json().catch(() => ({}));
 const SEANCE_B = connexionB.session?.token ?? "";
-const avecB = { ...avecJeton, "X-Helix-Session": SEANCE_B };
+const avecB = { ...avecJeton, "X-OxoAI-Session": SEANCE_B };
 
 const envoyer = async (seance, messages, memoire) => {
   const avant = RECUES.length;
   const texte = await (
     await appel("/v1/chat/completions", {
       method: "POST",
-      headers: { ...avecJeton, "X-Helix-Session": seance },
+      headers: { ...avecJeton, "X-OxoAI-Session": seance },
       body: JSON.stringify({ stream: true, effort: "moyen", model: MINISTRAL, tools: false, messages, ...(memoire ? { memoire } : {}) }),
     })
   ).text();
@@ -219,7 +219,7 @@ const envoyer = async (seance, messages, memoire) => {
     if (!ligne.startsWith("data:")) continue;
     try {
       const j = JSON.parse(ligne.slice(5));
-      if (j.helix) evenements.push(j.helix);
+      if (j.oxoai) evenements.push(j.oxoai);
       const c = j.choices?.[0]?.delta?.content;
       if (typeof c === "string") reponse += c;
     } catch {
@@ -342,19 +342,19 @@ verifier("et la réponse arrive quand même, sans extraits", reponduQuandMeme, "
 verifier("le journal le dit", /\[memoire\] .*illisible|\[memoire\] .*abîmée|rien rangé pour le Chat chatA3/.test(journal), journal.split("\n").filter((l) => l.includes("[memoire]")).slice(-4).join(" | "));
 
 console.log("\n6. Export, suppression du Chat, bouton « Effacer la mémoire de ce Chat », effacement du compte");
-const exportA = await (await appel("/helix/export", { headers: avecA })).json().catch(() => ({}));
+const exportA = await (await appel("/oxoai/export", { headers: avecA })).json().catch(() => ({}));
 const memoiresExport = JSON.stringify(exportA.memoireDesConversations ?? null);
 verifier("l'export RGPD contient la mémoire de ses Chats, en texte, sans vecteurs", /4521B/.test(memoiresExport) && /chatA1/.test(memoiresExport) && !/vecteurs/.test(memoiresExport), memoiresExport.slice(0, 300));
 verifier("et dit la mémoire illisible qu'il n'a pas pu lire", (exportA.nonInclus ?? []).some((l) => /Mémoire des conversations : 1 mémoire/.test(l)), JSON.stringify(exportA.nonInclus ?? []).slice(-300));
-const exportB = await (await appel("/helix/export", { headers: avecB })).json().catch(() => ({}));
+const exportB = await (await appel("/oxoai/export", { headers: avecB })).json().catch(() => ({}));
 verifier("l'export de la collègue ne contient rien de la mémoire de l'autre", !JSON.stringify(exportB).includes("4521B") && (exportB.memoireDesConversations ?? []).length === 1, JSON.stringify(exportB.memoireDesConversations ?? null).slice(0, 200));
 
 // Le Chat chatA1 existe dans la collection synchronisée, puis l'écran le supprime (la liste repart sans lui).
 const maintenant = new Date().toISOString();
 const chatA1 = { id: "chatA1", title: "Entrepôt", ownerId: ID_A, visibility: "prive", origin: "local", messages: [], createdAt: maintenant, updatedAt: maintenant };
-const ecrit1 = await appel("/helix/data/sessions", { method: "PUT", headers: avecA, body: JSON.stringify({ value: [chatA1] }) });
+const ecrit1 = await appel("/oxoai/data/sessions", { method: "PUT", headers: avecA, body: JSON.stringify({ value: [chatA1] }) });
 const avantSuppression = fichiersMemoire().filter((f) => f.endsWith("chatA1.mem")).length;
-const ecrit2 = await appel("/helix/data/sessions", { method: "PUT", headers: avecA, body: JSON.stringify({ value: [] }) });
+const ecrit2 = await appel("/oxoai/data/sessions", { method: "PUT", headers: avecA, body: JSON.stringify({ value: [] }) });
 const apresSuppression = fichiersMemoire().filter((f) => f.endsWith("chatA1.mem")).length;
 verifier(
   "supprimer le Chat efface sa mémoire, celle de chaque personne qui y a parlé (les deux)",
@@ -365,11 +365,11 @@ const rApres = await envoyer(SEANCE_A, court, { chat: "chatA2", autresChats: tru
 verifier("et le fait ne revient plus de nulle part", !/4521B/.test(systemeDe(rApres)), systemeDe(rApres).slice(-200));
 
 const avantBouton = fichiersMemoire().filter((f) => f.endsWith("chatA3.mem")).length;
-const bSurA = await appel("/helix/memoire-chat/chatA3", { method: "DELETE", headers: avecB });
+const bSurA = await appel("/oxoai/memoire-chat/chatA3", { method: "DELETE", headers: avecB });
 const encore = fichiersMemoire().filter((f) => f.endsWith("chatA3.mem")).length;
-const bouton = await appel("/helix/memoire-chat/chatA3", { method: "DELETE", headers: avecA });
+const bouton = await appel("/oxoai/memoire-chat/chatA3", { method: "DELETE", headers: avecA });
 const corpsBouton = await bouton.json().catch(() => ({}));
-const sansSeance = await appel("/helix/memoire-chat/chatA3", { method: "DELETE", headers: avecJeton });
+const sansSeance = await appel("/oxoai/memoire-chat/chatA3", { method: "DELETE", headers: avecJeton });
 verifier(
   "« Effacer la mémoire de ce Chat » : la collègue n'efface que la sienne (rien chez l'autre), la titulaire efface la sienne, sans séance : refusé",
   avantBouton === 1 && bSurA.ok && encore === 1 && bouton.ok && corpsBouton.effacee === true && fichiersMemoire().filter((f) => f.endsWith("chatA3.mem")).length === 0 && sansSeance.status === 401,
@@ -379,7 +379,7 @@ verifier(
 // La collègue reparle (une mémoire à elle), puis supprime son compte.
 await envoyer(SEANCE_B, conversation("Le badge de l'atelier est le 77.", 40, "Quel badge ?", "B2 "), { chat: "chatB9", autresChats: false });
 const dossiersAvant = readdirSync(dossierMemoire).length;
-const efface = await appel("/helix/compte/effacer", { method: "POST", headers: avecB, body: JSON.stringify({ password: MDP_B }) });
+const efface = await appel("/oxoai/compte/effacer", { method: "POST", headers: avecB, body: JSON.stringify({ password: MDP_B }) });
 const dossiersApres = (() => { try { return readdirSync(dossierMemoire).length; } catch { return 0; } })();
 verifier("l'effacement du compte efface toute sa mémoire des conversations", efface.ok && dossiersApres === dossiersAvant - 1, `${efface.status} ${dossiersAvant} → ${dossiersApres}`);
 
@@ -410,14 +410,14 @@ const u = spawnSync(
      await new Promise((r) => setTimeout(r, 1500));
      const ex = m.pourExport("u1");
      const resume = ex.chats[0]?.entrees.find((e) => e.role === "resume");
-     process.env.HELIX_MEMOIRE_RESUME = "non";
+     process.env.OXOAI_MEMOIRE_RESUME = "non";
      console.log(JSON.stringify({ pendant, apres: appels, resume: resume?.texte ?? null, petit: m.machineConfortable() }));`,
   ],
   {
     cwd: RACINE,
     encoding: "utf8",
     timeout: 60_000,
-    env: { ...ENV, HELIX_DATA_DIR: join(ICI, "u"), HELIX_MEMOIRE_RESUME: "oui", HELIX_MEMOIRE_REPOS_MS: "700", HELIX_LMSTUDIO_URL: "http://127.0.0.1:9/v1" },
+    env: { ...ENV, OXOAI_DATA_DIR: join(ICI, "u"), OXOAI_MEMOIRE_RESUME: "oui", OXOAI_MEMOIRE_REPOS_MS: "700", OXOAI_LMSTUDIO_URL: "http://127.0.0.1:9/v1" },
   },
 );
 let fx = {};
@@ -439,7 +439,7 @@ passerelle.kill();
 lm.close();
 await attendre(300);
 verifier("aucun appel au trousseau macOS (dossier personnel jetable, clé par fichier)", !existsSync(join(ICI, "security.log")), "security appelé");
-if (echecs.length > 0 || process.env.ESSAI_JOURNAL) console.log(journal.split("\n").filter((l) => /^\[(chat|helix|memoire)\]/.test(l)).join("\n").slice(-5000));
+if (echecs.length > 0 || process.env.ESSAI_JOURNAL) console.log(journal.split("\n").filter((l) => /^\[(chat|oxoai|memoire)\]/.test(l)).join("\n").slice(-5000));
 rmSync(ICI, { recursive: true, force: true });
 console.log(`\n${reussis} réussi(s), ${echecs.length} échec(s)`);
 process.exit(echecs.length > 0 ? 1 : 0);

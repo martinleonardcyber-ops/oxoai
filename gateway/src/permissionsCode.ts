@@ -7,7 +7,7 @@ import { dirname, isAbsolute, join, parse, resolve } from "node:path";
 import { cheminReel, estProtege } from "./zonesProtegees.ts";
 
 /**
- * Les demandes d'autorisation d'OpenCode, passées par la barrière de Helix.
+ * Les demandes d'autorisation d'OpenCode, passées par la barrière de OxoAI.
  *
  * ── Pourquoi ────────────────────────────────────────────────────────────────
  *
@@ -16,7 +16,7 @@ import { cheminReel, estProtege } from "./zonesProtegees.ts";
  * sans jamais demander, parce que ses défauts sont « tout permis », et la
  * passerelle refusait d'office toute demande d'autorisation qui aurait pu
  * passer. Une commande lancée par l'agent a les droits du compte qui fait
- * tourner l'instance : c'était la plus grande porte de Helix, et la seule sans
+ * tourner l'instance : c'était la plus grande porte de OxoAI, et la seule sans
  * barrière.
  *
  * Désormais la configuration d'OpenCode fait tout demander (opencode.ts,
@@ -71,7 +71,7 @@ export function nouveauTourCode(sessionID: string): void {
   tours.set(sessionID, ouvrirDemande());
 }
 
-/** Demandes posées à la barrière et encore sans réponse : identifiant OpenCode → carte de Helix. */
+/** Demandes posées à la barrière et encore sans réponse : identifiant OpenCode → carte de OxoAI. */
 const enCours = new Map<string, string>();
 
 /** OpenCode a tranché lui-même (session arrêtée, demande abandonnée) : la carte n'a plus d'objet. */
@@ -114,7 +114,7 @@ function racineDuProjet(dossier: string): string {
  * `edit` avec `patterns` = les fichiers relatifs à la racine du dépôt, et
  * `metadata.filepath` = ces noms **joints par des virgules** ; les chemins
  * absolus, destination d'un « Move to » comprise, ne sont que dans
- * `metadata.files` (lu dans son code). Helix lisait `filepath` : un seul
+ * `metadata.files` (lu dans son code). OxoAI lisait `filepath` : un seul
  * « chemin » fait de tous les noms, qui ne tombait jamais dans une zone
  * protégée ; le deuxième fichier d'un correctif, ou la destination d'un
  * déplacement par un lien du projet, passait donc le refus des zones, et au
@@ -211,7 +211,7 @@ export async function traiterPermissionCode(
     return refuser("commande-trop-longue", tf("Refusé par l'instance : cette commande dépasse {0} caractères, elle ne peut pas être montrée en entier pour accord. Découpe-la, ou écris d'abord un fichier puis lance-le.", String(COMMANDE_MAX)), proprietaire);
   }
   /*
-   * Une zone protégée (zonesProtegees.ts : données de l'instance, `~/.helix`,
+   * Une zone protégée (zonesProtegees.ts : données de l'instance, `~/.oxoai`,
    * clés, réglages d'autres logiciels) ne se lit ni ne s'écrit, même avec un
    * accord : refus sans carte. Chemin réel, liens résolus : un lien posé dans
    * le projet vers `~/.ssh` est refusé comme sa cible. Une commande (`bash`)

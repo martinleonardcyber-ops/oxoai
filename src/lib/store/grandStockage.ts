@@ -54,7 +54,7 @@ let mode: IssueEcriture = "fichier";
 
 function brutPont(): PontGrand | undefined {
   if (typeof window === "undefined") return undefined;
-  const p = (window as unknown as { helix?: { grand?: PontGrand } }).helix?.grand;
+  const p = (window as unknown as { oxoai?: { grand?: PontGrand } }).oxoai?.grand;
   return p?.disponible && Array.isArray(p.cles) ? p : undefined;
 }
 
@@ -62,13 +62,13 @@ function pont(): PontGrand | undefined {
   return mode === "navigateur" ? undefined : brutPont();
 }
 
-const PREFIX = "helix:";
+const PREFIX = "oxoai:";
 const valeurs: Record<string, string> = { ...(pont()?.valeurs ?? {}) };
 
 /** Lu même sans chiffrement disponible : c'est justement le cas où le fichier est là et illisible. */
 function lirePreload(champ: "illisibles" | "incidents"): unknown {
   try {
-    return (window as unknown as { helix?: { grand?: Record<string, unknown> } }).helix?.grand?.[champ];
+    return (window as unknown as { oxoai?: { grand?: Record<string, unknown> } }).oxoai?.grand?.[champ];
   } catch {
     return undefined;
   }
@@ -121,7 +121,7 @@ export type EtatReleve = "attente" | "relue" | "absente" | "echec" | "hors-ligne
 const releves = new Map<string, { etat: EtatReleve; nombre?: number }>();
 
 /** Émis quand un incident ou sa relève change : le bandeau se redessine. */
-export const GRAND_CHANGE = "helix:grand-change";
+export const GRAND_CHANGE = "oxoai:grand-change";
 const annoncer = () => {
   try {
     window.dispatchEvent(new Event(GRAND_CHANGE));

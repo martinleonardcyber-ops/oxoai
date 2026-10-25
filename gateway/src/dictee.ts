@@ -65,7 +65,7 @@ const FILS = Math.max(1, Math.min(8, availableParallelism()));
 
 /** Dossier des fichiers temporaires, sous le dossier de données de l'instance. */
 export const dossierTemporaire = (): string =>
-  join(process.env.HELIX_DATA_DIR ?? join(homedir(), ".helix", "data"), "dictee");
+  join(process.env.OXOAI_DATA_DIR ?? join(homedir(), ".oxoai", "data"), "dictee");
 
 /** Erreur destinée à l'utilisateur, avec le code HTTP qui la porte. */
 export class ErreurDictee extends Error {
@@ -153,10 +153,10 @@ segments, info = whisper.transcribe(
     initial_prompt=invite,
 )
 texte = " ".join(s.text.strip() for s in segments if s.text.strip())
-sys.stdout.write("@@HELIX@@" + json.dumps({"texte": texte, "duree_audio": info.duration}))
+sys.stdout.write("@@OXOAI@@" + json.dumps({"texte": texte, "duree_audio": info.duration}))
 `;
 
-const MARQUEUR = "@@HELIX@@";
+const MARQUEUR = "@@OXOAI@@";
 
 export interface Transcription {
   texte: string;

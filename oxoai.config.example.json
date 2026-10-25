@@ -1,5 +1,5 @@
 {
-  "_commentaire": "Profil de deploiement client. Copier en helix.config.json et adapter. Ce fichier prime sur toute detection automatique : ce que l'integrateur ecrit ici fait foi.",
+  "_commentaire": "Profil de deploiement client. Copier en oxoai.config.json et adapter. Ce fichier prime sur toute detection automatique : ce que l'integrateur ecrit ici fait foi.",
 
   "client": "Cabinet Dupont",
 
@@ -34,21 +34,21 @@
   ],
 
   "_workspace": "Dossier auquel l'agent a acces. Rien en dehors ne lui est accessible.",
-  "workspace": "/Users/partage/Helix",
+  "workspace": "/Users/partage/OxoAI",
 
   "_share": "false par defaut : la passerelle n'ecoute que sur la boucle locale et n'est joignable par personne sur le reseau. Mettre true UNIQUEMENT sur la machine qui heberge l'instance partagee, et derriere un pare-feu : c'est elle qui detient les donnees de l'entreprise. Sur un poste personnel, ne touchez pas a ce reglage : l'interrupteur Parametres > Profil > Ouvrir l'instance a mes collegues fait la meme chose sous mot de passe, et laisse ce fichier a l'integrateur.",
   "share": true,
 
   "_tls": "Chiffrement du transport. Absent : en clair en local, AUTO-SIGNE des que share vaut true (une instance ouverte au reseau ne sert jamais en clair). true force le chiffrement meme en local. false le desactive, a reserver au cas ou un reverse proxy termine deja le TLS. Pour un deploiement durable, fournissez votre propre certificat : les postes n'ont alors rien a accepter.",
   "tls": {
-    "cert": "/etc/helix/instance-cert.pem",
-    "key": "/etc/helix/instance-key.pem"
+    "cert": "/etc/oxoai/instance-cert.pem",
+    "key": "/etc/oxoai/instance-key.pem"
   },
 
   "_autoProvision": "false = l'integrateur gere les modeles, l'ecran de mise en route ne propose aucun telechargement.",
   "autoProvision": false,
 
-  "_connecteursLibres": "Autoriser l'ajout d'un connecteur MCP dont la commande n'est PAS au catalogue de Helix. Absent ou false par defaut, et c'est la seule valeur raisonnable pour une instance partagee : un serveur MCP est un programme execute sur cette machine, donc laisser l'interface choisir la commande revient a offrir l'execution de code a distance a quiconque detient une seance. Mettre true uniquement pour brancher un serveur MCP interne, sur une instance dont on maitrise qui s'y connecte.",
+  "_connecteursLibres": "Autoriser l'ajout d'un connecteur MCP dont la commande n'est PAS au catalogue de OxoAI. Absent ou false par defaut, et c'est la seule valeur raisonnable pour une instance partagee : un serveur MCP est un programme execute sur cette machine, donc laisser l'interface choisir la commande revient a offrir l'execution de code a distance a quiconque detient une seance. Mettre true uniquement pour brancher un serveur MCP interne, sur une instance dont on maitrise qui s'y connecte.",
   "connecteursLibres": false,
 
   "_google": "Client OAuth Google de l'entreprise, pour le connecteur Google Drive (lecture seule). Aucun identifiant n'est livre avec le produit : l'entreprise cree le sien dans console.cloud.google.com (API Google Drive activee, audience Interne si elle a Google Workspace, client de type Application de bureau) et recopie ici l'identifiant (qui se termine par .apps.googleusercontent.com) et le code secret. Vide : la tuile Google Drive explique la marche a suivre. Redemarrer l'instance apres modification.",
@@ -60,17 +60,17 @@
   "_chiffrement": "Ou vit la cle de chiffrement des donnees. trousseau (defaut macOS) = hors du disque de donnees, un disque copie ne suffit pas. fichier = a cote des donnees en -rw-------, plus faible mais seule option sur Linux. false = pas de chiffrement.",
   "chiffrement": "trousseau",
 
-  "_rechercheWeb": "Recherche sur le web du Chat (menu +). Absent ou true : chacun peut l'activer, question par question ; les questions partent alors a DuckDuckGo et l'instance ouvre les pages trouvees. false : l'entree reste visible mais grisee, l'ecran dit que ce profil l'interdit, et l'instance refuse toute demande qui la reclamerait. Ne touche ni aux employes OpenClaw ni a Helix Code.",
+  "_rechercheWeb": "Recherche sur le web du Chat (menu +). Absent ou true : chacun peut l'activer, question par question ; les questions partent alors a DuckDuckGo et l'instance ouvre les pages trouvees. false : l'entree reste visible mais grisee, l'ecran dit que ce profil l'interdit, et l'instance refuse toute demande qui la reclamerait. Ne touche ni aux employes OpenClaw ni a OxoAI Code.",
   "rechercheWeb": true,
 
   "_journalCopie": "Second emplacement ou recopier le journal d'audit, ligne a ligne. Le chainage detecte une falsification mais n'empeche pas la suppression du fichier : cette copie est ce qui rend le journal opposable. A configurer pour tout client soumis a un audit.",
-  "journalCopie": "/Volumes/Sauvegarde/helix-audit",
+  "journalCopie": "/Volumes/Sauvegarde/oxoai-audit",
   "_journalConservationJours": "Duree de conservation du journal d'audit sur l'instance, en jours (90 par defaut, de 30 a 3650). Au-dela, les journees sont effacees ; la copie journalCopie n'est jamais purgee.",
   "journalConservationJours": 365,
-  "_openclaw": "Agents toujours actifs. Helix installe OpenClaw tout seul et propose ses mises a jour ; version et node fixent les versions installees, port deplace l'instance dediee (18800 par defaut).",
+  "_openclaw": "Agents toujours actifs. OxoAI installe OpenClaw tout seul et propose ses mises a jour ; version et node fixent les versions installees, port deplace l'instance dediee (18800 par defaut).",
   "openclaw": { "port": 18800 },
 
-  "_computerUse": "Controle de l'ecran. Desactive par defaut. mode : sandbox (VM dediee via cua/Lume, recommande, le poste n'est jamais touche) | hote (la machine reelle ; macOS demande alors deux autorisations a Helix : Enregistrement de l'ecran et Accessibilite) | desactive. Necessite un modele de role gui ou vision : un modele de conversation ne voit pas les captures.",
+  "_computerUse": "Controle de l'ecran. Desactive par defaut. mode : sandbox (VM dediee via cua/Lume, recommande, le poste n'est jamais touche) | hote (la machine reelle ; macOS demande alors deux autorisations a OxoAI : Enregistrement de l'ecran et Accessibilite) | desactive. Necessite un modele de role gui ou vision : un modele de conversation ne voit pas les captures.",
   "_requireApproval": "true = chaque action modifiante (clic, frappe, glisser) attend un accord explicite. Ne passer a false que sur un poste de demonstration.",
   "computerUse": {
     "mode": "sandbox",

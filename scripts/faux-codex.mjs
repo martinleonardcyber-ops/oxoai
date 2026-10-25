@@ -34,7 +34,7 @@ const args = process.argv.slice(2);
 const noter = (extra = {}) => {
   if (!AUX) return;
   const secrets = Object.entries(process.env)
-    .filter(([nom, v]) => nom === "HELIX_CANARI_SECRET" || nom === "HELIX_TOKEN" || nom.startsWith("HELIX_OPENCODE") || nom === "OPENAI_API_KEY" || nom === "CODEX_API_KEY" || String(v).includes("canari-secret"))
+    .filter(([nom, v]) => nom === "OXOAI_CANARI_SECRET" || nom === "OXOAI_TOKEN" || nom.startsWith("OXOAI_OPENCODE") || nom === "OPENAI_API_KEY" || nom === "CODEX_API_KEY" || String(v).includes("canari-secret"))
     .map(([nom]) => nom);
   appendFileSync(join(AUX, "appels.jsonl"), JSON.stringify({ args, cwd: process.cwd(), pid: process.pid, env: Object.keys(process.env), secrets, ...extra }) + "\n");
 };

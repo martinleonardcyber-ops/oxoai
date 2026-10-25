@@ -88,7 +88,7 @@ function valider(brut: unknown): PreferencesFormats {
 /* ------------------------------------------------------------------ */
 
 /** Émis par la synchronisation et par `useProfile` quand un profil a changé. */
-const PROFIL_CHANGE = "helix:profile-changed";
+const PROFIL_CHANGE = "oxoai:profile-changed";
 
 /*
  * Réglage en mémoire, pour le compte qui l'a produit. `useSyncExternalStore`

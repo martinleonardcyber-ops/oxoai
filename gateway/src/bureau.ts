@@ -146,7 +146,7 @@ async function cheminSur(brut: unknown, extension: string | null): Promise<Verdi
 /*
  * Les zones protégées (zonesProtegees.ts, revue du 25/09/2026) : avec « Tout
  * mon poste », l'espace est le dossier personnel, et un document produit ou lu
- * dans `~/.helix/data` ou `~/.ssh` n'y a rien à faire.
+ * dans `~/.oxoai/data` ou `~/.ssh` n'y a rien à faire.
  */
 const REFUS_ZONE =
   "Cet emplacement est protégé (données de l'instance, clés, réglages d'autres logiciels) : choisis un dossier de documents.";
@@ -395,7 +395,7 @@ try:
 except Exception as err:
     sortie = {"ok": False, "erreur": "%s : %s" % (type(err).__name__, err)}
 
-sys.stdout.write("\n@@HELIX@@" + json.dumps(sortie))
+sys.stdout.write("\n@@OXOAI@@" + json.dumps(sortie))
 `;
 
 /* -------------------------------- exécution ----------------------------------- */
@@ -420,10 +420,10 @@ interface Reponse {
  * standard. Le marqueur isole la réponse du bruit : sans lui, un avertissement
  * suffirait à faire échouer une génération réussie.
  */
-const MARQUEUR = "@@HELIX@@";
+const MARQUEUR = "@@OXOAI@@";
 
 async function lancer(charge: Record<string, unknown>): Promise<Reponse> {
-  const travail = await mkdtemp(join(tmpdir(), "helix-bureau-"));
+  const travail = await mkdtemp(join(tmpdir(), "oxoai-bureau-"));
   const script = join(travail, "bureau.py");
 
   try {

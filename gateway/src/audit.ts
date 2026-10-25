@@ -277,7 +277,7 @@ export interface AuditEntry {
 }
 
 const dossier = () =>
-  join(process.env.HELIX_DATA_DIR ?? join(homedir(), ".helix", "data"), "audit");
+  join(process.env.OXOAI_DATA_DIR ?? join(homedir(), ".oxoai", "data"), "audit");
 
 const fichierDuJour = () =>
   join(dossier(), `audit-${new Date().toISOString().slice(0, 10)}.jsonl`);
@@ -285,10 +285,10 @@ const fichierDuJour = () =>
 /**
  * Journée dont on veut relire le journal.
  *
- * `jour` arrive d'un paramètre d'URL (`GET /helix/audit?jour=…`). Assemblé tel
+ * `jour` arrive d'un paramètre d'URL (`GET /oxoai/audit?jour=…`). Assemblé tel
  * quel dans un chemin, « x/../../../ailleurs/fichier » sortait du dossier
  * d'audit : n'importe quel `.jsonl` lisible par le compte qui fait tourner
- * Helix était alors renvoyé à l'appelant. Seule une date AAAA-MM-JJ désigne un
+ * OxoAI était alors renvoyé à l'appelant. Seule une date AAAA-MM-JJ désigne un
  * journal ; tout le reste retombe sur celui du jour.
  */
 const FORMAT_JOUR = /^\d{4}-\d{2}-\d{2}$/;

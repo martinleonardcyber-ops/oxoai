@@ -7,9 +7,9 @@ import { Worker } from "node:worker_threads";
  * ── Pourquoi plus `node --check` (28/09/2026) ───────────────────────────────
  *
  * Le contrôle lançait le binaire de la passerelle avec `--check`. Dans
- * l'application de bureau, ce binaire est celui de Helix, et il ne sert de
+ * l'application de bureau, ce binaire est celui de OxoAI, et il ne sert de
  * Node qu'avec le fusible RunAsNode ouvert : n'importe quel programme du poste
- * pouvait alors faire tourner son JavaScript sous l'identité de Helix, avec
+ * pouvait alors faire tourner son JavaScript sous l'identité de OxoAI, avec
  * ses autorisations (accessibilité, micro, écran). Le fusible est fermé
  * (SECURITE.md, « RunAsNode fermé ») ; il n'y a plus de Node à lancer, et il
  * n'en faut pas : compiler n'est pas exécuter.

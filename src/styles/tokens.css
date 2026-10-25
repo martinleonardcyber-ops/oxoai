@@ -1,6 +1,6 @@
 /* =============================================================================
- * TOKENS DE DESIGN HELIX
- * Source de verite : charte du site Helix (helix-agence.fr + dossier Helix 2).
+ * TOKENS DE DESIGN OXOAI
+ * Palette héritée de HelixAI (charte de helix-agence.fr), accent passé à l'iris de la famille Oxo.
  * Toutes les couleurs sont des triplets HSL « H S% L% » (sans wrapper hsl()),
  * consommes via Tailwind avec `hsl(var(--token) / <alpha-value>)`.
  * AUCUNE valeur hexadecimale en dur dans les composants : on passe par ces tokens.
@@ -27,7 +27,7 @@
   --ring: 30 8% 9%;
 
   /* --- Accents ------------------------------------------------------------ */
-  --accent: 162 70% 38%; /* #1DA57C vert emeraude : accent interactif, badges, liens */
+  --accent: 253 85% 62%; /* #6A4CF0 iris (famille Oxo) : accent interactif, badges, liens */
   --accent-foreground: 40 22% 97%;
   --info: 221 83% 53%; /* #2563EB bleu : encarts d'information */
   --info-foreground: 40 22% 97%;
@@ -152,7 +152,7 @@
  *
  * Ce n'est pas la palette claire inversee. Un creme inverse donne un gris bleu
  * mort ; on garde ici la meme dominante chaude, ramenee dans les valeurs
- * basses. L'accent emeraude est legerement eclairci : a 38 % de luminosite il
+ * basses. L'accent iris est eclairci (79 %) : plus sombre, il
  * passait sous le seuil de lisibilite sur fond sombre.
  * ========================================================================== */
 
@@ -175,7 +175,7 @@
   --input: 30 6% 20%;
   --ring: 40 18% 93%;
 
-  --accent: 162 62% 46%;
+  --accent: 250 100% 79%; /* #A493FF : iris éclairci pour le fond sombre */
   --accent-foreground: 30 8% 8%;
   --info: 221 83% 63%;
   --info-foreground: 30 8% 8%;

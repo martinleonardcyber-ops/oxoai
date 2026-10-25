@@ -7,9 +7,9 @@ import { lister, t, tf } from "./langue.ts";
 import * as agendaGoogle from "./agendaGoogle.ts";
 
 /**
- * Connecteur agenda de Helix, en CalDAV.
+ * Connecteur agenda de OxoAI, en CalDAV.
  *
- * Pourquoi CalDAV et pas l'API Google Agenda : Helix se vend à des PME
+ * Pourquoi CalDAV et pas l'API Google Agenda : OxoAI se vend à des PME
  * françaises sur l'argument de la souveraineté. Un connecteur Google Agenda ne
  * servirait qu'un fournisseur américain et lierait le produit à des conditions
  * d'API révocables. CalDAV est un protocole ouvert (RFC 4791, posé sur WebDAV
@@ -1772,7 +1772,7 @@ export async function configurer(
   if (!verdict.ok) return { ok: false, message: verdict.message };
 
   /*
-   * Refus net plutôt que dégradation silencieuse. Ailleurs dans Helix, une
+   * Refus net plutôt que dégradation silencieuse. Ailleurs dans OxoAI, une
    * donnée non chiffrable est écrite en clair en le disant ; un mot de passe
    * d'agenda, non : il ouvre le plus souvent la messagerie du même compte, et
    * il dit à qui le vole où se trouvent les gens et quand.
@@ -1781,7 +1781,7 @@ export async function configurer(
     return {
       ok: false,
       message:
-        tf("Le chiffrement des données n'est pas actif sur cette machine : {0} refuse d'enregistrer un mot de passe d'agenda en clair. Déverrouillez le trousseau du compte hôte, ou réglez « chiffrement » sur « fichier » dans helix.config.json, puis recommencez.", nomProduit()),
+        tf("Le chiffrement des données n'est pas actif sur cette machine : {0} refuse d'enregistrer un mot de passe d'agenda en clair. Déverrouillez le trousseau du compte hôte, ou réglez « chiffrement » sur « fichier » dans oxoai.config.json, puis recommencez.", nomProduit()),
     };
   }
 

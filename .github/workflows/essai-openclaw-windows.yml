@@ -1,5 +1,5 @@
 # Installation d'OpenClaw sous Windows (29/09/2026) : sur une vraie machine Windows jetable,
-# le chemin exact de Helix quand on déploie un agent (installerOpenClaw de
+# le chemin exact de OxoAI quand on déploie un agent (installerOpenClaw de
 # gateway/src/installationOpenClaw.ts) : Node privé téléchargé et vérifié, npm lancé par
 # node.exe npm-cli.js avec les mêmes arguments et le même environnement, puis
 # `openclaw --version` et une passerelle OpenClaw jetable sur un port libre.
@@ -37,7 +37,7 @@ concurrency:
 
 jobs:
   installation:
-    name: Installation d'OpenClaw comme Helix la fait (${{ matrix.nom }})
+    name: Installation d'OpenClaw comme OxoAI la fait (${{ matrix.nom }})
     runs-on: ${{ matrix.machine }}
     timeout-minutes: 45
     strategy:
@@ -73,7 +73,7 @@ jobs:
           persist-credentials: false
 
       # Le Node qui fait tourner la passerelle (comme node gateway/src) ; OpenClaw, lui, est installé
-      # par le Node privé que Helix télécharge (24.21.0, empreinte vérifiée).
+      # par le Node privé que OxoAI télécharge (24.21.0, empreinte vérifiée).
       - name: Node
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
@@ -94,7 +94,7 @@ jobs:
           "python : $((Get-Command python -ErrorAction SilentlyContinue).Source)"
           "Processeur : $env:PROCESSOR_ARCHITECTURE"
 
-      - name: Installation réelle d'OpenClaw (chemin de Helix)
+      - name: Installation réelle d'OpenClaw (chemin de OxoAI)
         run: node scripts/essai-openclaw-windows.mjs --installation --sortie essai-openclaw-windows-sortie ${{ matrix.options }}
 
       - name: Garder les journaux

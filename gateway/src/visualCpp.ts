@@ -8,14 +8,14 @@ import { pipeline } from "node:stream/promises";
 import { t, tf } from "./langue.ts";
 
 /**
- * Les bibliothèques Visual C++ de Microsoft, posées par Helix sous Windows
+ * Les bibliothèques Visual C++ de Microsoft, posées par OxoAI sous Windows
  * quand elles manquent.
  *
  * Décidé par Medhi le 29/09/2026 : exception à la règle des licences (Apache
  * 2.0 et MIT seulement), comme Python (pythonPrive.ts) et Unsloth avant lui
  * (PROJET.md § 3.9 et § 3.12). Le paquet « Microsoft Visual C++
  * Redistributable » est sous licence de Microsoft (logiciel fermé, gratuit,
- * redistribuable) ; Helix ne le livre pas, il le télécharge chez Microsoft au
+ * redistribuable) ; OxoAI ne le livre pas, il le télécharge chez Microsoft au
  * moment d'installer, et c'est Windows qui l'installe, avec l'autorisation
  * d'administrateur de la personne (UAC).
  *
@@ -31,7 +31,7 @@ import { t, tf } from "./langue.ts";
  * La DLL est là sur les machines de GitHub (Visual Studio y est installé) et
  * sur la plupart des PC (beaucoup de programmes l'installent), mais pas sur
  * tous. Vu sur GitHub le 29/09/2026, la DLL retirée de System32 le temps de
- * l'essai, avec le PATH que Helix donne à OpenClaw : `openclaw --version`
+ * l'essai, avec le PATH que OxoAI donne à OpenClaw : `openclaw --version`
  * répond et la passerelle d'OpenClaw ouvre son port, mais les deux modules
  * ne se chargent plus ; ce qui s'en sert échoue alors en cours de route.
  *
@@ -120,7 +120,7 @@ export const SIGNATAIRE_MICROSOFT = "CN=Microsoft Corporation, O=Microsoft Corpo
  */
 export const RACINES_MICROSOFT = ["8F43288AD272F3103B6FB1428485EA3014C0BCFE"] as const;
 
-/** Le paquet pour ce processeur, ou null (Windows 32 bits : Helix n'y pose pas de Node). */
+/** Le paquet pour ce processeur, ou null (Windows 32 bits : OxoAI n'y pose pas de Node). */
 export function paquetVisualCpp(arch: string): PaquetVisualCpp | null {
   return arch === "x64" || arch === "arm64" ? PAQUETS_VISUAL_CPP[arch] : null;
 }
@@ -191,24 +191,24 @@ export function lireReleve(sortie: string): ReleveVisualCpp | null {
 /*
  * Les trois scripts PowerShell sont des constantes : aucun ne porte de
  * donnée. Le processeur, le fichier à vérifier ou à lancer et son journal
- * passent par des variables d'environnement (`HELIX_VC_*`), lues par
+ * passent par des variables d'environnement (`OXOAI_VC_*`), lues par
  * PowerShell comme des chaînes, jamais interprétées comme du code.
  */
 
 /** Relève la clé du registre (vues 64 et 32 bits) et les DLL de `System32`, en JSON. */
 export const SCRIPT_RELEVE = [
   "$ErrorActionPreference = 'SilentlyContinue'",
-  "$a = $env:HELIX_VC_ARCH",
+  "$a = $env:OXOAI_VC_ARCH",
   "$reg = foreach ($c in @('HKLM:\\SOFTWARE\\Microsoft\\VisualStudio\\14.0\\VC\\Runtimes\\' + $a, 'HKLM:\\SOFTWARE\\WOW6432Node\\Microsoft\\VisualStudio\\14.0\\VC\\Runtimes\\' + $a)) { $k = Get-ItemProperty -LiteralPath $c; if ($k) { @{ installe = [int]$k.Installed; version = [string]$k.Version } } }",
-  "$dll = foreach ($n in ($env:HELIX_VC_DLL -split ';')) { $f = Join-Path (Join-Path $env:SystemRoot 'System32') $n; $i = Get-Item -LiteralPath $f; if ($i) { $v = $i.VersionInfo; @{ nom = $n; present = $true; version = ('{0}.{1}.{2}.{3}' -f $v.FileMajorPart, $v.FileMinorPart, $v.FileBuildPart, $v.FilePrivatePart) } } else { @{ nom = $n; present = $false } } }",
+  "$dll = foreach ($n in ($env:OXOAI_VC_DLL -split ';')) { $f = Join-Path (Join-Path $env:SystemRoot 'System32') $n; $i = Get-Item -LiteralPath $f; if ($i) { $v = $i.VersionInfo; @{ nom = $n; present = $true; version = ('{0}.{1}.{2}.{3}' -f $v.FileMajorPart, $v.FileMinorPart, $v.FileBuildPart, $v.FilePrivatePart) } } else { @{ nom = $n; present = $false } } }",
   "[Console]::Out.Write((@{ registre = @($reg); dll = @($dll) } | ConvertTo-Json -Compress -Depth 4))",
 ].join("\n");
 
-/** Signature Authenticode du fichier `HELIX_VC_FICHIER` : statut, signataire, racine de la chaîne. */
+/** Signature Authenticode du fichier `OXOAI_VC_FICHIER` : statut, signataire, racine de la chaîne. */
 export const SCRIPT_SIGNATURE = [
   "$ErrorActionPreference = 'Stop'",
-  "$s = Get-AuthenticodeSignature -LiteralPath $env:HELIX_VC_FICHIER",
-  "$r = @{ statut = [string]$s.Status; message = [string]$s.StatusMessage; signataire = ''; racine = ''; empreinteRacine = ''; version = [string](Get-Item -LiteralPath $env:HELIX_VC_FICHIER).VersionInfo.ProductVersion }",
+  "$s = Get-AuthenticodeSignature -LiteralPath $env:OXOAI_VC_FICHIER",
+  "$r = @{ statut = [string]$s.Status; message = [string]$s.StatusMessage; signataire = ''; racine = ''; empreinteRacine = ''; version = [string](Get-Item -LiteralPath $env:OXOAI_VC_FICHIER).VersionInfo.ProductVersion }",
   "if ($s.SignerCertificate) {",
   "  $r.signataire = $s.SignerCertificate.Subject",
   "  $c = New-Object System.Security.Cryptography.X509Certificates.X509Chain",
@@ -222,16 +222,16 @@ export const SCRIPT_SIGNATURE = [
 ].join("\n");
 
 /**
- * Lance l'installeur `HELIX_VC_FICHIER` avec l'élévation que Windows demande
+ * Lance l'installeur `OXOAI_VC_FICHIER` avec l'élévation que Windows demande
  * (UAC), sans fenêtre (`/quiet`), sans redémarrer (`/norestart`), journal dans
- * `HELIX_VC_JOURNAL` ; rend son code de sortie, ou le code natif de l'erreur
+ * `OXOAI_VC_JOURNAL` ; rend son code de sortie, ou le code natif de l'erreur
  * de lancement (1223 : la personne, ou Windows, a refusé l'autorisation).
  * `Start-Process` passe par ShellExecute, pas par `cmd.exe`.
  */
 export const SCRIPT_INSTALLATION = [
   "$ErrorActionPreference = 'Stop'",
   "try {",
-  "  $p = Start-Process -FilePath $env:HELIX_VC_FICHIER -ArgumentList @('/install', '/quiet', '/norestart', '/log', ('\"' + $env:HELIX_VC_JOURNAL + '\"')) -Verb RunAs -PassThru",
+  "  $p = Start-Process -FilePath $env:OXOAI_VC_FICHIER -ArgumentList @('/install', '/quiet', '/norestart', '/log', ('\"' + $env:OXOAI_VC_JOURNAL + '\"')) -Verb RunAs -PassThru",
   // Le handle lu tout de suite : sans lui, `ExitCode` d'un processus élevé revient vide.
   "  $h = $p.Handle",
   "  $p.WaitForExit()",
@@ -258,12 +258,12 @@ export function commandePowerShell(script: string, env: Record<string, string | 
 
 /**
  * L'environnement de ce Windows PowerShell : celui de la passerelle, plus les
- * variables `HELIX_VC_*`, **sans `PSModulePath`**. Vu sur le Windows de GitHub
+ * variables `OXOAI_VC_*`, **sans `PSModulePath`**. Vu sur le Windows de GitHub
  * le 29/09/2026 : lancé depuis PowerShell 7, Windows PowerShell 5.1 hérite de
  * ses dossiers de modules, et `Get-AuthenticodeSignature` ne se charge plus
  * (le module de PowerShell 7 du même nom est pris à la place). Sans la
  * variable, il reprend ses dossiers d'office. Même cas chez une personne qui
- * lancerait Helix depuis PowerShell 7.
+ * lancerait OxoAI depuis PowerShell 7.
  */
 export function envPowerShell(source: Record<string, string | undefined>, variables: Record<string, string>): Record<string, string | undefined> {
   const env: Record<string, string | undefined> = {};
@@ -345,7 +345,7 @@ export function issueInstalleur(code: number | null, natif?: number): IssueInsta
 
 /* ---- Ce qui ne tourne que sous Windows ------------------------------------ */
 
-const racine = () => join(process.env.HELIX_DATA_DIR ?? join(homedir(), ".helix", "data"), "visual-cpp");
+const racine = () => join(process.env.OXOAI_DATA_DIR ?? join(homedir(), ".oxoai", "data"), "visual-cpp");
 
 function powershell(script: string, variables: Record<string, string>, delaiMs: number): Promise<{ ok: boolean; sortie: string; erreur: string }> {
   const env = envPowerShell(process.env, variables);
@@ -358,7 +358,7 @@ function powershell(script: string, variables: Record<string, string>, delaiMs: 
 }
 
 /**
- * Variable réservée aux essais (SECURITE.md § 64) : `HELIX_ESSAI_VISUAL_CPP=absent`
+ * Variable réservée aux essais (SECURITE.md § 64) : `OXOAI_ESSAI_VISUAL_CPP=absent`
  * fait dire « absentes » à la détection, jusqu'à ce qu'une installation ait
  * tourné dans ce processus, pour faire passer tout le chemin (téléchargement,
  * vérifications, installeur réel) sur une machine qui les a déjà. Elle ne
@@ -367,7 +367,7 @@ function powershell(script: string, variables: Record<string, string>, delaiMs: 
  * jamais par une requête.
  */
 let installeeIci = false;
-const forceeAbsente = () => process.env.HELIX_ESSAI_VISUAL_CPP === "absent" && !installeeIci;
+const forceeAbsente = () => process.env.OXOAI_ESSAI_VISUAL_CPP === "absent" && !installeeIci;
 
 let cache: { verdict: VerdictVisualCpp | null; at: number } | null = null;
 
@@ -382,7 +382,7 @@ export async function detecterVisualCpp(forcer = false): Promise<VerdictVisualCp
   if (!forcer && cache && Date.now() - cache.at < 10 * 60_000) return cache.verdict;
   const paquet = paquetVisualCpp(process.arch);
   if (!paquet) return null;
-  const r = await powershell(SCRIPT_RELEVE, { HELIX_VC_ARCH: paquet.arch, HELIX_VC_DLL: DLL_VISUAL_CPP.join(";") }, 30_000);
+  const r = await powershell(SCRIPT_RELEVE, { OXOAI_VC_ARCH: paquet.arch, OXOAI_VC_DLL: DLL_VISUAL_CPP.join(";") }, 30_000);
   const releve = r.ok ? lireReleve(r.sortie) : null;
   if (!releve) console.warn(`[visual-cpp] relevé illisible : ${(r.erreur || r.sortie).slice(0, 300)}`);
   const verdict = releve ? verdictVisualCpp(releve, paquet.arch) : null;
@@ -420,7 +420,7 @@ export async function installerVisualCpp(avancer?: (pourcent: number) => void): 
   if (!reponse.ok || !reponse.body) throw new Error(tf("Téléchargement des bibliothèques de Microsoft impossible (HTTP {0}).", reponse.status));
 
   /*
-   * Dans un dossier à soi, sous les données de Helix (dossier personnel du
+   * Dans un dossier à soi, sous les données de OxoAI (dossier personnel du
    * compte : les autres comptes n'y écrivent pas), jamais dans le dossier
    * temporaire commun ; nom unique, fichier créé par nous seuls (`wx`).
    */
@@ -448,7 +448,7 @@ export async function installerVisualCpp(avancer?: (pourcent: number) => void): 
       throw new Error(t("Le paquet de Microsoft téléchargé ne correspond pas à son empreinte : il a été effacé sans être lancé."));
     }
 
-    const lue = await powershell(SCRIPT_SIGNATURE, { HELIX_VC_FICHIER: fichier }, 60_000);
+    const lue = await powershell(SCRIPT_SIGNATURE, { OXOAI_VC_FICHIER: fichier }, 60_000);
     let signature: Signature | null = null;
     try {
       signature = JSON.parse(lue.sortie.trim()) as Signature;
@@ -463,7 +463,7 @@ export async function installerVisualCpp(avancer?: (pourcent: number) => void): 
 
     console.log(`[visual-cpp] lancement de VC_redist.${paquet.arch}.exe ${paquet.version} (empreinte et signature de Microsoft vérifiées), autorisation d'administrateur demandée à Windows`);
     // Jusqu'à quinze minutes : la demande de Windows attend la personne.
-    const r = await powershell(SCRIPT_INSTALLATION, { HELIX_VC_FICHIER: fichier, HELIX_VC_JOURNAL: journal }, 15 * 60_000);
+    const r = await powershell(SCRIPT_INSTALLATION, { OXOAI_VC_FICHIER: fichier, OXOAI_VC_JOURNAL: journal }, 15 * 60_000);
     installeeIci = true;
     const { code, natif, erreur } = lireCodeInstalleur(r.sortie);
     const issue = issueInstalleur(code, natif);

@@ -45,7 +45,7 @@ export const LIMITE_ADRESSE = 7_500;
  */
 function architecture(): string | null {
   try {
-    const a = (window as unknown as { helix?: { architecture?: unknown } }).helix?.architecture;
+    const a = (window as unknown as { oxoai?: { architecture?: unknown } }).oxoai?.architecture;
     return typeof a === "string" ? a : null;
   } catch {
     return null;

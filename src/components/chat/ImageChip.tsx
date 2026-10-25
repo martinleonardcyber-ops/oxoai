@@ -26,7 +26,7 @@ import { t, tf } from "@/lib/i18n";
  * côté passerelle), le conseillé en premier. Aucun n'est installé sans clic :
  * le panneau annonce ce qui sera téléchargé, puis suit l'installation.
  * Depuis le 28/09/2026, l'écran ne dit plus si un modèle a été essayé de bout
- * en bout avec Helix (PROJET.md § 3.16) : `verifie` ne sert plus qu'à la
+ * en bout avec OxoAI (PROJET.md § 3.16) : `verifie` ne sert plus qu'à la
  * passerelle.
  */
 export function ImageChip({

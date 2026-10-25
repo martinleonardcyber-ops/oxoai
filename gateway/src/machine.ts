@@ -43,16 +43,16 @@ const exec = promisify(execFile);
  *
  * Isolation : ports ouverts sur 127.0.0.1 seulement (jamais sur le réseau),
  * mémoire plafonnée, un seul dossier partagé avec l'ordinateur de la
- * personne : `~/Helix/Machine`, par où les documents reviennent.
+ * personne : `~/OxoAI/Machine`, par où les documents reviennent.
  */
 
 /** Image de base de cua, épinglée : une nouvelle version ne s'impose pas sans essai. */
 const IMAGE_BASE = "trycua/cua-ubuntu@sha256:e2a800152d7d0a2a43b1f7f715f964ecb4a7501b262f3ca626f15a9e6b083e32";
-/** Image Helix : la base, plus la bureautique en français. Changer le numéro force une reconstruction. */
-const IMAGE = "helix-machine:3";
-const CONTENEUR = "helix-machine";
+/** Image OxoAI : la base, plus la bureautique en français. Changer le numéro force une reconstruction. */
+const IMAGE = "oxoai-machine:3";
+const CONTENEUR = "oxoai-machine";
 /** Port du serveur de pilotage sur le poste. Pas 8000, trop souvent pris par un autre logiciel. */
-export const PORT_MACHINE = Number(process.env.HELIX_MACHINE_PORT) || 18910;
+export const PORT_MACHINE = Number(process.env.OXOAI_MACHINE_PORT) || 18910;
 const MEMOIRE = "3g";
 
 /*
@@ -61,7 +61,7 @@ const MEMOIRE = "3g";
  *  - le démarrage de cua tentait une mise à jour sur internet à chaque fois
  *    (deux minutes perdues, et un code qui change sans essai) : retirée ;
  *  - statistiques d'usage de cua coupées ;
- *  - LibreOffice préréglé (fichier helix.xcd, encodé ci-dessous) : pas de
+ *  - LibreOffice préréglé (fichier oxoai.xcd, encodé ci-dessous) : pas de
  *    fenêtre de récupération (mesuré le 24/09/2026 : après un redémarrage,
  *    elle bloquait tout, et le modèle relançait Writer sept fois), pas
  *    d'astuce du jour, formats Microsoft par défaut et sans question sur le
@@ -77,7 +77,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \\
       libreoffice-writer libreoffice-calc libreoffice-impress libreoffice-gtk3 \\
       libreoffice-l10n-fr hunspell-fr fonts-dejavu fonts-liberation2 language-pack-fr \\
     && apt-get clean && rm -rf /var/lib/apt/lists/*
-RUN echo ${LIBREOFFICE_XCD} | base64 -d > /usr/lib/libreoffice/share/registry/helix.xcd
+RUN echo ${LIBREOFFICE_XCD} | base64 -d > /usr/lib/libreoffice/share/registry/oxoai.xcd
 RUN printf '#!/bin/bash\\nrm -rf /home/kasm-user/.config/libreoffice/4/user/backup\\n/usr/bin/python3 -m computer_server\\n' > /dockerstartup/custom_startup.sh && chmod 755 /dockerstartup/custom_startup.sh
 ENV CUA_TELEMETRY=off CUA_TELEMETRY_ENABLED=false LANG=fr_FR.UTF-8 LANGUAGE=fr_FR:fr LC_ALL=fr_FR.UTF-8
 USER 1000
@@ -85,12 +85,12 @@ USER 1000
 
 /** Dossier partagé entre la machine et l'ordinateur de la personne. */
 export function dossierEchange(): string {
-  return process.env.HELIX_MACHINE_ECHANGE ?? join(homedir(), "Helix", "Machine");
+  return process.env.OXOAI_MACHINE_ECHANGE ?? join(homedir(), "OxoAI", "Machine");
 }
 /** Le même, vu de l'intérieur de la machine. */
 export const ECHANGE_DANS_LA_MACHINE = "/home/kasm-user/Echanges";
 
-const racineDonnees = () => process.env.HELIX_DATA_DIR ?? join(homedir(), ".helix", "data");
+const racineDonnees = () => process.env.OXOAI_DATA_DIR ?? join(homedir(), ".oxoai", "data");
 
 /* ------------------------------------------------------------------ */
 /* Le système de la machine : Linux ou macOS                           */
@@ -199,7 +199,7 @@ async function etatConteneur(docker: string): Promise<"absent" | "arrete" | "en_
 export type Environnement = "linux" | "macos" | "aucun";
 
 export interface DiagnosticMachine {
-  /** Ce que Helix conseille pour cet ordinateur. */
+  /** Ce que OxoAI conseille pour cet ordinateur. */
   conseil: Environnement;
   /** Pourquoi, en une phrase, dans la langue de la personne. */
   raison: string;
@@ -397,7 +397,7 @@ function lancer(docker: string, args: string[], etape: string, message: string):
  */
 async function effacerAnciennesImages(docker: string): Promise<void> {
   try {
-    const { stdout } = await exec(docker, ["images", "helix-machine", "--format", "{{.Repository}}:{{.Tag}}"], { timeout: 10_000 });
+    const { stdout } = await exec(docker, ["images", "oxoai-machine", "--format", "{{.Repository}}:{{.Tag}}"], { timeout: 10_000 });
     const anciennes = stdout.split("\n").map((l) => l.trim()).filter((l) => l && l !== IMAGE);
     if (anciennes.length === 0) return;
     const { stdout: sa } = await exec(docker, ["inspect", "-f", "{{.Config.Image}}", CONTENEUR], { timeout: 8000 }).catch(() => ({ stdout: "" }));

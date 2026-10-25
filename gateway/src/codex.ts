@@ -28,22 +28,22 @@ import {
  * ── Ce qui a été décidé, et pourquoi c'est étroit ───────────────────────────
  *
  * Décidé par Medhi le 27/09/2026 (PROJET.md § 3.14, qui fait exception au
- * § 3.1 « un seul moteur ») : Helix pilote le programme `codex` **officiel**,
+ * § 3.1 « un seul moteur ») : OxoAI pilote le programme `codex` **officiel**,
  * installé et connecté par la personne, par le parcours d'OpenAI, pour son
  * propre usage. C'est la forme qu'OpenAI décrit (« Integrate Codex within your
  * own application », page Codex SDK ; `codex exec` reprend la connexion
  * enregistrée, page « Non-interactive mode »). Tout le reste est écarté :
  *
- *  - Helix n'ouvre, ne lit, ne copie ni ne transmet jamais `~/.codex` ni aucun
+ *  - OxoAI n'ouvre, ne lit, ne copie ni ne transmet jamais `~/.codex` ni aucun
  *    jeton. Ce module ne lit **aucun fichier** : il cherche un exécutable par
  *    son chemin, et demande tout le reste au programme lui-même
  *    (`codex --version`, `codex login status`). `~/.codex` reste une zone
  *    protégée pour les agents (zonesProtegees.ts) ;
- *  - Helix n'installe pas `codex` : c'est le logiciel d'un tiers, dont la
+ *  - OxoAI n'installe pas `codex` : c'est le logiciel d'un tiers, dont la
  *    personne accepte elle-même les conditions. L'écran donne la commande
  *    officielle ;
  *  - la connexion se fait par `codex login` : le navigateur de la personne
- *    s'ouvre chez OpenAI, Helix ne voit passer aucun jeton ;
+ *    s'ouvre chez OpenAI, OxoAI ne voit passer aucun jeton ;
  *  - réservé au propriétaire du poste (codexGarde.ts, `refusCodex`), vérifié
  *    ici à chaque route, pas seulement à l'écran.
  *
@@ -51,11 +51,11 @@ import {
  *
  * `codex exec --json` dans le dossier du projet, la demande sur l'entrée
  * standard, le flux JSONL traduit en évènements de l'écran Code. L'app-server
- * relaierait mieux les demandes d'approbation vers la barrière de Helix, mais
+ * relaierait mieux les demandes d'approbation vers la barrière de OxoAI, mais
  * OpenAI le dit expérimental (page « Codex app-server », 27/09/2026) : à
  * reprendre quand il ne le sera plus. D'ici là, `codex exec` ne demande rien
  * (`approval_policy = never`) et c'est le bac à sable qui borne ce qu'il fait,
- * jamais plus large que le niveau de Helix (codexGarde.ts, `bacASable`).
+ * jamais plus large que le niveau de OxoAI (codexGarde.ts, `bacASable`).
  *
  * Pas essayé avec un vrai compte le 27/09/2026 : la batterie de sécurité
  * joue un faux `codex` (scripts/faux-codex.mjs).
@@ -103,16 +103,16 @@ function nodeDuPath(): string | null {
 }
 
 /**
- * Où chercher `codex`. `HELIX_CODEX_BIN` d'abord : un intégrateur fixe ainsi
+ * Où chercher `codex`. `OXOAI_CODEX_BIN` d'abord : un intégrateur fixe ainsi
  * la version qu'il a éprouvée, et la batterie y met son faux programme. Puis
  * le PATH, puis les emplacements habituels d'une installation par npm ou
  * Homebrew, qu'une application ouverte depuis le Dock ne reçoit pas toujours
  * dans son PATH.
  *
- * Jamais sous `~/.codex` : c'est là que Codex range ses jetons, et Helix n'y
+ * Jamais sous `~/.codex` : c'est là que Codex range ses jetons, et OxoAI n'y
  * regarde pas, même pour chercher un exécutable. L'installateur d'OpenAI qui y
  * poserait le programme (`install.sh`) le met aussi dans le PATH du shell ;
- * s'il n'est pas dans celui de l'application, `HELIX_CODEX_BIN` le désigne.
+ * s'il n'est pas dans celui de l'application, `OXOAI_CODEX_BIN` le désigne.
  *
  * Sous Windows (pas essayé sur un vrai Windows le 27/09/2026) : `codex.exe`
  * dans le PATH ou le dossier des liens de WinGet ; l'installation par npm pose
@@ -121,7 +121,7 @@ function nodeDuPath(): string | null {
  * `@openai/codex`, `bin/codex.js`).
  */
 export function trouverCodex(): Programme | null {
-  const impose = process.env.HELIX_CODEX_BIN;
+  const impose = process.env.OXOAI_CODEX_BIN;
   if (impose) return executable(impose) ? { commande: impose, prefixe: [], chemin: impose } : null;
 
   const maison = homedir();
@@ -261,7 +261,7 @@ const CONNEXION_MAX_MS = 10 * 60_000;
 /**
  * Lance `codex login` : Codex ouvre le navigateur de la personne chez OpenAI,
  * attend son retour sur la boucle locale, et range lui-même ce qu'il reçoit.
- * Helix ne lit rien de ce que le programme écrit (sa sortie porte l'adresse
+ * OxoAI ne lit rien de ce que le programme écrit (sa sortie porte l'adresse
  * de connexion, avec son `state`) : il attend la fin, puis redemande l'état.
  */
 function lancerConnexion(p: Programme, par: string): void {
@@ -463,8 +463,8 @@ async function lancerTache(
 /* Routes                                                              */
 /* ------------------------------------------------------------------ */
 
-/** La passerelle a-t-elle été lancée par l'application de bureau ? (electron/main.cjs pose `HELIX_BUREAU`.) */
-export const surLeBureau = (): boolean => process.env.HELIX_BUREAU === "1";
+/** La passerelle a-t-elle été lancée par l'application de bureau ? (electron/main.cjs pose `OXOAI_BUREAU`.) */
+export const surLeBureau = (): boolean => process.env.OXOAI_BUREAU === "1";
 
 /** Requête venue de la machine elle-même, par la boucle locale. */
 export const depuisLaBoucle = (req: http.IncomingMessage): boolean => {
@@ -480,15 +480,15 @@ export interface OutilsRouteCodex {
 }
 
 /**
- * `GET /helix/codex` : l'état (proposé ou non, installé, connecté, niveau) ;
- * `POST /helix/codex/connexion` et `/connexion/annuler` ; `POST
- * /helix/codex/tache` (flux d'évènements en réponse) ; `POST
- * /helix/codex/arreter`. La séance est déjà vérifiée par index.ts ; tout le
+ * `GET /oxoai/codex` : l'état (proposé ou non, installé, connecté, niveau) ;
+ * `POST /oxoai/codex/connexion` et `/connexion/annuler` ; `POST
+ * /oxoai/codex/tache` (flux d'évènements en réponse) ; `POST
+ * /oxoai/codex/arreter`. La séance est déjà vérifiée par index.ts ; tout le
  * reste l'est ici.
  */
 export async function routeCodex(req: http.IncomingMessage, res: http.ServerResponse, chemin: string, o: OutilsRouteCodex): Promise<void> {
   const { userId, contexte, envoyer } = o;
-  if (req.method === "GET" && chemin === "/helix/codex") {
+  if (req.method === "GET" && chemin === "/oxoai/codex") {
     return envoyer(200, await etat(contexte, new URL(req.url ?? "/", "http://x").searchParams.get("relire") === "1"));
   }
   if (req.method !== "POST") return envoyer(404, { error: { message: tf("Route inconnue : {0} {1}", req.method, chemin) } });
@@ -496,7 +496,7 @@ export async function routeCodex(req: http.IncomingMessage, res: http.ServerResp
   const refus = refusCodex(contexte);
   if (refus) return envoyer(refus.code === "adresse" ? 400 : 403, { error: { message: refus.message, code: `codex_${refus.code}` } });
 
-  if (chemin === "/helix/codex/connexion") {
+  if (chemin === "/oxoai/codex/connexion") {
     const p = trouverCodex();
     if (!p) return envoyer(409, { error: { message: t("Codex n'est pas installé sur ce poste.") } });
     if (!connexion) {
@@ -505,15 +505,15 @@ export async function routeCodex(req: http.IncomingMessage, res: http.ServerResp
     }
     return envoyer(202, { started: true });
   }
-  if (chemin === "/helix/codex/connexion/annuler") {
+  if (chemin === "/oxoai/codex/connexion/annuler") {
     if (connexion) arreterArbre(connexion.enfant);
     return envoyer(200, { ok: true });
   }
-  if (chemin === "/helix/codex/tache") {
+  if (chemin === "/oxoai/codex/tache") {
     const corps = await o.lireCorps().catch(() => ({}));
     return lancerTache(req, res, userId, (corps && typeof corps === "object" ? corps : {}) as Record<string, unknown>, envoyer);
   }
-  if (chemin === "/helix/codex/arreter") {
+  if (chemin === "/oxoai/codex/arreter") {
     if (!tache || tache.userId !== userId) return envoyer(404, { error: { message: t("Aucune tâche Codex en cours.") } });
     tache.arretee = true;
     arreterArbre(tache.enfant);

@@ -1,5 +1,5 @@
 /**
- * Client de la passerelle modèles Helix (voir gateway/ et ARCHITECTURE.md, ADR-001).
+ * Client de la passerelle modèles OxoAI (voir gateway/ et ARCHITECTURE.md, ADR-001).
  * Seul point de contact du front avec l'inférence : le front ne connaît jamais
  * l'infrastructure (LM Studio, cluster exo, cloud européen).
  */
@@ -67,7 +67,7 @@ export async function fetchHealth(): Promise<HealthReport> {
 }
 
 export async function fetchModels(): Promise<GatewayModel[]> {
-  const res = await apiFetch(`/helix/models`);
+  const res = await apiFetch(`/oxoai/models`);
   if (!res.ok) throw new Error(tf("Impossible de lister les modèles ({0})", res.status));
   const data = (await res.json()) as { models: GatewayModel[] };
   return data.models;
@@ -90,7 +90,7 @@ export interface ChatTurn {
 }
 
 /** Événement d'activité d'outil relayé par la passerelle. */
-export type HelixEvent =
+export type OxoAIEvent =
   | { type: "tool_start"; name: string; args: Record<string, unknown> }
   | { type: "tool_end"; name: string; ok: boolean; preview: string }
   /* Découpage d'une demande lourde : voir gateway/src/plan.ts. */
@@ -148,7 +148,7 @@ export interface StreamHandlers {
   /** Modèle réellement utilisé, renvoyé par la passerelle. */
   onModel?: (uid: string) => void;
   /** Activité des outils MCP. */
-  onEvent?: (event: HelixEvent) => void;
+  onEvent?: (event: OxoAIEvent) => void;
 }
 
 export interface McpToolInfo {
@@ -174,13 +174,13 @@ export async function fetchMcp(): Promise<{
   toutLePoste?: boolean;
   servers: McpServerStatus[];
 }> {
-  const res = await apiFetch(`/helix/mcp`);
+  const res = await apiFetch(`/oxoai/mcp`);
   if (!res.ok) throw new Error(tf("Impossible de lister les serveurs MCP ({0})", res.status));
   return res.json();
 }
 
 export async function toggleMcpServer(id: string, start: boolean): Promise<void> {
-  const res = await apiFetch(`/helix/mcp/toggle`, {
+  const res = await apiFetch(`/oxoai/mcp/toggle`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ id, start }),
@@ -213,7 +213,7 @@ export interface DemandeApprobation {
     destination?: string;
     niveau?: NiveauApprobation;
     employe?: string;
-    /** D'où vient la demande : le Chat ou Cowork, Helix Code, un employé. */
+    /** D'où vient la demande : le Chat ou Cowork, OxoAI Code, un employé. */
     surface?: "chat" | "code" | "employe";
     /** La commande entière que l'agent de code veut lancer (outil `code__bash`). */
     commande?: string;
@@ -254,13 +254,13 @@ export interface EtatApprobation {
 }
 
 export async function fetchApprobation(): Promise<EtatApprobation> {
-  const res = await apiFetch(`/helix/approbation`);
+  const res = await apiFetch(`/oxoai/approbation`);
   if (!res.ok) throw new Error(`Niveau d'approbation illisible (${res.status})`);
   return res.json();
 }
 
 export async function setNiveauApprobation(niveau: NiveauApprobation): Promise<void> {
-  const res = await apiFetch(`/helix/approbation/niveau`, {
+  const res = await apiFetch(`/oxoai/approbation/niveau`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ niveau }),
@@ -273,7 +273,7 @@ export async function setNiveauApprobation(niveau: NiveauApprobation): Promise<v
 
 export async function repondreApprobation(id: string, accord: boolean): Promise<boolean> {
   try {
-    const res = await apiFetch(`/helix/approbation/repondre`, {
+    const res = await apiFetch(`/oxoai/approbation/repondre`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ id, accord }),
@@ -301,7 +301,7 @@ export function subscribeApprobation(
   onOuvert?: () => void,
 ): () => void {
   return ouvrirFlux(
-    "/helix/approbation/evenements",
+    "/oxoai/approbation/evenements",
     (donnees) => onEvent(JSON.parse(donnees) as EvenementApprobation),
     onOuvert ? { onOuvert } : {},
   );
@@ -378,7 +378,7 @@ export async function streamChat(
     throw new Error(message ?? tf("Erreur {0}", res.status));
   }
 
-  const served = res.headers.get("X-Helix-Model");
+  const served = res.headers.get("X-OxoAI-Model");
   if (served) handlers.onModel?.(served);
 
   if (!res.body) throw new Error(t("Réponse sans flux."));
@@ -411,8 +411,8 @@ export async function streamChat(
         if (!payload || payload === "[DONE]") continue;
         try {
           const json = JSON.parse(payload);
-          if (json?.helix) {
-            handlers.onEvent?.(json.helix as HelixEvent);
+          if (json?.oxoai) {
+            handlers.onEvent?.(json.oxoai as OxoAIEvent);
             continue;
           }
           const delta = json?.choices?.[0]?.delta;

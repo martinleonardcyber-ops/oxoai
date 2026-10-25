@@ -8,12 +8,12 @@ import { controlerSyntaxeJs } from "./syntaxeNode.ts";
 import { cheminReel, estProtege } from "./zonesProtegees.ts";
 
 /**
- * Ce que la couche de Helix fait pour qu'un petit modèle (jusqu'à environ
+ * Ce que la couche de OxoAI fait pour qu'un petit modèle (jusqu'à environ
  * 8 milliards de paramètres) code juste, dans Cowork et dans Code.
  *
  * Demandé par Medhi le 27/09/2026 : « même un modèle de 2 ou 3 milliards de
- * paramètres doit bien coder ; la couche logicielle de Helix doit l'aider ».
- * Contexte réel : un PC Windows sans carte graphique, où Helix choisit
+ * paramètres doit bien coder ; la couche logicielle de OxoAI doit l'aider ».
+ * Contexte réel : un PC Windows sans carte graphique, où OxoAI choisit
  * Ministral 3B, Qwen3.5 4B ou Qwen3.5 2B.
  *
  * Les erreurs typiques d'un petit modèle dans une boucle d'outils, et ce qui
@@ -36,7 +36,7 @@ import { cheminReel, estProtege } from "./zonesProtegees.ts";
  *    analyse Python, JSON, CSS, scripts d'une page), le résultat joint au
  *    retour de l'outil, et une relance bornée avant de répondre (chat.ts) ;
  *  - trop d'outils, des consignes trop longues → `outilsPourPetit`,
- *    `consignePetit`, et pour OpenCode l'agent `helix-petit`.
+ *    `consignePetit`, et pour OpenCode l'agent `oxoai-petit`.
  */
 
 /* ------------------------------------------------------------------ */
@@ -804,7 +804,7 @@ export async function verifierEcriture(absolu: string, racine: string): Promise<
   if (ext === ".js" || ext === ".mjs" || ext === ".cjs") {
     /*
      * Compilé dans la passerelle, sans lancer de programme ni rien exécuter
-     * (syntaxeNode.ts) : `node --check` lançait le binaire de Helix en mode
+     * (syntaxeNode.ts) : `node --check` lançait le binaire de OxoAI en mode
      * Node, ce qui demandait le fusible RunAsNode ouvert (fermé le
      * 28/09/2026). Les modules (import, export) sont lus comme avant.
      */
@@ -844,11 +844,11 @@ export function relanceSyntaxe(enErreur: Map<string, string>, outilEcriture: str
 }
 
 /* ------------------------------------------------------------------ */
-/* Helix Code : l'agent d'OpenCode pour un petit modèle                */
+/* OxoAI Code : l'agent d'OpenCode pour un petit modèle                */
 /* ------------------------------------------------------------------ */
 
 /** Nom de l'agent d'OpenCode réservé aux petits modèles (opencode.ts, `writeConfig` et `refModele`). */
-export const AGENT_PETIT = "helix-petit";
+export const AGENT_PETIT = "oxoai-petit";
 
 /**
  * Consignes de l'agent de code pour un petit modèle, à la place de
@@ -886,11 +886,11 @@ export const CONSIGNES_CODE_PETIT = [
 ].join("\n");
 
 /**
- * L'agent `helix-petit` d'OpenCode, tel qu'écrit dans sa configuration.
+ * L'agent `oxoai-petit` d'OpenCode, tel qu'écrit dans sa configuration.
  * Vérifié dans le code d'OpenCode 1.18.32 (packages/opencode/src) :
  *  - un agent déclaré dans `agent` hérite des permissions globales de la
  *    configuration (`Permission.merge(defaults, user)`, agent/agent.ts), puis
- *    des siennes : les « ask » de Helix restent ;
+ *    des siennes : les « ask » de OxoAI restent ;
  *  - une permission `deny` sur tout (`"*"`) retire l'outil de la liste envoyée
  *    au modèle (`Permission.disabled`, session/llm/request.ts) ;
  *  - `steps` borne les tours d'outils : au dernier, OpenCode demande au modèle
@@ -898,7 +898,7 @@ export const CONSIGNES_CODE_PETIT = [
  *  - `prompt` remplace les consignes du fournisseur, comme pour `build` ;
  *  - l'agent est choisi par le champ `agent` de `prompt_async` (`PromptInput`).
  * Retirés : `task` (un sous-agent repart d'un contexte vide et relit tout ; le
- * séquençage de Helix tient déjà le fil, sequenceCode.ts), `todowrite` et
+ * séquençage de OxoAI tient déjà le fil, sequenceCode.ts), `todowrite` et
  * `todoread` (même raison), `webfetch`, `websearch`, `codesearch` et `lsp`.
  * Restent : read, glob, grep, list, edit, write, bash et les connecteurs.
  */
@@ -922,7 +922,7 @@ export function agentPetitOpenCode(): Record<string, unknown> {
 
 /**
  * Les modèles décrits à OpenCode comme petits, au moment où sa configuration
- * a été écrite (`writeConfig`) : l'agent `helix-petit` n'est demandé que pour
+ * a été écrite (`writeConfig`) : l'agent `oxoai-petit` n'est demandé que pour
  * eux, et il existe forcément dans la configuration que lit l'OpenCode en
  * marche (elle n'est écrite qu'à son démarrage, et un modèle inconnu le fait
  * redémarrer, `modelesEcrits`). Un agent absent ferait échouer la demande
@@ -934,7 +934,7 @@ export function noterPetitsModeles(ids: string[]): void {
   petitsEcrits = new Set(ids);
 }
 
-/** Le champ `agent` d'une demande à OpenCode pour ce modèle : `helix-petit`, ou rien (l'agent par défaut). */
+/** Le champ `agent` d'une demande à OpenCode pour ce modèle : `oxoai-petit`, ou rien (l'agent par défaut). */
 export function agentPourModele(id: string): { agent?: string } {
   return petitsEcrits.has(id) ? { agent: AGENT_PETIT } : {};
 }

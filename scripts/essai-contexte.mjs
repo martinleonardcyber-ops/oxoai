@@ -8,7 +8,7 @@
  * jetables, un « Linux x64 de 16 Go sans carte NVIDIA » simulé comme en 7 decies
  * de securite.mjs), devant un faux `lms` et un faux LM Studio qui refuse comme
  * le vrai une demande plus grande que la taille chargée, coupe une réponse par
- * sa longueur, ou réfléchit sans fin. Ce que cela prouve : ce que Helix envoie
+ * sa longueur, ou réfléchit sans fin. Ce que cela prouve : ce que OxoAI envoie
  * et ce que l'écran reçoit. Ce que cela ne prouve pas : ce qu'un vrai modèle en
  * fait (PROJET.md).
  *
@@ -47,14 +47,14 @@ function verifier(nom, condition, obtenu) {
   }
 }
 
-const ICI = mkdtempSync(join(tmpdir(), "helix-essai-contexte-"));
+const ICI = mkdtempSync(join(tmpdir(), "oxoai-essai-contexte-"));
 const BIN = join(ICI, "bin");
 mkdirSync(BIN);
 mkdirSync(join(ICI, "maison", ".lmstudio", ".internal"), { recursive: true });
 mkdirSync(join(ICI, "espace"));
 symlinkSync(process.execPath, join(BIN, "node"));
 const INTERNE = join(ICI, "maison", ".lmstudio", ".internal");
-// Le moteur sans interface, déclaré comme llmster le fait : c'est le moteur de Helix tant qu'aucune application n'est déclarée.
+// Le moteur sans interface, déclaré comme llmster le fait : c'est le moteur de OxoAI tant qu'aucune application n'est déclarée.
 writeFileSync(join(INTERNE, "llmster-install-location.json"), JSON.stringify({ path: process.execPath, argv: [], cwd: join(ICI, "maison") }));
 const applicationDeLaPersonne = (oui) => {
   const f = join(INTERNE, "app-install-location.json");
@@ -104,7 +104,7 @@ const appelsLms = () => readFileSync(join(ICI, "appels.log"), "utf8").split("\n"
  * taille chargée (message relevé dans LM Studio : « …the model is loaded with
  * context length of only 4096 tokens, which is not enough… »), estimée à
  * 3,5 caractères par jeton ; `PLAFOND` (en caractères) le fait refuser plus
- * tôt, pour un refus que l'estimation de Helix n'a pas vu venir.
+ * tôt, pour un refus que l'estimation de OxoAI n'a pas vu venir.
  */
 const RECUES = [];
 let MODE = "normal";
@@ -174,14 +174,14 @@ const passerelle = spawn(process.execPath, ["--experimental-strip-types", "--no-
     HOME: join(ICI, "maison"),
     TMPDIR: tmpdir(),
     FAUX_LMS_DIR: ICI,
-    HELIX_CONFIG: join(ICI, "profil.json"),
-    HELIX_DATA_DIR: join(ICI, "donnees"),
-    HELIX_WORKSPACE: join(ICI, "espace"),
-    HELIX_GATEWAY_PORT: String(PORT),
-    HELIX_GATEWAY_HOST: "127.0.0.1",
-    HELIX_LMSTUDIO_URL: `http://127.0.0.1:${PORT_LM}/v1`,
-    HELIX_EXO_URL: "http://127.0.0.1:9/v1",
-    HELIX_OPENCODE_BIN: "/usr/bin/true",
+    OXOAI_CONFIG: join(ICI, "profil.json"),
+    OXOAI_DATA_DIR: join(ICI, "donnees"),
+    OXOAI_WORKSPACE: join(ICI, "espace"),
+    OXOAI_GATEWAY_PORT: String(PORT),
+    OXOAI_GATEWAY_HOST: "127.0.0.1",
+    OXOAI_LMSTUDIO_URL: `http://127.0.0.1:${PORT_LM}/v1`,
+    OXOAI_EXO_URL: "http://127.0.0.1:9/v1",
+    OXOAI_OPENCODE_BIN: "/usr/bin/true",
   },
   stdio: ["ignore", "pipe", "pipe"],
 });
@@ -209,7 +209,7 @@ try {
  */
 let SEANCE = "";
 try {
-  const r = await fetch(`${G}/helix/auth/create`, {
+  const r = await fetch(`${G}/oxoai/auth/create`, {
     method: "POST",
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${JETON}` },
     body: JSON.stringify({ fullName: "Essai", email: "essai@example.test", password: `Ess-${randomBytes(12).toString("hex")}!9` }),
@@ -223,7 +223,7 @@ const envoyer = async (corps) => {
   const texte = await (
     await fetch(`${G}/v1/chat/completions`, {
       method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${JETON}`, "X-Helix-Langue": "fr", ...(SEANCE ? { "X-Helix-Session": SEANCE } : {}) },
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${JETON}`, "X-OxoAI-Langue": "fr", ...(SEANCE ? { "X-OxoAI-Session": SEANCE } : {}) },
       body: JSON.stringify({ stream: true, effort: "moyen", ...corps }),
     }).catch(() => ({ text: async () => "" }))
   ).text();
@@ -234,7 +234,7 @@ const envoyer = async (corps) => {
     if (!ligne.startsWith("data:")) continue;
     try {
       const j = JSON.parse(ligne.slice(5));
-      if (j.helix) evenements.push(j.helix);
+      if (j.oxoai) evenements.push(j.oxoai);
       const c = j.choices?.[0]?.delta?.content;
       if (typeof c === "string") reponse += c;
       if (j.error) evenements.push({ ...j.error, type: "erreur-api", typeApi: j.error.type });
@@ -253,26 +253,26 @@ const changer = async (charges) => {
 
 console.log(`\nEssai de la place de conversation, sur ${RACINE}`);
 
-// 1 a. Moteur de Helix, modèle chargé par LM Studio seul à 4 096 jetons : rechargé avec la taille de Helix.
+// 1 a. Moteur de OxoAI, modèle chargé par LM Studio seul à 4 096 jetons : rechargé avec la taille de OxoAI.
 console.log("\n1. Modèle déjà chargé avec 4 096 jetons");
 await changer([{ cle: MINISTRAL, contexte: 4096 }]);
 const r1 = await envoyer({ model: MINISTRAL, tools: false, messages: [{ role: "system", content: SYSTEME }, { role: "user", content: "Bonjour" }] });
 const appels1 = appelsLms();
 verifier(
-  "moteur de Helix (llmster seul) : le modèle chargé à 4 096 jetons est rechargé avec 32 768, au repos, avant la réponse",
+  "moteur de OxoAI (llmster seul) : le modèle chargé à 4 096 jetons est rechargé avec 32 768, au repos, avant la réponse",
   appels1.includes(`unload ${MINISTRAL}`) && appels1.some((l) => l.startsWith(`load ${MINISTRAL}`) && l.includes("--context-length 32768")) && lireCharges()[0]?.contexte === 32768,
   JSON.stringify(appels1),
 );
 verifier("et la réponse arrive, sans erreur", /Réponse d'essai/.test(r1.reponse) && !r1.evenements.some((e) => e.type === "error"), JSON.stringify(r1.evenements).slice(0, 300));
 
 // 1 b. Application LM Studio de la personne : rien n'est rechargé ; les outils ne tiennent pas, ils sont retirés et c'est dit.
-// Un autre modèle que celui que Helix vient de recharger : celui-ci n'a jamais été chargé par Helix.
+// Un autre modèle que celui que OxoAI vient de recharger : celui-ci n'a jamais été chargé par OxoAI.
 applicationDeLaPersonne(true);
 await changer([{ cle: MINISTRAL, contexte: 32768 }, { cle: QWEN, contexte: 4096 }]);
 const r1b = await envoyer({ model: QWEN, tools: true, messages: [{ role: "system", content: SYSTEME }, { role: "user", content: "Quels sont les fichiers de mon dossier ?" }] });
 const appels1b = appelsLms();
 const outilsPartis = r1b.flux.map((r) => (Array.isArray(r.tools) ? r.tools.length : 0));
-verifier("application LM Studio de la personne : le modèle n'est jamais déchargé ni rechargé par Helix", !appels1b.some((l) => l.startsWith("unload") || l.startsWith("load")), JSON.stringify(appels1b));
+verifier("application LM Studio de la personne : le modèle n'est jamais déchargé ni rechargé par OxoAI", !appels1b.some((l) => l.startsWith("unload") || l.startsWith("load")), JSON.stringify(appels1b));
 /*
  * Depuis le 23/10/2026 (choixOutils.ts) : les outils qui ne tiennent pas tous
  * ne sont plus retirés ensemble ; ceux du service nommé (« fichiers ») passent
@@ -301,7 +301,7 @@ verifier(
   r1c.reponse.slice(0, 500),
 );
 
-// 3. Le moteur refuse une demande que l'estimation de Helix croyait tenir : raccourcie et renvoyée.
+// 3. Le moteur refuse une demande que l'estimation de OxoAI croyait tenir : raccourcie et renvoyée.
 console.log("\n3. Refus « context length » du moteur");
 applicationDeLaPersonne(true);
 await changer([{ cle: MINISTRAL, contexte: 32768 }]);
@@ -396,7 +396,7 @@ const u = spawnSync(
      console.log(JSON.stringify({ coupe: r.dernierCoupe, apres: r.apres, long: r.messages[3].content.length, note: /caractères de plus retirés/.test(r.messages[3].content), refus, pasRefus,
        tailles: ["gpt-4o", "gpt-5-mini", "claude-sonnet-4-5", "gemini-2.5-pro", "deepseek-chat", "o3", "modele-inconnu"].map((n) => c.contexteConnuParNom(n)) }));`,
   ],
-  { cwd: RACINE, encoding: "utf8", timeout: 60_000, env: { ...process.env, PATH: `${BIN}:/usr/bin:/bin`, HOME: join(ICI, "maison"), HELIX_DATA_DIR: join(ICI, "u"), HELIX_CONFIG: join(ICI, "absent.json") } },
+  { cwd: RACINE, encoding: "utf8", timeout: 60_000, env: { ...process.env, PATH: `${BIN}:/usr/bin:/bin`, HOME: join(ICI, "maison"), OXOAI_DATA_DIR: join(ICI, "u"), OXOAI_CONFIG: join(ICI, "absent.json") } },
 );
 let fx = {};
 try {
@@ -424,7 +424,7 @@ passerelle.kill();
 lm.close();
 await attendre(300);
 verifier("aucun appel au trousseau macOS (dossier personnel jetable, clé par fichier)", !existsSync(join(ICI, "security.log")), "security appelé");
-if (echecs.length > 0 || process.env.ESSAI_JOURNAL) console.log(journal.split("\n").filter((l) => /^\[(chat|helix)\]/.test(l)).join("\n").slice(-4000));
+if (echecs.length > 0 || process.env.ESSAI_JOURNAL) console.log(journal.split("\n").filter((l) => /^\[(chat|oxoai)\]/.test(l)).join("\n").slice(-4000));
 rmSync(ICI, { recursive: true, force: true });
 console.log(`\n${reussis} réussi(s), ${echecs.length} échec(s)`);
 process.exit(echecs.length > 0 ? 1 : 0);

@@ -13,7 +13,7 @@ import { t, tf } from "./langue.ts";
  * https://github.com/palmier-io/palmier-pro ; `MCPService.swift` et
  * `MCPHTTPServer.swift` de la branche `last-gpl-source`, lus le 29/09/2026 :
  * écoute sur 127.0.0.1 seulement, et refus d'un en-tête `Origin` qui ne
- * serait pas local). Helix ne l'installe pas et ne distribue rien d'elle : il
+ * serait pas local). OxoAI ne l'installe pas et ne distribue rien d'elle : il
  * parle à l'application que la personne a installée elle-même.
  *
  * Un serveur sans authentification sur un port connu, c'est un port que
@@ -54,7 +54,7 @@ const executer = promisify(execFile);
 /** Le port que Palmier Pro écoute (`MCPService.port`). */
 export const PORT_PALMIER = 19789;
 
-/** Page de téléchargement officielle : l'écran y renvoie, Helix ne télécharge rien. */
+/** Page de téléchargement officielle : l'écran y renvoie, OxoAI ne télécharge rien. */
 export const TELECHARGEMENT_PALMIER = "https://github.com/palmier-io/palmier-pro/releases/latest";
 
 /** Signature attendue : Developer ID d'Apple, identifiant et équipe de Palmier, Inc. */
@@ -62,19 +62,19 @@ export const EXIGENCE_PALMIER = 'anchor apple generic and identifier "io.palmier
 
 /*
  * Pour les essais seulement (scripts/essai-palmier.mjs, SECURITE.md § 63) :
- *  - `HELIX_ESSAI_PALMIER_PORT` remplace le port (un vrai Palmier Pro ouvert
+ *  - `OXOAI_ESSAI_PALMIER_PORT` remplace le port (un vrai Palmier Pro ouvert
  *    sur la machine d'essai n'est jamais touché) ;
- *  - `HELIX_ESSAI_PALMIER_EXECUTABLE` (chemin absolu) remplace la signature
+ *  - `OXOAI_ESSAI_PALMIER_EXECUTABLE` (chemin absolu) remplace la signature
  *    par le chemin de l'exécutable qui doit écouter, lu par `lsof` : le faux
  *    serveur des essais est un script Node, qui ne porte pas la signature de
  *    Palmier. Posées par qui lance la passerelle, jamais par une requête.
  */
 export function portPalmier(): number {
-  const essai = Number(process.env.HELIX_ESSAI_PALMIER_PORT);
+  const essai = Number(process.env.OXOAI_ESSAI_PALMIER_PORT);
   return Number.isInteger(essai) && essai >= 1024 && essai <= 65535 ? essai : PORT_PALMIER;
 }
 const executableEssai = (): string | null => {
-  const brut = process.env.HELIX_ESSAI_PALMIER_EXECUTABLE;
+  const brut = process.env.OXOAI_ESSAI_PALMIER_EXECUTABLE;
   return brut && isAbsolute(brut) ? brut : null;
 };
 

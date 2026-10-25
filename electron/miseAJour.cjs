@@ -9,7 +9,7 @@
  *    si elle porte la même signature que l'application en place : c'est ce qui
  *    empêche un tiers de glisser une version piégée ;
  *  - **application non signée** (le cas tant que le certificat manque) :
- *    Helix vérifie qu'une version plus récente existe et le dit, avec un lien
+ *    OxoAI vérifie qu'une version plus récente existe et le dit, avec un lien
  *    vers le paquet. L'installation reste manuelle, parce que macOS refuserait
  *    de toute façon de remplacer une application non signée.
  *
@@ -19,7 +19,7 @@
  * pour un poste installé seul, les publications GitHub du dépôt (décidé par
  * Medhi le 27/09/2026, sourceGithub.cjs : sur macOS et sous Windows
  * l'installation d'un clic, signature de l'éditeur vérifiée ; sous Linux, le
- * paquet proposé au téléchargement). `HELIX_SANS_MISE_A_JOUR=1` : rien n'est
+ * paquet proposé au téléchargement). `OXOAI_SANS_MISE_A_JOUR=1` : rien n'est
  * contacté. HTTPS exigé, sauf sur la boucle locale (essais).
  */
 
@@ -96,18 +96,18 @@ const IDENTIFIANT_WINDOWS = (() => {
   }
 })();
 
-/** Windows : le dossier où l'installateur est téléchargé, à Helix seul (dans son profil, pas le dossier temporaire commun). */
+/** Windows : le dossier où l'installateur est téléchargé, à OxoAI seul (dans son profil, pas le dossier temporaire commun). */
 const dossierInstallateur = () => path.join(app.getPath("userData"), "mise-a-jour");
 
 /**
  * La dernière publication GitHub du dépôt. Sur macOS, l'annonce vient du
- * manifeste publié avec elle (`helix-mise-a-jour.json`) ; ailleurs, le lien du
+ * manifeste publié avec elle (`oxoai-mise-a-jour.json`) ; ailleurs, le lien du
  * paquet qui convient suffit.
  */
 async function verifierGithub() {
   publier({ phase: "verification", message: null });
   try {
-    const entetes = { Accept: "application/vnd.github+json", "User-Agent": "Helix" };
+    const entetes = { Accept: "application/vnd.github+json", "User-Agent": "OxoAI" };
     const reponse = await net.fetch(`https://api.github.com/repos/${DEPOT}/releases/latest`, { headers: entetes });
     if (reponse.status === 404) {
       publier({ phase: "erreur", message: tx("githubVide") });
@@ -137,7 +137,7 @@ async function verifierGithub() {
     const manifeste = sourceGithub.manifesteDe(fichiers);
     if (process.platform === "darwin") {
       if (manifeste) {
-        const lu = await net.fetch(manifeste.browser_download_url, { headers: { "User-Agent": "Helix" } });
+        const lu = await net.fetch(manifeste.browser_download_url, { headers: { "User-Agent": "OxoAI" } });
         annonce = lu.ok ? sourceGithub.lireManifeste(await lu.text(), version, process.arch) : null;
         // L'archive décrite doit être dans la même publication.
         if (annonce && !fichiers.some((f) => f.name === annonce.files[0].url)) annonce = null;
@@ -153,7 +153,7 @@ async function verifierGithub() {
     if (process.platform === "win32" && process.arch === "x64") {
       const cle = signatureEditeur.cleDesRessources(process.resourcesPath);
       if (manifeste && cle && IDENTIFIANT_WINDOWS) {
-        const lu = await net.fetch(manifeste.browser_download_url, { headers: { "User-Agent": "Helix" } });
+        const lu = await net.fetch(manifeste.browser_download_url, { headers: { "User-Agent": "OxoAI" } });
         const decrit = lu.ok ? sourceGithub.lireManifesteWindows(await lu.text(), version, cle, IDENTIFIANT_WINDOWS) : null;
         // L'installateur décrit doit être dans la même publication, avec une adresse https.
         const fichier = decrit ? fichiers.find((f) => f.name === decrit.fichier) : null;
@@ -178,7 +178,7 @@ function publier(changements) {
   Object.assign(etat, changements);
   // À toutes les fenêtres : sur macOS, la fenêtre peut être refermée puis recréée.
   for (const f of BrowserWindow.getAllWindows()) {
-    if (!f.isDestroyed()) f.webContents.send("helix:maj-etat", { ...etat });
+    if (!f.isDestroyed()) f.webContents.send("oxoai:maj-etat", { ...etat });
   }
 }
 
@@ -186,7 +186,7 @@ function publier(changements) {
 function lireSignature() {
   return new Promise((resolve) => {
     if (process.platform !== "darwin") return resolve(false);
-    // …/Helix.app/Contents/MacOS/Helix → …/Helix.app
+    // …/OxoAI.app/Contents/MacOS/OxoAI → …/OxoAI.app
     const paquet = path.resolve(path.dirname(process.execPath), "..", "..");
     execFile("/usr/bin/codesign", ["-dv", "--verbose=2", paquet], (err, _out, sortie) => {
       if (err) return resolve(false);
@@ -204,14 +204,14 @@ function lireSignature() {
  */
 function sourceInstance() {
   try {
-    const brut = coffre.lire()["helix:instance"];
+    const brut = coffre.lire()["oxoai:instance"];
     if (!brut) return null;
     const config = JSON.parse(brut);
     if (!config || config.remote !== true || typeof config.url !== "string" || !config.token) return null;
     const u = new URL(config.url);
     const locale = u.hostname === "127.0.0.1" || u.hostname === "localhost";
     if (u.protocol !== "https:" && !(u.protocol === "http:" && locale)) return null;
-    return { url: `${config.url.replace(/\/+$/, "")}/helix/mises-a-jour/`, entetes: { Authorization: `Bearer ${config.token}` } };
+    return { url: `${config.url.replace(/\/+$/, "")}/oxoai/mises-a-jour/`, entetes: { Authorization: `Bearer ${config.token}` } };
   } catch {
     return null;
   }
@@ -299,10 +299,10 @@ async function lireBorne(reponse, max) {
  * Les notes ne se lisent que là où GitHub est déjà la source des versions :
  * un poste rattaché suit son instance et ne contacte pas GitHub (décision du
  * 26/09/2026), un paquet qui porte le serveur de l'agence suit sa propre
- * numérotation, et `HELIX_SANS_MISE_A_JOUR=1` coupe tout.
+ * numérotation, et `OXOAI_SANS_MISE_A_JOUR=1` coupe tout.
  */
 function notesPermises() {
-  if (!DEPOT || process.env.HELIX_SANS_MISE_A_JOUR === "1") return false;
+  if (!DEPOT || process.env.OXOAI_SANS_MISE_A_JOUR === "1") return false;
   if (sourceInstance()) return false;
   if (lireAdresseFlux()) return false;
   return true;
@@ -311,7 +311,7 @@ function notesPermises() {
 async function listePublications() {
   if (cacheListe && Date.now() - cacheListe.quand < CACHE_NOTES_MS) return cacheListe.liste;
   const reponse = await net.fetch(`https://api.github.com/repos/${DEPOT}/releases?per_page=30`, {
-    headers: { Accept: "application/vnd.github+json", "User-Agent": "Helix" },
+    headers: { Accept: "application/vnd.github+json", "User-Agent": "OxoAI" },
   });
   if (!reponse.ok) throw new Error(`GitHub a répondu ${reponse.status}`);
   const liste = notesVersion.lireListe(await lireBorne(reponse, LISTE_MAX_OCTETS));
@@ -345,7 +345,7 @@ async function nouveautes(demande) {
       const traduite = notesVersion.noteTraduiteDe(p.assets, langue);
       if (traduite) {
         try {
-          const r = await net.fetch(traduite.browser_download_url, { headers: { "User-Agent": "Helix" } });
+          const r = await net.fetch(traduite.browser_download_url, { headers: { "User-Agent": "OxoAI" } });
           if (r.ok) texte = notesVersion.extraireNoteTraduite(await lireBorne(r, notesVersion.TAILLE_BRUTE_MAX));
           if (texte) langueTexte = langue;
         } catch {
@@ -438,9 +438,9 @@ const garde = (fn) => (event, ...args) => {
 };
 
 function brancher() {
-  ipcMain.handle("helix:maj-etat", garde(() => ({ ...etat })));
-  ipcMain.handle("helix:maj-verifier", garde(() => verifier()));
-  ipcMain.handle("helix:maj-installer", garde(() => {
+  ipcMain.handle("oxoai:maj-etat", garde(() => ({ ...etat })));
+  ipcMain.handle("oxoai:maj-verifier", garde(() => verifier()));
+  ipcMain.handle("oxoai:maj-installer", garde(() => {
     // Application signée : la mise à jour téléchargée par electron-updater.
     if (updater && etat.phase === "prete" && etat.automatique) {
       setImmediate(() => updater.quitAndInstall());
@@ -452,17 +452,17 @@ function brancher() {
       void installerWindows().catch((err) => publier({ phase: "erreur", message: tx("installationImpossible", String(err?.message ?? err).slice(0, 200)) }));
       return true;
     }
-    // Sans signature : Helix l'installe lui-même, sur le clic de la personne.
+    // Sans signature : OxoAI l'installe lui-même, sur le clic de la personne.
     if (etat.phase === "disponible" && annonce) {
       void installerSansSignature().catch((err) => publier({ phase: "erreur", message: tx("installationImpossible", String(err?.message ?? err).slice(0, 200)) }));
       return true;
     }
     return false;
   }));
-  ipcMain.handle("helix:maj-nouveautes", garde((_e, demande) => nouveautes(demande)));
-  ipcMain.handle("helix:maj-lancement", garde(() => ({ ...releverLancement() })));
-  ipcMain.handle("helix:maj-nouveautes-vues", garde((_e, reglage) => nouveautesVues(reglage)));
-  ipcMain.handle("helix:maj-ouvrir-paquet", garde(() => {
+  ipcMain.handle("oxoai:maj-nouveautes", garde((_e, demande) => nouveautes(demande)));
+  ipcMain.handle("oxoai:maj-lancement", garde(() => ({ ...releverLancement() })));
+  ipcMain.handle("oxoai:maj-nouveautes-vues", garde((_e, reglage) => nouveautesVues(reglage)));
+  ipcMain.handle("oxoai:maj-ouvrir-paquet", garde(() => {
     // Le lien vient du flux de l'agence ou de GitHub, jamais de la page, et reste du web :
     // un flux altéré ne doit pas pouvoir faire ouvrir un `file:` ou un `smb:`.
     if (!etat.lienPaquet || !/^https:\/\//i.test(etat.lienPaquet)) return false;
@@ -482,7 +482,7 @@ async function demarrerMiseAJour(permis) {
     publier({ phase: "inactif", message: tx("developpement") });
     return;
   }
-  if (process.env.HELIX_SANS_MISE_A_JOUR === "1") {
+  if (process.env.OXOAI_SANS_MISE_A_JOUR === "1") {
     publier({ phase: "non-configuree", message: null });
     return;
   }
@@ -606,7 +606,7 @@ async function installerSansSignature() {
    */
   if (!zip || !zip.sha512 || !Number.isInteger(zip.size) || zip.size <= 0) throw new Error(tx("sansArchive"));
   const url = new URL(zip.url, adresseFlux).toString();
-  const dossier = fs.mkdtempSync(path.join(os.tmpdir(), "helix-maj-"));
+  const dossier = fs.mkdtempSync(path.join(os.tmpdir(), "oxoai-maj-"));
   try {
     await preparerEtLancer(zip, url, dossier);
   } catch (err) {
@@ -776,7 +776,7 @@ function empreinteSurLeDisque(chemin) {
  * Windows (27/09/2026) : installe la version annoncée par GitHub, d'un clic.
  *
  * L'installateur NSIS décrit par le manifeste est téléchargé dans le dossier de
- * Helix (`userData\mise-a-jour`, jamais le dossier d'installation : NSIS y
+ * OxoAI (`userData\mise-a-jour`, jamais le dossier d'installation : NSIS y
  * arrête tout ce qui tourne), plafonné à la taille annoncée ; puis son
  * empreinte SHA-512 et la signature de l'éditeur sont vérifiées, avec la clé
  * de l'application qui tourne ici. L'empreinte est relue sur le disque juste
@@ -786,11 +786,11 @@ function empreinteSurLeDisque(chemin) {
  * Le lancement reprend celui d'electron-updater (NsisUpdater) :
  * `--updated /S --force-run`. `/S` installe sans fenêtre, par utilisateur
  * (`nsis.oneClick`, `perMachine: false` : pas de droits d'administrateur) ;
- * `--updated` fait attendre à l'installateur que Helix se ferme (puis il
- * l'arrête s'il tourne encore) ; `--force-run` le fait relancer Helix une fois
+ * `--updated` fait attendre à l'installateur que OxoAI se ferme (puis il
+ * l'arrête s'il tourne encore) ; `--force-run` le fait relancer OxoAI une fois
  * l'installation faite : sans lui, un installateur « un clic » lancé avec `/S`
  * ne relance rien (modèle installSection.nsh d'electron-builder, lu le
- * 27/09/2026). Un fichier écrit par Helix lui-même ne porte pas la marque
+ * 27/09/2026). Un fichier écrit par OxoAI lui-même ne porte pas la marque
  * « téléchargé » (Mark of the Web) : SmartScreen ne devrait pas s'interposer.
  * Pas essayé sur un vrai PC (27/09/2026), ni avec Smart App Control actif, qui
  * bloque un exécutable non signé même sans cette marque.
@@ -833,7 +833,7 @@ async function installerWindows() {
 
 /** Télécharge l'installateur dans `partiel`, le vérifie (taille, empreinte, signature), puis le met à sa place et en relit l'empreinte. */
 async function telechargerInstallateur(a, cle, description, partiel, final) {
-  const reponse = await net.fetch(a.url, { headers: { "User-Agent": "Helix" } });
+  const reponse = await net.fetch(a.url, { headers: { "User-Agent": "OxoAI" } });
   if (!reponse.ok || !reponse.body) throw new Error(tx("sourceRepond", reponse.status));
   const hash = crypto.createHash("sha512");
   const sortie = fs.createWriteStream(partiel, { flags: "wx" });

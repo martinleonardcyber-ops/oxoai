@@ -11,7 +11,7 @@
  * question qui fait réfléchir le modèle, à trois endroits, pour chaque
  * modèle essayé :
  *
- *  1. directement à l'API de LM Studio (127.0.0.1:1234), sans Helix : ce que
+ *  1. directement à l'API de LM Studio (127.0.0.1:1234), sans OxoAI : ce que
  *     le moteur envoie vraiment sur ce système (canal `reasoning_content`,
  *     `reasoning`, ou `<think>` dans le texte) ;
  *  2. à travers la passerelle, par l'API compatible (le relais, octet pour
@@ -31,7 +31,7 @@
  * l'application empaquetée déjà en route. Sous Linux (job `reflexion-linux`
  * de .github/workflows/essai-windows.yml), seul :
  *
- *   HELIX_ESSAI_MACHINE_JETABLE=1 node scripts/essai-reflexion-ci.mjs
+ *   OXOAI_ESSAI_MACHINE_JETABLE=1 node scripts/essai-reflexion-ci.mjs
  *     [--modeles qwen3-1.7b,qwen/qwen3.5-2b] [--sortie essai-reflexion-sortie]
  *
  * La passerelle est alors lancée par `node gateway/src/index.ts`, données
@@ -111,15 +111,15 @@ async function lireFlux(reponse, t0) {
       }
       if (json.error) vu.erreurs.push(JSON.stringify(json.error).slice(0, 300));
       // Un statut non vide (« Chargement… », « Le modèle lit la demande… ») est déjà un signe à l'écran.
-      if (json.helix?.type === "statut" && json.helix.message) premierSigne ||= maintenant;
-      if (json.helix?.type === "error") vu.erreurs.push(String(json.helix.message).slice(0, 300));
+      if (json.oxoai?.type === "statut" && json.oxoai.message) premierSigne ||= maintenant;
+      if (json.oxoai?.type === "error") vu.erreurs.push(String(json.oxoai.message).slice(0, 300));
       // Ce que l'écran fait de cet évènement (useChat.ts) : les derniers caractères du texte étaient la réflexion.
-      if (json.helix?.type === "reflexion_requalifiee") {
+      if (json.oxoai?.type === "reflexion_requalifiee") {
         vu.requalifiee++;
-        const n = Math.min(json.helix.caracteres ?? 0, texte.length);
+        const n = Math.min(json.oxoai.caracteres ?? 0, texte.length);
         reflexion += texte.slice(texte.length - n);
         texte = texte.slice(0, texte.length - n);
-        premiereReflexion ||= maintenant - (json.helix.depuisMs ?? 0);
+        premiereReflexion ||= maintenant - (json.oxoai.depuisMs ?? 0);
         derniereReflexion = maintenant;
         if (!texte.trim()) premierTexte = 0;
       }
@@ -179,7 +179,7 @@ export async function essaiReflexion({ G, entetes, dire, verifier, sortie, model
   for (const cle of modeles) {
     dire(`   modèle ${cle}`);
     const slug = nomDuModele(cle).replace(/[^a-z0-9.-]+/g, "-");
-    let liste = (await (await fetch(`${G}/helix/models`, { headers: entetes() })).json().catch(() => ({}))).models ?? [];
+    let liste = (await (await fetch(`${G}/oxoai/models`, { headers: entetes() })).json().catch(() => ({}))).models ?? [];
     let modele = liste.find((m) => nomDuModele(m.id) === nomDuModele(cle));
     if (!modele) {
       // Comme « Installer » à l'écran de mise en route : téléchargé, chargé, essayé (santeModeles.ts), suivi par son flux.
@@ -187,8 +187,8 @@ export async function essaiReflexion({ G, entetes, dire, verifier, sortie, model
       const minuterie = setTimeout(() => arret.abort(), delaiMiseEnRouteMs);
       let etat = null;
       try {
-        const flux = await fetch(`${G}/helix/provision/stream`, { headers: entetes(), signal: arret.signal });
-        const lance = await fetch(`${G}/helix/provision/start`, { method: "POST", headers: entetes(), body: JSON.stringify({ model: cle }) });
+        const flux = await fetch(`${G}/oxoai/provision/stream`, { headers: entetes(), signal: arret.signal });
+        const lance = await fetch(`${G}/oxoai/provision/start`, { method: "POST", headers: entetes(), body: JSON.stringify({ model: cle }) });
         dire(`   mise en route de ${cle} : ${lance.status}`);
         const lecteur = flux.body.getReader();
         const decodeur = new TextDecoder();
@@ -223,14 +223,14 @@ export async function essaiReflexion({ G, entetes, dire, verifier, sortie, model
         clearTimeout(minuterie);
         arret.abort();
       }
-      liste = (await (await fetch(`${G}/helix/models`, { headers: entetes() })).json().catch(() => ({}))).models ?? [];
+      liste = (await (await fetch(`${G}/oxoai/models`, { headers: entetes() })).json().catch(() => ({}))).models ?? [];
       modele = liste.find((m) => nomDuModele(m.id) === nomDuModele(cle));
       if (!verifier(`réflexion, ${cle} : installé et proposé au Chat`, Boolean(modele), `${JSON.stringify(etat).slice(0, 400)} ; sélecteur : ${liste.map((m) => m.id).join(", ")}`)) continue;
     }
     const id = modele.id;
     const messages = [{ role: "user", content: QUESTION }];
     const endroits = [
-      // Sans rien de Helix : le moteur tel qu'il est sur ce système (le modèle est déjà en mémoire, chargé par Helix).
+      // Sans rien de OxoAI : le moteur tel qu'il est sur ce système (le modèle est déjà en mémoire, chargé par OxoAI).
       ["lmstudio", `${lmStudio}/chat/completions`, { "Content-Type": "application/json" }, { model: id, stream: true, messages }],
       ["relais", `${G}/v1/chat/completions`, entetes(), { model: id, stream: true, messages }],
       ["chat", `${G}/v1/chat/completions`, entetes(), { model: id, stream: true, tools: false, effort: "moyen", messages }],
@@ -262,27 +262,27 @@ export async function essaiReflexion({ G, entetes, dire, verifier, sortie, model
      */
     if (chat.reflexion.trim()) avecReflexion.push(cle);
     verifier(
-      `réflexion, ${cle}, Chat de Helix : la réflexion reçue arrive séparée (reasoning_content), sur une durée mesurée, jamais dans le texte (<think>, </think>)`,
+      `réflexion, ${cle}, Chat de OxoAI : la réflexion reçue arrive séparée (reasoning_content), sur une durée mesurée, jamais dans le texte (<think>, </think>)`,
       chat.statut === 200 && !/<\/?think>/.test(chat.texte) && (!chat.reflexion.trim() || ((chat.vu.reasoning_content > 0 || chat.vu.requalifiee > 0) && chat.dureeReflexion > 0)),
       `${chat.statut} ${forme(chat.vu)} ; ${chat.dureeReflexion} ms ; moteur seul : ${forme(vus.lmstudio?.vu ?? {})} ; ${JSON.stringify(chat.texte.slice(0, 200))}`,
     );
     // Lecture de la demande et tri se disent à l'écran (chat.ts, `attenteAffichee`) : jamais une bulle muette plus de quelques secondes.
     verifier(
-      `réflexion, ${cle}, Chat de Helix : un premier signe à l'écran (statut, réflexion ou texte) en moins de 8 s`,
+      `réflexion, ${cle}, Chat de OxoAI : un premier signe à l'écran (statut, réflexion ou texte) en moins de 8 s`,
       chat.premierSigne > 0 && chat.premierSigne < 8000,
       `${chat.premierSigne} ms`,
     );
-    // Le modèle de l'essai doit répondre ; les suivants peuvent partir en boucle au processeur (dit par Helix, et noté ici).
+    // Le modèle de l'essai doit répondre ; les suivants peuvent partir en boucle au processeur (dit par OxoAI, et noté ici).
     if (cle === modeles[0]) {
       verifier(
-        `réflexion, ${cle}, Chat de Helix : une réponse, et sans erreur`,
+        `réflexion, ${cle}, Chat de OxoAI : une réponse, et sans erreur`,
         chat.texte.trim().length > 0 && (chat.vu.erreurs ?? []).length === 0,
         `${JSON.stringify(chat.texte.slice(0, 300))} ${(chat.vu.erreurs ?? []).join(" | ")}`,
       );
     }
   }
   verifier(
-    "réflexion : au moins un Chat de Helix l'a reçue et rendue séparée (l'essai n'est pas vide)",
+    "réflexion : au moins un Chat de OxoAI l'a reçue et rendue séparée (l'essai n'est pas vide)",
     avecReflexion.length > 0,
     "aucun modèle n'a réfléchi par le Chat",
   );
@@ -299,8 +299,8 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
   };
   const MODELES = option("modeles", "qwen3-1.7b,qwen/qwen3.5-2b").split(",").filter(Boolean);
   const SORTIE = resolve(option("sortie", join(RACINE, "essai-reflexion-sortie")));
-  if (process.env.HELIX_ESSAI_MACHINE_JETABLE !== "1") {
-    console.log("Cet essai installe le moteur de LM Studio dans ~/.lmstudio et en accepte les conditions : machine jetable seulement (HELIX_ESSAI_MACHINE_JETABLE=1).");
+  if (process.env.OXOAI_ESSAI_MACHINE_JETABLE !== "1") {
+    console.log("Cet essai installe le moteur de LM Studio dans ~/.lmstudio et en accepte les conditions : machine jetable seulement (OXOAI_ESSAI_MACHINE_JETABLE=1).");
     process.exit(2);
   }
   mkdirSync(SORTIE, { recursive: true });
@@ -323,23 +323,23 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
     }
     return ok;
   };
-  const TMP = join(process.env.RUNNER_TEMP || tmpdir(), `helix-essai-reflexion-${Date.now()}`);
+  const TMP = join(process.env.RUNNER_TEMP || tmpdir(), `oxoai-essai-reflexion-${Date.now()}`);
   const DONNEES = join(TMP, "donnees");
   mkdirSync(DONNEES, { recursive: true });
-  writeFileSync(join(TMP, "helix.config.json"), JSON.stringify({ chiffrement: "fichier" }));
+  writeFileSync(join(TMP, "oxoai.config.json"), JSON.stringify({ chiffrement: "fichier" }));
   const PORT = 8787;
   const G = `http://127.0.0.1:${PORT}`;
   const journalPasserelle = createWriteStream(join(SORTIE, "passerelle.log"), { flags: "w" });
   const passerelle = spawn(process.execPath, [join(RACINE, "gateway", "src", "index.ts")], {
     cwd: RACINE,
-    env: { ...process.env, HELIX_DATA_DIR: DONNEES, HELIX_CONFIG: join(TMP, "helix.config.json"), HELIX_GATEWAY_PORT: String(PORT), HELIX_SANS_MISE_A_JOUR: "1" },
+    env: { ...process.env, OXOAI_DATA_DIR: DONNEES, OXOAI_CONFIG: join(TMP, "oxoai.config.json"), OXOAI_GATEWAY_PORT: String(PORT), OXOAI_SANS_MISE_A_JOUR: "1" },
     stdio: ["ignore", "pipe", "pipe"],
   });
   passerelle.stdout.pipe(journalPasserelle);
   passerelle.stderr.pipe(journalPasserelle);
   let JETON = "";
   let SEANCE = "";
-  const entetes = () => ({ "Content-Type": "application/json", Authorization: `Bearer ${JETON}`, "X-Helix-Langue": "fr", ...(SEANCE ? { "X-Helix-Session": SEANCE } : {}) });
+  const entetes = () => ({ "Content-Type": "application/json", Authorization: `Bearer ${JETON}`, "X-OxoAI-Langue": "fr", ...(SEANCE ? { "X-OxoAI-Session": SEANCE } : {}) });
   try {
     dire("1. La passerelle démarre");
     let sante = false;
@@ -353,16 +353,16 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
     JETON = readFileSync(fichierJeton, "utf8").trim();
     dire("2. Le compte administrateur");
     const motDePasse = `Essai-${randomBytes(12).toString("base64url")}-9a`;
-    const compte = await (await fetch(`${G}/helix/auth/create`, { method: "POST", headers: entetes(), body: JSON.stringify({ fullName: "Administrateur essai", email: "admin@essai-reflexion.test", password: motDePasse }) })).json().catch(() => ({}));
+    const compte = await (await fetch(`${G}/oxoai/auth/create`, { method: "POST", headers: entetes(), body: JSON.stringify({ fullName: "Administrateur essai", email: "admin@essai-reflexion.test", password: motDePasse }) })).json().catch(() => ({}));
     SEANCE = compte.session?.token ?? "";
     if (!verifier("le premier compte est créé", Boolean(SEANCE), JSON.stringify(compte).slice(0, 300))) throw new Error("pas de séance");
     dire("3. Le moteur de LM Studio et le premier modèle, comme l'écran de mise en route");
-    const avant = await (await fetch(`${G}/helix/provision`, { headers: entetes() })).json().catch(() => ({}));
+    const avant = await (await fetch(`${G}/oxoai/provision`, { headers: entetes() })).json().catch(() => ({}));
     dire(`   machine : ${JSON.stringify(avant.hardware)} ; moteur : ${avant.moteur} ; installé : ${avant.moteurInstalle}`);
     const arret = new AbortController();
     const minuterie = setTimeout(() => arret.abort(), 45 * 60_000);
-    const flux = await fetch(`${G}/helix/provision/stream`, { headers: entetes(), signal: arret.signal });
-    const lance = await fetch(`${G}/helix/provision/moteur`, { method: "POST", headers: entetes(), body: JSON.stringify({ conditionsAcceptees: true, model: MODELES[0] }) });
+    const flux = await fetch(`${G}/oxoai/provision/stream`, { headers: entetes(), signal: arret.signal });
+    const lance = await fetch(`${G}/oxoai/provision/moteur`, { method: "POST", headers: entetes(), body: JSON.stringify({ conditionsAcceptees: true, model: MODELES[0] }) });
     verifier("installation du moteur acceptée (202)", lance.status === 202, `${lance.status} ${(await lance.text()).slice(0, 300)}`);
     let etat = null;
     try {
@@ -396,7 +396,7 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
       arret.abort();
     }
     if (!verifier("la mise en route arrive à « prêt »", etat?.phase === "ready", JSON.stringify(etat))) throw new Error("pas prêt");
-    dire("4. La réflexion du modèle : moteur seul, relais de Helix, Chat de Helix");
+    dire("4. La réflexion du modèle : moteur seul, relais de OxoAI, Chat de OxoAI");
     await essaiReflexion({ G, entetes, dire, verifier, sortie: SORTIE, modeles: MODELES });
   } catch (err) {
     verifier("l'essai s'est déroulé sans exception", false, err?.stack ?? err);

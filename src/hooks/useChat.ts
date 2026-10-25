@@ -220,7 +220,7 @@ interface ReponseEnCours {
   abonnes: Set<(history: Message[]) => void>;
 }
 const reponsesEnCours = new Map<string, ReponseEnCours>();
-export const CHATS_EN_COURS = "helix:chats-en-cours";
+export const CHATS_EN_COURS = "oxoai:chats-en-cours";
 
 /** Un Chat a-t-il une réponse en train de s'écrire (pour la barre latérale) ? */
 export const chatEnCours = (sessionId: string) => reponsesEnCours.has(sessionId);

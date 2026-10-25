@@ -6,7 +6,7 @@ import { homedir, totalmem } from "node:os";
 import { join } from "node:path";
 import { assurerServeurLlama, chargerModeleLlama, dechargerModeleLlama, infoGguf } from "./llamaCpp.ts";
 import { cleLlamaCpp, moteurOuvert, urlLlamaCpp } from "./llamaCppBase.ts";
-import { applicationLmStudio, lmsDeLlmster, moteurAPoser, moteurGereParHelix, moteurSansInterface, preparerDossiersLlmster } from "./engine.ts";
+import { applicationLmStudio, lmsDeLlmster, moteurAPoser, moteurGereParOxoAI, moteurSansInterface, preparerDossiersLlmster } from "./engine.ts";
 import { BACKENDS, classifyRoles, isReasoningModel, tousLesBackends } from "./config.ts";
 import type { BackendConfig, BackendStatus, ModelInfo } from "./types.ts";
 import { t, tf } from "./langue.ts";
@@ -51,9 +51,9 @@ export function oublierLms(): void {
 }
 
 /**
- * Localise le binaire `lms`, ou `null` s'il est absent, ou si Helix ne doit
+ * Localise le binaire `lms`, ou `null` s'il est absent, ou si OxoAI ne doit
  * pas s'en servir maintenant : seule l'application LM Studio de la personne
- * est déclarée, son service ne tourne pas, et elle n'a pas choisi que Helix la
+ * est déclarée, son service ne tourne pas, et elle n'a pas choisi que OxoAI la
  * démarre (23/10/2026, signalement « il ouvre automatiquement Bionic ») :
  * n'importe quelle commande (`ls`, `ps`, `server status`, `get`, `load`)
  * lancerait alors l'application (engine.ts, reglagesMoteur.ts). La garde vaut
@@ -62,7 +62,7 @@ export function oublierLms(): void {
  */
 export async function findLms(): Promise<string | null> {
   if (!(await reveilPermis())) {
-    if (!attenteDite) console.log("[helix] application LM Studio fermée, et pas de choix de moteur : aucune commande `lms` lancée (Réglages, Modèles locaux).");
+    if (!attenteDite) console.log("[oxoai] application LM Studio fermée, et pas de choix de moteur : aucune commande `lms` lancée (Réglages, Modèles locaux).");
     attenteDite = true;
     return null;
   }
@@ -81,7 +81,7 @@ async function lmsInstalle(): Promise<string | null> {
       /*
        * 30 s pour un fichier présent à sa place connue (essai sous Ubuntu du
        * 27/09/2026) : le `lms` du moteur sans interface pèse 109 Mo et mettait
-       * plus de 5 s à répondre sur une machine lente, et Helix le déclarait
+       * plus de 5 s à répondre sur une machine lente, et OxoAI le déclarait
        * absent juste après l'avoir installé. Présent et exécutable, il compte
        * même si sa réponse tarde : les appels suivants diront s'il est cassé.
        */
@@ -155,7 +155,7 @@ async function lmStudioMetadata(): Promise<{ meta: Map<string, Partial<ModelInfo
       ...(typeof entry.trainedForToolUse === "boolean" ? { outils: entry.trainedForToolUse } : {}),
       ...(typeof entry.maxContextLength === "number" ? { contexteMax: entry.maxContextLength } : {}),
       // Rangé par l'entraînement sous son propre éditeur (entrainement.ts).
-      ...((entry.path ?? "").startsWith("helix-entrainement/") ? { entraine: true } : {}),
+      ...((entry.path ?? "").startsWith("oxoai-entrainement/") ? { entraine: true } : {}),
     });
   }
 
@@ -203,7 +203,7 @@ async function fetchJson(
 /**
  * Le serveur local de LM Studio ne tourne pas toujours : il s'arrête quand
  * l'utilisateur quitte l'application, et ne revient pas seul après un
- * redémarrage. Sans lui, Helix n'a plus aucun modèle et l'utilisateur devrait
+ * redémarrage. Sans lui, OxoAI n'a plus aucun modèle et l'utilisateur devrait
  * aller le relancer à la main — exactement ce qu'un logiciel installé ne doit
  * pas demander.
  *
@@ -353,7 +353,7 @@ async function demarrerServeurLmStudio(): Promise<boolean> {
     const leve = await lancerLms(lms, "daemon up", 180_000).then(
       () => true,
       (err) => {
-        console.error("[helix] `lms daemon up` en échec :", String((err as { stderr?: unknown }).stderr ?? (err as Error).message ?? err).slice(-300));
+        console.error("[oxoai] `lms daemon up` en échec :", String((err as { stderr?: unknown }).stderr ?? (err as Error).message ?? err).slice(-300));
         return false;
       },
     );
@@ -368,13 +368,13 @@ async function demarrerServeurLmStudio(): Promise<boolean> {
     }
   }
   try {
-    console.log("[helix] serveur LM Studio arrêté, démarrage...");
+    console.log("[oxoai] serveur LM Studio arrêté, démarrage...");
     /*
      * Le moteur sans interface juste posé ou juste levé peut refuser le
      * premier `server start` (essai Windows de bout en bout du 28/09/2026,
      * application empaquetée, scripts/essai-windows-ci.mjs : « Error:
      * WebSocket connection closed », code 1, une seconde après `daemon up`,
-     * pendant que le service redémarrait). Helix abandonnait alors, et la
+     * pendant que le service redémarrait). OxoAI abandonnait alors, et la
      * mise en route finissait sur « Le moteur est installé, mais il n'a pas
      * démarré » ; l'essai n'était passé que parce qu'il relisait l'état
      * toutes les trois secondes, ce qui relançait le serveur. Quatre essais,
@@ -390,7 +390,7 @@ async function demarrerServeurLmStudio(): Promise<boolean> {
         if (await repond(LMSTUDIO_URL)) break;
         if (n >= essais) throw err;
         const detail = `${(err as { stderr?: unknown }).stderr ?? ""}${(err as Error).message ?? ""}`;
-        console.warn(`[helix] \`lms server start\` refusé (essai ${n}/${essais}), nouvel essai dans 5 s :`, detail.slice(-200));
+        console.warn(`[oxoai] \`lms server start\` refusé (essai ${n}/${essais}), nouvel essai dans 5 s :`, detail.slice(-200));
         await new Promise((r) => setTimeout(r, 5000));
       }
     }
@@ -404,9 +404,9 @@ async function demarrerServeurLmStudio(): Promise<boolean> {
      */
     const application = applicationLmStudio();
     const detail = `${(err as { stdout?: unknown }).stdout ?? ""}${(err as { stderr?: unknown }).stderr ?? ""}${(err as Error).message ?? ""}`;
-    console.error("[helix] `lms server start` en échec :", detail.slice(-300));
+    console.error("[oxoai] `lms server start` en échec :", detail.slice(-300));
     if (!application || moteurSansInterface() || !/no valid installation|daemon is not running|failed to start or connect/i.test(detail)) return false;
-    console.log("[helix] LM Studio jamais ouvert sur ce Mac : premier lancement en arrière-plan...");
+    console.log("[oxoai] LM Studio jamais ouvert sur ce Mac : premier lancement en arrière-plan...");
     await exec("/usr/bin/open", ["-g", "-j", "-a", application], { timeout: 30_000 }).catch(() => undefined);
     let demarre = false;
     for (let i = 0; i < 12 && !demarre; i++) {
@@ -419,7 +419,7 @@ async function demarrerServeurLmStudio(): Promise<boolean> {
   // Le serveur met un instant à écouter : on lui laisse le temps.
   for (let i = 0; i < 10; i++) {
     if (await repond(LMSTUDIO_URL)) {
-      console.log("[helix] serveur LM Studio démarré.");
+      console.log("[oxoai] serveur LM Studio démarré.");
       return true;
     }
     await new Promise((r) => setTimeout(r, 500));
@@ -428,7 +428,7 @@ async function demarrerServeurLmStudio(): Promise<boolean> {
 }
 
 /** Modèles que cette instance a chargés elle-même (loadModel). */
-const chargesParHelix = new Set<string>();
+const chargesParOxoAI = new Set<string>();
 
 /**
  * La taille de conversation qu'un service publie dans sa liste de modèles,
@@ -453,7 +453,7 @@ function contexteDeLaListe(entree: Record<string, unknown>): number | undefined 
  *     été par un autre programme avec une taille plus petite) ;
  *  2. ce que le profil de déploiement dit du service, puis ce que le service
  *     publie ;
- *  3. à défaut : pour LM Studio, la taille que Helix pose lui-même à chaque
+ *  3. à défaut : pour LM Studio, la taille que OxoAI pose lui-même à chaque
  *     chargement (32 768 sur un poste de 36 Go ou moins), sinon 4 096, le
  *     défaut de LM Studio quand rien n'est précisé ;
  *     un autre serveur de la machine (Ollama, llama.cpp), 8 192 : Ollama
@@ -480,9 +480,9 @@ export async function contexteDuModele(model: ModelInfo, backend: BackendConfig)
     if (backend.contexte) return borne(backend.contexte);
     const options = optionsDeChargement();
     const i = options.indexOf("--context-length");
-    const parHelix = i >= 0 ? Number(options[i + 1]) : NaN;
-    // Helix charge toujours avec sa taille (loadModel, provision.ts) ; `chargesParHelix` ne survit pas à un redémarrage.
-    if (Number.isFinite(parHelix)) return borne(parHelix);
+    const parOxoAI = i >= 0 ? Number(options[i + 1]) : NaN;
+    // OxoAI charge toujours avec sa taille (loadModel, provision.ts) ; `chargesParOxoAI` ne survit pas à un redémarrage.
+    if (Number.isFinite(parOxoAI)) return borne(parOxoAI);
     return borne(4096);
   }
   if (backend.contexte) return backend.contexte;
@@ -499,7 +499,7 @@ export async function contexteDuModele(model: ModelInfo, backend: BackendConfig)
 /**
  * À la fermeture : rendre la mémoire, sans casser le travail des autres.
  *
- * On arrêtait le serveur LM Studio s'il avait été démarré par Helix. Mais il
+ * On arrêtait le serveur LM Studio s'il avait été démarré par OxoAI. Mais il
  * est partagé : l'agent personnel de la personne (OpenClaw), une seconde
  * instance, LM Studio lui-même s'en servent. Mesuré le 24/09/2026 : une
  * instance qui s'arrêtait a coupé le serveur sous les autres, et leurs
@@ -512,7 +512,7 @@ export async function contexteDuModele(model: ModelInfo, backend: BackendConfig)
  * d'aboutir.
  */
 export function stopLmStudioIfStarted(): void {
-  if (!lmsPathCache || chargesParHelix.size === 0) return;
+  if (!lmsPathCache || chargesParOxoAI.size === 0) return;
   let enMemoire: LmsModelEntry[] = [];
   try {
     enMemoire = JSON.parse(execFileSync(lmsPathCache, ["ps", "--json"], { timeout: 8000, encoding: "utf8" })) as LmsModelEntry[];
@@ -521,10 +521,10 @@ export function stopLmStudioIfStarted(): void {
   }
   for (const e of enMemoire) {
     const cle = e.modelKey ?? e.path ?? "";
-    if (!chargesParHelix.has(cle) || (e.status && e.status !== "idle")) continue;
+    if (!chargesParOxoAI.has(cle) || (e.status && e.status !== "idle")) continue;
     try {
       execFileSync(lmsPathCache, ["unload", cle], { timeout: 10_000, stdio: "ignore" });
-      console.log(`[helix] ${cle} déchargé à la fermeture.`);
+      console.log(`[oxoai] ${cle} déchargé à la fermeture.`);
     } catch {
       /* déjà parti */
     }
@@ -650,7 +650,7 @@ export async function discover(options: { attendreLmStudio?: boolean } = {}): Pr
          * Studio (JIT) est actif par défaut, et sa documentation prévient que
          * `/v1/models` peut alors lister **tous** les modèles téléchargés
          * (lmstudio.ai/docs/developer/openai-compat/models). Pris pour
-         * chargés, ils n'étaient jamais chargés par Helix : LM Studio les
+         * chargés, ils n'étaient jamais chargés par OxoAI : LM Studio les
          * chargeait seul à la première question, avec ses propres réglages
          * (sa taille de conversation par défaut, quatre réponses en parallèle,
          * la puce graphique à sa guise, et une heure avant de libérer la
@@ -774,7 +774,7 @@ function toModelInfo(
    * appeler des outils (`trainedForToolUse`) sait travailler en agent de code,
    * quel que soit son nom. Vu le 26/09/2026 : le rôle ne venait que du nom
    * (« coder », « qwen3 », « glm »…), et un poste qui n'avait que Mistral,
-   * gpt-oss ou Granite, pourtant installés par Helix, n'avait « aucun modèle
+   * gpt-oss ou Granite, pourtant installés par OxoAI, n'avait « aucun modèle
    * disponible » dans Code.
    */
   // Sauf un modèle fait pour l'écran (Qwen3-VL, UI-TARS…) : LM Studio le déclare lui aussi « outils », et il code mal.
@@ -853,7 +853,7 @@ export function optionsDeChargement(): string[] {
  *
  * Vu par Medhi le 27/09/2026 sur un PC Windows sans carte graphique (16 Go,
  * llmster 0.0.25, Qwen3.5 4B) : une réflexion « 不 時////… » sans fin, là où
- * le même Helix répond juste sur un Mac. Sans `--gpu`, LM Studio choisit seul
+ * le même OxoAI répond juste sur un Mac. Sans `--gpu`, LM Studio choisit seul
  * combien de couches confier à la carte graphique ; sur un PC sans carte
  * dédiée, la seule qu'il puisse voir est la puce graphique intégrée (Intel,
  * AMD), par Vulkan. Or les défauts publiés de llama.cpp qui rendent une
@@ -864,18 +864,18 @@ export function optionsDeChargement(): string[] {
  * (« disabled by default ») ; ce qui se passe quand c'est la seule puce du
  * poste n'est écrit nulle part, et n'a pas été vu sur ce PC.
  *
- * Helix traite déjà une telle machine comme calculant au processeur : c'est
+ * OxoAI traite déjà une telle machine comme calculant au processeur : c'est
  * pour lui qu'il a choisi le modèle (`tientSur`, provision.ts). On le charge
  * donc là aussi, `--gpu off`, sans rien laisser au hasard. Une carte NVIDIA
  * (vue par `nvidia-smi`) garde le choix de LM Studio, par CUDA ; un Mac aussi.
  *
- * Contrepartie assumée : une carte AMD ou Intel dédiée, que Helix ne sait pas
+ * Contrepartie assumée : une carte AMD ou Intel dédiée, que OxoAI ne sait pas
  * encore reconnaître, calcule elle aussi au processeur (plus lent, mais juste).
- * `HELIX_DECHARGEMENT_GPU` rend la main : « auto » laisse LM Studio décider,
+ * `OXOAI_DECHARGEMENT_GPU` rend la main : « auto » laisse LM Studio décider,
  * « max », « off » ou une part entre 0 et 1 sont passés tels quels à `lms load`.
  */
 function optionGpu(): string[] {
-  const reglage = (process.env.HELIX_DECHARGEMENT_GPU ?? "").trim().toLowerCase();
+  const reglage = (process.env.OXOAI_DECHARGEMENT_GPU ?? "").trim().toLowerCase();
   if (reglage === "auto") return [];
   if (reglage === "off" || reglage === "max" || (/^(0(\.\d+)?|1(\.0+)?)$/.test(reglage))) return ["--gpu", reglage];
   return calculSurProcesseur(detectHardware()) ? ["--gpu", "off"] : [];
@@ -911,7 +911,7 @@ export function echantillonnageLocal(modele: string, raisonner: boolean): Record
    * Ministral 3 (3B, 8B, 14B, version « instruct ») : Mistral conseille une
    * température de 0,1 (« We recommend starting with a Temperature of 0.1 for
    * most use cases », carte de mistralai/Ministral-3-3B-Instruct-2512, relue
-   * le 27/09/2026 ; « below 0.1 » en production). Helix n'envoyait rien : le
+   * le 27/09/2026 ; « below 0.1 » en production). OxoAI n'envoyait rien : le
    * moteur appliquait sa propre température, plus haute, et un 3B tiré au
    * hasard s'écarte plus volontiers de la question (« des fois un truc qui
    * n'a rien à voir », Medhi, PC Windows, Ministral 3B). Le conseil vaut
@@ -970,13 +970,13 @@ async function unloadOthers(lms: string, garder: string): Promise<number> {
     if (!cle || cle === garder) continue;
     if (/embed/i.test(cle) || entree.type === "embedding") continue;
     if (occupe(entree)) {
-      console.log(`[helix] ${cle} est en train de répondre : il n'est pas déchargé.`);
+      console.log(`[oxoai] ${cle} est en train de répondre : il n'est pas déchargé.`);
       continue;
     }
     try {
       await exec(lms, ["unload", cle], { timeout: 30_000 });
       liberes += 1;
-      console.log(`[helix] ${cle} déchargé pour libérer la mémoire.`);
+      console.log(`[oxoai] ${cle} déchargé pour libérer la mémoire.`);
     } catch {
       /* déjà parti, ou refus : on continue */
     }
@@ -1005,7 +1005,7 @@ export async function faireLaPlace(lms: string, modelKey: string, enMemoire?: Lm
    * Avant, le nouveau modèle était chargé À CÔTÉ de celui déjà en mémoire, et
    * on ne libérait la place que si LM Studio refusait. Or LM Studio refuse
    * rarement : il accepte, puis la machine bascule sur le disque (swap) et
-   * tout l'ordinateur se fige, pas seulement Helix. Constaté sur un Mac de
+   * tout l'ordinateur se fige, pas seulement OxoAI. Constaté sur un Mac de
    * 16 Go : Qwen3 8B résident + Qwen3-VL 8B chargé pour lire une image.
    *
    * On estime donc l'empreinte (poids + environ 30 % pour le contexte) et on
@@ -1079,7 +1079,7 @@ export async function loadModel(modelKey: string, options: { auto?: boolean } = 
   if (verdict.ok) return r;
   const lms = await findLms();
   if (lms) await exec(lms, ["unload", modelKey], { timeout: 30_000 }).catch(() => {});
-  chargesParHelix.delete(modelKey);
+  chargesParOxoAI.delete(modelKey);
   const relais = await relaisApresDefaillance(modelKey, options.auto === true);
   return {
     ok: false,
@@ -1148,9 +1148,9 @@ async function chargerModele(modelKey: string): Promise<{ ok: boolean; message: 
 
   try {
     await charger();
-    chargesParHelix.add(modelKey);
-    // Au journal, avec ses options : sur un poste, c'est ce qui dit que le modèle a été chargé par Helix, et comment (27/09/2026).
-    console.log(`[helix] ${modelKey} chargé par Helix : ${optionsDeChargement().join(" ")}`);
+    chargesParOxoAI.add(modelKey);
+    // Au journal, avec ses options : sur un poste, c'est ce qui dit que le modèle a été chargé par OxoAI, et comment (27/09/2026).
+    console.log(`[oxoai] ${modelKey} chargé par OxoAI : ${optionsDeChargement().join(" ")}`);
     return { ok: true, message: tf("Modèle {0} chargé.", modelKey), neuf: true };
   } catch (err) {
     const detail = err instanceof Error ? `${err.message}` : String(err);
@@ -1186,7 +1186,7 @@ async function chargerModele(modelKey: string): Promise<{ ok: boolean; message: 
   }
 }
 
-/** Taille de conversation que Helix vise pour un modèle de LM Studio : la sienne au chargement, 32 768 à défaut. */
+/** Taille de conversation que OxoAI vise pour un modèle de LM Studio : la sienne au chargement, 32 768 à défaut. */
 export function tailleVisee(): number {
   const options = optionsDeChargement();
   const i = options.indexOf("--context-length");
@@ -1205,15 +1205,15 @@ export type Agrandissement =
  * Un modèle de LM Studio chargé avec une petite taille de conversation
  * (16/10/2026, « des fois ça se coupe chez certaines personnes ») : 4 096
  * jetons, le défaut de LM Studio quand il charge un modèle seul (chargement à
- * la demande, ou depuis son application). Helix le prenait tel quel
+ * la demande, ou depuis son application). OxoAI le prenait tel quel
  * (`contexteCharge`) : ses consignes et ses outils dépassaient souvent cette
  * place à eux seuls, et le moteur refusait la demande (« greater than the
  * context length ») ou la coupait.
  *
- * Rechargé ici avec la taille de Helix (`optionsDeChargement`), seulement
+ * Rechargé ici avec la taille de OxoAI (`optionsDeChargement`), seulement
  * quand c'est sûr :
- *  - le moteur est celui de Helix (`moteurGereParHelix`, engine.ts), ou c'est
- *    Helix qui a chargé ce modèle ; jamais un modèle chargé par l'application
+ *  - le moteur est celui de OxoAI (`moteurGereParOxoAI`, engine.ts), ou c'est
+ *    OxoAI qui a chargé ce modèle ; jamais un modèle chargé par l'application
  *    LM Studio de la personne, qui l'a peut-être réglé ainsi exprès et s'en
  *    sert peut-être ailleurs ;
  *  - le modèle est au repos (`lms ps` : `idle`) : on ne décharge pas sous une
@@ -1227,13 +1227,13 @@ export async function agrandirLaConversation(model: ModelInfo, auRechargement?: 
   if (model.backendKind !== "lmstudio" || !avant || moteurOuvert()) return { fait: false, avant, raison: "inconnu" };
   if (avant >= Math.min(visee, 16_384)) return { fait: false, avant, raison: "assez" };
   /*
-   * Hors du moteur de Helix, seulement un modèle que Helix a chargé sans
+   * Hors du moteur de OxoAI, seulement un modèle que OxoAI a chargé sans
    * préciser de taille (poste de plus de 36 Go, `optionsDeChargement`) : la
-   * petite taille est alors de son fait. Chargé par Helix avec sa taille et
+   * petite taille est alors de son fait. Chargé par OxoAI avec sa taille et
    * revenu plus petit, c'est qu'un autre programme l'a rechargé : on n'y touche pas.
    */
-  const parHelixSansTaille = chargesParHelix.has(model.id) && !optionsDeChargement().includes("--context-length");
-  if (!moteurGereParHelix() && !parHelixSansTaille) return { fait: false, avant, raison: "application" };
+  const parOxoAISansTaille = chargesParOxoAI.has(model.id) && !optionsDeChargement().includes("--context-length");
+  if (!moteurGereParOxoAI() && !parOxoAISansTaille) return { fait: false, avant, raison: "application" };
   if (agrandissementsTentes.has(model.id)) return { fait: false, avant, raison: "deja" };
   if (!/^[A-Za-z0-9@_./:+-]{1,300}$/.test(model.id) || model.id.startsWith("-")) return { fait: false, avant, raison: "inconnu" };
   const lms = await findLms();
@@ -1255,12 +1255,12 @@ export async function agrandirLaConversation(model: ModelInfo, auRechargement?: 
   const options = optionsDeChargement().filter((_, i, tout) => tout[i] !== "--context-length" && tout[i - 1] !== "--context-length");
   try {
     await exec(lms, ["unload", model.id], { timeout: 30_000 });
-    chargesParHelix.delete(model.id);
+    chargesParOxoAI.delete(model.id);
     preparerDossiersLlmster();
     await exec(lms, ["load", model.id, "--yes", "--ttl", TTL_SECONDES, "--context-length", String(visee), ...options], { timeout: 300_000 });
-    chargesParHelix.add(model.id);
+    chargesParOxoAI.add(model.id);
   } catch (err) {
-    console.warn(`[helix] ${model.id} : rechargement avec ${visee} jetons raté (${err instanceof Error ? err.message.slice(0, 200) : String(err)})`);
+    console.warn(`[oxoai] ${model.id} : rechargement avec ${visee} jetons raté (${err instanceof Error ? err.message.slice(0, 200) : String(err)})`);
     return { fait: false, avant, raison: "echec" };
   }
   let apres = visee;
@@ -1272,6 +1272,6 @@ export async function agrandirLaConversation(model: ModelInfo, auRechargement?: 
   } catch {
     /* on garde la taille demandée */
   }
-  console.log(`[helix] ${model.id} rechargé par Helix : conversation de ${avant} à ${apres} jetons`);
+  console.log(`[oxoai] ${model.id} rechargé par OxoAI : conversation de ${avant} à ${apres} jetons`);
   return apres > avant ? { fait: true, avant, apres } : { fait: false, avant, raison: "echec" };
 }

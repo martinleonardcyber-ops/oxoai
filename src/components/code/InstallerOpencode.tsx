@@ -9,7 +9,7 @@ import { instance } from "@/lib/instance";
 import { plateformePoste } from "@/lib/plateforme";
 
 /**
- * L'écran Code sans son moteur : Helix pose OpenCode lui-même (demandé par
+ * L'écran Code sans son moteur : OxoAI pose OpenCode lui-même (demandé par
  * Medhi le 27/09/2026, « tout s'installe seul »). Version épinglée, empreinte
  * vérifiée (gateway/src/opencodePrive.ts).
  *

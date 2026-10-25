@@ -16,7 +16,7 @@ import {
 import { dansLaLangue, langue, t, tf } from "./langue.ts";
 
 /**
- * Connecteur Google Drive de Helix, en lecture seule.
+ * Connecteur Google Drive de OxoAI, en lecture seule.
  *
  * Pourquoi l'API de Google et pas un protocole ouvert : Drive n'en expose
  * aucun. WebDAV n'existe pas chez Google, et le seul chemin vers les fichiers
@@ -27,14 +27,14 @@ import { dansLaLangue, langue, t, tf } from "./langue.ts";
  * l'instance.
  *
  * Pourquoi chaque entreprise a son propre client OAuth : un identifiant commun,
- * livré avec Helix, ferait de l'agence l'éditeur d'une application Google qui
+ * livré avec OxoAI, ferait de l'agence l'éditeur d'une application Google qui
  * lit le Drive de tous ses clients. La portée `drive.readonly` est « restreinte »
  * chez Google : publiée pour tous, elle impose une vérification et une
  * évaluation de sécurité annuelle payante, et une compromission exposerait tout
  * le parc d'un coup. Un client créé par l'entreprise elle-même, de type
  * « Interne » quand elle a Google Workspace, n'est soumis à aucune
  * vérification, et ne concerne qu'elle. L'identifiant est lu dans le profil de
- * déploiement (`google` dans helix.config.json), jamais dans une requête.
+ * déploiement (`google` dans oxoai.config.json), jamais dans une requête.
  *
  * Le parcours d'autorisation est celui que Google prescrit aux applications
  * installées : redirection vers la boucle locale (`http://127.0.0.1:<port>/`),
@@ -323,18 +323,18 @@ function erreurJetons(json: Record<string, unknown>): ErreurDrive {
   /*
    * L'application Google se saisit à l'écran depuis le 26/09/2026
    * (clientGoogle.ts) : ces deux messages renvoyaient encore au seul fichier
-   * helix.config.json (tournée des connecteurs du 28/09/2026).
+   * oxoai.config.json (tournée des connecteurs du 28/09/2026).
    */
   if (code === "invalid_client" || code === "unauthorized_client") {
     return new ErreurDrive(
       "config",
-      t("Google ne reconnaît pas l'application Google de cette instance (identifiant ou secret). Vérifiez-la dans Réglages, Connecteurs (ou la rubrique « google » de helix.config.json si elle y est fixée)."),
+      t("Google ne reconnaît pas l'application Google de cette instance (identifiant ou secret). Vérifiez-la dans Réglages, Connecteurs (ou la rubrique « google » de oxoai.config.json si elle y est fixée)."),
     );
   }
   if (code === "invalid_request" && /client_secret/i.test(detail)) {
     return new ErreurDrive(
       "config",
-      t("Google exige le secret de l'application Google : enregistrez-la de nouveau avec son secret dans Réglages, Connecteurs (ou ajoutez « clientSecret » dans la rubrique « google » de helix.config.json, puis redémarrez l'instance)."),
+      t("Google exige le secret de l'application Google : enregistrez-la de nouveau avec son secret dans Réglages, Connecteurs (ou ajoutez « clientSecret » dans la rubrique « google » de oxoai.config.json, puis redémarrez l'instance)."),
     );
   }
   if (code === "admin_policy_enforced") {
@@ -631,7 +631,7 @@ interface Flux {
   redirection: string;
   serveur: http.Server;
   minuterie: ReturnType<typeof setTimeout>;
-  /** Compte Helix qui a lancé l'autorisation : c'est lui que le journal nomme. */
+  /** Compte OxoAI qui a lancé l'autorisation : c'est lui que le journal nomme. */
   qui: string;
   echangeEnCours: boolean;
 }
@@ -710,14 +710,14 @@ export async function demarrer(qui: string): Promise<{ ok: boolean; message: str
       ok: false,
       message:
         id.manque === "identifiant"
-          ? t("Aucune application Google n'est enregistrée sur cette instance : renseignez-la dans Réglages, Connecteurs (ou « google » dans helix.config.json).")
-          : t("L'identifiant du client OAuth Google de helix.config.json n'a pas la bonne forme : il se termine par « .apps.googleusercontent.com »."),
+          ? t("Aucune application Google n'est enregistrée sur cette instance : renseignez-la dans Réglages, Connecteurs (ou « google » dans oxoai.config.json).")
+          : t("L'identifiant du client OAuth Google de oxoai.config.json n'a pas la bonne forme : il se termine par « .apps.googleusercontent.com »."),
     };
   }
   if (!chiffrementActif()) {
     return {
       ok: false,
-      message: t("Le chiffrement des données n'est pas actif sur cette machine : l'accès au Drive ne sera pas enregistré en clair. Réglez « chiffrement » dans helix.config.json, puis recommencez."),
+      message: t("Le chiffrement des données n'est pas actif sur cette machine : l'accès au Drive ne sera pas enregistré en clair. Réglez « chiffrement » dans oxoai.config.json, puis recommencez."),
     };
   }
   if (flux?.echangeEnCours) {

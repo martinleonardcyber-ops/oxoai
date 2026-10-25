@@ -5,7 +5,7 @@ import { createHmac, pbkdf2Sync, randomBytes, randomInt, timingSafeEqual } from 
  *
  * C'est le format que lisent toutes les applications d'authentification du
  * marché, y compris celles qui n'envoient rien à personne (Aegis, 2FAS,
- * KeePassXC, l'app Mots de passe d'Apple) : Helix n'impose aucun service tiers,
+ * KeePassXC, l'app Mots de passe d'Apple) : OxoAI n'impose aucun service tiers,
  * il n'en contacte aucun. Le calcul tient en quelques lignes de `node:crypto`,
  * sans dépendance.
  *

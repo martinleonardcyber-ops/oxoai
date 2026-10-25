@@ -12,7 +12,7 @@
  * B. Emplacement des modèles : un sous-dossier `LM Studio` ou
  *    `modeles-llamacpp` déjà posé en lien symbolique.
  * C. Moteur ouvert : un autre programme sur son port ne reçoit ni la clé ni
- *    les Chats ; un serveur resté de Helix (le même fichier exécuté) est arrêté et remplacé.
+ *    les Chats ; un serveur resté de OxoAI (le même fichier exécuté) est arrêté et remplacé.
  */
 import { spawn, spawnSync } from "node:child_process";
 import { chmodSync, copyFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
@@ -33,7 +33,7 @@ const portLibre = () =>
   });
 const attendre = (ms) => new Promise((r) => setTimeout(r, ms));
 
-const TMP = realpathSync(mkdtempSync(join(tmpdir(), "helix-essai-intrusion-")));
+const TMP = realpathSync(mkdtempSync(join(tmpdir(), "oxoai-essai-intrusion-")));
 const MAISON = join(TMP, "maison");
 const BIN = join(TMP, "bin");
 const ESPACE = join(TMP, "espace-agents");
@@ -72,16 +72,16 @@ async function demarrer(donnees, env = {}) {
       HOME: MAISON,
       USERPROFILE: MAISON,
       LANG: "C",
-      HELIX_CONFIG: join(TMP, "profil.json"),
-      HELIX_DATA_DIR: donnees,
-      HELIX_GATEWAY_PORT: String(port),
-      HELIX_WORKSPACE: ESPACE,
-      HELIX_LLAMACPP_PORT: String(await portLibre()),
-      HELIX_LMSTUDIO_URL: "http://127.0.0.1:9/v1",
-      HELIX_EXO_URL: "http://127.0.0.1:9/v1",
-      HELIX_APPS_DIR: join(TMP, "Applications"),
-      HELIX_OPENCODE_BIN: join(BIN, "opencode"),
-      HELIX_RTK_BIN: join(BIN, "rtk"),
+      OXOAI_CONFIG: join(TMP, "profil.json"),
+      OXOAI_DATA_DIR: donnees,
+      OXOAI_GATEWAY_PORT: String(port),
+      OXOAI_WORKSPACE: ESPACE,
+      OXOAI_LLAMACPP_PORT: String(await portLibre()),
+      OXOAI_LMSTUDIO_URL: "http://127.0.0.1:9/v1",
+      OXOAI_EXO_URL: "http://127.0.0.1:9/v1",
+      OXOAI_APPS_DIR: join(TMP, "Applications"),
+      OXOAI_OPENCODE_BIN: join(BIN, "opencode"),
+      OXOAI_RTK_BIN: join(BIN, "rtk"),
       ...env,
     },
     stdio: ["ignore", "pipe", "pipe"],
@@ -107,12 +107,12 @@ async function arreter() {
   await Promise.race([fin, attendre(10_000)]);
   if (lui.exitCode === null) lui.kill("SIGKILL");
 }
-const entetes = (seance) => ({ "Content-Type": "application/json", Authorization: `Bearer ${JETON}`, "X-Helix-Langue": "fr", ...(seance ? { "X-Helix-Session": seance } : {}) });
+const entetes = (seance) => ({ "Content-Type": "application/json", Authorization: `Bearer ${JETON}`, "X-OxoAI-Langue": "fr", ...(seance ? { "X-OxoAI-Session": seance } : {}) });
 const appel = async (chemin, seance, corps) => {
   const r = await fetch(`${G}${chemin}`, corps === undefined ? { headers: entetes(seance) } : { method: "POST", headers: entetes(seance), body: JSON.stringify(corps) });
   return { statut: r.status, json: await r.json().catch(() => ({})) };
 };
-const administrateur = async () => (await appel("/helix/auth/create", null, { fullName: "Admin Essai", email: "admin@example.test", password: "Admin2Essai!Solide42" })).json.session?.token ?? "";
+const administrateur = async () => (await appel("/oxoai/auth/create", null, { fullName: "Admin Essai", email: "admin@example.test", password: "Admin2Essai!Solide42" })).json.session?.token ?? "";
 
 const intrus = [];
 try {
@@ -129,7 +129,7 @@ try {
         lectureMaison: z.cheminProtegeDans({ path: m }, m),
       }));`;
     const r = spawnSync(process.execPath, ["--input-type=module", "-e", code], {
-      env: { PATH, HOME: MAISON, HELIX_DATA_DIR: join(TMP, "donnees-a"), HELIX_CONFIG: join(TMP, "profil.json") },
+      env: { PATH, HOME: MAISON, OXOAI_DATA_DIR: join(TMP, "donnees-a"), OXOAI_CONFIG: join(TMP, "profil.json") },
       encoding: "utf8",
     });
     let v = {};
@@ -147,27 +147,27 @@ try {
   /* ── B. Sous-dossier déjà posé en lien symbolique ────────────────────── */
   console.log("B. Emplacement des modèles : sous-dossier déjà posé en lien symbolique");
   {
-    await demarrer(join(TMP, "donnees-b"), { HELIX_MOTEUR: "lmstudio" });
+    await demarrer(join(TMP, "donnees-b"), { OXOAI_MOTEUR: "lmstudio" });
     const admin = await administrateur();
     mkdirSync(join(ESPACE, "cible"), { recursive: true });
     symlinkSync(join(ESPACE, "cible"), join(DISQUE, "LM Studio"));
-    const r = await appel("/helix/emplacement-modeles", admin, { dossier: DISQUE });
+    const r = await appel("/oxoai/emplacement-modeles", admin, { dossier: DISQUE });
     const pointeur = join(MAISON, ".lmstudio-home-pointer");
     verifier("LM Studio : `LM Studio` lien vers l'espace des agents, refusé (400), aucun pointeur", r.statut === 400 && /lien symbolique/.test(r.json.error?.message ?? "") && !existsSync(pointeur), `${r.statut} ${JSON.stringify(r.json)}`);
     // Un pointeur écrit à la main vers ce lien n'est pas suivi : `lms` ne se lance pas depuis l'espace des agents.
     writeFileSync(pointeur, join(DISQUE, "LM Studio"));
-    const e = await appel("/helix/emplacement-modeles", admin);
+    const e = await appel("/oxoai/emplacement-modeles", admin);
     verifier("un pointeur vers un lien n'est pas suivi par la passerelle", e.json.dossier !== join(DISQUE, "LM Studio") || e.json.introuvable === true, JSON.stringify(e.json).slice(0, 300));
     rmSync(pointeur, { force: true });
     rmSync(join(DISQUE, "LM Studio"), { force: true });
     await arreter();
 
     const donnees = join(TMP, "donnees-c");
-    await demarrer(donnees, { HELIX_MOTEUR: "llamacpp" });
+    await demarrer(donnees, { OXOAI_MOTEUR: "llamacpp" });
     const admin2 = await administrateur();
     mkdirSync(join(donnees, "vide"), { recursive: true });
     symlinkSync(join(donnees, "vide"), join(DISQUE, "modeles-llamacpp"));
-    const r2 = await appel("/helix/emplacement-modeles", admin2, { dossier: DISQUE });
+    const r2 = await appel("/oxoai/emplacement-modeles", admin2, { dossier: DISQUE });
     verifier("llama.cpp : `modeles-llamacpp` lien vers les données de l'instance, refusé (400)", r2.statut === 400 && /lien symbolique/.test(r2.json.error?.message ?? ""), `${r2.statut} ${JSON.stringify(r2.json)}`);
     rmSync(join(DISQUE, "modeles-llamacpp"), { force: true });
     await arreter();
@@ -198,7 +198,7 @@ try {
       res.end(reponse);
     }).listen(portIntrus, "127.0.0.1");
     intrus.push(() => faux.close());
-    await demarrer(d1, { HELIX_MOTEUR: "llamacpp", HELIX_LLAMACPP_PORT: String(portIntrus) });
+    await demarrer(d1, { OXOAI_MOTEUR: "llamacpp", OXOAI_LLAMACPP_PORT: String(portIntrus) });
     const m1 = await fetch(`${G}/v1/models`, { headers: { Authorization: `Bearer ${JETON}` } }).then((r) => r.json()).catch(() => ({}));
     const cle1 = readFileSync(join(d1, "llamacpp", "cle"), "utf8").trim();
     verifier("un autre programme sur le port ne reçoit jamais la clé du moteur", !recus.includes(`Bearer ${cle1}`), `${recus.length} requêtes, ${recus.filter((a) => a).length} avec une clé`);
@@ -206,7 +206,7 @@ try {
     await arreter();
     faux.close();
 
-    // C2. Un serveur resté de Helix (le fichier posé par Helix, lancé avant la passerelle) : arrêté et remplacé (revue finale du 28/09/2026), jamais doublé.
+    // C2. Un serveur resté de OxoAI (le fichier posé par OxoAI, lancé avant la passerelle) : arrêté et remplacé (revue finale du 28/09/2026), jamais doublé.
     const d2 = join(TMP, "donnees-e");
     preparer(d2, process.execPath);
     const portReste = await portLibre();
@@ -218,11 +218,11 @@ try {
       if (await fetch(`http://127.0.0.1:${portReste}/`).then(() => true, () => false)) break;
       await attendre(200);
     }
-    await demarrer(d2, { HELIX_MOTEUR: "llamacpp", HELIX_LLAMACPP_PORT: String(portReste) });
+    await demarrer(d2, { OXOAI_MOTEUR: "llamacpp", OXOAI_LLAMACPP_PORT: String(portReste) });
     const m2 = await fetch(`${G}/v1/models`, { headers: { Authorization: `Bearer ${JETON}` } }).then((r) => r.json()).catch(() => ({}));
-    // Il gardait le modèle en mémoire après la fermeture de Helix : il est arrêté par son PID, puis remplacé (ici par une copie de Node, qui ne sait pas servir : seul l'arrêt compte).
+    // Il gardait le modèle en mémoire après la fermeture de OxoAI : il est arrêté par son PID, puis remplacé (ici par une copie de Node, qui ne sait pas servir : seul l'arrêt compte).
     for (let i = 0; i < 50 && reste.exitCode === null && reste.signalCode === null; i++) await attendre(200);
-    verifier("un serveur resté de Helix (même fichier exécuté, lu par lsof) est arrêté puis remplacé, jamais gardé à côté d'un second", reste.exitCode !== null || reste.signalCode !== null, `code ${reste.exitCode} signal ${reste.signalCode} ${JSON.stringify(m2).slice(0, 120)}`);
+    verifier("un serveur resté de OxoAI (même fichier exécuté, lu par lsof) est arrêté puis remplacé, jamais gardé à côté d'un second", reste.exitCode !== null || reste.signalCode !== null, `code ${reste.exitCode} signal ${reste.signalCode} ${JSON.stringify(m2).slice(0, 120)}`);
     await arreter();
     reste.kill();
 
@@ -238,7 +238,7 @@ try {
     );
     // `exec` : le shell laisse la place à Node sous le même numéro, comme le vrai llama-server est lui-même le processus lancé.
     writeFileSync(join(d3, "llamacpp", "b11146", "llama-server"), `#!/bin/sh\nexec ${JSON.stringify(process.execPath)} ${JSON.stringify(serveurJs)} "$@"\n`);
-    await demarrer(d3, { HELIX_MOTEUR: "llamacpp" });
+    await demarrer(d3, { OXOAI_MOTEUR: "llamacpp" });
     const m3 = await fetch(`${G}/v1/models`, { headers: { Authorization: `Bearer ${JETON}` } }).then((r) => r.json()).catch(() => ({}));
     verifier("le serveur lancé par la passerelle est reconnu (son numéro) et ses modèles servis", (m3.data ?? []).some((m) => m.id === "llamacpp/qwen3-1.7b"), JSON.stringify(m3).slice(0, 200));
     await arreter();

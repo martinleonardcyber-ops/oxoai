@@ -201,9 +201,9 @@ await new Promise((ok) => faux.listen(PORT_FAUX, "127.0.0.1", ok));
 /* Passerelle jetable                                                         */
 /* ------------------------------------------------------------------------- */
 
-const AUX = mkdtempSync(join(tmpdir(), "helix-messageries-aux-"));
-const DONNEES = mkdtempSync(join(tmpdir(), "helix-messageries-donnees-"));
-const ESPACE = mkdtempSync(join(tmpdir(), "helix-messageries-espace-"));
+const AUX = mkdtempSync(join(tmpdir(), "oxoai-messageries-aux-"));
+const DONNEES = mkdtempSync(join(tmpdir(), "oxoai-messageries-donnees-"));
+const ESPACE = mkdtempSync(join(tmpdir(), "oxoai-messageries-espace-"));
 const PREALABLE = join(AUX, "prealable.mjs");
 writeFileSync(
   PREALABLE,
@@ -233,15 +233,15 @@ const PORT = await portLibre();
 const G = `http://127.0.0.1:${PORT}`;
 const ENV = {
   ...process.env,
-  HELIX_CONFIG: join(AUX, "profil.json"),
-  HELIX_GATEWAY_PORT: String(PORT),
-  HELIX_DATA_DIR: DONNEES,
-  HELIX_WORKSPACE: ESPACE,
-  HELIX_OPENCODE_BIN: FAUX_OPENCODE,
-  HELIX_CODE_DIR: ESPACE,
-  HELIX_LMSTUDIO_URL: "http://127.0.0.1:9/v1",
-  HELIX_EXO_URL: "http://127.0.0.1:9/v1",
-  HELIX_GATEWAY_HOST: "127.0.0.1",
+  OXOAI_CONFIG: join(AUX, "profil.json"),
+  OXOAI_GATEWAY_PORT: String(PORT),
+  OXOAI_DATA_DIR: DONNEES,
+  OXOAI_WORKSPACE: ESPACE,
+  OXOAI_OPENCODE_BIN: FAUX_OPENCODE,
+  OXOAI_CODE_DIR: ESPACE,
+  OXOAI_LMSTUDIO_URL: "http://127.0.0.1:9/v1",
+  OXOAI_EXO_URL: "http://127.0.0.1:9/v1",
+  OXOAI_GATEWAY_HOST: "127.0.0.1",
 };
 const passerelle = spawn(process.execPath, ["--import", PREALABLE, join(RACINE, "gateway", "src", "index.ts")], { env: ENV, stdio: ["ignore", "pipe", "pipe"] });
 let journal = "";
@@ -264,29 +264,29 @@ if (!demarree) {
 }
 
 const JETON = readFileSync(join(DONNEES, "instance-token"), "utf8").trim();
-const avecJeton = { "Content-Type": "application/json", Authorization: `Bearer ${JETON}`, "X-Helix-Langue": "fr" };
+const avecJeton = { "Content-Type": "application/json", Authorization: `Bearer ${JETON}`, "X-OxoAI-Langue": "fr" };
 const appel = (chemin, options = {}) => fetch(`${G}${chemin}`, { redirect: "manual", ...options });
 const poster = (chemin, entetes, corps) => appel(chemin, { method: "POST", headers: entetes, body: JSON.stringify(corps ?? {}) });
-const premier = await (await poster("/helix/auth/create", avecJeton, { fullName: "Alice Essai", email: "alice@example.test", password: "Mot2PasseSolide!42" })).json();
-const A = { ...avecJeton, "X-Helix-Session": premier.session?.token };
+const premier = await (await poster("/oxoai/auth/create", avecJeton, { fullName: "Alice Essai", email: "alice@example.test", password: "Mot2PasseSolide!42" })).json();
+const A = { ...avecJeton, "X-OxoAI-Session": premier.session?.token };
 const idA = premier.account?.id;
-const creeB = await (await poster("/helix/auth/create", A, { fullName: "Bruno Essai", email: "bruno@example.test", password: "Provisoire2Passe!11" })).json();
-const connB = await (await poster("/helix/auth/mot-de-passe-provisoire", avecJeton, { accountId: creeB.account?.id, password: "Provisoire2Passe!11", nouveau: "Bruno2PasseSolide!57" })).json();
-const B = { ...avecJeton, "X-Helix-Session": connB.session?.token };
+const creeB = await (await poster("/oxoai/auth/create", A, { fullName: "Bruno Essai", email: "bruno@example.test", password: "Provisoire2Passe!11" })).json();
+const connB = await (await poster("/oxoai/auth/mot-de-passe-provisoire", avecJeton, { accountId: creeB.account?.id, password: "Provisoire2Passe!11", nouveau: "Bruno2PasseSolide!57" })).json();
+const B = { ...avecJeton, "X-OxoAI-Session": connB.session?.token };
 const idB = creeB.account?.id;
-const etatDe = async (entetes = A) => (await (await appel("/helix/messageries", { headers: entetes })).json()).services ?? [];
+const etatDe = async (entetes = A) => (await (await appel("/oxoai/messageries", { headers: entetes })).json()).services ?? [];
 const service = async (id, entetes = A) => (await etatDe(entetes)).find((s) => s.id === id);
-const connecter = (corps, entetes = A) => poster("/helix/messageries/connecter", entetes, corps);
+const connecter = (corps, entetes = A) => poster("/oxoai/messageries/connecter", entetes, corps);
 
 /* ------------------------------------------------------------------------- */
 console.log("\nA. Qui a le droit");
 {
-  const sans = await appel("/helix/messageries", { headers: avecJeton });
+  const sans = await appel("/oxoai/messageries", { headers: avecJeton });
   verifier("état des messageries : sans séance → 401", sans.status === 401, sans.status);
-  const vueB = await (await appel("/helix/messageries", { headers: B })).json();
+  const vueB = await (await appel("/oxoai/messageries", { headers: B })).json();
   verifier("un collègue voit l'état des trois messageries, et l'écran sait qu'il n'administre pas", Array.isArray(vueB.services) && vueB.services.length === 3 && vueB.administrateur === false, JSON.stringify(vueB).slice(0, 200));
   for (const [suite, corps] of [["/connecter", { service: "telegram", jeton: TG }], ["/envoi", { service: "telegram", envoi: true }], ["/oublier", { service: "discord" }]]) {
-    const r = await poster(`/helix/messageries${suite}`, B, corps);
+    const r = await poster(`/oxoai/messageries${suite}`, B, corps);
     verifier(`membre qui n'administre pas : ${suite} refusé (403)`, r.status === 403, r.status);
   }
   const avantB = recues.length;
@@ -295,9 +295,9 @@ console.log("\nA. Qui a le droit");
   verifier("une messagerie hors de la liste est refusée (400)", inconnu.status === 400, inconnu.status);
   const forme = await connecter({ service: "telegram", jeton: "pas un jeton" });
   verifier("un jeton qui n'a pas la forme de ceux de Telegram est refusé sans rien envoyer (400)", forme.status === 400 && !recues.some((x) => x.hote === "api.telegram.org"), forme.status);
-  const mcp = await poster("/helix/connecteurs/ajouter", A, { id: "telegram", command: "/bin/sh" });
+  const mcp = await poster("/oxoai/connecteurs/ajouter", A, { id: "telegram", command: "/bin/sh" });
   verifier("un connecteur MCP ne peut pas prendre le préfixe « telegram » (réservé)", mcp.status === 400, mcp.status);
-  const webhookSansCompte = await appel("/helix/messageries/whatsapp/webhook", { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" });
+  const webhookSansCompte = await appel("/oxoai/messageries/whatsapp/webhook", { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" });
   verifier("webhook WhatsApp sans numéro branché : rien n'est lu (404), sans jeton d'instance requis", webhookSansCompte.status === 404, webhookSansCompte.status);
 }
 
@@ -342,19 +342,19 @@ console.log("\nB. Connexion : le jeton est essayé, jamais rendu");
   verifier("WhatsApp : `appsecret_proof` sur chaque appel à Meta", preuves, "preuve manquante");
   const vueA = await service("whatsapp");
   const vueB = await service("whatsapp", B);
-  verifier("le jeton de vérification du webhook n'est montré qu'à l'administrateur, avec l'adresse à déclarer chez Meta", typeof vueA?.webhook?.verification === "string" && vueA.webhook.verification.length >= 30 && vueB?.webhook?.verification === undefined && vueA.webhook.adresse === `${G}/helix/messageries/whatsapp/webhook`, JSON.stringify([vueA?.webhook?.adresse, vueB?.webhook]));
+  verifier("le jeton de vérification du webhook n'est montré qu'à l'administrateur, avec l'adresse à déclarer chez Meta", typeof vueA?.webhook?.verification === "string" && vueA.webhook.verification.length >= 30 && vueB?.webhook?.verification === undefined && vueA.webhook.adresse === `${G}/oxoai/messageries/whatsapp/webhook`, JSON.stringify([vueA?.webhook?.adresse, vueB?.webhook]));
 }
 
 const VERIFICATION = (await service("whatsapp"))?.webhook?.verification ?? "";
 const signer = (corps, secret = WA_SECRET) => `sha256=${createHmac("sha256", secret).update(corps).digest("hex")}`;
 const notification = (messages, numero = WA_NUMERO) =>
   JSON.stringify({ object: "whatsapp_business_account", entry: [{ id: WA_COMPTE, changes: [{ field: "messages", value: { messaging_product: "whatsapp", metadata: { display_phone_number: "33123456789", phone_number_id: numero }, contacts: messages.map((m) => ({ wa_id: m.from, profile: { name: m.nom } })), messages: messages.map((m) => ({ from: m.from, id: m.id, timestamp: String(m.ts), type: "text", text: { body: m.texte } })) } }] }] });
-const deposer = (corps, signature) => appel("/helix/messageries/whatsapp/webhook", { method: "POST", headers: { "Content-Type": "application/json", ...(signature ? { "X-Hub-Signature-256": signature } : {}) }, body: corps });
+const deposer = (corps, signature) => appel("/oxoai/messageries/whatsapp/webhook", { method: "POST", headers: { "Content-Type": "application/json", ...(signature ? { "X-Hub-Signature-256": signature } : {}) }, body: corps });
 
 console.log("\nC. Webhook de WhatsApp : signé par Meta, ou ignoré");
 {
-  const mauvais = await appel(`/helix/messageries/whatsapp/webhook?hub.mode=subscribe&hub.verify_token=autre&hub.challenge=1158201444`);
-  const bon = await appel(`/helix/messageries/whatsapp/webhook?hub.mode=subscribe&hub.verify_token=${encodeURIComponent(VERIFICATION)}&hub.challenge=1158201444`);
+  const mauvais = await appel(`/oxoai/messageries/whatsapp/webhook?hub.mode=subscribe&hub.verify_token=autre&hub.challenge=1158201444`);
+  const bon = await appel(`/oxoai/messageries/whatsapp/webhook?hub.mode=subscribe&hub.verify_token=${encodeURIComponent(VERIFICATION)}&hub.challenge=1158201444`);
   const bonTexte = await bon.text();
   verifier("abonnement : faux jeton de vérification → 403 ; le bon → le défi renvoyé tel quel", mauvais.status === 403 && bon.status === 200 && bonTexte === "1158201444", `${mauvais.status} ${bon.status} ${bonTexte}`);
   const recent = notification([{ from: "33611111111", nom: "Marie Client", id: "wamid.R1", ts: maintenant() - 600, texte: "Bonjour, je voudrais un rendez-vous" }]);
@@ -401,11 +401,11 @@ console.log("\nC. Webhook de WhatsApp : signé par Meta, ou ignoré");
 
 console.log("\nD. Un vrai Chat : la carte d'envoi, et l'appel recopié d'un message reçu");
 {
-  await poster("/helix/approbation/niveau", A, { niveau: "tout" });
+  await poster("/oxoai/approbation/niveau", A, { niveau: "tout" });
   const chat = (entetes, question) => appel("/v1/chat/completions", { method: "POST", headers: entetes, body: JSON.stringify({ model: "essai-messageries", stream: true, tools: true, messages: [{ role: "user", content: question }] }) }).then((r) => r.text());
   const attendreCarte = async (entetes, outil, enCours) => {
     for (let t = 0; t < 10_000; t += 200) {
-      const e = await (await appel("/helix/approbation", { headers: entetes })).json().catch(() => ({}));
+      const e = await (await appel("/oxoai/approbation", { headers: entetes })).json().catch(() => ({}));
       const c = (e.enAttente ?? []).find((d) => d.detail?.outil === outil);
       if (c) return c;
       const fini = await Promise.race([enCours.then(() => true), attendre(200).then(() => false)]);
@@ -419,7 +419,7 @@ console.log("\nD. Un vrai Chat : la carte d'envoi, et l'appel recopié d'un mess
   const avant = envoisTg().length;
   const enCours = chat(A, "RESUME-TG : résume la conversation avec Paul.");
   const carte = await attendreCarte(A, "telegram__envoyer", enCours);
-  if (carte) await poster("/helix/approbation/repondre", A, { id: carte.id, accord: false });
+  if (carte) await poster("/oxoai/approbation/repondre", A, { id: carte.id, accord: false });
   const flux = await enCours;
   const lu = auModele.some((d) => (d.messages ?? []).some((m) => m.role === "tool" && /Message glissé par un inconnu/.test(String(m.content))));
   verifier("témoin : le modèle a bien lu le message piégé par un vrai appel (telegram__messages)", lu, auModele.length);
@@ -436,7 +436,7 @@ console.log("\nD. Un vrai Chat : la carte d'envoi, et l'appel recopié d'un mess
     Boolean(carte2) && String(carte2.detail?.arguments).includes("FIN-DU-MESSAGE-TG") && /Équipe Essai/.test(String(carte2.detail?.destinataire)) && /Équipe Essai/.test(carte2.resume) && carte2.detail?.unique === true,
     carte2 ? JSON.stringify({ d: carte2.detail?.destinataire, r: carte2.resume.slice(0, 120) }) : "aucune carte",
   );
-  if (carte2) await poster("/helix/approbation/repondre", A, { id: carte2.id, accord: true });
+  if (carte2) await poster("/oxoai/approbation/repondre", A, { id: carte2.id, accord: true });
   await enCours2;
   const parti = envoisTg().at(-1);
   const corpsParti = JSON.parse(parti?.corps || "{}");
@@ -446,9 +446,9 @@ console.log("\nD. Un vrai Chat : la carte d'envoi, et l'appel recopié d'un mess
   const avantB = envoisTg().length;
   const enCours3 = chat(B, "ENVOIE-TG : envoie le point au groupe.");
   const carte3 = await attendreCarte(B, "telegram__envoyer", enCours3);
-  const vueParA = (await (await appel("/helix/approbation", { headers: A })).json()).enAttente ?? [];
+  const vueParA = (await (await appel("/oxoai/approbation", { headers: A })).json()).enAttente ?? [];
   verifier("la carte d'un collègue n'est posée qu'à lui (l'administrateur ne peut pas répondre à sa place)", Boolean(carte3) && !vueParA.some((d) => d.id === carte3?.id), carte3 ? "vue" : "aucune carte");
-  if (carte3) await poster("/helix/approbation/repondre", B, { id: carte3.id, accord: true });
+  if (carte3) await poster("/oxoai/approbation/repondre", B, { id: carte3.id, accord: true });
   const flux3 = await enCours3;
   verifier("membre qui n'administre pas : même après sa carte acceptée, rien n'est envoyé", envoisTg().length === avantB, `${envoisTg().length - avantB} envoi(s) ; ${flux3.slice(-200)}`);
 
@@ -461,21 +461,21 @@ console.log("\nD. Un vrai Chat : la carte d'envoi, et l'appel recopié d'un mess
     Boolean(carte4) && carte4.detail?.texteFinal === "Bonjour Paul, votre rendez-vous est le lundi 10 h." && /33622222222/.test(String(carte4.detail?.destinataire)) && /fermée/.test(carte4.resume) && /facture/.test(carte4.resume),
     carte4 ? JSON.stringify({ t: carte4.detail?.texteFinal, d: carte4.detail?.destinataire, r: carte4.resume }) : "aucune carte",
   );
-  if (carte4) await poster("/helix/approbation/repondre", A, { id: carte4.id, accord: true });
+  if (carte4) await poster("/oxoai/approbation/repondre", A, { id: carte4.id, accord: true });
   await enCours4;
   const envoiWa = recues.filter((x) => x.hote === "graph.facebook.com" && x.chemin.includes("/messages")).slice(avantWa).at(-1);
   const jWa = JSON.parse(envoiWa?.corps || "{}");
   verifier("accepté : le modèle part hors de la fenêtre, avec ses deux valeurs, au numéro montré", jWa.type === "template" && jWa.to === "33622222222" && jWa.template?.name === "rappel_rdv" && JSON.stringify(jWa.template?.components) === JSON.stringify([{ type: "body", parameters: [{ type: "text", text: "Paul" }, { type: "text", text: "lundi 10 h" }] }]), JSON.stringify(jWa).slice(0, 240));
-  await poster("/helix/approbation/niveau", A, { niveau: "modifications" });
+  await poster("/oxoai/approbation/niveau", A, { niveau: "modifications" });
 }
 
 console.log("\nE. Jetons : jamais à l'écran, jamais en clair sur le disque, jamais au journal");
 {
   for (const [nom, entetes] of [["administrateur", A], ["collègue", B]]) {
-    const brut = await (await appel("/helix/messageries", { headers: entetes })).text();
+    const brut = await (await appel("/oxoai/messageries", { headers: entetes })).text();
     verifier(`état (${nom}) : trois messageries branchées, sans aucun jeton`, JSON.parse(brut).services.every((s) => s.configure) && !SECRETS.test(brut), brut.match(SECRETS)?.[0] ?? brut.slice(0, 160));
   }
-  const outils = await (await appel("/helix/outils", { headers: A })).text();
+  const outils = await (await appel("/oxoai/outils", { headers: A })).text();
   verifier("la puce « Outils » nomme les messageries branchées, sans rien de secret", /Telegram/.test(outils) && /Discord/.test(outils) && /WhatsApp/.test(outils) && !SECRETS.test(outils), outils.slice(0, 200));
   const fichiers = [];
   const parcourir = (d) => {
@@ -562,7 +562,7 @@ s.carteWa = { nombre: cartes.length, montreTout: String(cartes[0]?.detail?.argum
 if (cartes[0]) ap.repondre(cartes[0].id, false, "outil", A.userId);
 s.carteWa.refuse = (await verdict).autorise === false;
 const { avecLangueDe } = await import(${src("langue.ts")});
-await avecLangueDe({ "x-helix-langue": "fr" }, new URL("http://essai/"), async () => {
+await avecLangueDe({ "x-oxoai-langue": "fr" }, new URL("http://essai/"), async () => {
   s.envoiFerme = await m.reglerEnvoi("discord", false, A.userId);
   s.outilsSansEnvoiDiscord = m.toolsForModel().map((x) => x.function.name);
   s.dcApresFermeture = await appeler("discord__envoyer", { salon: ${JSON.stringify(SALON)}, texte: "Après fermeture" });

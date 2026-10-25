@@ -1,21 +1,21 @@
 /**
- * La ligne de commande `helix` (cli/helix.mjs), livrée avec l'application.
+ * La ligne de commande `oxoai` (cli/oxoai.mjs), livrée avec l'application.
  *
  * Elle n'était pas dans le paquet : il fallait le dépôt et un Node installé.
  * Le paquet l'embarque maintenant (extraResources, `Resources/cli`), et un
- * bouton des Paramètres pose un petit lanceur dans `~/.local/bin/helix`.
+ * bouton des Paramètres pose un petit lanceur dans `~/.local/bin/oxoai`.
  *
  * Le lanceur fait tourner le script avec un vrai Node (28/09/2026). Il le
  * faisait avec le binaire de l'application en mode Node (ELECTRON_RUN_AS_NODE),
  * ce qui obligeait à laisser ouvert le fusible RunAsNode, par lequel
  * n'importe quel programme du poste pouvait faire tourner son code sous
- * l'identité de Helix (SECURITE.md, « RunAsNode fermé »). Dans l'ordre :
- *  1. le Node que Helix pose lui-même (gateway/src/installationOpenClaw.ts :
+ * l'identité de OxoAI (SECURITE.md, « RunAsNode fermé »). Dans l'ordre :
+ *  1. le Node que OxoAI pose lui-même (gateway/src/installationOpenClaw.ts :
  *     version épinglée, empreinte vérifiée), s'il est là ;
  *  2. sinon le Node du système, s'il est en version 20 ou plus (ce que
- *     demande cli/helix.mjs) ;
+ *     demande cli/oxoai.mjs) ;
  *  3. sinon le lanceur le dit, et « Mettre en place » demande à la passerelle
- *     de poser le Node de Helix (par son canal, electron/main.cjs).
+ *     de poser le Node de OxoAI (par son canal, electron/main.cjs).
  * Le choix se fait à chaque lancement, dans le lanceur : un Node installé ou
  * retiré ensuite est pris en compte sans rien refaire.
  *
@@ -25,7 +25,7 @@
  * bouton « Retirer » enlève le lanceur et cette ligne, et rien d'autre.
  *
  * Windows (04/10/2026, demande de Medhi : l'écran disait « pas encore prise
- * en charge ») : un `helix.cmd` dans `%USERPROFILE%\.helix\bin`, et ce dossier
+ * en charge ») : un `oxoai.cmd` dans `%USERPROFILE%\.oxoai\bin`, et ce dossier
  * ajouté au PATH du compte (registre `HKCU\Environment`), jamais à celui de la
  * machine : toujours sans droit d'administrateur. Détails plus bas, à
  * `contenuLanceurWindows` et `SCRIPT_PATH_WINDOWS`.
@@ -47,17 +47,17 @@ const { execFile } = require("node:child_process");
  */
 const app = () => require("electron").app;
 
-const MARQUE = "# Ajouté par HelixAI (ligne de commande helix)";
-/** La version de Node que demande cli/helix.mjs (fetch intégré, modules standard). */
+const MARQUE = "# Ajouté par OxoAI (ligne de commande oxoai)";
+/** La version de Node que demande cli/oxoai.mjs (fetch intégré, modules standard). */
 const NODE_MINIMUM = 20;
 const windows = () => process.platform === "win32";
 /*
- * Sous Windows, un dossier à Helix dans le dossier du compte (à côté de ses
- * données, `~\.helix`), pas `~\.local\bin` : aucun usage n'y en fait un dossier
+ * Sous Windows, un dossier à OxoAI dans le dossier du compte (à côté de ses
+ * données, `~\.oxoai`), pas `~\.local\bin` : aucun usage n'y en fait un dossier
  * de commandes, et c'est nous qui l'ajoutons au PATH.
  */
-const dossierLanceur = () => (windows() ? path.join(os.homedir(), ".helix", "bin") : path.join(os.homedir(), ".local", "bin"));
-const lanceur = () => path.join(dossierLanceur(), windows() ? "helix.cmd" : "helix");
+const dossierLanceur = () => (windows() ? path.join(os.homedir(), ".oxoai", "bin") : path.join(os.homedir(), ".local", "bin"));
+const lanceur = () => path.join(dossierLanceur(), windows() ? "oxoai.cmd" : "oxoai");
 /*
  * Le fichier que lit vraiment le shell de connexion (revue Linux du
  * 27/09/2026) : zsh lit `~/.zprofile`, bash `~/.bash_profile` s'il existe, et
@@ -74,18 +74,18 @@ function profil() {
 /** Le script livré : dans le paquet, ou dans le dépôt en développement. */
 function script() {
   return app().isPackaged
-    ? path.join(process.resourcesPath, "cli", "helix.mjs")
-    : path.join(__dirname, "..", "cli", "helix.mjs");
+    ? path.join(process.resourcesPath, "cli", "oxoai.mjs")
+    : path.join(__dirname, "..", "cli", "oxoai.mjs");
 }
 
 /**
- * Le Node que Helix pose : même règle que `racine()` de
+ * Le Node que OxoAI pose : même règle que `racine()` de
  * gateway/src/installationOpenClaw.ts (la passerelle reçoit le même
  * environnement que ce processus). `node` y est un lien vers la version
  * installée : le chemin reste bon quand elle change.
  */
 function nodePrive() {
-  const donnees = process.env.HELIX_DATA_DIR ?? path.join(os.homedir(), ".helix", "data");
+  const donnees = process.env.OXOAI_DATA_DIR ?? path.join(os.homedir(), ".oxoai", "data");
   // Windows : `node.exe` à la racine du dossier (dispositionNode, gateway/src/plateformeOpenClaw.ts), et `node` y est une « junction ».
   return windows() ? path.join(donnees, "openclaw-moteur", "node", "node.exe") : path.join(donnees, "openclaw-moteur", "node", "bin", "node");
 }
@@ -98,14 +98,14 @@ function nomProduit() {
   } catch {
     /* paquet sans nom affiché */
   }
-  return "Helix";
+  return "OxoAI";
 }
 
 const guillemets = (s) => `'${String(s).replace(/'/g, `'\\''`)}'`;
 
 /**
  * Le lanceur. Il choisit le Node à chaque lancement (voir l'en-tête) : celui
- * de Helix, puis `node` du PATH du terminal, puis les emplacements usuels, le
+ * de OxoAI, puis `node` du PATH du terminal, puis les emplacements usuels, le
  * premier en version 20 ou plus. Le message final est en français, comme toute
  * la ligne de commande (cli/textes.mjs, décision du 25/09/2026).
  */
@@ -113,14 +113,14 @@ function contenuLanceur({ script: scriptCli = script(), prive = nodePrive(), nom
   const verifier = `process.exit(Number(process.versions.node.split(".")[0]) >= ${NODE_MINIMUM} ? 0 : 1)`;
   return [
     "#!/bin/sh",
-    "# Lanceur de la ligne de commande helix, posé par l'application (Réglages).",
+    "# Lanceur de la ligne de commande oxoai, posé par l'application (Réglages).",
     `# Node : celui que l'application pose, sinon celui du système en version ${NODE_MINIMUM} ou plus.`,
     `for NODE in ${guillemets(prive)} "$(command -v node 2>/dev/null)" /opt/homebrew/bin/node /usr/local/bin/node /usr/bin/node; do`,
     `  [ -n "$NODE" ] && [ -x "$NODE" ] || continue`,
     `  "$NODE" -e ${guillemets(verifier)} 2>/dev/null || continue`,
     `  exec "$NODE" ${guillemets(scriptCli)} "$@"`,
     "done",
-    `echo ${guillemets(`helix : Node ${NODE_MINIMUM} ou plus est introuvable sur cet ordinateur. Ouvrez ${nom}, Réglages › Installer les apps › CLI : « Mettre en place » pose le Node de ${nom}.`)} >&2`,
+    `echo ${guillemets(`oxoai : Node ${NODE_MINIMUM} ou plus est introuvable sur cet ordinateur. Ouvrez ${nom}, Réglages › Installer les apps › CLI : « Mettre en place » pose le Node de ${nom}.`)} >&2`,
     "exit 127",
     "",
   ].join("\n");
@@ -129,7 +129,7 @@ function contenuLanceur({ script: scriptCli = script(), prive = nodePrive(), nom
 /*
  * ── Windows ────────────────────────────────────────────────────────────────
  *
- * Le lanceur est un `helix.cmd` (04/10/2026). Un `.ps1` serait refusé par la
+ * Le lanceur est un `oxoai.cmd` (04/10/2026). Un `.ps1` serait refusé par la
  * stratégie d'exécution par défaut des postes Windows ; un `.cmd` se lance
  * depuis PowerShell comme depuis l'Invite de commandes.
  *
@@ -147,7 +147,7 @@ function contenuLanceur({ script: scriptCli = script(), prive = nodePrive(), nom
  *    ce qui resterait d'accentué (application installée ailleurs, message).
  * Fins de ligne CRLF : avec des LF seuls, `goto` manque parfois son étiquette.
  *
- * Node, dans le même ordre qu'ailleurs : celui que Helix pose, puis ceux du
+ * Node, dans le même ordre qu'ailleurs : celui que OxoAI pose, puis ceux du
  * PATH (`where $PATH:node.exe` : le PATH seul, jamais le dossier courant, où
  * un projet téléchargé pourrait avoir mis un `node.exe`), en écartant
  * l'alias `WindowsApps\node.exe`, qui ouvre le Microsoft Store au lieu de
@@ -175,27 +175,27 @@ function contenuLanceurWindows({ script: scriptCli = script(), prive = nodePrive
   const systeme = "%SystemRoot%\\System32";
   return [
     "@echo off",
-    "rem Lanceur de la ligne de commande helix, posé par l'application (Réglages).",
+    "rem Lanceur de la ligne de commande oxoai, posé par l'application (Réglages).",
     `rem Node : celui que l'application pose, sinon celui du PATH en version ${NODE_MINIMUM} ou plus.`,
     "setlocal DisableDelayedExpansion",
     // La page de code d'avant : le dernier mot de « Page de codes active : 850 » (« 850. » en allemand).
-    `for /f "tokens=*" %%c in ('${systeme}\\chcp.com') do for %%d in (%%c) do set "HELIX_PAGE=%%d"`,
-    'if defined HELIX_PAGE set "HELIX_PAGE=%HELIX_PAGE:.=%"',
+    `for /f "tokens=*" %%c in ('${systeme}\\chcp.com') do for %%d in (%%c) do set "OXOAI_PAGE=%%d"`,
+    'if defined OXOAI_PAGE set "OXOAI_PAGE=%OXOAI_PAGE:.=%"',
     `${systeme}\\chcp.com 65001 >nul`,
-    `set "HELIX_NODE=${cheminCmd(prive, env)}"`,
-    `set "HELIX_SCRIPT=${cheminCmd(scriptCli, env)}"`,
-    `if exist "%HELIX_NODE%" "%HELIX_NODE%" -e "${verifier}" >nul 2>&1 && goto lancer`,
+    `set "OXOAI_NODE=${cheminCmd(prive, env)}"`,
+    `set "OXOAI_SCRIPT=${cheminCmd(scriptCli, env)}"`,
+    `if exist "%OXOAI_NODE%" "%OXOAI_NODE%" -e "${verifier}" >nul 2>&1 && goto lancer`,
     `for /f "delims=" %%n in ('${systeme}\\where.exe $PATH:node.exe 2^>nul ^| ${systeme}\\findstr.exe /v /i /l WindowsApps') do (`,
-    `  "%%n" -e "${verifier}" >nul 2>&1 && (set "HELIX_NODE=%%n" & goto lancer)`,
+    `  "%%n" -e "${verifier}" >nul 2>&1 && (set "OXOAI_NODE=%%n" & goto lancer)`,
     ")",
-    `>&2 echo ${texteEcho(`helix : Node ${NODE_MINIMUM} ou plus est introuvable sur cet ordinateur. Ouvrez ${nom}, Réglages › Installer les apps › CLI : « Mettre en place » pose le Node de ${nom}.`)}`,
-    `if defined HELIX_PAGE ${systeme}\\chcp.com %HELIX_PAGE% >nul`,
+    `>&2 echo ${texteEcho(`oxoai : Node ${NODE_MINIMUM} ou plus est introuvable sur cet ordinateur. Ouvrez ${nom}, Réglages › Installer les apps › CLI : « Mettre en place » pose le Node de ${nom}.`)}`,
+    `if defined OXOAI_PAGE ${systeme}\\chcp.com %OXOAI_PAGE% >nul`,
     "exit /b 127",
     ":lancer",
-    '"%HELIX_NODE%" "%HELIX_SCRIPT%" %*',
-    'set "HELIX_CODE=%ERRORLEVEL%"',
-    `if defined HELIX_PAGE ${systeme}\\chcp.com %HELIX_PAGE% >nul`,
-    "exit /b %HELIX_CODE%",
+    '"%OXOAI_NODE%" "%OXOAI_SCRIPT%" %*',
+    'set "OXOAI_CODE=%ERRORLEVEL%"',
+    `if defined OXOAI_PAGE ${systeme}\\chcp.com %OXOAI_PAGE% >nul`,
+    "exit /b %OXOAI_CODE%",
     "",
   ].join("\r\n");
 }
@@ -228,7 +228,7 @@ const SCRIPT_PATH_WINDOWS = String.raw`
 $ErrorActionPreference = 'Stop'
 $cle = [Microsoft.Win32.Registry]::CurrentUser.CreateSubKey('Environment')
 $brut = [string]$cle.GetValue('Path', '', [Microsoft.Win32.RegistryValueOptions]::DoNotExpandEnvironmentNames)
-$action = $env:HELIX_CLI_ACTION
+$action = $env:OXOAI_CLI_ACTION
 if ($action -eq 'lire') {
   $machine = [string][Environment]::GetEnvironmentVariable('Path', 'Machine')
   $b64 = { param($s) [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes([Environment]::ExpandEnvironmentVariables($s))) }
@@ -236,7 +236,7 @@ if ($action -eq 'lire') {
   exit 0
 }
 $normal = { param($e) [Environment]::ExpandEnvironmentVariables($e.Trim().Trim('"')).TrimEnd('\').ToLowerInvariant() }
-$dossier = [string]$env:HELIX_CLI_DOSSIER
+$dossier = [string]$env:OXOAI_CLI_DOSSIER
 $cible = & $normal $dossier
 if (-not $cible) { throw 'dossier vide' }
 $entrees = $brut -split ';'
@@ -256,8 +256,8 @@ if (@($cle.GetValueNames()) -contains 'Path') {
 if ($nouveau -eq '') { $cle.DeleteValue('Path', $false) } else { $cle.SetValue('Path', $nouveau, $genre) }
 $cle.Close()
 try {
-  [Environment]::SetEnvironmentVariable('HELIX_CLI_DIFFUSION', '1', 'User')
-  [Environment]::SetEnvironmentVariable('HELIX_CLI_DIFFUSION', [string]::Empty, 'User')
+  [Environment]::SetEnvironmentVariable('OXOAI_CLI_DIFFUSION', '1', 'User')
+  [Environment]::SetEnvironmentVariable('OXOAI_CLI_DIFFUSION', [string]::Empty, 'User')
 } catch { }
 [Console]::Out.Write($action)
 `;
@@ -271,7 +271,7 @@ function pathWindows(action, dossier = dossierLanceur()) {
     execFile(
       powershell,
       args,
-      { encoding: "utf8", timeout: 60_000, windowsHide: true, env: { ...process.env, HELIX_CLI_ACTION: action, HELIX_CLI_DOSSIER: dossier } },
+      { encoding: "utf8", timeout: 60_000, windowsHide: true, env: { ...process.env, OXOAI_CLI_ACTION: action, OXOAI_CLI_DOSSIER: dossier } },
       (err, sortie, erreur) => resolve({ ok: !err, sortie: String(sortie).trim(), erreur: String(erreur || err?.message || "").trim() }),
     );
   });
@@ -303,7 +303,7 @@ async function pathsWindows() {
   if (r.ok) {
     const [compte = "", machine = ""] = r.sortie.split("|").map((b) => Buffer.from(b, "base64").toString("utf8"));
     valeur = { compte: compte.split(";").filter((d) => d.trim()), machine: machine.split(";").filter((d) => d.trim()) };
-  } else console.error(`[helix] PATH du compte illisible : ${r.erreur.slice(-400)}`);
+  } else console.error(`[oxoai] PATH du compte illisible : ${r.erreur.slice(-400)}`);
   registreGarde = { le: Date.now(), valeur };
   return valeur;
 }
@@ -361,7 +361,7 @@ function pathDuShell() {
   });
 }
 
-/** Le lanceur posé par l'application porte cette phrase ; un autre programme nommé helix, non. */
+/** Le lanceur posé par l'application porte cette phrase ; un autre programme nommé oxoai, non. */
 const estLeNotre = (contenu) => contenu.includes("posé par l'application");
 
 /** Pourquoi la commande n'est pas proposée ici, ou null. Windows l'a depuis le 04/10/2026. */
@@ -380,7 +380,7 @@ async function etat(o = {}) {
   const disponible = empechement() === null && fs.existsSync(scriptCli);
   let installe = false;
   let aJour = false;
-  // Un fichier ~/.local/bin/helix (ou helix.cmd) qui n'est pas le nôtre : on ne le remplace pas (revue du 26/09/2026).
+  // Un fichier ~/.local/bin/oxoai (ou oxoai.cmd) qui n'est pas le nôtre : on ne le remplace pas (revue du 26/09/2026).
   let etranger = false;
   try {
     const actuel = fs.readFileSync(lanceur(), "utf8");
@@ -421,14 +421,14 @@ async function etat(o = {}) {
     profil: windows() ? "" : profil(),
     // Windows : le dossier est dans le PATH du compte (c'est nous qui l'y mettons, et « Retirer » l'enlève).
     ligneAjoutee,
-    // Le Node dont se servira le lanceur : « prive » (celui de Helix), « systeme », ou null (aucun en version 20 ou plus).
+    // Le Node dont se servira le lanceur : « prive » (celui de OxoAI), « systeme », ou null (aucun en version 20 ou plus).
     node: disponible ? await nodeUtilisable() : null,
   };
 }
 
 /**
  * Pose le lanceur. `demanderNodePrive` (electron/main.cjs) : quand le poste
- * n'a aucun Node qui convienne, la passerelle pose celui de Helix (sous
+ * n'a aucun Node qui convienne, la passerelle pose celui de OxoAI (sous
  * Windows aussi : l'archive `.zip` officielle, empreinte épinglée,
  * gateway/src/installationOpenClaw.ts). Le lanceur est posé même si cela
  * échoue : il le dira à chaque lancement, et l'état rendu porte la raison
@@ -460,7 +460,7 @@ async function installer({ demanderNodePrive, script: scriptCli = script() } = {
     registreGarde = null;
     if (!r.ok) {
       erreurPath = true;
-      console.error(`[helix] PATH du compte non modifié : ${r.erreur.slice(-400)}`);
+      console.error(`[oxoai] PATH du compte non modifié : ${r.erreur.slice(-400)}`);
     }
   } else if (!(await pathDuShell()).split(":").includes(dossierLanceur())) {
     let actuel = "";
@@ -508,16 +508,16 @@ function remplacerAncienLanceur() {
 async function retirer(o = {}) {
   try {
     const actuel = fs.readFileSync(lanceur(), "utf8");
-    // On ne retire qu'un lanceur posé par l'application, jamais un autre programme nommé helix.
+    // On ne retire qu'un lanceur posé par l'application, jamais un autre programme nommé oxoai.
     if (estLeNotre(actuel)) fs.rmSync(lanceur(), { force: true });
   } catch {
     /* déjà absent */
   }
   if (windows()) {
-    // Le dossier est à Helix (`~\.helix\bin`) : son entrée du PATH du compte s'en va, et lui aussi s'il est vide.
+    // Le dossier est à OxoAI (`~\.oxoai\bin`) : son entrée du PATH du compte s'en va, et lui aussi s'il est vide.
     const r = await pathWindows("retirer");
     registreGarde = null;
-    if (!r.ok) console.error(`[helix] PATH du compte non modifié : ${r.erreur.slice(-400)}`);
+    if (!r.ok) console.error(`[oxoai] PATH du compte non modifié : ${r.erreur.slice(-400)}`);
     try {
       if (fs.readdirSync(dossierLanceur()).length === 0) fs.rmdirSync(dossierLanceur());
     } catch {

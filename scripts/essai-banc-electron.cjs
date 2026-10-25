@@ -16,7 +16,7 @@ const os = require("node:os");
 const path = require("node:path");
 
 const [RACINE] = process.argv.slice(-1);
-const profil = fs.mkdtempSync(path.join(os.tmpdir(), "helix-banc-profil-"));
+const profil = fs.mkdtempSync(path.join(os.tmpdir(), "oxoai-banc-profil-"));
 app.setPath("userData", profil);
 if (app.dock) app.dock.hide();
 
@@ -35,7 +35,7 @@ app.whenReady().then(async () => {
     });
     await new Promise((r) => victime.listen(0, "127.0.0.1", r));
     const port = victime.address().port;
-    const projet = fs.mkdtempSync(path.join(os.tmpdir(), "helix-banc-projet-"));
+    const projet = fs.mkdtempSync(path.join(os.tmpdir(), "oxoai-banc-projet-"));
     const essais = ["127.0.0.1", "localhost", "0.0.0.0"].map((h) => `http://${h}:${port}/`);
     fs.writeFileSync(
       path.join(projet, "index.html"),
@@ -47,7 +47,7 @@ app.whenReady().then(async () => {
     const service = await rendu.demarrerRendu();
     const rapport = await fetch(`${service.url}/rendre`, {
       method: "POST",
-      headers: { "x-helix-cle": service.cle, "content-type": "application/json" },
+      headers: { "x-oxoai-cle": service.cle, "content-type": "application/json" },
       body: JSON.stringify({ fichier: path.join(projet, "index.html"), racine: projet }),
     }).then((r) => r.json());
     fs.rmSync(projet, { recursive: true, force: true });

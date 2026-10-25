@@ -6,13 +6,13 @@
  * scripts/marques/, relevé le 28/09/2026 sur le kit ou la page de marque de la
  * société (adresse, date et règle d'usage dans scripts/marques/sources.json,
  * et résumé dans THIRD_PARTY_NOTICES.md, « Marques et logos »). Les logos
- * appartiennent à leurs sociétés ; Helix ne les montre que pour désigner le
+ * appartiennent à leurs sociétés ; OxoAI ne les montre que pour désigner le
  * service qu'on branche ou le modèle qu'on choisit.
  *
  * EXCEPTION ASSUMÉE À LA RÈGLE DES TOKENS : ces couleurs sont en hexadécimal.
  * Ce ne sont pas des couleurs d'interface mais des données, celles que ces
  * sociétés imposent pour leur marque, et leurs chartes interdisent de les
- * changer. Les rendre aux couleurs de Helix les rendrait méconnaissables, et
+ * changer. Les rendre aux couleurs de OxoAI les rendrait méconnaissables, et
  * fautives.
  *
  * Chaque marque a un dessin « clair » et, quand la société en livre un, un

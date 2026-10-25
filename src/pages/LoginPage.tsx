@@ -89,7 +89,7 @@ type Mode =
 /**
  * Écran de connexion.
  *
- * Les comptes sont locaux : Helix ne contacte aucun service d'authentification.
+ * Les comptes sont locaux : OxoAI ne contacte aucun service d'authentification.
  * Le compte détermine à qui appartiennent le profil, la mémoire et les sessions.
  */
 export function LoginPage({ onSignedIn }: { onSignedIn: () => void }) {

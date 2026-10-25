@@ -28,7 +28,7 @@ interface PontCoffre {
 
 function pont(): PontCoffre | undefined {
   if (typeof window === "undefined") return undefined;
-  const p = (window as unknown as { helix?: { coffre?: PontCoffre } }).helix?.coffre;
+  const p = (window as unknown as { oxoai?: { coffre?: PontCoffre } }).oxoai?.coffre;
   return p?.disponible ? p : undefined;
 }
 
@@ -102,7 +102,7 @@ export function reprendreAnciensSecrets(cles: string[]): void {
  * Applique, une seule fois, les préférences de l'ancienne origine.
  *
  * Jusqu'à la 0.22.0 l'interface était servie depuis le disque ; elle l'est
- * désormais sous `helix://app`. Une origine, c'est un stockage : le nouveau
+ * désormais sous `oxoai://app`. Une origine, c'est un stockage : le nouveau
  * est vide. L'application relit l'ancien au premier démarrage
  * (electron/reprise.cjs) et le passe ici. Ce qui existe déjà n'est pas écrasé :
  * on complète, on ne remplace pas.

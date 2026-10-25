@@ -22,7 +22,7 @@
  *    préalable (prealable.mjs) qui l'empêche de sortir de la machine ;
  *  - le faux modèle de la scène (faux-modele.mjs), en guise de LM Studio et
  *    de Mistral AI (clé factice) ;
- *  - un faux OpenCode (faux-opencode.mjs) qui joue la séance de Helix Code ;
+ *  - un faux OpenCode (faux-opencode.mjs) qui joue la séance de OxoAI Code ;
  *  - le serveur de développement de l'interface (Vite), relié à cette passerelle ;
  *  - un Chrome sans fenêtre, au profil jetable (cdp.mjs).
  * Rien ne touche au LM Studio de la machine, à ~/.lmstudio, ni aux ports
@@ -86,7 +86,7 @@ const journal = (...m) => console.log(`[captures ${LANGUE}]`, ...m);
 
 /* ── L'environnement jetable ───────────────────────────────────────────── */
 
-const TMP = realpathSync(mkdtempSync(join(tmpdir(), `helix-captures-${LANGUE}-`)));
+const TMP = realpathSync(mkdtempSync(join(tmpdir(), `oxoai-captures-${LANGUE}-`)));
 const MAISON = join(TMP, "maison");
 const BIN = join(TMP, "bin");
 const DONNEES = join(TMP, "donnees");
@@ -127,7 +127,7 @@ for (const [nom, corps] of [
   chmodSync(join(BIN, nom), 0o755);
 }
 /*
- * La séance de Helix Code que joue le faux OpenCode : liste de tâches, deux
+ * La séance de OxoAI Code que joue le faux OpenCode : liste de tâches, deux
  * lectures, une recherche, deux modifications, puis la commande de tests,
  * laissée en cours (c'est pendant qu'elle tourne que la capture est prise).
  */
@@ -158,7 +158,7 @@ writeFileSync(
 /*
  * Le profil de l'instance jetable : chiffrement dans un fichier (pas de
  * trousseau), exo coupé, et OpenClaw sur un port libre où rien n'écoute :
- * la passerelle ne sonde ni ne touche jamais l'OpenClaw de Helix (18800).
+ * la passerelle ne sonde ni ne touche jamais l'OpenClaw de OxoAI (18800).
  */
 writeFileSync(
   join(TMP, "profil.json"),
@@ -191,21 +191,21 @@ const passerelle = spawn(process.execPath, ["--import", join(ICI, "prealable.mjs
     HOME: MAISON,
     LANG: "C",
     TMPDIR: join(TMP, "tmp"),
-    HELIX_CONFIG: join(TMP, "profil.json"),
-    HELIX_DATA_DIR: DONNEES,
-    HELIX_GATEWAY_PORT: String(PORT_PASSERELLE),
-    HELIX_GATEWAY_HOST: "127.0.0.1",
-    HELIX_WORKSPACE: ESPACE,
-    HELIX_CODE_DIR: PROJET,
-    HELIX_MOTEUR: "lmstudio",
-    HELIX_LMSTUDIO_URL: `${FAUX}/v1`,
-    HELIX_EXO_URL: "http://127.0.0.1:9/v1",
-    HELIX_APPS_DIR: join(TMP, "Applications"),
-    HELIX_OPENCODE_BIN: join(BIN, "opencode"),
-    HELIX_RTK_BIN: join(BIN, "rtk"),
-    HELIX_CAPTURES_FAUX: FAUX,
-    HELIX_CAPTURES_SORTIES: SORTIES,
-    HELIX_CAPTURES_SCENE: join(ICI, "scenes", `${LANGUE}.mjs`),
+    OXOAI_CONFIG: join(TMP, "profil.json"),
+    OXOAI_DATA_DIR: DONNEES,
+    OXOAI_GATEWAY_PORT: String(PORT_PASSERELLE),
+    OXOAI_GATEWAY_HOST: "127.0.0.1",
+    OXOAI_WORKSPACE: ESPACE,
+    OXOAI_CODE_DIR: PROJET,
+    OXOAI_MOTEUR: "lmstudio",
+    OXOAI_LMSTUDIO_URL: `${FAUX}/v1`,
+    OXOAI_EXO_URL: "http://127.0.0.1:9/v1",
+    OXOAI_APPS_DIR: join(TMP, "Applications"),
+    OXOAI_OPENCODE_BIN: join(BIN, "opencode"),
+    OXOAI_RTK_BIN: join(BIN, "rtk"),
+    OXOAI_CAPTURES_FAUX: FAUX,
+    OXOAI_CAPTURES_SORTIES: SORTIES,
+    OXOAI_CAPTURES_SCENE: join(ICI, "scenes", `${LANGUE}.mjs`),
   },
   stdio: ["ignore", "pipe", "pipe"],
 });
@@ -238,8 +238,8 @@ async function api(chemin, corps, methode) {
     headers: {
       "Content-Type": "application/json",
       Authorization: `Bearer ${JETON}`,
-      "X-Helix-Langue": LANGUE,
-      ...(SEANCE ? { "X-Helix-Session": SEANCE } : {}),
+      "X-OxoAI-Langue": LANGUE,
+      ...(SEANCE ? { "X-OxoAI-Session": SEANCE } : {}),
     },
     ...(corps === undefined ? {} : { body: JSON.stringify(corps) }),
   });
@@ -250,7 +250,7 @@ async function api(chemin, corps, methode) {
 
 /* ── Le serveur de l'interface ─────────────────────────────────────────── */
 
-process.env.HELIX_GATEWAY_URL = G;
+process.env.OXOAI_GATEWAY_URL = G;
 const { createServer: serveurVite } = await import("vite");
 const vite = await serveurVite({
   configFile: join(RACINE, "vite.config.ts"),
@@ -290,9 +290,9 @@ async function deposer(nom, texte) {
   const entete = Buffer.from(JSON.stringify({ nom, taille: octets.length, texte, parentId: null, visibilite: "organisation", groupes: [] }), "utf8");
   const longueur = Buffer.alloc(4);
   longueur.writeUInt32BE(entete.length);
-  const r = await fetch(`${G}/helix/bibliotheque/documents`, {
+  const r = await fetch(`${G}/oxoai/bibliotheque/documents`, {
     method: "POST",
-    headers: { "Content-Type": "application/x-helix-document", Authorization: `Bearer ${JETON}`, "X-Helix-Session": SEANCE, "X-Helix-Langue": LANGUE },
+    headers: { "Content-Type": "application/x-oxoai-document", Authorization: `Bearer ${JETON}`, "X-OxoAI-Session": SEANCE, "X-OxoAI-Langue": LANGUE },
     body: Buffer.concat([longueur, entete, octets]),
   });
   const json = await r.json();
@@ -313,17 +313,17 @@ async function preparer(utilisateur) {
   // La base de connaissances et ses documents, indexés par le faux modèle d'embeddings.
   const documents = [];
   for (const d of scene.base.documents) documents.push(await deposer(d.nom, d.texte));
-  const { base } = await api("/helix/connaissances", { nom: scene.base.nom, description: scene.base.description, visibilite: "organisation", groupes: [] });
-  await api(`/helix/connaissances/${base.id}/documents`, { documents: documents.map((d) => d.id) });
+  const { base } = await api("/oxoai/connaissances", { nom: scene.base.nom, description: scene.base.description, visibilite: "organisation", groupes: [] });
+  await api(`/oxoai/connaissances/${base.id}/documents`, { documents: documents.map((d) => d.id) });
   for (let i = 0; i < 120; i++) {
-    const { bases } = await api("/helix/connaissances");
+    const { bases } = await api("/oxoai/connaissances");
     const b = bases.find((x) => x.id === base.id);
     if (b && b.documents.length === documents.length && b.documents.every((d) => d.etat === "pret")) break;
     if (b?.documents.some((d) => d.etat === "erreur")) throw new Error(`indexation : ${JSON.stringify(b.documents)}`);
     await attendre(250);
   }
   ids.base = base.id;
-  const essai = await api("/helix/connaissances/chercher", { bases: [base.id], question: scene.demo.question, nombre: 5 });
+  const essai = await api("/oxoai/connaissances/chercher", { bases: [base.id], question: scene.demo.question, nombre: 5 });
   journal("recherche de la question :", essai.passages.map((p) => `[${p.n}] ${p.document} ${p.similarite}`).join(", "));
 
   // Les Chats plus anciens, rangés comme l'écran les range (src/lib/store/sessions.ts).
@@ -349,7 +349,7 @@ async function preparer(utilisateur) {
       updatedAt: apres,
     };
   });
-  await api("/helix/data/sessions", { value: sessions }, "PUT");
+  await api("/oxoai/data/sessions", { value: sessions }, "PUT");
 
   /*
    * Les agents (collection « agents »), avec le modèle de la machine et la
@@ -358,10 +358,10 @@ async function preparer(utilisateur) {
    * agents lancerait sa mise en service (installation d'OpenClaw). Rangés du
    * plus récent au plus ancien, comme l'écran les montre.
    */
-  const { models } = await api("/helix/models");
+  const { models } = await api("/oxoai/models");
   const qwen = models.find((m) => (m.uid ?? m.id).endsWith(scene.modeleChat));
   await api(
-    "/helix/data/agents",
+    "/oxoai/data/agents",
     {
       value: agentsDeLaScene().map((a, i) => {
         const quand = new Date(maintenant - (30 + i * 24) * 3600_000).toISOString();
@@ -386,14 +386,14 @@ async function preparer(utilisateur) {
   );
 
   // La clé Mistral factice : la passerelle croit parler à api.mistral.ai, le module préalable la renvoie au faux modèle.
-  await api("/helix/fournisseurs", { fournisseur: "mistral", cle: "captures-cle-factice-0000", modeles: scene.modelesMistral, portee: "moi" });
+  await api("/oxoai/fournisseurs", { fournisseur: "mistral", cle: "captures-cle-factice-0000", modeles: scene.modelesMistral, portee: "moi" });
 
   // Le jeu d'exemples de l'entraînement.
-  const projet = await api("/helix/entrainement/projets", { nom: scene.entrainement.nom });
-  await api("/helix/entrainement/exemples", { projet: projet.id, exemples: scene.entrainement.exemples.map(([question, reponse]) => ({ question, reponse })) });
+  const projet = await api("/oxoai/entrainement/projets", { nom: scene.entrainement.nom });
+  await api("/oxoai/entrainement/exemples", { projet: projet.id, exemples: scene.entrainement.exemples.map(([question, reponse]) => ({ question, reponse })) });
   ids.projet = projet.id;
 
-  // Le projet de Helix Code (quelques fichiers, jamais exécutés).
+  // Le projet de OxoAI Code (quelques fichiers, jamais exécutés).
   for (const [chemin, contenu] of Object.entries(scene.code.fichiers)) {
     const f = join(PROJET, chemin);
     mkdirSync(dirname(f), { recursive: true });
@@ -404,14 +404,14 @@ async function preparer(utilisateur) {
 
 /** Une question à Mistral (faux serveur), au nom de la personne : la ligne « distant » de « Mon usage ». */
 async function questionMistral() {
-  const { models } = await api("/helix/models");
+  const { models } = await api("/oxoai/models");
   const m = models.find((x) => /mistral-medium-latest$/.test(x.uid ?? x.id));
   if (!m) throw new Error(`modèle Mistral absent : ${models.map((x) => x.uid).join(", ")}`);
   const qwen = models.find((x) => (x.uid ?? x.id).endsWith(scene.modeleChat));
   const demander = async (modele, question) => {
     const r = await fetch(`${G}/v1/chat/completions`, {
       method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${JETON}`, "X-Helix-Session": SEANCE },
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${JETON}`, "X-OxoAI-Session": SEANCE },
       body: JSON.stringify({ model: modele, stream: true, messages: [{ role: "user", content: question }] }),
     });
     await r.text();
@@ -425,14 +425,14 @@ async function questionMistral() {
  * Ce que Chrome reçoit de la scène à la place de la réponse de la passerelle.
  *
  * Seulement l'agent toujours actif : il vit dans OpenClaw (le port 18800 de
- * Helix), qu'on ne lance pas pour une capture, et ses comptes rendus datent
+ * OxoAI), qu'on ne lance pas pour une capture, et ses comptes rendus datent
  * des jours passés. La vraie réponse de la passerelle est lue d'abord (les
  * modèles, les canaux, les familles d'outils restent les siens) ; la scène y
  * ajoute l'agent, OpenClaw en service, et son activité.
  */
 async function intercepter(utilisateur, ids) {
   const cree = new Date(Date.now() - 6 * 86400_000).toISOString();
-  await chrome.intercepter(/\/api\/helix\/employes(\?.*)?$/, (url, reelle, methode) => {
+  await chrome.intercepter(/\/api\/oxoai\/employes(\?.*)?$/, (url, reelle, methode) => {
     if (methode !== "GET" || !reelle) return undefined;
     const modele = (reelle.modeles ?? []).find((m) => m.nom === scene.modeleChat || m.uid?.endsWith(scene.modeleChat));
     return {
@@ -467,9 +467,9 @@ async function intercepter(utilisateur, ids) {
   });
   // Ce qui touche à l'agent lui-même ne part jamais vers la passerelle : elle irait le chercher chez OpenClaw.
   await chrome.intercepter(
-    /\/api\/helix\/employes\/[^?]+/,
+    /\/api\/oxoai\/employes\/[^?]+/,
     (url) => {
-      const chemin = new URL(url).pathname.replace(/^\/api\/helix\/employes\/[^/]+/, "");
+      const chemin = new URL(url).pathname.replace(/^\/api\/oxoai\/employes\/[^/]+/, "");
       if (chemin === "/activite") {
         const principal = /\/employes\/emp_agent_scene_0\//.test(url);
         return { executions: principal ? scene.agents.activite.map((x) => ({ statut: "ok", ...x })) : [] };
@@ -485,9 +485,9 @@ async function intercepter(utilisateur, ids) {
     { sansPasserelle: true },
   );
   await chrome.activerInterceptions([
-    { urlPattern: "*/api/helix/employes", requestStage: "Response" },
-    { urlPattern: "*/api/helix/employes?*", requestStage: "Response" },
-    { urlPattern: "*/api/helix/employes/*", requestStage: "Request" },
+    { urlPattern: "*/api/oxoai/employes", requestStage: "Response" },
+    { urlPattern: "*/api/oxoai/employes?*", requestStage: "Response" },
+    { urlPattern: "*/api/oxoai/employes/*", requestStage: "Request" },
   ]);
 }
 
@@ -645,9 +645,9 @@ async function nouveauChrome() {
   chrome = await lancerChrome({ langue: scene.localeNavigateur });
   await chrome.noterRequetes();
   await chrome.avantChaquePage(`try {
-    localStorage.setItem("helix:langue", ${JSON.stringify(LANGUE)});
-    localStorage.setItem("helix:apparence", "clair");
-    if (!localStorage.getItem("helix:instance")) localStorage.setItem("helix:instance", ${JSON.stringify(JSON.stringify({ url: G, remote: false, token: JETON }))});
+    localStorage.setItem("oxoai:langue", ${JSON.stringify(LANGUE)});
+    localStorage.setItem("oxoai:apparence", "clair");
+    if (!localStorage.getItem("oxoai:instance")) localStorage.setItem("oxoai:instance", ${JSON.stringify(JSON.stringify({ url: G, remote: false, token: JETON }))});
   } catch {}`);
   await chrome.aller(`${V}/?token=${JETON}`);
   await connecter();
@@ -661,7 +661,7 @@ async function nouveauChrome() {
 
 try {
   mkdirSync(SORTIE, { recursive: true });
-  const compte = await api("/helix/auth/create", { fullName: scene.personne.nom, email: scene.personne.email, password: scene.personne.motDePasse });
+  const compte = await api("/oxoai/auth/create", { fullName: scene.personne.nom, email: scene.personne.email, password: scene.personne.motDePasse });
   SEANCE = compte.session?.token ?? "";
   const ids = await preparer(compte.account);
   await questionMistral();
@@ -831,7 +831,7 @@ try {
     await pause(1200);
     await prendre("agents");
   });
-  // Helix Code, pendant que la commande de tests tourne (faux OpenCode).
+  // OxoAI Code, pendant que la commande de tests tourne (faux OpenCode).
   await etape("code", async () => {
     await chrome.aller(`${V}/code`);
     await chrome.attendreQue("document.querySelector('textarea')", { quoi: "zone de saisie de Code" });

@@ -14,7 +14,7 @@ import { echantillonnageLocal } from "./backends.ts";
  * répondait « 不 時////… » au lieu d'une réponse, quand Ministral 3B, sur le
  * même PC, répondait juste. Le défaut est vraisemblablement dans le moteur
  * (llama.cpp de llmster, architecture hybride récente de Qwen3.5, processeur
- * sous Windows) : Helix ne peut pas le corriger. Medhi : « ça doit
+ * sous Windows) : OxoAI ne peut pas le corriger. Medhi : « ça doit
  * fonctionner en fonction des PC ». La note d'un modèle ne dit pas s'il
  * tourne juste sur un poste donné ; seul un essai le dit.
  *
@@ -143,7 +143,7 @@ export function verdictDeReponse(brut: string, reflexionBrute = ""): Verdict {
  * première question après un chargement paie aussi la lecture du gabarit.
  * Borné : un moteur figé ne doit pas bloquer la mise en route.
  */
-const DELAI_ESSAI_MS = Number(process.env.HELIX_ESSAI_MODELE_MS ?? 180_000);
+const DELAI_ESSAI_MS = Number(process.env.OXOAI_ESSAI_MODELE_MS ?? 180_000);
 
 /**
  * Pose la question d'essai au modèle déjà chargé, par le serveur local
@@ -199,7 +199,7 @@ export async function essayerModele(baseUrl: string, modele: string, apiKey?: st
 /* ------------------------------ le registre ------------------------------ */
 
 const fichierRegistre = () =>
-  join(process.env.HELIX_DATA_DIR ?? join(homedir(), ".helix", "data"), "modeles-sur-cette-machine.json");
+  join(process.env.OXOAI_DATA_DIR ?? join(homedir(), ".oxoai", "data"), "modeles-sur-cette-machine.json");
 
 /**
  * Nom comparable d'un modèle : sans éditeur ni numéro de copie. Le catalogue
@@ -235,7 +235,7 @@ function ecrire(registre: Registre): void {
     writeFileSync(provisoire, `${JSON.stringify({ version: 1, modeles: registre }, null, 2)}\n`, { encoding: "utf8", mode: 0o600 });
     renameSync(provisoire, chemin);
   } catch (err) {
-    console.error(`[helix] état des modèles non enregistré : ${err instanceof Error ? err.message : String(err)}`);
+    console.error(`[oxoai] état des modèles non enregistré : ${err instanceof Error ? err.message : String(err)}`);
   }
 }
 
@@ -243,7 +243,7 @@ function ecrire(registre: Registre): void {
 function modifier(modele: string, changer: (avant: Fiche | undefined) => Fiche): Fiche | null {
   const registre = lire();
   if (registre === null) {
-    console.error("[helix] modeles-sur-cette-machine.json illisible : rien n'est écrit par-dessus.");
+    console.error("[oxoai] modeles-sur-cette-machine.json illisible : rien n'est écrit par-dessus.");
     return null;
   }
   const fiche = changer(registre[nomDuModele(modele)]);
@@ -295,7 +295,7 @@ export function noterEssai(modele: string, verdict: Verdict): void {
         },
   );
   console.log(
-    `[helix] essai de ${modele} sur cette machine : ${verdict.ok ? (verdict.indecis ? `sans conclusion (${verdict.indecis})` : "réponse correcte") : `réponse incorrecte (${verdict.raison})`}`,
+    `[oxoai] essai de ${modele} sur cette machine : ${verdict.ok ? (verdict.indecis ? `sans conclusion (${verdict.indecis})` : "réponse correcte") : `réponse incorrecte (${verdict.raison})`}`,
   );
 }
 

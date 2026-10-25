@@ -65,7 +65,7 @@ export const LANGUES = [
 
 export type Langue = (typeof LANGUES)[number]["code"];
 
-const CLE = "helix:langue";
+const CLE = "oxoai:langue";
 
 /** Catalogues embarqués : `t()` doit répondre dès le premier rendu. */
 const CATALOGUES: Record<Exclude<Langue, "fr">, Record<string, string>> = {
@@ -291,7 +291,7 @@ try {
 
 // L'application de bureau suit la même langue pour ses propres textes (zone de notification, menu de Windows et Linux).
 try {
-  (window as unknown as { helix?: { langue?: (code: string) => void } }).helix?.langue?.(courante);
+  (window as unknown as { oxoai?: { langue?: (code: string) => void } }).oxoai?.langue?.(courante);
 } catch {
   /* navigateur, ou application d'une version antérieure */
 }

@@ -9,7 +9,7 @@
  * D'où vient la liste : https://create.roblox.com/docs/studio/mcp, lue le
  * 12/10/2026 (serveur MCP intégré à Roblox Studio ; l'ancien dépôt
  * `Roblox/studio-rust-mcp-server` est archivé depuis avril 2026). Roblox
- * Studio est un logiciel propriétaire : Helix n'en distribue rien et n'en lit
+ * Studio est un logiciel propriétaire : OxoAI n'en distribue rien et n'en lit
  * aucun code, il lance le serveur que la personne a installé avec Studio.
  * Un outil qu'une version de Studio ajouterait, ou renommerait, n'est pas
  * dans ces listes : il est traité comme une écriture (carte à chaque appel).

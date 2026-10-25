@@ -10,7 +10,7 @@
  * Le serveur sert aussi des outils réservés aux clients qui affichent des
  * « applications » (`viewport_*`, `open_viewport`, `search_mentions`) : il ne
  * les liste pas à un client qui ne le déclare pas, ce qui est le cas de
- * Helix. S'ils apparaissaient, ils ne sont dans aucune liste ci-dessous, donc
+ * OxoAI. S'ils apparaissaient, ils ne sont dans aucune liste ci-dessous, donc
  * traités comme des écritures. De même pour tout outil d'une version future.
  */
 
@@ -34,7 +34,7 @@ export const ID_BLENDER = "blender";
  * scène), `generate_3d` (génération chez Hyper3D, Hunyuan3D ou Tripo, payante),
  * `execute_blender_code` (du Python exécuté dans Blender, sur cette machine),
  * `disable_telemetry` et `record_trajectory_feedback` (réglage et retour à
- * l'auteur du module ; la télémétrie est de toute façon coupée par Helix au
+ * l'auteur du module ; la télémétrie est de toute façon coupée par OxoAI au
  * lancement, blender.ts). Ils passent par la carte, à chaque appel.
  */
 export const LECTURES_BLENDER = new Set(["get_addon_status", "get_scene_info", "look"]);

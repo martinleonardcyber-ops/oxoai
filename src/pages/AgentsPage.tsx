@@ -660,7 +660,7 @@ function AgentModal({
               {t("PDF, Word, Excel, PowerPoint ou texte : il les consulte pour répondre.")}
             </p>
             <Button variant="secondary" size="sm" icon={Plus} block onClick={() => setDepuisEspace(true)}>
-              {/* Une phrase entière : « Depuis » seul se traduisait « Since » (« Since Helix »), tournée à l'écran du 28/09/2026. */}
+              {/* Une phrase entière : « Depuis » seul se traduisait « Since » (« Since OxoAI »), tournée à l'écran du 28/09/2026. */}
               {tf("Depuis {0}", branding.name)}
             </Button>
             {depuisEspace && (

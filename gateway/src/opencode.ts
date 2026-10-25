@@ -17,7 +17,7 @@ import { join, dirname, parse, sep } from "node:path";
 import { homedir } from "node:os";
 import { PORT, NIVEAUX_EFFORT } from "./config.ts";
 import { instanceToken } from "./auth.ts";
-import { etatInstallationOpencode, installerOpencode, opencodeDeHelix, opencodeInstallable, type EtatInstallationOpencode } from "./opencodePrive.ts";
+import { etatInstallationOpencode, installerOpencode, opencodeDeOxoAI, opencodeInstallable, type EtatInstallationOpencode } from "./opencodePrive.ts";
 import { models } from "./router.ts";
 import { autoProvisionEnabled, deployment } from "./deployment.ts";
 import { t, tf } from "./langue.ts";
@@ -33,13 +33,13 @@ import { codeGreffonRtk, ecrireEnveloppe, menageBases, rtkEnFond } from "./rtk.t
  * Moteur de l'écran Code : OpenCode en mode serveur (ARCHITECTURE.md, ADR-003).
  *
  * OpenCode n'appelle jamais un fournisseur directement : il est configuré pour
- * passer par la passerelle Helix. Il hérite donc du routage par rôle, du profil
+ * passer par la passerelle OxoAI. Il hérite donc du routage par rôle, du profil
  * de déploiement client et des clés d'API — locale aujourd'hui, cloud européen
  * demain, sans rien changer ici.
  */
 
 /*
- * `HELIX_OPENCODE_BIN` d'abord : un intégrateur peut ainsi fixer la version
+ * `OXOAI_OPENCODE_BIN` d'abord : un intégrateur peut ainsi fixer la version
  * d'OpenCode qu'il a éprouvée, indépendamment de celle que la personne a
  * installée pour son propre usage. C'est aussi ce qui permet d'essayer une
  * nouvelle version avant de l'adopter.
@@ -52,14 +52,14 @@ import { codeGreffonRtk, ecrireEnveloppe, menageBases, rtkEnFond } from "./rtk.t
  * Windows).
  */
 /*
- * L'OpenCode posé par Helix (opencodePrive.ts) passe avant ceux de la
- * machine : c'est la version épinglée, avec laquelle Helix Code a été essayé.
+ * L'OpenCode posé par OxoAI (opencodePrive.ts) passe avant ceux de la
+ * machine : c'est la version épinglée, avec laquelle OxoAI Code a été essayé.
  */
 const CANDIDATES =
   process.platform === "win32"
     ? [
-        ...(process.env.HELIX_OPENCODE_BIN ? [process.env.HELIX_OPENCODE_BIN] : []),
-        opencodeDeHelix(),
+        ...(process.env.OXOAI_OPENCODE_BIN ? [process.env.OXOAI_OPENCODE_BIN] : []),
+        opencodeDeOxoAI(),
         join(homedir(), ".opencode", "bin", "opencode.exe"),
         join(homedir(), "scoop", "shims", "opencode.exe"),
         ...(process.env.APPDATA
@@ -70,7 +70,7 @@ const CANDIDATES =
           : []),
         "opencode.exe",
       ]
-    : [...(process.env.HELIX_OPENCODE_BIN ? [process.env.HELIX_OPENCODE_BIN] : []), opencodeDeHelix(), `${homedir()}/.opencode/bin/opencode`, "opencode"];
+    : [...(process.env.OXOAI_OPENCODE_BIN ? [process.env.OXOAI_OPENCODE_BIN] : []), opencodeDeOxoAI(), `${homedir()}/.opencode/bin/opencode`, "opencode"];
 
 /**
  * Mot de passe du serveur OpenCode, tiré à chaque démarrage de la passerelle.
@@ -82,7 +82,7 @@ const CANDIDATES =
  * d'agent, donc l'accès aux outils de lecture, d'écriture et de commande
  * d'OpenCode dans le dossier de projet. Toute l'authentification de la
  * passerelle — jeton d'instance et séance — était contournable par n'importe
- * quel processus du poste, sans rien connaître de Helix.
+ * quel processus du poste, sans rien connaître de OxoAI.
  *
  * Le mot de passe ne vit qu'en mémoire, le temps de l'exécution : il n'est
  * écrit nulle part sur le disque. OpenCode l'attend en HTTP Basic, avec
@@ -95,7 +95,7 @@ const enteteServeur = (): string =>
 
 /**
  * Clé que présente OpenCode au serveur d'outils de la passerelle
- * (`/helix/code/outils`, outilsCode.ts). Le jeton d'instance ne suffit pas :
+ * (`/oxoai/code/outils`, outilsCode.ts). Le jeton d'instance ne suffit pas :
  * il est sur chaque poste du parc, et cette route fait agir les connecteurs
  * sans séance. Tirée à chaque démarrage, gardée en mémoire, remise à OpenCode
  * par son environnement (voir `environnementOpenCode`) : depuis le 26/09/2026,
@@ -104,8 +104,8 @@ const enteteServeur = (): string =>
 export const cleOutils = randomBytes(24).toString("base64url");
 
 /**
- * Clé que joint OpenCode à chaque appel au modèle (en-tête `X-Helix-Relais`
- * du fournisseur « helix »). Revue du 25/09/2026 : le relais (chat.ts) croyait
+ * Clé que joint OpenCode à chaque appel au modèle (en-tête `X-OxoAI-Relais`
+ * du fournisseur « oxoai »). Revue du 25/09/2026 : le relais (chat.ts) croyait
  * l'en-tête `X-Session-Id` de n'importe quel porteur du jeton d'instance, qui
  * pouvait ainsi faire afficher des statuts dans la session de Code d'un
  * collègue. Seuls les appels qui présentent cette clé sont suivis
@@ -128,9 +128,9 @@ export const cleRelaisValide = (valeur: unknown): boolean => memeCle(valeur, cle
  * configuration désigne (`{env:…}`, substitué par OpenCode à la lecture :
  * lu dans son code 1.18.32, `text.replace(/\{env:([^}]+)\}/g, …)`).
  */
-const VAR_JETON = "HELIX_OPENCODE_JETON";
-const VAR_CLE_OUTILS = "HELIX_OPENCODE_CLE_OUTILS";
-const VAR_CLE_RELAIS = "HELIX_OPENCODE_CLE_RELAIS";
+const VAR_JETON = "OXOAI_OPENCODE_JETON";
+const VAR_CLE_OUTILS = "OXOAI_OPENCODE_CLE_OUTILS";
+const VAR_CLE_RELAIS = "OXOAI_OPENCODE_CLE_RELAIS";
 /** Ce qu'aucune commande lancée par OpenCode ne doit trouver dans son environnement. */
 export const VARIABLES_SECRETES = ["OPENCODE_SERVER_PASSWORD", VAR_JETON, VAR_CLE_OUTILS, VAR_CLE_RELAIS];
 
@@ -142,7 +142,7 @@ let lastError: string | undefined;
 let modelesEcrits = new Set<string>();
 
 /**
- * État rendu par `GET /helix/code`. Plus de port d'OpenCode depuis le
+ * État rendu par `GET /oxoai/code`. Plus de port d'OpenCode depuis le
  * 26/09/2026 (revue du 25/09) : aucun client ne s'en servait, et la route ne
  * demande que le jeton d'instance.
  */
@@ -151,7 +151,7 @@ export interface CodeStatus {
   running: boolean;
   projectDir: string;
   error?: string;
-  /** Helix sait-il poser OpenCode ici ? Sinon, la raison. */
+  /** OxoAI sait-il poser OpenCode ici ? Sinon, la raison. */
   installable: boolean;
   raisonNonInstallable?: string;
   installation: EtatInstallationOpencode;
@@ -172,11 +172,11 @@ export function oublierOpencode(): void {
  * Dossier de l'instance par défaut : celui où démarre OpenCode, et celui d'une
  * personne qui n'en a encore choisi aucun. Validé comme un dossier choisi : un
  * profil qui désignerait le dossier personnel entier ne le fait pas devenir
- * dossier de projet (retour à ~/Helix).
+ * dossier de projet (retour à ~/OxoAI).
  */
 export function dossierParDefaut(): string {
-  const voulu = process.env.HELIX_CODE_DIR ?? deployment().workspace;
-  const repli = join(homedir(), "Helix");
+  const voulu = process.env.OXOAI_CODE_DIR ?? deployment().workspace;
+  const repli = join(homedir(), "OxoAI");
   if (!voulu) return repli;
   if (!existsSync(voulu)) return voulu; // créé au démarrage d'OpenCode (writeConfig)
   const verdict = validerDossier(voulu);
@@ -214,7 +214,7 @@ async function chercherBinaire(): Promise<string | null> {
 /**
  * Localisation d'OpenCode, mémorisée.
  *
- * `status()` appelle `locate()` à chaque `GET /helix/code`, et la recherche
+ * `status()` appelle `locate()` à chaque `GET /oxoai/code`, et la recherche
  * lançait un `opencode --version` par appel. Mesuré au banc : 40 requêtes
  * simultanées ouvrent 40 processus enfants. Or cette route ne demande que le
  * jeton d'instance — présent sur chaque poste du parc — et sa réponse tient en
@@ -223,7 +223,7 @@ async function chercherBinaire(): Promise<string | null> {
  *
  * Un binaire trouvé ne se déplace pas en cours d'exécution : la réponse est
  * gardée définitivement. Une absence, elle, peut être corrigée par une
- * installation pendant que Helix tourne — on la revérifie donc, mais pas plus
+ * installation pendant que OxoAI tourne — on la revérifie donc, mais pas plus
  * d'une fois par demi-minute. C'est la même mémorisation que `findLms` dans
  * backends.ts.
  */
@@ -254,7 +254,7 @@ function locate(): Promise<string | null> {
 
 /**
  * Écrit la configuration OpenCode du projet : un fournisseur unique, la
- * passerelle Helix. Les modèles proposés sont ceux qu'elle expose réellement.
+ * passerelle OxoAI. Les modèles proposés sont ceux qu'elle expose réellement.
  */
 /**
  * Où vit la configuration d'OpenCode, et pourquoi plus dans le dossier de
@@ -266,7 +266,7 @@ function locate(): Promise<string | null> {
  * dossier qui n'est pas un dépôt Git devient le projet « global », et sa
  * configuration locale est ignorée. Mesuré le 20/09/2026 : le journal
  * d'OpenCode ne charge que les trois chemins globaux, jamais celui du dossier.
- * Le fournisseur « helix » n'existait donc pas pour lui, et chaque prompt
+ * Le fournisseur « oxoai » n'existait donc pas pour lui, et chaque prompt
  * finissait en « Provider request failed with HTTP 401 : missing_api_key »
  * chez un fournisseur distant, puis en « Model unavailable » une fois le
  * modèle nommé.
@@ -281,7 +281,7 @@ function locate(): Promise<string | null> {
  * dossier de travail, et hors de portée d'un `git add .`.
  */
 function dossierConfig(): string {
-  const base = process.env.HELIX_DATA_DIR ?? join(homedir(), ".helix", "data");
+  const base = process.env.OXOAI_DATA_DIR ?? join(homedir(), ".oxoai", "data");
   const dossier = join(base, "opencode");
   if (!existsSync(dossier)) mkdirSync(dossier, { recursive: true });
   return dossier;
@@ -291,7 +291,7 @@ function dossierConfig(): string {
  * Un **dossier**, et pas un fichier : `OPENCODE_CONFIG` ne produit aucun effet
  * mesurable en 1.18.3 (le fournisseur reste inconnu), là où
  * `OPENCODE_CONFIG_DIR` fonctionne. Vérifié en interrogeant le serveur
- * lui-même : `GET /api/provider` ne rend « helix » que dans le second cas.
+ * lui-même : `GET /api/provider` ne rend « oxoai » que dans le second cas.
  */
 const cheminConfig = (): string => join(dossierConfig(), "opencode.json");
 
@@ -308,7 +308,7 @@ const cheminConfig = (): string => join(dossierConfig(), "opencode.json");
  * que tout le contexte.
  *
  * Seulement quand on la connaît : celle du chargement en cours (`lms ps`), ou
- * celle avec laquelle Helix le chargera lui-même (`optionsDeChargement`). Un
+ * celle avec laquelle OxoAI le chargera lui-même (`optionsDeChargement`). Un
  * chargement fait ensuite par un autre programme avec une taille plus petite
  * n'est pas vu avant le prochain démarrage d'OpenCode. La réponse est bornée
  * au quart du contexte, 8 192 jetons au plus : de quoi écrire un fichier, et
@@ -320,8 +320,8 @@ function limiteDe(m: ModelInfo): { context: number; output: number } | undefined
   if (m.backendKind !== "lmstudio") return undefined;
   const options = optionsDeChargement();
   const i = options.indexOf("--context-length");
-  const parHelix = i >= 0 ? Number(options[i + 1]) : undefined;
-  const contexte = m.contexteCharge ?? (m.loaded ? undefined : parHelix);
+  const parOxoAI = i >= 0 ? Number(options[i + 1]) : undefined;
+  const contexte = m.contexteCharge ?? (m.loaded ? undefined : parOxoAI);
   if (!contexte || !Number.isFinite(contexte) || contexte < 4096) return undefined;
   const borne = m.contexteMax ? Math.min(contexte, m.contexteMax) : contexte;
   return { context: borne, output: Math.min(8192, Math.floor(borne / 4)) };
@@ -334,7 +334,7 @@ async function writeConfig(dir: string): Promise<void> {
    * Ménage de l'ancien emplacement : un `opencode.json` écrit par une version
    * précédente porte le jeton d'instance en clair dans le dossier de travail.
    * On ne l'efface que si c'est bien le nôtre — reconnaissable à son
-   * fournisseur « helix » — pour ne jamais toucher à celui d'un utilisateur
+   * fournisseur « oxoai » — pour ne jamais toucher à celui d'un utilisateur
    * qui aurait le sien.
    */
   const ancien = join(dir, "opencode.json");
@@ -343,7 +343,7 @@ async function writeConfig(dir: string): Promise<void> {
       const contenu = JSON.parse(readFileSync(ancien, "utf8")) as {
         provider?: Record<string, unknown>;
       };
-      if (contenu?.provider && Object.keys(contenu.provider).length === 1 && contenu.provider.helix) {
+      if (contenu?.provider && Object.keys(contenu.provider).length === 1 && contenu.provider.oxoai) {
         unlinkSync(ancien);
         console.log(`[opencode] ancienne configuration retirée du dossier de travail : ${ancien}`);
       }
@@ -385,7 +385,7 @@ async function writeConfig(dir: string): Promise<void> {
     modelEntries["auto"] = { name: "Automatique", variants: variantes };
   }
   modelesEcrits = new Set(Object.keys(modelEntries));
-  // Les petits modèles (8 milliards ou moins) travaillent avec l'agent `helix-petit` (petitsModeles.ts, 27/09/2026).
+  // Les petits modèles (8 milliards ou moins) travaillent avec l'agent `oxoai-petit` (petitsModeles.ts, 27/09/2026).
   noterPetitsModeles(usable.filter((m) => estPetitModele(m)).map((m) => m.id));
 
   const pinned = deployment().models?.code;
@@ -412,10 +412,10 @@ async function writeConfig(dir: string): Promise<void> {
         $schema: "https://opencode.ai/config.json",
         ...(enveloppe ? { shell: enveloppe } : {}),
         provider: {
-          helix: {
+          oxoai: {
             npm: "@ai-sdk/openai-compatible",
             // Nom affiché dans OpenCode : celui de la marque, pas celui du code.
-            name: process.env.HELIX_NOM_PRODUIT?.trim() || "Instance",
+            name: process.env.OXOAI_NOM_PRODUIT?.trim() || "Instance",
             /*
              * La clé est le jeton d'instance : depuis que la passerelle exige
              * une authentification, un fournisseur sans clé se heurte à un 401
@@ -425,24 +425,24 @@ async function writeConfig(dir: string): Promise<void> {
              * le fait lire par OpenCode dans son environnement (voir
              * `environnementOpenCode`). Revue du 25/09 : une commande lancée
              * par l'agent n'a qu'à lire ce fichier pour tenir la clé de toute
-             * la passerelle. `X-Helix-Relais` : voir `cleRelais`.
+             * la passerelle. `X-OxoAI-Relais` : voir `cleRelais`.
              */
             options: {
               baseURL: `http://localhost:${PORT}/v1`,
               apiKey: `{env:${VAR_JETON}}`,
-              headers: { "X-Helix-Relais": `{env:${VAR_CLE_RELAIS}}` },
+              headers: { "X-OxoAI-Relais": `{env:${VAR_CLE_RELAIS}}` },
             },
             models: modelEntries,
           },
         },
-        model: `helix/${defaultModel}`,
+        model: `oxoai/${defaultModel}`,
         /*
          * Le « petit modèle » sert aux travaux annexes : titre de session,
          * résumés. Sans cette ligne, OpenCode les confie à son propre
          * fournisseur hébergé, c'est-à-dire qu'un morceau du code du client
          * part chez un tiers pour écrire un titre.
          */
-        small_model: `helix/${defaultModel}`,
+        small_model: `oxoai/${defaultModel}`,
         /*
          * Aucun repli sur le fournisseur distant d'OpenCode : sur une
          * plateforme vendue comme locale, un basculement silencieux vers un
@@ -466,20 +466,20 @@ async function writeConfig(dir: string): Promise<void> {
          * /etc/hosts laissait la session bloquée pour toujours, l'outil
          * tournant à l'écran sans que personne puisse répondre. Refusées
          * d'office, elles deviennent un échec d'outil que le modèle lit et
-         * explique (vérifié, même banc). C'est aussi la règle de Helix : une
+         * explique (vérifié, même banc). C'est aussi la règle de OxoAI : une
          * fois le dossier choisi, l'agent n'en sort pas.
          */
         /*
          * `skill` refusé aussi (25/09/2026) : les compétences extérieures sont
          * coupées (OPENCODE_DISABLE_EXTERNAL_SKILLS), et la seule qui reste,
          * livrée avec OpenCode, sert à modifier sa propre configuration, que
-         * Helix écrit. Un outil refusé disparaît de la liste envoyée au modèle :
+         * OxoAI écrit. Un outil refusé disparaît de la liste envoyée au modèle :
          * 165 jetons de moins à chaque lecture (mesuré), plus sa présentation
          * dans les consignes.
          */
         /*
          * **Tout le reste demande**, et la réponse vient de la barrière de
-         * Helix (fluxCode.ts, permissionsCode.ts, approbation.ts). Revue de
+         * OxoAI (fluxCode.ts, permissionsCode.ts, approbation.ts). Revue de
          * sécurité du 25/09/2026 : les défauts d'OpenCode 1.18.32 sont
          * `"*": "allow"`, si bien que `bash`, `edit`, `write`, `apply_patch` et
          * `webfetch` agissaient sans jamais passer par la barrière
@@ -492,7 +492,7 @@ async function writeConfig(dir: string): Promise<void> {
          * laisser passer (« Demander avant de modifier ») ou non (« Demander
          * pour tout ») ; la configuration, elle, n'est lue qu'au démarrage.
          * Laissés libres : la liste de tâches, les sous-agents (leurs outils
-         * redemandent), et les connecteurs de l'instance (`helix_*`), que la
+         * redemandent), et les connecteurs de l'instance (`oxoai_*`), que la
          * passerelle soumet déjà elle-même à la barrière (outilsCode.ts) : les
          * faire demander aussi ici donnerait deux cartes pour un seul appel.
          */
@@ -513,7 +513,7 @@ async function writeConfig(dir: string): Promise<void> {
           todowrite: "allow",
           todoread: "allow",
           task: "allow",
-          "helix_*": "allow",
+          "oxoai_*": "allow",
           external_directory: "deny",
           doom_loop: "deny",
           question: "deny",
@@ -541,10 +541,10 @@ async function writeConfig(dir: string): Promise<void> {
          * passerelle ne doit pas lancer chez OpenCode une autorisation OAuth.
          */
         mcp: {
-          helix: {
+          oxoai: {
             type: "remote",
-            url: `http://localhost:${PORT}/helix/code/outils`,
-            headers: { Authorization: `Bearer {env:${VAR_JETON}}`, "X-Helix-Cle": `{env:${VAR_CLE_OUTILS}}` },
+            url: `http://localhost:${PORT}/oxoai/code/outils`,
+            headers: { Authorization: `Bearer {env:${VAR_JETON}}`, "X-OxoAI-Cle": `{env:${VAR_CLE_OUTILS}}` },
             enabled: true,
             oauth: false,
             timeout: 130_000,
@@ -600,23 +600,23 @@ function ecrireGreffonEnvironnement(): void {
   const dossier = join(dossierConfig(), "plugin");
   if (!existsSync(dossier)) mkdirSync(dossier, { recursive: true });
   const vides = { ...Object.fromEntries(VARIABLES_SECRETES.map((v) => [v, ""])), ...variablesRendues() };
-  const fichier = join(dossier, "helix-environnement.js");
+  const fichier = join(dossier, "oxoai-environnement.js");
   writeFileSync(
     fichier,
     [
       // Les `import` en tête : le morceau de RTK en porte (rtk.ts, `codeGreffonRtk`).
       ...codeGreffonRtk(),
-      "// Écrit par la passerelle Helix (gateway/src/opencode.ts) : ne pas modifier.",
+      "// Écrit par la passerelle OxoAI (gateway/src/opencode.ts) : ne pas modifier.",
       "// Les commandes lancées par l'agent ne reçoivent ni le mot de passe du serveur ni les clés de la passerelle.",
       `const VIDES = ${JSON.stringify(vides)};`,
       ...codeCheminHorsProjet(),
-      "export const HelixEnvironnement = async (contexte) => ({",
-      // `HELIX_RTK_DB` : seulement dans les sessions où RTK sert ; l'enveloppe du shell le lit (rtk.ts).
+      "export const OxoAIEnvironnement = async (contexte) => ({",
+      // `OXOAI_RTK_DB` : seulement dans les sessions où RTK sert ; l'enveloppe du shell le lit (rtk.ts).
       '  "shell.env": async (entree, sortie) => {',
-      "    sortie.env = { ...(sortie.env ?? {}), ...VIDES, HELIX_RTK_DB: baseRtk(entree?.sessionID) };",
+      "    sortie.env = { ...(sortie.env ?? {}), ...VIDES, OXOAI_RTK_DB: baseRtk(entree?.sessionID) };",
       "  },",
       '  "tool.execute.before": async (entree, sortie) => {',
-      "    const refus = helixHorsProjet(entree?.tool, sortie?.args, contexte?.directory, contexte?.worktree);",
+      "    const refus = oxoaiHorsProjet(entree?.tool, sortie?.args, contexte?.directory, contexte?.worktree);",
       "    if (refus) throw new Error(refus);",
       "  },",
       "});",
@@ -653,25 +653,25 @@ function ecrireGreffonEnvironnement(): void {
  */
 export function codeCheminHorsProjet(): string[] {
   return [
-    'import { existsSync as helixExiste } from "node:fs";',
-    'import { isAbsolute as helixAbsolu, relative as helixRelatif, resolve as helixResoudre } from "node:path";',
-    'const HELIX_CHEMINS = { read: "filePath", write: "filePath", edit: "filePath", list: "path", glob: "path", grep: "path" };',
-    "const helixDedans = (racine, chemin) => {",
+    'import { existsSync as oxoaiExiste } from "node:fs";',
+    'import { isAbsolute as oxoaiAbsolu, relative as oxoaiRelatif, resolve as oxoaiResoudre } from "node:path";',
+    'const OXOAI_CHEMINS = { read: "filePath", write: "filePath", edit: "filePath", list: "path", glob: "path", grep: "path" };',
+    "const oxoaiDedans = (racine, chemin) => {",
     '  if (typeof racine !== "string" || !racine || racine === "/") return false;',
-    "  const r = helixRelatif(helixResoudre(racine), chemin);",
-    '  return r === "" || (!/^\\.\\.([\\\\/]|$)/.test(r) && !helixAbsolu(r));',
+    "  const r = oxoaiRelatif(oxoaiResoudre(racine), chemin);",
+    '  return r === "" || (!/^\\.\\.([\\\\/]|$)/.test(r) && !oxoaiAbsolu(r));',
     "};",
-    "const helixHorsProjet = (outil, args, dossier, arbre) => {",
-    "  const cle = HELIX_CHEMINS[outil];",
+    "const oxoaiHorsProjet = (outil, args, dossier, arbre) => {",
+    "  const cle = OXOAI_CHEMINS[outil];",
     '  const brut = cle && args && typeof args[cle] === "string" ? args[cle].trim() : "";',
     '  if (!brut || typeof dossier !== "string" || !dossier) return null;',
-    "  if (!helixAbsolu(brut) && !/^[A-Za-z]:[\\\\/]/.test(brut)) return null;",
-    "  const chemin = helixResoudre(dossier, brut);",
-    "  if (helixDedans(dossier, chemin) || helixDedans(arbre, chemin)) return null;",
+    "  if (!oxoaiAbsolu(brut) && !/^[A-Za-z]:[\\\\/]/.test(brut)) return null;",
+    "  const chemin = oxoaiResoudre(dossier, brut);",
+    "  if (oxoaiDedans(dossier, chemin) || oxoaiDedans(arbre, chemin)) return null;",
     // Les dossiers qu'OpenCode se permet (`tool-output` de ses données, `opencode` du dossier temporaire) : laissés à sa propre règle.
     "  if (/[\\\\/]opencode([\\\\/]|$)/.test(chemin)) return null;",
     '  const relatif = brut.replace(/^[A-Za-z]:/, "").replace(/^[\\\\/]+/, "");',
-    "  const propose = relatif && helixExiste(helixResoudre(dossier, relatif)) ? helixResoudre(dossier, relatif) : \"\";",
+    "  const propose = relatif && oxoaiExiste(oxoaiResoudre(dossier, relatif)) ? oxoaiResoudre(dossier, relatif) : \"\";",
     "  return \"This path is outside the project folder: \" + brut + \". The project folder is \" + dossier + \". \" +",
     '    (propose ? "Did you mean " + propose + "? " : "") +',
     '    "Use paths inside the project folder: an absolute path from another system (/app, /home, C:\\\\) is not the project. Nothing was done.";',
@@ -683,7 +683,7 @@ export function codeCheminHorsProjet(): string[] {
  * Variables de l'hôte transmises à OpenCode, et rien d'autre.
  *
  * Revue du 25/09/2026 : OpenCode recevait tout `process.env` de la passerelle,
- * c'est-à-dire, selon le poste, `HELIX_TOKEN`, des clés de fournisseurs, des
+ * c'est-à-dire, selon le poste, `OXOAI_TOKEN`, des clés de fournisseurs, des
  * mots de passe de base de données, et le transmettait à chaque commande.
  * Une liste blanche : ce qu'un shell et les outils de développement habituels
  * attendent (chemins, langue, dossier temporaire, compte), plus, sous Windows,
@@ -712,7 +712,7 @@ export function environnementOpenCode(): Record<string, string> {
     // La configuration ne dépend plus du dossier de travail (voir dossierConfig).
     OPENCODE_CONFIG_DIR: dossierConfig(),
     /*
-     * Rien vers l'extérieur, et rien d'autre que la configuration de Helix.
+     * Rien vers l'extérieur, et rien d'autre que la configuration de OxoAI.
      *
      * OpenCode télécharge à chaque démarrage la liste des modèles de
      * models.dev — vérifié : il a appelé un faux serveur mis à sa place.
@@ -740,7 +740,7 @@ export function environnementOpenCode(): Record<string, string> {
      * dossier personnel jetable, aucun modèle : un dépôt cloné qui porte
      * `.opencode/plugin/x.js` faisait exécuter ce fichier dès l'ouverture
      * d'une session dans le projet, sans carte ; son `opencode.json` donnait
-     * `"*": "allow"` à l'agent `build`, par-dessus la barrière de Helix. Avec
+     * `"*": "allow"` à l'agent `build`, par-dessus la barrière de OxoAI. Avec
      * elle, ni l'un ni l'autre (même essai). Contrepartie : les `AGENTS.md`
      * du projet ne sont plus lus par OpenCode.
      */
@@ -749,19 +749,19 @@ export function environnementOpenCode(): Record<string, string> {
      * Ni les réglages globaux du compte (seconde tournée du 28/09/2026). Même
      * sans ceux du projet, OpenCode lit `~/.config/opencode` (`Global.Path.config`,
      * tiré de `XDG_CONFIG_HOME`) et `~/.opencode` (`Global.Path.home`, que
-     * `OPENCODE_TEST_HOME` remplace), avant le dossier de Helix : lu dans
+     * `OPENCODE_TEST_HOME` remplace), avant le dossier de OxoAI : lu dans
      * `ConfigPaths.directories` de son code 1.18.32. Essayé avec le vrai
      * OpenCode 1.18.32, dossier personnel jetable, aucun modèle : un
      * `~/.config/opencode/opencode.json` portant
      * `agent.build.permission = { bash: "allow", edit: "allow", external_directory: "allow" }`
-     * ajoutait ces règles **après** celles de Helix dans les permissions de
+     * ajoutait ces règles **après** celles de OxoAI dans les permissions de
      * l'agent `build` (`GET /agent`), et la dernière règle qui correspond
      * l'emporte : commandes et écritures sans carte, sortie du projet permise.
      * Un greffon `~/.opencode/plugin/*.js` s'exécutait à l'ouverture d'une
      * session. Ce sont les réglages de la personne pour son propre terminal ;
-     * dans Helix Code, ils valaient pour chaque compte de l'instance, membres
+     * dans OxoAI Code, ils valaient pour chaque compte de l'instance, membres
      * compris, et défaisaient ce que l'écran promet. Deux dossiers vides, à
-     * Helix : même essai, permissions de `build` = celles de Helix, greffon non
+     * OxoAI : même essai, permissions de `build` = celles de OxoAI, greffon non
      * exécuté. Les commandes de l'agent retrouvent le vrai `XDG_CONFIG_HOME`
      * par le greffon d'environnement (`ecrireGreffonEnvironnement`).
      */
@@ -770,7 +770,7 @@ export function environnementOpenCode(): Record<string, string> {
   };
 }
 
-/** Un dossier vide, à Helix, pour ce qu'OpenCode ne doit pas lire chez la personne (voir `environnementOpenCode`). */
+/** Un dossier vide, à OxoAI, pour ce qu'OpenCode ne doit pas lire chez la personne (voir `environnementOpenCode`). */
 function dossierPrive(nom: string): string {
   const dossier = join(dossierConfig(), "prive", nom);
   if (!existsSync(dossier)) mkdirSync(dossier, { recursive: true, mode: 0o700 });
@@ -812,7 +812,7 @@ function variablesRendues(): Record<string, string> {
  * demande ne démarre pas en 12 secondes, il la relance dans une session neuve.
  * La chauffe évite l'attente ; le guet couvre ce qu'elle n'aurait pas prévu.
  *
- * Depuis le 25/09/2026, Helix Code passe par l'ancienne API d'OpenCode (voir
+ * Depuis le 25/09/2026, OxoAI Code passe par l'ancienne API d'OpenCode (voir
  * fluxCode.ts) : la chauffe aussi, pour chauffer le moteur qui servira.
  * Mesuré le même jour : sur un modèle inconnu, la session échoue en quelques
  * millisecondes (« Model not found »), sans appeler de modèle.
@@ -835,7 +835,7 @@ async function chauffer(sur: number, dossier: string): Promise<void> {
       method: "POST",
       headers: entetes,
       body: JSON.stringify({
-        model: { providerID: "helix", modelID: "chauffe-helix-sans-modele" },
+        model: { providerID: "oxoai", modelID: "chauffe-oxoai-sans-modele" },
         parts: [{ type: "text", text: "chauffe" }],
       }),
       signal: AbortSignal.timeout(5000),
@@ -986,10 +986,10 @@ export type VerdictOpencodeEnFond = "profil" | "non-publie" | "en-cours" | "pres
  *
  * Rien n'est fait :
  * - si le profil de déploiement réserve les installations à l'intégrateur
- *   (`autoProvision: false`) : il fixe son OpenCode par `HELIX_OPENCODE_BIN` ;
- * - si Helix ne sait pas le poser ici (système sans archive épinglée) ;
- * - si un OpenCode existe déjà (celui de Helix, celui de la machine, ou celui
- *   que désigne `HELIX_OPENCODE_BIN`) : on n'en ajoute pas un second.
+ *   (`autoProvision: false`) : il fixe son OpenCode par `OXOAI_OPENCODE_BIN` ;
+ * - si OxoAI ne sait pas le poser ici (système sans archive épinglée) ;
+ * - si un OpenCode existe déjà (celui de OxoAI, celui de la machine, ou celui
+ *   que désigne `OXOAI_OPENCODE_BIN`) : on n'en ajoute pas un second.
  *
  * Un poste rattaché à une instance distante n'est pas concerné : il ne lance
  * aucune passerelle locale (electron/main.cjs, `posteRattache`). C'est
@@ -1000,10 +1000,10 @@ export async function opencodeEnFond(): Promise<VerdictOpencodeEnFond> {
   if (opencodeInstallable() !== null) return "non-publie";
   if (etatInstallationOpencode().enCours) return "en-cours";
   if (await locate()) return "present";
-  console.log("[helix] Installation d'OpenCode en arrière-plan.");
+  console.log("[oxoai] Installation d'OpenCode en arrière-plan.");
   void installerOpencode()
     .then(() => oublierOpencode())
-    .catch((err: unknown) => console.warn(`[helix] OpenCode non installé : ${err instanceof Error ? err.message : String(err)}`));
+    .catch((err: unknown) => console.warn(`[oxoai] OpenCode non installé : ${err instanceof Error ? err.message : String(err)}`));
   return "lancee";
 }
 
@@ -1016,10 +1016,10 @@ export function stopServer(): void {
 /**
  * S'assure que le serveur OpenCode connaît ce modèle, et le redémarre sinon.
  *
- * OpenCode ne lit sa configuration qu'à son démarrage. Helix l'écrit à ce
+ * OpenCode ne lit sa configuration qu'à son démarrage. OxoAI l'écrit à ce
  * moment-là avec les modèles que la machine sert — et si LM Studio n'était pas
  * encore prêt, ou si un modèle a été téléchargé depuis, la liste est courte.
- * Le serveur refusait alors tout prompt : « Model unavailable: helix/qwen3-8b »
+ * Le serveur refusait alors tout prompt : « Model unavailable: oxoai/qwen3-8b »
  * dans son journal, et rien du tout à l'écran. Observé sur le poste du client
  * le 22/09/2026, cinq fois depuis le 20. On réécrit donc la configuration et
  * on relance le serveur avant d'ouvrir une session sur un modèle qu'il ignore.
@@ -1045,8 +1045,8 @@ export async function assurerModele(id: string): Promise<boolean> {
     const corps = (await reponse.json()) as {
       providers?: { id: string; models?: Record<string, unknown> }[];
     };
-    const helix = corps.providers?.find((p) => p.id === "helix");
-    return Boolean(helix?.models && id in helix.models);
+    const oxoai = corps.providers?.find((p) => p.id === "oxoai");
+    return Boolean(oxoai?.models && id in oxoai.models);
   } catch {
     return true;
   }
@@ -1075,7 +1075,7 @@ export function refModele(
   variante?: string,
 ): { model: { providerID: string; modelID: string }; variant?: string; agent?: string } {
   // Un petit modèle : l'agent aux consignes courtes et aux outils essentiels (petitsModeles.ts).
-  return { model: { providerID: "helix", modelID: id }, ...(variante ? { variant: variante } : {}), ...agentPourModele(id) };
+  return { model: { providerID: "oxoai", modelID: id }, ...(variante ? { variant: variante } : {}), ...agentPourModele(id) };
 }
 
 /** Un port TCP libre sur la boucle locale, attribué par le système. */
@@ -1279,11 +1279,11 @@ const replier = (chemin: string) => chemin.normalize("NFC").toLowerCase();
  */
 /**
  * Pour quoi le dossier est demandé.
- *  - `code` (défaut) : dossier de projet de Helix Code, dont l'agent lance des
+ *  - `code` (défaut) : dossier de projet de OxoAI Code, dont l'agent lance des
  *    commandes avec les droits du compte. Revue du 25/09/2026 : le dossier
- *    personnel lui-même était accepté, et il contient `~/.helix/data`. Refusés
+ *    personnel lui-même était accepté, et il contient `~/.oxoai/data`. Refusés
  *    désormais : le dossier personnel, et tout dossier qui est une zone
- *    protégée (zonesProtegees.ts : données de l'instance, `~/.helix`, clés,
+ *    protégée (zonesProtegees.ts : données de l'instance, `~/.oxoai`, clés,
  *    réglages d'autres logiciels) ou qui en contient une.
  *  - `cowork` : espace de travail de Cowork (serveur de fichiers, tenu par la
  *    barrière d'approbation) : le dossier personnel reste permis (« Tout mon

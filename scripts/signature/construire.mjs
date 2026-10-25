@@ -62,10 +62,10 @@ const forme = formes.find((f) => f.ok);
 if (!forme) {
   erreurs.push(
     "Aucun identifiant de notarisation. Le plus simple et le plus sûr, une fois pour toutes :\n" +
-      '   xcrun notarytool store-credentials "helix-notarisation" \\\n' +
+      '   xcrun notarytool store-credentials "oxoai-notarisation" \\\n' +
       "     --apple-id vous@exemple.fr --team-id XXXXXXXXXX\n" +
       "   (le mot de passe d'application est demandé, puis gardé dans le trousseau)\n" +
-      '   export APPLE_KEYCHAIN_PROFILE="helix-notarisation"\n' +
+      '   export APPLE_KEYCHAIN_PROFILE="oxoai-notarisation"\n' +
       "   Autres formes acceptées : APPLE_API_KEY + APPLE_API_KEY_ID + APPLE_API_ISSUER,\n" +
       "   ou APPLE_ID + APPLE_APP_SPECIFIC_PASSWORD + APPLE_TEAM_ID.",
   );
@@ -76,9 +76,9 @@ if (env.APPLE_KEYCHAIN_PROFILE && !env.APPLE_KEYCHAIN) {
 }
 
 /* 3. Adresse de mise à jour, facultative, mais en HTTPS si elle est donnée. */
-const flux = env.HELIX_MISE_A_JOUR_URL;
+const flux = env.OXOAI_MISE_A_JOUR_URL;
 if (flux && !/^https:\/\//.test(flux)) {
-  erreurs.push(`HELIX_MISE_A_JOUR_URL doit commencer par https:// (reçu : ${flux}).`);
+  erreurs.push(`OXOAI_MISE_A_JOUR_URL doit commencer par https:// (reçu : ${flux}).`);
 }
 
 if (!existsSync(join(racine, "build", "entitlements.mac.plist"))) {

@@ -64,7 +64,7 @@ import { PORT as PORT_PASSERELLE, surLeReseau } from "./config.ts";
  * Si l'interface choisit cette commande, alors quiconque atteint la passerelle
  * choisit ce qui tourne sur le serveur : c'est de l'exécution de code à
  * distance, offerte à n'importe quel salarié d'une instance partagée. La
- * commande vient donc du catalogue ci-dessous, écrit dans Helix et livré avec
+ * commande vient donc du catalogue ci-dessous, écrit dans OxoAI et livré avec
  * lui. La requête, elle, n'apporte que des secrets — jamais un exécutable.
  */
 
@@ -89,7 +89,7 @@ export interface EntreeCatalogue {
   categorie: Categorie;
   /**
    * Commande et arguments, pour un serveur qui tourne sur cette machine.
-   * Absents pour un serveur livré avec Helix (déjà déclaré dans `mcp.ts`, et
+   * Absents pour un serveur livré avec OxoAI (déjà déclaré dans `mcp.ts`, et
    * répéter sa définition ici garantirait qu'un jour les deux divergent) et
    * pour un service distant, qui a une `url`.
    */
@@ -113,13 +113,13 @@ export interface EntreeCatalogue {
   local?: { port: number; chemin: string };
   /**
    * Serveur MCP d'une **application installée sur cette machine**, lancé en
-   * stdio par une commande que Helix tire de l'installation de l'application
+   * stdio par une commande que OxoAI tire de l'installation de l'application
    * (Roblox Studio, Blender, 12/10/2026) : ni adresse, ni commande écrite ici
    * ou reçue ; `APPLICATIONS_STDIO` la donne, et reconnaît l'application
    * avant de lancer quoi que ce soit.
    */
   lanceur?: true;
-  /** Page officielle où la personne télécharge l'application elle-même (Helix ne la télécharge pas). */
+  /** Page officielle où la personne télécharge l'application elle-même (OxoAI ne la télécharge pas). */
   telechargement?: string;
   /**
    * Comment l'autorisation se fait :
@@ -184,7 +184,7 @@ export const CATEGORIES: Categorie[] = [
 ];
 
 /**
- * Ce que Helix sait brancher.
+ * Ce que OxoAI sait brancher.
  *
  * ── Deux familles, et la différence compte ───────────────────────────────────
  *
@@ -325,8 +325,8 @@ export const CATALOGUE: EntreeCatalogue[] = [
   /*
    * Figma et Vercel : leur documentation parle de clients « approuvés », et ils
    * avaient été retirés du catalogue le matin du 28/09/2026 pour cette raison.
-   * Remis le même jour : Medhi a branché Helix à Vercel depuis l'écran, la page
-   * d'autorisation de Vercel a accepté Helix et le compte est autorisé (capture
+   * Remis le même jour : Medhi a branché OxoAI à Vercel depuis l'écran, la page
+   * d'autorisation de Vercel a accepté OxoAI et le compte est autorisé (capture
    * du 28/09/2026). Si un service refuse un jour, l'écran montre sa réponse.
    */
   {
@@ -518,7 +518,7 @@ export const CATALOGUE: EntreeCatalogue[] = [
    * Palmier Pro (29/09/2026, demande de Medhi) : un monteur vidéo pour Mac,
    * dont le serveur MCP n'existe que sur la machine où l'application est
    * ouverte. Rangé avec Canva et Figma, les autres outils de création. Les
-   * versions récentes sont propriétaires : Helix ne les distribue pas, il parle
+   * versions récentes sont propriétaires : OxoAI ne les distribue pas, il parle
    * à celle que la personne a installée (palmier.ts, PROJET.md § 3.5).
    */
   {
@@ -536,7 +536,7 @@ export const CATALOGUE: EntreeCatalogue[] = [
    * Roblox Studio et Blender (12/10/2026, demande de Medhi : « on nous le
    * réclame »). Deux applications de création installées sur la machine de
    * l'instance, dont le serveur MCP se lance en stdio : celui de Roblox est
-   * livré avec Studio (roblox.ts), celui de Blender est posé par Helix,
+   * livré avec Studio (roblox.ts), celui de Blender est posé par OxoAI,
    * version et empreintes figées (blender.ts). Lire est libre ; modifier,
    * exécuter du code, générer se confirme à chaque appel (robloxRegles.ts,
    * blenderRegles.ts).
@@ -807,7 +807,7 @@ interface ApplicationLocale {
 }
 const APPLICATIONS_LOCALES: Record<string, ApplicationLocale> = {
   palmier: { proposable: palmierProposable, port: portPalmier, reconnaitre: ecouteurPalmier },
-  // Unreal Editor (16/10/2026) : une lecture faite par Helix au branchement, ses jeux d'outils.
+  // Unreal Editor (16/10/2026) : une lecture faite par OxoAI au branchement, ses jeux d'outils.
   unreal: {
     proposable: unrealProposable,
     port: portUnreal,
@@ -821,7 +821,7 @@ const APPLICATIONS_LOCALES: Record<string, ApplicationLocale> = {
   },
 };
 
-/** L'application locale d'une entrée, si elle en est une et que Helix sait la reconnaître. */
+/** L'application locale d'une entrée, si elle en est une et que OxoAI sait la reconnaître. */
 function applicationLocale(entree: EntreeCatalogue | undefined) {
   return entree?.local ? APPLICATIONS_LOCALES[entree.id] : undefined;
 }
@@ -831,7 +831,7 @@ function applicationLocale(entree: EntreeCatalogue | undefined) {
  * Studio et Blender, 12/10/2026) : où la fiche se montre, la commande (tirée
  * de l'installation, jamais d'une requête), ce qui est vérifié avant de la
  * lancer et avant chaque appel, ce qui se prépare au clic (Blender : le
- * serveur posé par Helix), et ce qu'il faut dire après le démarrage (Roblox :
+ * serveur posé par OxoAI), et ce qu'il faut dire après le démarrage (Roblox :
  * aucun Studio n'a activé son serveur). Une entrée `lanceur` sans ligne ici
  * n'est jamais lancée.
  */
@@ -847,7 +847,7 @@ interface ApplicationStdio {
   conseil?: (id: string) => Promise<string | null>;
   /** Pour l'écran seulement : un verdict récent suffit (Blender : pas deux PowerShell par rafraîchissement). */
   raisonPourEcran?: () => Promise<string | null>;
-  /** Au retrait : ce que Helix efface, et ce qu'il faut dire de faire dans l'application. */
+  /** Au retrait : ce que OxoAI efface, et ce qu'il faut dire de faire dans l'application. */
   retirer?: () => Promise<string | null>;
   /** Un appel à la fois, et relance du serveur après un délai dépassé (Blender, 16/10/2026 : mcp.ts, `serie`, `relancerApresDelai`). */
   serie?: true;
@@ -857,7 +857,7 @@ const APPLICATIONS_STDIO: Record<string, ApplicationStdio> = {
     proposable: robloxProposable,
     commande: commandeRoblox,
     avantLancement: refusRoblox,
-    // Une lecture, faite par Helix lui-même au branchement : un Studio a-t-il activé son serveur ?
+    // Une lecture, faite par OxoAI lui-même au branchement : un Studio a-t-il activé son serveur ?
     conseil: async (id) => conseilRoblox(await appelerOutilMcp(`${id}__list_roblox_studios`, {}).catch(() => null)),
   },
   blender: {
@@ -872,9 +872,9 @@ const APPLICATIONS_STDIO: Record<string, ApplicationStdio> = {
     serie: true,
     /*
      * Retirer Blender (relecture du 12/10/2026) : l'environnement posé par
-     * Helix est effacé, et l'écran dit de décocher le module dans Blender. Tant
+     * OxoAI est effacé, et l'écran dit de décocher le module dans Blender. Tant
      * qu'il est coché, il rouvre son port (9876, sans authentification) à
-     * chaque démarrage de Blender, que Helix soit branché ou non.
+     * chaque démarrage de Blender, que OxoAI soit branché ou non.
      */
     retirer: async () => {
       try {
@@ -922,7 +922,7 @@ export const commandeLibreAutorisee = (): boolean =>
  * Collection **interne** du magasin de l'instance.
  *
  * Interne veut dire : absente de `COLLECTIONS`, donc jamais distribuée par les
- * routes de synchronisation `/helix/data/<collection>`. Un jeton Notion
+ * routes de synchronisation `/oxoai/data/<collection>`. Un jeton Notion
  * recopié vers chaque poste du parc n'aurait plus rien d'un secret.
  *
  * Le secret est de plus chiffré **ici**, avant d'entrer dans le magasin, en
@@ -1040,7 +1040,7 @@ function kubeconfigVerifie(chemin: string): string {
   if (/^\s*-?\s*["']?(exec|auth-provider)["']?\s*:/m.test(texte) || /"(exec|auth-provider)"\s*:/.test(texte)) {
     throw new Error(t("Ce kubeconfig déclare une commande à lancer (« exec » ou « auth-provider ») : refusé. Utilisez un compte de service avec un jeton ou un certificat."));
   }
-  const dossier = join(process.env.HELIX_DATA_DIR ?? join(homedir(), ".helix", "data"), "kubeconfig");
+  const dossier = join(process.env.OXOAI_DATA_DIR ?? join(homedir(), ".oxoai", "data"), "kubeconfig");
   mkdirSync(dossier, { recursive: true, mode: 0o700 });
   const copie = join(dossier, "kubernetes.yaml");
   writeFileSync(copie, texte, { mode: 0o600 });
@@ -1136,7 +1136,7 @@ export function aligner(c: ConnecteurEnregistre): ConnecteurEnregistre {
  */
 function envPublic(id: string): { envPublic?: Record<string, string> } {
   if (id !== "memoire") return {};
-  const dossier = process.env.HELIX_DATA_DIR ?? join(homedir(), ".helix", "data");
+  const dossier = process.env.OXOAI_DATA_DIR ?? join(homedir(), ".oxoai", "data");
   const carnet = join(dossier, "memoire.jsonl");
   try {
     mkdirSync(dossier, { recursive: true });
@@ -1255,7 +1255,7 @@ export async function charger(): Promise<void> {
     } catch (err) {
       /*
        * Un magasin illisible — clé de chiffrement absente, par exemple — ne
-       * doit pas empêcher la passerelle de démarrer : le reste de Helix
+       * doit pas empêcher la passerelle de démarrer : le reste de OxoAI
        * fonctionne sans connecteurs.
        */
       console.error(
@@ -1349,7 +1349,7 @@ export interface EtatConnecteurs {
 
 /** L'adresse de retour des services distants : la route publique de l'instance, telle que le navigateur l'atteint. */
 export const adresseDeRetour = (base: string, entree?: EntreeCatalogue): string =>
-  `${entree?.retourSansLocalhost ? sansLocalhost(base) : base.replace(/\/+$/, "")}/helix/oauth/retour`;
+  `${entree?.retourSansLocalhost ? sansLocalhost(base) : base.replace(/\/+$/, "")}/oxoai/oauth/retour`;
 
 /**
  * Le catalogue dans la langue de qui le lit.
@@ -1460,13 +1460,13 @@ const ID_VALIDE = /^[a-z0-9][a-z0-9_-]{0,31}$/;
  * nommé « linkedin » aurait apporté des `linkedin__profil` que la barrière
  * range parmi les lectures. Et ceux du commerce (natifs/commerce.ts, § 47).
  */
-const IDS_RESERVES = new Set(["courrier", "agenda", "drive", "slack", "bureau", "ecran", "bibliotheque", "reunions", "controle", "code", "connaissances", "taches", "machine", "helix", "web", "sheets", "slides", "youtube", "linkedin", "facebook", "instagram", "tiktok", "x", "docs", "forms", "dropbox", "telegram", "discord", "whatsapp", "stripe", "shopify", "woocommerce", "salesforce", "pipedrive", "zendesk", "brevo", "mailchimp", "microsoft", "outlook", "onedrive", "sharepoint", "excel", "word", "teams"]);
+const IDS_RESERVES = new Set(["courrier", "agenda", "drive", "slack", "bureau", "ecran", "bibliotheque", "reunions", "controle", "code", "connaissances", "taches", "machine", "oxoai", "web", "sheets", "slides", "youtube", "linkedin", "facebook", "instagram", "tiktok", "x", "docs", "forms", "dropbox", "telegram", "discord", "whatsapp", "stripe", "shopify", "woocommerce", "salesforce", "pipedrive", "zendesk", "brevo", "mailchimp", "microsoft", "outlook", "onedrive", "sharepoint", "excel", "word", "teams"]);
 
 /**
  * Ce que la requête a le droit d'apporter, selon le régime de l'instance.
  *
  * Deux chemins, et un seul est ouvert par défaut. Sur le chemin du catalogue,
- * `command` et `args` sont pris dans la constante de Helix et **ce que la
+ * `command` et `args` sont pris dans la constante de OxoAI et **ce que la
  * requête contient à ces noms est ignoré** : c'est la propriété qui rend la
  * route inoffensive, quelle que soit l'imagination de l'appelant.
  */
@@ -1538,7 +1538,7 @@ function resoudreCommande(
     return {
       ok: false,
       message: tf(
-        "Aucun connecteur « {0} » dans le catalogue de {1}, et cette instance n'autorise pas les commandes libres. Un serveur MCP est un programme exécuté sur cette machine : {1} ne lance que les commandes de son catalogue. Pour un serveur interne, l'intégrateur doit régler « connecteursLibres » sur true dans helix.config.json.",
+        "Aucun connecteur « {0} » dans le catalogue de {1}, et cette instance n'autorise pas les commandes libres. Un serveur MCP est un programme exécuté sur cette machine : {1} ne lance que les commandes de son catalogue. Pour un serveur interne, l'intégrateur doit régler « connecteursLibres » sur true dans oxoai.config.json.",
         id,
         nomProduit(),
       ),
@@ -1631,7 +1631,7 @@ export async function ajouter(brut: unknown, qui: string): Promise<Resultat> {
     };
   }
   /*
-   * Un identifiant déjà porté par un serveur livré avec Helix serait écrasé :
+   * Un identifiant déjà porté par un serveur livré avec OxoAI serait écrasé :
    * les outils du nouveau venu prendraient la place de ceux des fichiers, sous
    * le même préfixe, et la barrière d'approbation les classerait avec les mauvais.
    */
@@ -1658,7 +1658,7 @@ export async function ajouter(brut: unknown, qui: string): Promise<Resultat> {
     return {
       ok: false,
       message: tf(
-        "Le chiffrement des données n'est pas actif sur cette machine : {0} refuse d'enregistrer un jeton d'accès en clair. Déverrouillez le trousseau du compte hôte, ou réglez « chiffrement » sur « fichier » dans helix.config.json, puis recommencez.",
+        "Le chiffrement des données n'est pas actif sur cette machine : {0} refuse d'enregistrer un jeton d'accès en clair. Déverrouillez le trousseau du compte hôte, ou réglez « chiffrement » sur « fichier » dans oxoai.config.json, puis recommencez.",
         nomProduit(),
       ),
     };
@@ -1777,7 +1777,7 @@ export async function retirer(id: string, qui: string): Promise<Resultat> {
     lecturesPerso.delete(id);
   }
   definirEcriture(id, false);
-  // Une application en stdio (Blender) : ce que Helix avait posé pour elle, et ce qu'il reste à faire dans l'application.
+  // Une application en stdio (Blender) : ce que OxoAI avait posé pour elle, et ce qu'il reste à faire dans l'application.
   const stdio = connecteur.local ? applicationStdio(entreeCatalogue(id)) : undefined;
   const apres = stdio?.retirer ? await stdio.retirer().catch(() => null) : null;
 
@@ -1798,7 +1798,7 @@ export async function retirer(id: string, qui: string): Promise<Resultat> {
  *  - `pret` : l'instance est déjà autorisée, le service est branché ;
  *  - `adresse` : il faut ouvrir cette page dans le navigateur de la personne.
  *    C'est le service qui l'affiche, chez lui, avec son logo et sa liste de
- *    permissions ; Helix ne voit jamais le mot de passe ;
+ *    permissions ; OxoAI ne voit jamais le mot de passe ;
  *  - un message d'erreur.
  *
  * `base` est l'adresse par laquelle le navigateur atteint l'instance : elle
@@ -1836,7 +1836,7 @@ export async function connecter(
     return {
       ok: false,
       message: tf(
-        "Le chiffrement des données n'est pas actif sur cette machine : {0} refuse d'y conserver un jeton d'accès. Déverrouillez le trousseau du compte hôte, ou réglez « chiffrement » sur « fichier » dans helix.config.json.",
+        "Le chiffrement des données n'est pas actif sur cette machine : {0} refuse d'y conserver un jeton d'accès. Déverrouillez le trousseau du compte hôte, ou réglez « chiffrement » sur « fichier » dans oxoai.config.json.",
         nomProduit(),
       ),
     };
@@ -2105,7 +2105,7 @@ async function brancherLocal(
   const demarrage = await startServer(entree.id);
   if (!demarrage.ok) {
     if (!deja) await retirerServeur(entree.id);
-    // En stdio (Roblox Studio, Blender), c'est le programme lancé par Helix qui a échoué : « est ouvert » n'est vérifié que pour Palmier Pro (relecture du 12/10/2026).
+    // En stdio (Roblox Studio, Blender), c'est le programme lancé par OxoAI qui a échoué : « est ouvert » n'est vérifié que pour Palmier Pro (relecture du 12/10/2026).
     return {
       ok: false,
       message: stdio
@@ -2296,9 +2296,9 @@ export async function ajouterPersonnalise(
   const description = typeof b.description === "string" && b.description.trim() ? b.description.trim().replace(/\s+/g, " ").slice(0, 300) : t("Serveur MCP ajouté par l'administrateur.");
   // Scellé par la clé de l'instance, ou rien : un enregistrement en clair serait la porte d'entrée que la règle ferme.
   if (!chiffrementActif()) {
-    return { ok: false, message: tf("Le chiffrement des données n'est pas actif sur cette machine : {0} refuse d'enregistrer un serveur ajouté sans le sceller. Déverrouillez le trousseau du compte hôte, ou réglez « chiffrement » sur « fichier » dans helix.config.json, puis recommencez.", nomProduit()) };
+    return { ok: false, message: tf("Le chiffrement des données n'est pas actif sur cette machine : {0} refuse d'enregistrer un serveur ajouté sans le sceller. Déverrouillez le trousseau du compte hôte, ou réglez « chiffrement » sur « fichier » dans oxoai.config.json, puis recommencez.", nomProduit()) };
   }
-  const refusMachine = t("Un programme de cette machine, ou un serveur sur sa boucle locale, ne s'ajoute que depuis cette machine même, sur une instance fermée aux collègues. Sur une instance ouverte au réseau, c'est l'intégrateur qui l'autorise (« connecteursLibres » dans helix.config.json).");
+  const refusMachine = t("Un programme de cette machine, ou un serveur sur sa boucle locale, ne s'ajoute que depuis cette machine même, sur une instance fermée aux collègues. Sur une instance ouverte au réseau, c'est l'intégrateur qui l'autorise (« connecteursLibres » dans oxoai.config.json).");
 
   let spec: SpecPerso;
   let variables: Record<string, string> = {};

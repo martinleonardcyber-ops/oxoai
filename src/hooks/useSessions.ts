@@ -12,7 +12,7 @@ import {
 import { effacerMemoireDuChat } from "@/lib/memoireConversation";
 
 /** Événement interne émis quand une session est créée ou mise à jour. */
-export const SESSIONS_CHANGED = "helix:sessions-changed";
+export const SESSIONS_CHANGED = "oxoai:sessions-changed";
 
 export function notifySessionsChanged(): void {
   window.dispatchEvent(new Event(SESSIONS_CHANGED));

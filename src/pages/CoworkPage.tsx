@@ -99,7 +99,7 @@ const SERVICES_ROLE = [
  * La machine de l'agent (mode `sandbox`, machine.ts) : l'écran piloté n'est
  * pas celui de la personne mais un bureau Linux isolé. Le modèle doit savoir
  * ce qu'il y trouve, et par où rendre un document : le dossier d'échange,
- * qui apparaît chez la personne dans Helix/Machine.
+ * qui apparaît chez la personne dans OxoAI/Machine.
  */
 const MACHINE_ROLE = [
   ``,
@@ -107,7 +107,7 @@ const MACHINE_ROLE = [
   t("- Applications disponibles : Firefox, LibreOffice Writer, Calc et Impress, Fichiers. Ouvre-les avec « ecran__ouvrir_app » (« Writer », « Calc », « Impress », « Firefox »),"),
   t("  puis attends 3 secondes (« ecran__attendre ») et prends une capture avant d'agir."),
   t("- Pour rendre un document à la personne, enregistre-le dans le dossier « Echanges » (/home/kasm-user/Echanges) :"),
-  t("  il apparaît chez elle dans Helix/Machine. Choisis le format Microsoft (.docx, .xlsx, .pptx) sauf demande contraire."),
+  t("  il apparaît chez elle dans OxoAI/Machine. Choisis le format Microsoft (.docx, .xlsx, .pptx) sauf demande contraire."),
   t("- Dans Calc, remplis les cellules avec « ecran__saisir_tableau » (au clavier, depuis une cellule de départ), jamais en cliquant cellule par cellule."),
   t("- Pour enregistrer le document ouvert, utilise « ecran__enregistrer_document » avec le nom du fichier (« compte-rendu.docx »)."),
   t("- L'enregistrement te renvoie le contenu relu dans le fichier : compare-le à la demande, et corrige s'il ne correspond pas."),
@@ -122,7 +122,7 @@ const MACHINE_MACOS_ROLE = [
   t("  puis attends 3 secondes (« ecran__attendre ») et prends une capture avant d'agir."),
   t("- Les raccourcis utilisent la touche Commande (« cmd+s », « cmd+c »), pas Contrôle."),
   t("- Pour rendre un document à la personne, enregistre-le dans le dossier partagé (/Volumes/My Shared Files) :"),
-  t("  il apparaît chez elle dans Helix/Machine. Choisis le format Microsoft (.docx, .xlsx, .pptx) sauf demande contraire."),
+  t("  il apparaît chez elle dans OxoAI/Machine. Choisis le format Microsoft (.docx, .xlsx, .pptx) sauf demande contraire."),
   t("- Dans Calc, remplis les cellules avec « ecran__saisir_tableau » (au clavier, depuis une cellule de départ), jamais en cliquant cellule par cellule."),
   t("- Pour enregistrer le document ouvert, utilise « ecran__enregistrer_document » avec le nom du fichier (« compte-rendu.docx »)."),
   t("- L'enregistrement te renvoie le contenu relu dans le fichier : compare-le à la demande, et corrige s'il ne correspond pas."),
@@ -466,7 +466,7 @@ export function CoworkPage() {
    * l'arrêt exécutait l'action (mesuré le 23/09/2026 : un clic parti après
    * l'arrêt). Arrêter vaut donc refus de ce qui attend encore. Les demandes d'un
    * employé ne sont pas touchées : elles ne viennent pas de cette conversation,
-   * ni celles de Helix Code (une commande en attente dans une autre session).
+   * ni celles de OxoAI Code (une commande en attente dans une autre session).
    */
   const arreter = () => {
     chat.stop();

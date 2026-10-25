@@ -52,7 +52,7 @@ const POLITIQUE = [
  * le serveur Vite injecte ses propres scripts en ligne et recompile à chaud.
  */
 const politiqueDeContenu = () => ({
-  name: "helix-csp",
+  name: "oxoai-csp",
   transformIndexHtml: {
     order: "post" as const,
     handler(html: string, ctx: { server?: unknown }) {
@@ -73,7 +73,7 @@ export default defineConfig({
   // disque (file://), où les chemins absolus ne résoudraient pas.
   base: "./",
   define: {
-    __HELIX_VERSION__: JSON.stringify(version),
+    __OXOAI_VERSION__: JSON.stringify(version),
   },
   resolve: {
     alias: {
@@ -83,10 +83,10 @@ export default defineConfig({
   server: {
     port: 5173,
     proxy: {
-      // Passerelle modèles Helix (voir gateway/). Évite toute question de CORS
+      // Passerelle modèles OxoAI (voir gateway/). Évite toute question de CORS
       // et reproduit le chemin qu'aura l'application empaquetée.
       "/api": {
-        target: process.env.HELIX_GATEWAY_URL ?? "http://localhost:8787",
+        target: process.env.OXOAI_GATEWAY_URL ?? "http://localhost:8787",
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/api/, ""),
       },

@@ -84,7 +84,7 @@ interface Memoire {
 
 /* ---- Rangement sur le disque --------------------------------------- */
 
-const dossierRacine = () => join(process.env.HELIX_DATA_DIR ?? join(homedir(), ".helix", "data"), "memoire-conversations");
+const dossierRacine = () => join(process.env.OXOAI_DATA_DIR ?? join(homedir(), ".oxoai", "data"), "memoire-conversations");
 /** Le dossier d'un compte porte une empreinte, pas l'identifiant : rien d'autre à lire dans un nom de dossier. */
 const empreinte = (texte: string) => createHash("sha256").update(texte).digest("hex").slice(0, 32);
 const dossierDe = (userId: string) => join(dossierRacine(), empreinte(userId));
@@ -601,13 +601,13 @@ export function pourExport(userId: string): { chats: { chat: string; entrees: { 
 
 /*
  * Résumer demande au modèle de lire et d'écrire : sur un petit PC (processeur
- * seul, ou 18 Go de mémoire au plus, la limite où Helix charge déjà un seul
+ * seul, ou 18 Go de mémoire au plus, la limite où OxoAI charge déjà un seul
  * modèle à la fois, backends.ts `optionsDeChargement`), cela prendrait le
  * moteur à la personne pendant de longues secondes. On n'y range donc que le
- * texte. `HELIX_MEMOIRE_RESUME` (« oui », « non ») force le choix.
+ * texte. `OXOAI_MEMOIRE_RESUME` (« oui », « non ») force le choix.
  */
 export function machineConfortable(): boolean {
-  const force = (process.env.HELIX_MEMOIRE_RESUME ?? "").trim().toLowerCase();
+  const force = (process.env.OXOAI_MEMOIRE_RESUME ?? "").trim().toLowerCase();
   if (force === "oui") return true;
   if (force === "non") return false;
   const hw = detectHardware();
@@ -630,7 +630,7 @@ export function debutDemande(): () => void {
 const RESUME_A_PARTIR_DE = 12;
 const RESUME_PAQUET = 40;
 const RESUME_CARACTERES = 12_000;
-const REPOS_MS = Number(process.env.HELIX_MEMOIRE_REPOS_MS ?? 30_000);
+const REPOS_MS = Number(process.env.OXOAI_MEMOIRE_REPOS_MS ?? 30_000);
 const minuteries = new Map<string, ReturnType<typeof setTimeout>>();
 
 /**

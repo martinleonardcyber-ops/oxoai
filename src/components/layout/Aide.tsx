@@ -210,6 +210,7 @@ export function Aide({ open, onClose }: { open: boolean; onClose: () => void }) 
       <div className="mt-5 space-y-3 border-t border-border pt-4">
         <p className="text-sm font-medium text-foreground">{t("Besoin d'une personne")}</p>
         <div className="flex flex-wrap items-center gap-2">
+          {branding.urls.supportEmail && (
           <a
             href={`mailto:${branding.urls.supportEmail}?subject=${encodeURIComponent(
               tf("{0} {1} : demande d'aide", branding.name, branding.version),
@@ -219,6 +220,8 @@ export function Aide({ open, onClose }: { open: boolean; onClose: () => void }) 
             <Mail size={15} strokeWidth={1.75} />
             {branding.urls.supportEmail}
           </a>
+          )}
+          {branding.urls.marketing && (
           <a
             href={branding.urls.marketing}
             target="_blank"
@@ -228,6 +231,7 @@ export function Aide({ open, onClose }: { open: boolean; onClose: () => void }) 
             <ExternalLink size={15} strokeWidth={1.75} />
             {t("Site du prestataire")}
           </a>
+          )}
           <BoutonCopier onEchec={setCopieRefusee} />
           <BoutonSignaler onOuvrir={fermer} />
         </div>

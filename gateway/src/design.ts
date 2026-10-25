@@ -4,20 +4,20 @@ import donnees from "../design/donnees.json" with { type: "json" };
 import { completer } from "./completion.ts";
 
 /**
- * Un design professionnel pour les sites que fait Helix Code, même avec un
+ * Un design professionnel pour les sites que fait OxoAI Code, même avec un
  * petit modèle.
  *
  * Demandé le 24/09/2026 : un site fait par Code avec Qwen3 8B était « moche ».
  * Un petit modèle ne sait pas inventer une palette, marier deux polices ni
  * régler des espacements : laissé seul, il écrit trois couleurs primaires sur
- * du Times. On ne lui demande donc plus de dessiner. Helix choisit le design
+ * du Times. On ne lui demande donc plus de dessiner. OxoAI choisit le design
  * et le lui fournit tout fait :
  *
  *  - le choix vient des tables du skill « UI/UX Pro Max » (nextlevelbuilder,
  *    licence MIT, `gateway/design/`) : 192 types de produits, chacun avec son
  *    style, sa palette complète, son plan de page et ce qu'il faut éviter ;
  *    74 associations de polices ;
- *  - Helix écrit dans le projet `design/helix.css`, une feuille complète
+ *  - OxoAI écrit dans le projet `design/oxoai.css`, une feuille complète
  *    (en-tête, héros, boutons, cartes, tarifs, témoignages, FAQ, formulaire,
  *    pied de page), réglée sur ce choix, et `design/DESIGN.md`, qui montre
  *    chaque bloc en HTML prêt à copier ;
@@ -313,7 +313,7 @@ export function feuilleDeStyle(d: Design): string {
   const texte = famille(d.polices.texte, serif(d.polices.texte) ? "Georgia, serif" : "system-ui, sans-serif");
 
   return `/*
- * helix.css : feuille de style du site, préparée par Helix.
+ * oxoai.css : feuille de style du site, préparée par OxoAI.
  * Style : ${d.style} (famille « ${d.famille} ») pour « ${d.produit} ».
  * Palette et polices : tables du skill UI/UX Pro Max (nextlevelbuilder, licence MIT).
  * Ne pas réécrire : composer la page avec ses classes (voir DESIGN.md).
@@ -713,11 +713,11 @@ const svg = (nom: string) =>
   `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONES[nom]}</svg>`;
 
 export function guide(d: Design): string {
-  const lien = `<link rel="preconnect" href="https://fonts.googleapis.com">\n<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>\n<link rel="stylesheet" href="${d.polices.url}">\n<link rel="stylesheet" href="design/helix.css">`;
+  const lien = `<link rel="preconnect" href="https://fonts.googleapis.com">\n<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>\n<link rel="stylesheet" href="${d.polices.url}">\n<link rel="stylesheet" href="design/oxoai.css">`;
   const sections = d.plan?.sections ?? "Hero > Avantages > Comment ça marche > Témoignages > Tarifs > FAQ > Appel à l'action > Pied de page";
   return `# Design du site
 
-Préparé par Helix pour ce projet. **Ne réécris pas la feuille de style** : compose les pages avec les classes ci-dessous.
+Préparé par OxoAI pour ce projet. **Ne réécris pas la feuille de style** : compose les pages avec les classes ci-dessous.
 
 - Type de site reconnu : ${d.produit}
 - Style : ${d.style}
@@ -886,7 +886,7 @@ ${Object.keys(ICONES)
 }
 
 /* ------------------------------------------------------------------ */
-/* Pour Helix Code                                                     */
+/* Pour OxoAI Code                                                     */
 /* ------------------------------------------------------------------ */
 
 /**
@@ -916,12 +916,12 @@ export async function preparerDesign(
   options: { application?: boolean } = {},
 ): Promise<{ consigne: string; cree: boolean; design?: Design }> {
   const dossierDesign = join(dossier, "design");
-  const feuille = join(dossierDesign, "helix.css");
+  const feuille = join(dossierDesign, "oxoai.css");
   /*
    * Seulement pour un site qui commence. Posé dans un projet qui a déjà son
    * code, le design changeait ce que la personne n'avait pas demandé : pour
    * « corrige le bouton de ma page contact » dans un site existant, la
-   * consigne interdisait ses <style>, et `corrigerPages` ajoutait helix.css
+   * consigne interdisait ses <style>, et `corrigerPages` ajoutait oxoai.css
    * en dernier à toutes ses pages, par-dessus sa propre feuille. Reste un cas :
    * une demande de code ordinaire (« ajoute une interface User ») pose encore un
    * dossier design/ dans le projet (celle-là n'est pas réglée ici : voir
@@ -939,10 +939,10 @@ export async function preparerDesign(
     "",
     "",
     "---",
-    "Design : ce projet a un design professionnel prêt à l'emploi (design/helix.css, guide complet dans design/DESIGN.md). Règles :",
+    "Design : ce projet a un design professionnel prêt à l'emploi (design/oxoai.css, guide complet dans design/DESIGN.md). Règles :",
     "1. Dans le <head> de chaque page, mets exactement ces lignes, chemin relatif, sans barre au début :",
     ...(police ? [`   <link rel="stylesheet" href="${police}">`] : []),
-    '   <link rel="stylesheet" href="design/helix.css">',
+    '   <link rel="stylesheet" href="design/oxoai.css">',
     "2. N'écris aucun <style> ni attribut style : la feuille fait déjà tout le design.",
     '3. Structure : <header class="entete"><div class="conteneur">…</div></header>, puis des <section class="section"><div class="conteneur">…</div></section>,',
     '   le haut de page en <section class="heros heros--divise">, des cartes <article class="carte"> dans <div class="grille grille--3">,',
@@ -1002,7 +1002,7 @@ function policeDuProjet(dossierDesign: string): string | undefined {
  * jamais touché. Rend le nombre de pages corrigées.
  */
 export function corrigerPages(dossier: string): number {
-  const feuille = join(dossier, "design", "helix.css");
+  const feuille = join(dossier, "design", "oxoai.css");
   if (!existsSync(feuille)) return 0;
   const police = policeDuProjet(join(dossier, "design"));
   let corrigees = 0;
@@ -1030,7 +1030,7 @@ export function corrigerPages(dossier: string): number {
       const chemin = relative(dirname(p), feuille).split("\\").join("/");
       let neuf = html
         // Tout lien existant vers la feuille est retiré : on la remet au bon endroit, avec le bon chemin.
-        .replace(/[ \t]*<link[^>]+href=["'][^"']*design\/helix\.css["'][^>]*>\s*\n?/gi, "")
+        .replace(/[ \t]*<link[^>]+href=["'][^"']*design\/oxoai\.css["'][^>]*>\s*\n?/gi, "")
         .replace(/(<body[^>]*class=["'][^"']*)\bvisuel\b/i, "$1");
       const ajouts: string[] = [];
       if (police && !/\/\/fonts\.googleapis\.com\//.test(neuf)) {

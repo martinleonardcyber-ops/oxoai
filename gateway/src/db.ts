@@ -103,7 +103,7 @@ export const COLLECTIONS_INTERNES = [
    * Consommation des modèles, par jour, par compte et par modèle (usage.ts).
    * Interne parce que chaque personne ne doit voir que la sienne : distribuée
    * par la synchronisation, elle dirait à chaque poste qui travaille, quand et
-   * combien. La route `GET /helix/usage` la filtre sur le demandeur.
+   * combien. La route `GET /oxoai/usage` la filtre sur le demandeur.
    */
   "usage",
   // Tarifs des modèles distants, renseignés à la main : c'est la configuration
@@ -144,7 +144,7 @@ export const COLLECTIONS_INTERNES = [
    */
   "connaissances",
   /*
-   * Sessions de Helix Code (sessionsCode.ts) : propriétaire, dossier, titre et
+   * Sessions de OxoAI Code (sessionsCode.ts) : propriétaire, dossier, titre et
    * dates. Leur contenu reste chez OpenCode ; chacun ne liste que les siennes.
    */
   "sessionsCode",
@@ -362,7 +362,7 @@ class PostgresStore implements Store {
     };
     await client.connect();
     await client.query(
-      `CREATE TABLE IF NOT EXISTS helix_state (
+      `CREATE TABLE IF NOT EXISTS oxoai_state (
          collection TEXT PRIMARY KEY,
          value JSONB,
          revision BIGINT NOT NULL
@@ -379,7 +379,7 @@ class PostgresStore implements Store {
   async readRaw(collection: StoredCollection): Promise<unknown> {
     const client = await this.connect();
     const { rows } = await client.query(
-      "SELECT value FROM helix_state WHERE collection = $1",
+      "SELECT value FROM oxoai_state WHERE collection = $1",
       [collection],
     );
     return rows[0]?.value ?? null;
@@ -388,7 +388,7 @@ class PostgresStore implements Store {
   async revision(collection: StoredCollection): Promise<number> {
     const client = await this.connect();
     const { rows } = await client.query(
-      "SELECT revision FROM helix_state WHERE collection = $1",
+      "SELECT revision FROM oxoai_state WHERE collection = $1",
       [collection],
     );
     return Number(rows[0]?.revision ?? 0);
@@ -397,7 +397,7 @@ class PostgresStore implements Store {
   async write(collection: StoredCollection, value: unknown): Promise<void> {
     const client = await this.connect();
     await client.query(
-      `INSERT INTO helix_state (collection, value, revision)
+      `INSERT INTO oxoai_state (collection, value, revision)
        VALUES ($1, $2, $3)
        ON CONFLICT (collection)
        DO UPDATE SET value = EXCLUDED.value, revision = EXCLUDED.revision`,
@@ -420,9 +420,9 @@ export function db(): Store {
   store = configured
     ? new PostgresStore(configured)
     : new JsonStore(
-        process.env.HELIX_DATA_DIR ?? join(homedir(), ".helix", "data"),
+        process.env.OXOAI_DATA_DIR ?? join(homedir(), ".oxoai", "data"),
       );
-  console.log(`[helix] données de l'instance : ${store.describe()}`);
+  console.log(`[oxoai] données de l'instance : ${store.describe()}`);
   return store;
 }
 

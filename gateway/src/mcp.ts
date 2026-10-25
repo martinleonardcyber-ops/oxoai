@@ -154,7 +154,7 @@ export interface McpServerStatus {
  * enregistré, puis le dossier par défaut.
  */
 function fichierEspace(): string {
-  const base = process.env.HELIX_DATA_DIR ?? join(homedir(), ".helix", "data");
+  const base = process.env.OXOAI_DATA_DIR ?? join(homedir(), ".oxoai", "data");
   return join(base, "espace.json");
 }
 
@@ -181,11 +181,11 @@ function ecrireEspace(chemins: string[]): void {
   }
 }
 
-const espaceInitial: string[] = process.env.HELIX_WORKSPACE
-  ? [process.env.HELIX_WORKSPACE]
+const espaceInitial: string[] = process.env.OXOAI_WORKSPACE
+  ? [process.env.OXOAI_WORKSPACE]
   : deployment().workspace
     ? [deployment().workspace as string]
-    : (lireEspace() ?? [join(homedir(), "Helix")]);
+    : (lireEspace() ?? [join(homedir(), "OxoAI")]);
 
 let espaceCourant = espaceInitial[0];
 let espacesCourants = espaceInitial;
@@ -372,7 +372,7 @@ function surListeChangee(id: string): (err: Error | null) => void {
 
 const nouveauClient = (id: string) =>
   new Client(
-    { name: "helix-gateway", version: "1.0.0" },
+    { name: "oxoai-gateway", version: "1.0.0" },
     { capabilities: {}, listChanged: { tools: { autoRefresh: false, debounceMs: 300, onChanged: surListeChangee(id) } } },
   );
 
@@ -547,7 +547,7 @@ async function demarrerDistant(id: string, entry: Live): Promise<{ ok: boolean; 
     /*
      * Revérification des connecteurs du 28/09/2026 : Webflow ne documente que
      * son adresse `/sse`, c'est-à-dire l'ancien transport « HTTP + SSE » du
-     * protocole (2024-11-05). Helix ne parlait que le transport « streamable » :
+     * protocole (2024-11-05). OxoAI ne parlait que le transport « streamable » :
      * un POST sur `/sse` y est refusé (4xx), et le connecteur ne pouvait pas
      * démarrer, quoi que dise l'autorisation. La spécification prévoit le
      * repli : sur un 4xx autre qu'un refus d'autorisation (401, 403), rouvrir
@@ -582,7 +582,7 @@ async function demarrerDistant(id: string, entry: Live): Promise<{ ok: boolean; 
  * Ubuntu et audit Windows) : une machine sans Node n'en a pas, et sous Windows
  * c'est un `.cmd`, que Node refuse de lancer sans interpréteur de commandes.
  * Dans l'ordre : `npx` du système (macOS et Linux, comme avant) ; le Node du
- * système sous Windows, avec le script de `npx` ; le Node que Helix pose
+ * système sous Windows, avec le script de `npx` ; le Node que OxoAI pose
  * (installationOpenClaw.ts, empreinte vérifiée), installé au besoin. Son
  * dossier passe en tête du PATH : les paquets lancés par `npx` y trouvent
  * `node`.
@@ -617,7 +617,7 @@ async function resoudreNpx(): Promise<{ command: string; prefixe: string[]; path
      * Le premier dont le Node démarre, pas seulement le premier présent
      * (24/10/2026) : sur le Mac de Medhi, une mise à jour de Homebrew avait
      * remplacé simdjson, et `/opt/homebrew/bin/node` ne démarrait plus
-     * (« Library not loaded: libsimdjson.30.dylib ») ; Helix téléchargeait
+     * (« Library not loaded: libsimdjson.30.dylib ») ; OxoAI téléchargeait
      * alors son propre Node, alors que celui de `/usr/local` marchait.
      */
     const candidats = [dansLePath("npx"), "/opt/homebrew/bin/npx", "/usr/local/bin/npx"].filter((c): c is string => Boolean(c) && existsSync(c as string));
@@ -630,7 +630,7 @@ async function resoudreNpx(): Promise<{ command: string; prefixe: string[]; path
   }
   let prive = npxPrive();
   if (!prive && nodePriveInstallable() === null) {
-    console.log("[mcp] npx absent de cette machine : installation du Node de Helix (nodejs.org, empreinte vérifiée)...");
+    console.log("[mcp] npx absent de cette machine : installation du Node de OxoAI (nodejs.org, empreinte vérifiée)...");
     await assurerNodePrive().catch((err) => console.error(`[mcp] Node non installé : ${(err as Error).message}`));
     prive = npxPrive();
   }
@@ -1066,7 +1066,7 @@ async function appelerOutil(tool: McpTool, entry: Live, args: Record<string, unk
    * poste », c'est le dossier personnel entier, données de l'instance, clés
    * SSH et conversations des autres assistants comprises. Mesuré le
    * 25/09/2026 avant cette barrière : `read_text_file` rendait
-   * `~/.helix/data/instance-token`.
+   * `~/.oxoai/data/instance-token`.
    */
   const fichiers = tool.serverId === "fichiers";
   if (fichiers) {
@@ -1165,7 +1165,7 @@ async function appelerOutil(tool: McpTool, entry: Live, args: Record<string, unk
 }
 
 /** Délai d'un appel d'outil sans nouvelles du serveur (réglable pour les essais). */
-const DELAI_APPEL_MS = Number(process.env.HELIX_MCP_DELAI_MS) > 0 ? Number(process.env.HELIX_MCP_DELAI_MS) : 60_000;
+const DELAI_APPEL_MS = Number(process.env.OXOAI_MCP_DELAI_MS) > 0 ? Number(process.env.OXOAI_MCP_DELAI_MS) : 60_000;
 
 /**
  * Une erreur d'appel dit-elle que la connexion est perdue, et que le serveur

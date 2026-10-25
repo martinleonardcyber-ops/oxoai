@@ -41,8 +41,8 @@ interface Pont {
   surChangement: (rappel: (e: EtatMaj) => void) => () => void;
 }
 
-const pont = (): Pont | undefined => (window as unknown as { helix?: { miseAJour?: Pont } }).helix?.miseAJour;
-const CLE = "helix:maj-plus-tard";
+const pont = (): Pont | undefined => (window as unknown as { oxoai?: { miseAJour?: Pont } }).oxoai?.miseAJour;
+const CLE = "oxoai:maj-plus-tard";
 
 function repoussee(version: string): boolean {
   try {

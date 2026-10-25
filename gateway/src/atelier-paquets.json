@@ -128,13 +128,13 @@
    "pdfjs-dist": "6.3.289"
   },
   "verrou": {
-   "name": "helix-atelier",
+   "name": "oxoai-atelier",
    "version": "1.0.0",
    "lockfileVersion": 2,
    "requires": true,
    "packages": {
     "": {
-     "name": "helix-atelier",
+     "name": "oxoai-atelier",
      "version": "1.0.0",
      "dependencies": {
       "@e965/xlsx": "0.20.3",

@@ -1,17 +1,17 @@
 /**
- * Écrit `release/helix-mise-a-jour.json`, le manifeste que lit la mise à jour
+ * Écrit `release/oxoai-mise-a-jour.json`, le manifeste que lit la mise à jour
  * d'un poste installé seul (electron/sourceGithub.cjs), à publier avec la
  * version :
  *
- *  - `mac` : l'archive macOS (`Helix-<version>-arm64-mac.zip` de `npm run
+ *  - `mac` : l'archive macOS (`OxoAI-<version>-arm64-mac.zip` de `npm run
  *    package`), son empreinte SHA-512 (base64, la forme d'electron-updater) et
  *    sa taille. La signature de l'éditeur est dans l'application elle-même ;
  *  - `macIntel` (28/09/2026) : la même chose pour les Mac Intel
- *    (`Helix-<version>-x64-mac.zip`, `electron-builder --mac --x64`) ;
- *  - `windows` (27/09/2026) : l'installateur NSIS (`Helix-Setup-<version>-x64.exe`),
+ *    (`OxoAI-<version>-x64-mac.zip`, `electron-builder --mac --x64`) ;
+ *  - `windows` (27/09/2026) : l'installateur NSIS (`OxoAI-Setup-<version>-x64.exe`),
  *    son empreinte SHA-512, sa taille, et la signature de l'éditeur sur le
  *    tout (electron/signatureEditeur.cjs, `signerInstallateur`), faite avec la
- *    clé privée de l'éditeur (~/.helix-editeur/, ou HELIX_CLE_EDITEUR), lue
+ *    clé privée de l'éditeur (~/.oxoai-editeur/, ou OXOAI_CLE_EDITEUR), lue
  *    sans être copiée. Sans clé, pas de partie Windows : les postes Windows
  *    gardent « Télécharger ».
  *
@@ -43,22 +43,22 @@ const empreinte = (chemin) => {
 
 const manifeste = { version };
 
-const zip = `Helix-${version}-arm64-mac.zip`;
+const zip = `OxoAI-${version}-arm64-mac.zip`;
 if (existsSync(join(dossier, zip))) {
   manifeste.mac = { fichier: zip, sha512: await empreinte(join(dossier, zip)), octets: statSync(join(dossier, zip)).size };
   console.log(`mac : ${zip} (${manifeste.mac.octets} octets)`);
 }
 
 // Mac Intel (28/09/2026) : sa propre archive, lue par les seuls Mac Intel (sourceGithub.cjs, `lireManifeste`).
-const zipIntel = `Helix-${version}-x64-mac.zip`;
+const zipIntel = `OxoAI-${version}-x64-mac.zip`;
 if (existsSync(join(dossier, zipIntel))) {
   manifeste.macIntel = { fichier: zipIntel, sha512: await empreinte(join(dossier, zipIntel)), octets: statSync(join(dossier, zipIntel)).size };
   console.log(`mac intel : ${zipIntel} (${manifeste.macIntel.octets} octets)`);
 }
 
-const exe = `Helix-Setup-${version}-x64.exe`;
+const exe = `OxoAI-Setup-${version}-x64.exe`;
 if (existsSync(join(dossier, exe))) {
-  const cheminCle = process.env.HELIX_CLE_EDITEUR || join(homedir(), ".helix-editeur", "cle-privee-mises-a-jour.pem");
+  const cheminCle = process.env.OXOAI_CLE_EDITEUR || join(homedir(), ".oxoai-editeur", "cle-privee-mises-a-jour.pem");
   if (!existsSync(cheminCle)) {
     console.log(`windows : ${exe} trouvé, mais pas de clé d'éditeur (${cheminCle}) : pas de partie Windows, les postes garderont « Télécharger »`);
   } else {
@@ -90,5 +90,5 @@ if (!manifeste.mac && !manifeste.windows) {
   console.error(`Ni ${zip} ni ${exe} (signé) dans ${dossier} : rien à décrire.`);
   process.exit(1);
 }
-writeFileSync(join(dossier, "helix-mise-a-jour.json"), `${JSON.stringify(manifeste, null, 2)}\n`);
-console.log(`${join(dossier, "helix-mise-a-jour.json")} : ${version}`);
+writeFileSync(join(dossier, "oxoai-mise-a-jour.json"), `${JSON.stringify(manifeste, null, 2)}\n`);
+console.log(`${join(dossier, "oxoai-mise-a-jour.json")} : ${version}`);

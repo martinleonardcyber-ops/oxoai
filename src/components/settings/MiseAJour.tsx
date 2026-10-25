@@ -53,7 +53,7 @@ interface PontMiseAJour {
 
 const pont = (): PontMiseAJour | undefined =>
   typeof window !== "undefined"
-    ? (window as unknown as { helix?: { miseAJour?: PontMiseAJour } }).helix?.miseAJour
+    ? (window as unknown as { oxoai?: { miseAJour?: PontMiseAJour } }).oxoai?.miseAJour
     : undefined;
 
 export function MiseAJour() {

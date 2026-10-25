@@ -156,7 +156,7 @@ export function jugerVariables(brutes: unknown): { ok: true; variables: Record<s
   const variables: Record<string, string> = {};
   for (const [nom, valeur] of Object.entries(brutes as Record<string, unknown>)) {
     if (!/^[A-Za-z_][A-Za-z0-9_]{0,63}$/.test(nom)) return { ok: false, message: tf("Nom de variable refusé : « {0} » (lettres, chiffres et souligné).", nom) };
-    if (/^HELIX_/i.test(nom)) return { ok: false, message: tf("« {0} » : les variables qui commencent par HELIX_ sont celles de l'instance, elles ne se transmettent pas.", nom) };
+    if (/^OXOAI_/i.test(nom)) return { ok: false, message: tf("« {0} » : les variables qui commencent par OXOAI_ sont celles de l'instance, elles ne se transmettent pas.", nom) };
     if (typeof valeur !== "string" || valeur.length > 8000 || valeur.includes("\0")) return { ok: false, message: tf("Valeur refusée pour « {0} ».", nom) };
     if (valeur) variables[nom] = valeur;
   }

@@ -4,7 +4,7 @@
  *
  *   npm run cle:editeur
  *
- * La clé privée est écrite dans ~/.helix-editeur/ (dossier 700, fichier 600),
+ * La clé privée est écrite dans ~/.oxoai-editeur/ (dossier 700, fichier 600),
  * jamais dans le dépôt, et n'est jamais affichée. Une clé déjà là n'est pas
  * remplacée : la remplacer ferait refuser toute mise à jour par les postes
  * déjà installés, qui ne connaissent que l'ancienne.
@@ -14,7 +14,7 @@ import { existsSync, mkdirSync, writeFileSync, readFileSync, chmodSync } from "n
 import { homedir } from "node:os";
 import { join, dirname } from "node:path";
 
-const chemin = process.env.HELIX_CLE_EDITEUR || join(homedir(), ".helix-editeur", "cle-privee-mises-a-jour.pem");
+const chemin = process.env.OXOAI_CLE_EDITEUR || join(homedir(), ".oxoai-editeur", "cle-privee-mises-a-jour.pem");
 const empreinte = (pem) =>
   createHash("sha256").update(createPublicKey(pem).export({ type: "spki", format: "der" })).digest("hex").slice(0, 16).replace(/(.{4})(?!$)/g, "$1-");
 

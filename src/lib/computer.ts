@@ -85,7 +85,7 @@ const INDISPONIBLE: Capability = {
 
 export async function capability(): Promise<Capability> {
   try {
-    const res = await apiFetch("/helix/computer");
+    const res = await apiFetch("/oxoai/computer");
     if (!res.ok) return INDISPONIBLE;
     return (await res.json()) as Capability;
   } catch {
@@ -106,7 +106,7 @@ export interface ActionResult {
  */
 export async function runAction(action: Action): Promise<ActionResult> {
   try {
-    const res = await apiFetch("/helix/computer/action", {
+    const res = await apiFetch("/oxoai/computer/action", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(action),
@@ -128,7 +128,7 @@ export async function definirModeEcran(
   code?: string,
   systeme?: "linux" | "macos",
 ): Promise<void> {
-  const res = await apiFetch("/helix/computer/mode", {
+  const res = await apiFetch("/oxoai/computer/mode", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ mode, password, code: code || undefined, systeme }),
@@ -142,7 +142,7 @@ export async function definirModeEcran(
 /** Lance l'installation d'un modèle capable de lire l'écran. */
 export async function installerModeleEcran(key?: string): Promise<boolean> {
   try {
-    const res = await apiFetch("/helix/provision/start", {
+    const res = await apiFetch("/oxoai/provision/start", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ role: "gui", model: key }),
@@ -155,7 +155,7 @@ export async function installerModeleEcran(key?: string): Promise<boolean> {
 
 export async function answer(id: string, accord: boolean): Promise<boolean> {
   try {
-    const res = await apiFetch("/helix/computer/approve", {
+    const res = await apiFetch("/oxoai/computer/approve", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ id, accord }),
@@ -175,7 +175,7 @@ export type ComputerEvent =
 
 /** S'abonne au flux des demandes et des actions. Renvoie de quoi se désabonner. */
 export function subscribe(onEvent: (event: ComputerEvent) => void): () => void {
-  return ouvrirFlux("/helix/computer/events", (donnees) =>
+  return ouvrirFlux("/oxoai/computer/events", (donnees) =>
     onEvent(JSON.parse(donnees) as ComputerEvent),
   );
 }

@@ -9,7 +9,7 @@ import {
   type Agent,
 } from "@/lib/store/agents";
 
-const CHANGED = "helix:agents-changed";
+const CHANGED = "oxoai:agents-changed";
 
 function notify(): void {
   window.dispatchEvent(new Event(CHANGED));

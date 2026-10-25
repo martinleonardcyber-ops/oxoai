@@ -3,11 +3,11 @@ import { completer } from "./completion.ts";
 import { t, tf } from "./langue.ts";
 
 /**
- * Le séquençage de Helix Code : une demande composée est faite étape par
- * étape, et c'est Helix qui tient le fil, pas le modèle.
+ * Le séquençage de OxoAI Code : une demande composée est faite étape par
+ * étape, et c'est OxoAI qui tient le fil, pas le modèle.
  *
  * Demandé par Medhi le 26/09/2026 : « il faut que la couche logicielle soutienne
- * Helix Code et qu'il soit bon partout », même avec un petit modèle et un petit
+ * OxoAI Code et qu'il soit bon partout », même avec un petit modèle et un petit
  * contexte. Ce que les essais du jour ont montré avec Qwen3 8B : laissé seul
  * sur une demande composée, il écrit tout d'un coup, perd le fil, oublie ce
  * qu'il a nommé trois fichiers plus tôt, et annonce fini ce qui ne l'est pas.
@@ -16,7 +16,7 @@ import { t, tf } from "./langue.ts";
  * Donc :
  *  1. le modèle de code fait d'abord un plan court (JSON tenu par un schéma),
  *     avec la carte du projet sous les yeux (carteProjet.ts) ;
- *  2. Helix lui envoie une seule étape à la fois, avec la carte à jour ;
+ *  2. OxoAI lui envoie une seule étape à la fois, avec la carte à jour ;
  *  3. à la fin de chaque étape, le contrôle automatique (controleCode.ts)
  *     vérifie, fait corriger s'il le faut, et seulement alors l'étape suivante
  *     part.
@@ -65,7 +65,7 @@ const SCHEMA = {
 const CONSIGNE = `Tu prépares le plan de travail d'un agent de code, qui fera les étapes une par une. Réponds en JSON, dans la langue de la demande.
 - Une question, une explication, ou une petite modification d'un seul fichier : une_seule_etape = true, etapes = [].
 - Sinon : une_seule_etape = false, et 2 à 8 étapes dans l'ordre où les faire. D'abord ce dont les autres dépendent (données, fonctions communes, configuration), puis ce qui s'en sert, puis ce qui relie le tout.
-- Une étape = UN fichier écrit en entier avec tout son contenu (ou une modification précise d'un fichier existant). Chaque fichier ne figure que dans une seule étape. Pas d'étape « créer un fichier vide », pas d'étape « tester » ni « vérifier » : Helix vérifie après chaque étape.
+- Une étape = UN fichier écrit en entier avec tout son contenu (ou une modification précise d'un fichier existant). Chaque fichier ne figure que dans une seule étape. Pas d'étape « créer un fichier vide », pas d'étape « tester » ni « vérifier » : OxoAI vérifie après chaque étape.
 - titre : court (« Écrire app.py : lecture du fichier CSV »). fichiers : chemins relatifs au dossier.
 - consigne : ce que l'étape doit contenir, précisément, en 1 à 5 phrases : les noms EXACTS des fonctions, classes, routes ou éléments qu'elle crée, avec leurs paramètres, et ce qu'ils font. Une étape suivante qui s'en sert doit reprendre ces mêmes noms.
 - Garde les fichiers et les noms qui existent déjà (voir la carte du projet) ; n'en invente pas.`;
@@ -126,7 +126,7 @@ export async function planifierCode(
   modele: string,
   statut: (message: string) => void,
 ): Promise<EtapeCode[] | null> {
-  statut(t("Helix prépare le plan de travail..."));
+  statut(t("OxoAI prépare le plan de travail..."));
   const carte = blocCarte(dossier, 4000);
   const r = await completer(
     [
@@ -159,7 +159,7 @@ const decrire = (e: EtapeCode) =>
     .join("\n");
 
 /** Le marqueur du plan joint à la première demande : sessionsCode.ts le retire de l'historique. */
-export const MARQUEUR_PLAN = "\n\n---\nPlan de Helix";
+export const MARQUEUR_PLAN = "\n\n---\nPlan de OxoAI";
 
 /** Ce qui s'ajoute à la demande de la personne pour la première étape. */
 export function consignePremiereEtape(sessionID: string): string {
@@ -167,7 +167,7 @@ export function consignePremiereEtape(sessionID: string): string {
   if (!s) return "";
   const e = s.etapes[0]!;
   return [
-    `${MARQUEUR_PLAN} (${s.etapes.length} étapes, faites une par une ; Helix vérifie après chacune) :`,
+    `${MARQUEUR_PLAN} (${s.etapes.length} étapes, faites une par une ; OxoAI vérifie après chacune) :`,
     ...s.etapes.map((x, i) => `${i + 1}. ${x.titre}`),
     "",
     tf("Fais SEULEMENT l'étape 1 maintenant : {0}", e.titre),
@@ -191,8 +191,8 @@ export function etapeSuivante(sessionID: string): { texte: string; numero: numbe
   const e = s.etapes[s.courante]!;
   const numero = s.courante + 1;
   const texte = [
-    // Le début reconnaît une relance de Helix dans l'historique (sessionsCode.ts) : il commence par « [Helix ».
-    `${tf("[Helix : étape {0} sur {1}]", numero, s.etapes.length)} ${e.titre}`,
+    // Le début reconnaît une relance de OxoAI dans l'historique (sessionsCode.ts) : il commence par « [OxoAI ».
+    `${tf("[OxoAI : étape {0} sur {1}]", numero, s.etapes.length)} ${e.titre}`,
     tf("Demande de départ : {0}", s.demande.slice(0, 1500)),
     tf("Déjà fait : {0}.", s.etapes.slice(0, s.courante).map((x, i) => `${i + 1}. ${x.titre}`).join(" ; ")),
     "",

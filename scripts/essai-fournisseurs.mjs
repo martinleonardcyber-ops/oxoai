@@ -11,11 +11,11 @@
  * personne le ferait : liste des modèles, Chat en flux, raisonnement, appel
  * d'outil complet, image, erreurs (clé refusée, quota, débit, modèle retiré,
  * service surchargé, crédit, coupure en cours de flux), relais d'OpenCode,
- * Helix Code sur un modèle de clé personnelle, bases de connaissances,
+ * OxoAI Code sur un modèle de clé personnelle, bases de connaissances,
  * routage Auto, adresse qui bascule vers le réseau interne.
  *
- * Chaque faux imite le point d'accès compatible OpenAI **dont Helix se sert**
- * chez ce fournisseur (Helix n'appelle ni `/v1/messages` d'Anthropic, ni
+ * Chaque faux imite le point d'accès compatible OpenAI **dont OxoAI se sert**
+ * chez ce fournisseur (OxoAI n'appelle ni `/v1/messages` d'Anthropic, ni
  * `generateContent` de Google : voir modelesCloud.ts), avec ce que sa
  * documentation dit de lui : en-tête de la clé, forme de la liste des modèles
  * et pagination, capacités déclarées, champs refusés (400 d'OpenAI, 422 de
@@ -343,9 +343,9 @@ for (const nom of Object.keys(DIALECTES)) {
 /* La passerelle, avec son module préalable                                   */
 /* ------------------------------------------------------------------------- */
 
-const DONNEES = mkdtempSync(join(tmpdir(), "helix-fournisseurs-"));
-const AUX = mkdtempSync(join(tmpdir(), "helix-fournisseurs-aux-"));
-const PROJET = mkdtempSync(join(tmpdir(), "helix-fournisseurs-projet-"));
+const DONNEES = mkdtempSync(join(tmpdir(), "oxoai-fournisseurs-"));
+const AUX = mkdtempSync(join(tmpdir(), "oxoai-fournisseurs-aux-"));
+const PROJET = mkdtempSync(join(tmpdir(), "oxoai-fournisseurs-projet-"));
 const PORT = await portLibre();
 const G = `http://127.0.0.1:${PORT}`;
 const HOTES = Object.fromEntries(Object.entries(DIALECTES).map(([nom, d]) => [d.hote, PORTS[nom]]));
@@ -388,7 +388,7 @@ globalThis.fetch = (entree, options) => {
 );
 // Clé en fichier, dans le dossier jetable : l'essai ne sollicite jamais le trousseau du poste (27/09/2026).
 writeFileSync(join(AUX, "profil.json"), JSON.stringify({ chiffrement: "fichier", backends: [{ id: "lmstudio", enabled: false }, { id: "exo", enabled: false }] }));
-// Le faux OpenCode de la batterie : Helix Code sans le vrai, ni aucun modèle.
+// Le faux OpenCode de la batterie : OxoAI Code sans le vrai, ni aucun modèle.
 const FAUX_OPENCODE = join(AUX, "opencode");
 writeFileSync(FAUX_OPENCODE, `#!/bin/sh\nexec "${process.execPath}" "${join(RACINE, "scripts", "faux-opencode.mjs")}" "$@"\n`);
 chmodSync(FAUX_OPENCODE, 0o755);
@@ -397,14 +397,14 @@ mkdirSync(join(AUX, "home"), { recursive: true });
 const passerelle = spawn(process.execPath, ["--import", PREALABLE, join(RACINE, "gateway", "src", "index.ts")], {
   env: {
     ...process.env,
-    HELIX_CONFIG: join(AUX, "profil.json"),
-    HELIX_GATEWAY_PORT: String(PORT),
-    HELIX_DATA_DIR: DONNEES,
-    HELIX_OPENCODE_BIN: FAUX_OPENCODE,
-    HELIX_CODE_DIR: PROJET,
-    HELIX_LMSTUDIO_URL: "http://127.0.0.1:9/v1",
-    HELIX_EXO_URL: "http://127.0.0.1:9/v1",
-    HELIX_GATEWAY_HOST: "127.0.0.1",
+    OXOAI_CONFIG: join(AUX, "profil.json"),
+    OXOAI_GATEWAY_PORT: String(PORT),
+    OXOAI_DATA_DIR: DONNEES,
+    OXOAI_OPENCODE_BIN: FAUX_OPENCODE,
+    OXOAI_CODE_DIR: PROJET,
+    OXOAI_LMSTUDIO_URL: "http://127.0.0.1:9/v1",
+    OXOAI_EXO_URL: "http://127.0.0.1:9/v1",
+    OXOAI_GATEWAY_HOST: "127.0.0.1",
   },
   stdio: ["ignore", "pipe", "pipe"],
 });
@@ -428,16 +428,16 @@ if (!demarree) {
 }
 
 const JETON = readFileSync(join(DONNEES, "instance-token"), "utf8").trim();
-const avecJeton = { "Content-Type": "application/json", Authorization: `Bearer ${JETON}`, "X-Helix-Langue": "fr" };
+const avecJeton = { "Content-Type": "application/json", Authorization: `Bearer ${JETON}`, "X-OxoAI-Langue": "fr" };
 const appel = (chemin, options = {}) => fetch(`${G}${chemin}`, { redirect: "manual", ...options });
 const poster = (chemin, entetes, corps) => appel(chemin, { method: "POST", headers: entetes, body: JSON.stringify(corps) });
 
-const premier = await (await poster("/helix/auth/create", avecJeton, { fullName: "Alice Essai", email: "alice@example.test", password: "Mot2PasseSolide!42" })).json();
-const A = { ...avecJeton, "X-Helix-Session": premier.session?.token };
+const premier = await (await poster("/oxoai/auth/create", avecJeton, { fullName: "Alice Essai", email: "alice@example.test", password: "Mot2PasseSolide!42" })).json();
+const A = { ...avecJeton, "X-OxoAI-Session": premier.session?.token };
 const idA = premier.account?.id;
-const creeB = await (await poster("/helix/auth/create", A, { fullName: "Bruno Essai", email: "bruno@example.test", password: "Provisoire2Passe!11" })).json();
-const connB = await (await poster("/helix/auth/mot-de-passe-provisoire", avecJeton, { accountId: creeB.account?.id, password: "Provisoire2Passe!11", nouveau: "Bruno2PasseSolide!57" })).json();
-const B = { ...avecJeton, "X-Helix-Session": connB.session?.token };
+const creeB = await (await poster("/oxoai/auth/create", A, { fullName: "Bruno Essai", email: "bruno@example.test", password: "Provisoire2Passe!11" })).json();
+const connB = await (await poster("/oxoai/auth/mot-de-passe-provisoire", avecJeton, { accountId: creeB.account?.id, password: "Provisoire2Passe!11", nouveau: "Bruno2PasseSolide!57" })).json();
+const B = { ...avecJeton, "X-OxoAI-Session": connB.session?.token };
 
 /** Un Chat de l'écran : le flux lu en entier, contenu, raisonnement, évènements et erreurs à part. */
 async function chat(entetes, corps) {
@@ -450,9 +450,9 @@ async function chat(entetes, corps) {
     if (!t || t === "[DONE]") continue;
     try {
       const j = JSON.parse(t);
-      if (j.helix) {
-        sortie.evenements.push(j.helix);
-        if (j.helix.type === "error") sortie.erreurs.push(j.helix.message);
+      if (j.oxoai) {
+        sortie.evenements.push(j.oxoai);
+        if (j.oxoai.type === "error") sortie.erreurs.push(j.oxoai.message);
       }
       if (j.error) sortie.erreurs.push(j.error.message ?? JSON.stringify(j.error));
       const d = j.choices?.[0]?.delta;
@@ -495,17 +495,17 @@ const CHOISIS = {
 };
 const CLES = {};
 for (const [nom, attendu] of Object.entries(ATTENDUS)) {
-  const mauvaise = await poster("/helix/fournisseurs/essayer", A, { fournisseur: nom, cle: "cle-fausse-0000" });
+  const mauvaise = await poster("/oxoai/fournisseurs/essayer", A, { fournisseur: nom, cle: "cle-fausse-0000" });
   const jm = await mauvaise.json().catch(() => ({}));
   verifier(`${nom} : une clé fausse est dite refusée (400)`, mauvaise.status === 400 && /refuse cette clé/.test(jm.error?.message ?? ""), `${mauvaise.status} ${jm.error?.message}`);
-  const essai = await poster("/helix/fournisseurs/essayer", A, { fournisseur: nom, cle: DIALECTES[nom].cle });
+  const essai = await poster("/oxoai/fournisseurs/essayer", A, { fournisseur: nom, cle: DIALECTES[nom].cle });
   const liste = (await essai.json().catch(() => ({}))).modeles ?? [];
   const manquants = attendu.voulus.filter((m) => !liste.includes(m));
   const intrus = attendu.ecartes.filter((m) => liste.includes(m));
   verifier(`${nom} : la bonne clé ouvre ses modèles de conversation (${liste.length})`, essai.status === 200 && manquants.length === 0, `${essai.status} manquants : ${manquants.join(", ")}`);
   if (attendu.ecartes.length > 0) verifier(`${nom} : ni plongement, ni image, ni voix, ni modèle hors /chat/completions`, intrus.length === 0, intrus.join(", "));
   const portee = nom === "openai" ? "equipe" : "moi";
-  const ajout = await poster("/helix/fournisseurs", A, { fournisseur: nom, cle: DIALECTES[nom].cle, modeles: CHOISIS[nom], portee });
+  const ajout = await poster("/oxoai/fournisseurs", A, { fournisseur: nom, cle: DIALECTES[nom].cle, modeles: CHOISIS[nom], portee });
   const ja = await ajout.json().catch(() => ({}));
   CLES[nom] = ja.cle;
   verifier(`${nom} : la clé se branche (${portee === "equipe" ? "pour l'équipe" : "pour Alice"})`, ajout.status === 200 && ja.cle?.fin === DIALECTES[nom].cle.slice(-4), `${ajout.status} ${JSON.stringify(ja).slice(0, 120)}`);
@@ -514,14 +514,14 @@ for (const [nom, attendu] of Object.entries(ATTENDUS)) {
   const requetesListe = etats.anthropic.requetes.filter((r) => r.chemin === "/models");
   verifier("anthropic : la liste est lue page par page (25 modèles, 20 par page)", requetesListe.some((r) => r.entetes["x-api-key"]) && requetesListe.length >= 2, requetesListe.length);
   verifier("anthropic : la liste reçoit la clé dans x-api-key, avec anthropic-version", requetesListe.every((r) => r.entetes["x-api-key"] && r.entetes["anthropic-version"] && !r.entetes.authorization), JSON.stringify(requetesListe.map((r) => Object.keys(r.entetes))).slice(0, 200));
-  const cle = await poster("/helix/fournisseurs/essayer", A, { fournisseur: "openrouter", cle: "cle-fausse-0000" });
+  const cle = await poster("/oxoai/fournisseurs/essayer", A, { fournisseur: "openrouter", cle: "cle-fausse-0000" });
   verifier("openrouter : la liste est publique, mais une clé fausse est refusée par /key", cle.status === 400, cle.status);
 }
 
 /* ------------------------------------------------------------------------- */
 console.log("\nB. Les modèles de la clé dans le sélecteur");
-const modelesA = (await (await appel("/helix/models", { headers: A })).json()).models ?? [];
-const modelesB = (await (await appel("/helix/models", { headers: B })).json()).models ?? [];
+const modelesA = (await (await appel("/oxoai/models", { headers: A })).json()).models ?? [];
+const modelesB = (await (await appel("/oxoai/models", { headers: B })).json()).models ?? [];
 const uid = (nom, id) => `cle-${CLES[nom]?.id}/${id}`;
 const m = (nom, id) => modelesA.find((x) => x.uid === uid(nom, id));
 verifier("tous les modèles retenus sont proposés à Alice", Object.entries(CHOISIS).every(([nom, ids]) => ids.every((id) => m(nom, id))), Object.entries(CHOISIS).flatMap(([nom, ids]) => ids.filter((id) => !m(nom, id)).map((id) => `${nom}/${id}`)).join(", "));
@@ -537,8 +537,8 @@ verifier("openai/gpt-5, deepseek-reasoner et deepseek-r1 raisonnent ; gpt-4o non
 verifier("Bruno voit les modèles de la clé d'équipe, pas ceux des clés d'Alice", modelesB.some((x) => x.uid === uid("openai", "gpt-4o")) && !modelesB.some((x) => x.uid === uid("anthropic", "claude-sonnet-4-5")), modelesB.map((x) => x.uid).join(", ").slice(0, 200));
 {
   const avant = etats.openai.requetes.filter((r) => r.chemin === "/models").length;
-  await appel("/helix/models", { headers: A });
-  await appel("/helix/models", { headers: A });
+  await appel("/oxoai/models", { headers: A });
+  await appel("/oxoai/models", { headers: A });
   const apres = etats.openai.requetes.filter((r) => r.chemin === "/models").length;
   verifier("la liste d'un fournisseur n'est pas relue à chaque requête (gardée dix minutes)", apres === avant, `${avant} → ${apres}`);
 }
@@ -553,7 +553,7 @@ for (const [nom, id] of SIMPLES) {
 {
   const envoyes = Object.values(etats).flatMap((e) => e.requetes.filter((r) => r.corps).map((r) => r.corps));
   const fuite = envoyes.filter((c) => ["agent", "effort", "role", "connaissances"].some((k) => k in c) || typeof c.tools === "boolean");
-  verifier("aucun champ propre à Helix ne part chez un fournisseur (agent, effort, role, connaissances, tools: false)", fuite.length === 0, JSON.stringify(fuite[0] ?? {}).slice(0, 200));
+  verifier("aucun champ propre à OxoAI ne part chez un fournisseur (agent, effort, role, connaissances, tools: false)", fuite.length === 0, JSON.stringify(fuite[0] ?? {}).slice(0, 200));
   const chat_template = envoyes.some((c) => "chat_template_kwargs" in c);
   verifier("aucun champ de moteur local (chat_template_kwargs) ne part chez un fournisseur", !chat_template, "envoyé");
   const mistral = etats.mistral.requetes.filter((r) => r.corps);
@@ -581,7 +581,7 @@ for (const [nom, id] of [["deepseek", "deepseek-reasoner"], ["openrouter", "deep
 }
 
 /* ------------------------------------------------------------------------- */
-console.log("\nE. Appel d'outil complet : le modèle demande, Helix exécute, le modèle conclut");
+console.log("\nE. Appel d'outil complet : le modèle demande, OxoAI exécute, le modèle conclut");
 for (const [nom, id] of SIMPLES) {
   const s = await chat(A, { model: uid(nom, id), tools: true, messages: [{ role: "user", content: "outil-essai : cherche le rapport dans la bibliothèque" }] });
   const debuts = s.evenements.filter((e) => e.type === "tool_start" && e.name === "bibliotheque__chercher");
@@ -654,9 +654,9 @@ console.log("\nH. Refus du fournisseur, dits à l'écran");
   const revoquee = await chat(A, { model: uid("openai", "gpt-4o"), messages: [{ role: "user", content: "Bonjour" }] });
   verifier("clé révoquée (401) : dite comme telle, et non « modèle inconnu »", revoquee.erreurs.some((e) => /OpenAI refuse la clé \(401\)/.test(e)), dit(revoquee));
   etats.openai.revoquee = false;
-  const cleGoogle = await poster("/helix/fournisseurs/essayer", A, { fournisseur: "google", cle: "cle-fausse-0000" });
+  const cleGoogle = await poster("/oxoai/fournisseurs/essayer", A, { fournisseur: "google", cle: "cle-fausse-0000" });
   verifier("google : une clé fausse répond 400 (« API key not valid ») et reste dite refusée", cleGoogle.status === 400 && /refuse cette clé/.test((await cleGoogle.json()).error?.message ?? ""), cleGoogle.status);
-  const langue = await chat({ ...A, "X-Helix-Langue": "en" }, { model: uid("openai", "gpt-4o"), messages: [{ role: "user", content: "quota-essai" }] });
+  const langue = await chat({ ...A, "X-OxoAI-Langue": "en" }, { model: uid("openai", "gpt-4o"), messages: [{ role: "user", content: "quota-essai" }] });
   verifier("le refus suit la langue de la personne (anglais)", langue.erreurs.some((e) => /quota/i.test(e) && !/épuisé/.test(e)), dit(langue));
 }
 
@@ -665,19 +665,19 @@ console.log("\nI. Routage Auto, bases de connaissances, adresse qui bascule");
 {
   const auto = await chat(A, { messages: [{ role: "user", content: "Bonjour" }] });
   verifier("Auto sans modèle local : il ne prend pas un modèle de clé, et le dit en nommant celui qu'on peut choisir", auto.statut === 503 && auto.erreurs.some((e) => /ne choisit jamais un modèle branché par une clé/.test(e)), dit(auto));
-  const doc = await (await poster("/helix/bibliotheque/documents", A, { nom: "Note-essai.txt", contenu: Buffer.from("Le code est PERLE-7710.").toString("base64"), texte: "Le code est PERLE-7710.", visibilite: "prive" })).json();
-  const base = (await (await poster("/helix/connaissances", A, { nom: "Base-essai-cle", visibilite: "prive" })).json()).base;
-  await poster(`/helix/connaissances/${base?.id}/documents`, A, { documents: [doc.element?.id] });
+  const doc = await (await poster("/oxoai/bibliotheque/documents", A, { nom: "Note-essai.txt", contenu: Buffer.from("Le code est PERLE-7710.").toString("base64"), texte: "Le code est PERLE-7710.", visibilite: "prive" })).json();
+  const base = (await (await poster("/oxoai/connaissances", A, { nom: "Base-essai-cle", visibilite: "prive" })).json()).base;
+  await poster(`/oxoai/connaissances/${base?.id}/documents`, A, { documents: [doc.element?.id] });
   let vue = "";
   for (let i = 0; i < 40; i++) {
-    vue = JSON.stringify((await (await appel(`/helix/connaissances/${base?.id}`, { headers: A })).json()).base ?? {});
+    vue = JSON.stringify((await (await appel(`/oxoai/connaissances/${base?.id}`, { headers: A })).json()).base ?? {});
     if (/Une clé de fournisseur cloud ne sert pas à indexer/.test(vue)) break;
     await attendre(250);
   }
   const plongements = Object.values(etats).reduce((n, e) => n + e.embeddings, 0);
   verifier("base de connaissances sans modèle d'embeddings local : aucun appel chez un fournisseur, et l'écran dit pourquoi", plongements === 0 && /Une clé de fournisseur cloud ne sert pas à indexer/.test(vue), `${plongements} appel(s) ; ${vue.slice(0, 200)}`);
 
-  const ajout = await poster("/helix/fournisseurs", A, { fournisseur: "compatible", adresse: "https://rebond.essai.test/v1", cle: DIALECTES.rebond.cle, nom: "Rebond", pays: "France", modeles: ["modele-rebond"] });
+  const ajout = await poster("/oxoai/fournisseurs", A, { fournisseur: "compatible", adresse: "https://rebond.essai.test/v1", cle: DIALECTES.rebond.cle, nom: "Rebond", pays: "France", modeles: ["modele-rebond"] });
   const cleRebond = (await ajout.json()).cle;
   const avant = await chat(A, { model: `cle-${cleRebond?.id}/modele-rebond`, messages: [{ role: "user", content: "Bonjour" }] });
   verifier("fournisseur « compatible » à une adresse publique : il répond", avant.contenu.includes("Bonjour de rebond"), dit(avant));
@@ -685,7 +685,7 @@ console.log("\nI. Routage Auto, bases de connaissances, adresse qui bascule");
   const n = etats.rebond.requetes.length;
   const apres = await chat(A, { model: `cle-${cleRebond?.id}/modele-rebond`, messages: [{ role: "user", content: "Bonjour" }] });
   verifier("la même adresse bascule vers le réseau interne : l'appel ne part pas, et c'est dit", etats.rebond.requetes.length === n && apres.erreurs.some((e) => /réseau interne/.test(e)), `${etats.rebond.requetes.length - n} requête(s) ; ${dit(apres)}`);
-  const interne = await poster("/helix/fournisseurs/essayer", A, { fournisseur: "compatible", adresse: "https://interne.essai.test/v1", cle: "x" });
+  const interne = await poster("/oxoai/fournisseurs/essayer", A, { fournisseur: "compatible", adresse: "https://interne.essai.test/v1", cle: "x" });
   verifier("une adresse du réseau interne est refusée dès l'essai", interne.status === 400 && /réseau interne/.test((await interne.json()).error?.message ?? ""), interne.status);
 }
 
@@ -698,26 +698,26 @@ console.log("\nI. Routage Auto, bases de connaissances, adresse qui bascule");
  * pour qui (index.ts, `reglageCode`), puis OpenCode appelait la passerelle au
  * jeton d'instance seul, sans personne en face (chat.ts, `resolve`).
  */
-console.log("\nJ. Helix Code sur un modèle de clé personnelle (cas de Medhi : clé OpenAI, gpt-4.1-nano)");
+console.log("\nJ. OxoAI Code sur un modèle de clé personnelle (cas de Medhi : clé OpenAI, gpt-4.1-nano)");
 {
-  const ajout = await poster("/helix/fournisseurs", A, { fournisseur: "openai", cle: DIALECTES.openai.cle, modeles: ["gpt-4.1-nano"], portee: "moi" });
+  const ajout = await poster("/oxoai/fournisseurs", A, { fournisseur: "openai", cle: DIALECTES.openai.cle, modeles: ["gpt-4.1-nano"], portee: "moi" });
   const clePerso = (await ajout.json().catch(() => ({}))).cle;
   const nano = `cle-${clePerso?.id}/gpt-4.1-nano`;
   verifier("Alice branche sa clé OpenAI personnelle avec gpt-4.1-nano", ajout.status === 200 && clePerso?.portee === "moi", ajout.status);
-  const ouverture = await poster("/helix/code/session", A, { model: nano, dossier: PROJET });
+  const ouverture = await poster("/oxoai/code/session", A, { model: nano, dossier: PROJET });
   const jo = await ouverture.json().catch(() => ({}));
   const session = jo.data?.id;
   verifier("Alice ouvre une session de Code sur gpt-4.1-nano de sa clé (avant : « modèle inconnu ou réservé »)", ouverture.status === 200 && /^ses_/.test(session ?? ""), `${ouverture.status} ${JSON.stringify(jo).slice(0, 160)}`);
-  const refusB = await poster("/helix/code/session", B, { model: nano, dossier: PROJET });
+  const refusB = await poster("/oxoai/code/session", B, { model: nano, dossier: PROJET });
   verifier("Bruno ne l'ouvre pas sur la clé personnelle d'Alice (503)", refusB.status === 503, refusB.status);
-  const sessionB = (await (await poster("/helix/code/session", B, { model: uid("openai", "gpt-4o"), dossier: PROJET })).json().catch(() => ({}))).data?.id;
+  const sessionB = (await (await poster("/oxoai/code/session", B, { model: uid("openai", "gpt-4o"), dossier: PROJET })).json().catch(() => ({}))).data?.id;
   let portFaux = 0;
   for (let i = 0; i < 40 && !portFaux; i++) {
     portFaux = Number(journal.match(/prêt sur le port (\d+)/)?.[1] ?? 0);
     if (!portFaux) await attendre(250);
   }
   const env = portFaux ? ((await (await fetch(`http://127.0.0.1:${portFaux}/essai/env`)).json().catch(() => ({}))).env ?? {}) : {};
-  const relais = env.HELIX_OPENCODE_CLE_RELAIS ?? "";
+  const relais = env.OXOAI_OPENCODE_CLE_RELAIS ?? "";
   // Ce qu'OpenCode envoie : le nom du modèle, ses outils, 32 000 jetons de réponse (opencode.ts).
   const appelCode = async (entetes) => {
     const r = await poster("/v1/chat/completions", { ...avecJeton, ...entetes }, {
@@ -727,13 +727,13 @@ console.log("\nJ. Helix Code sur un modèle de clé personnelle (cas de Medhi : 
     });
     return { statut: r.status, texte: await r.text() };
   };
-  const parOpencode = await appelCode({ "X-Helix-Relais": relais, "X-Session-Id": session ?? "" });
+  const parOpencode = await appelCode({ "X-OxoAI-Relais": relais, "X-Session-Id": session ?? "" });
   verifier("l'appel d'OpenCode pour la session d'Alice reçoit gpt-4.1-nano de sa clé", Boolean(relais) && parOpencode.statut === 200 && parOpencode.texte.includes("Bonjour de openai (gpt-4.1-nano)"), `${parOpencode.statut} ${parOpencode.texte.slice(0, 160)}`);
-  const pourB = await appelCode({ "X-Helix-Relais": relais, "X-Session-Id": sessionB ?? "" });
+  const pourB = await appelCode({ "X-OxoAI-Relais": relais, "X-Session-Id": sessionB ?? "" });
   verifier("le même appel pour une session de Bruno est refusé (503, réservé)", Boolean(sessionB) && pourB.statut === 503 && /réservé/.test(pourB.texte), `${pourB.statut} ${pourB.texte.slice(0, 120)}`);
   const sansCle = await appelCode({ "X-Session-Id": session ?? "" });
   verifier("sans la clé remise à OpenCode, le numéro de session d'Alice ne suffit pas (503)", sansCle.statut === 503, sansCle.statut);
-  const autreSession = await appelCode({ "X-Helix-Relais": relais, "X-Session-Id": "ses_inconnueDuRegistre1" });
+  const autreSession = await appelCode({ "X-OxoAI-Relais": relais, "X-Session-Id": "ses_inconnueDuRegistre1" });
   verifier("avec la clé mais une session inconnue : refusé (503)", autreSession.statut === 503, autreSession.statut);
 }
 

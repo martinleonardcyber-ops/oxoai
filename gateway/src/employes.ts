@@ -40,32 +40,32 @@ import { backendById, contexteDuModele, discover, type Discovery } from "./backe
 import { moteurDeLaMachine } from "./types.ts";
 
 /**
- * Employés : des agents OpenClaw déployés et pilotés par Helix.
+ * Employés : des agents OpenClaw déployés et pilotés par OxoAI.
  *
  * Un employé tourne en permanence, a son poste, ses outils et ses missions
- * planifiées, et chacun peut lui parler depuis Helix, dans sa propre
+ * planifiées, et chacun peut lui parler depuis OxoAI, dans sa propre
  * conversation.
  *
  * Choix structurants, établis par une preuve de concept sur OpenClaw 2026.9.4
  * (voir PROJET.md § 3.4) :
  *
- *  - **Une instance OpenClaw à part**, dans le dossier de données d'Helix, sur
+ *  - **Une instance OpenClaw à part**, dans le dossier de données d'OxoAI, sur
  *    son propre port. Elle ne lit ni ne touche une installation personnelle
  *    d'OpenClaw qui tournerait sur la même machine. Sa configuration est
- *    **réécrite par Helix** à chaque changement (OpenClaw la recharge à chaud) :
- *    c'est Helix qui fait foi.
+ *    **réécrite par OxoAI** à chaque changement (OpenClaw la recharge à chaud) :
+ *    c'est OxoAI qui fait foi.
  *  - **Verrouillée** : écoute sur la boucle locale avec un jeton ; commandes
  *    système, navigateur, recherche web, médias, planification par l'agent et
  *    extensions coupés ; fichiers limités à l'espace de l'employé ; aucune
  *    procédure intégrée (elles poussaient le modèle à inventer des outils) ;
  *    ni télémétrie, ni vérification de mise à jour, ni catalogue distant, ni
  *    annonce sur le réseau local, ni « rêves » nocturnes de la mémoire.
- *  - **Le modèle passe par la passerelle Helix** : modèles locaux ou européens,
+ *  - **Le modèle passe par la passerelle OxoAI** : modèles locaux ou européens,
  *    consommation mesurée au nom de l'employé.
- *  - **Les outils sont ceux d'Helix**, servis par MCP (`serveurOutils.ts`), un
+ *  - **Les outils sont ceux d'OxoAI**, servis par MCP (`serveurOutils.ts`), un
  *    serveur par employé : chacun ne voit que les siens, sous l'approbation et
- *    le journal d'Helix.
- *  - **Les missions sont planifiées par Helix**, jamais par l'agent : une
+ *    le journal d'OxoAI.
+ *  - **Les missions sont planifiées par OxoAI**, jamais par l'agent : une
  *    automatisation OpenClaw peut exécuter une commande système.
  */
 
@@ -75,14 +75,14 @@ import { moteurDeLaMachine } from "./types.ts";
 
 /**
  * Quand une mission part. Les quatre premiers sont des horaires, planifiés
- * chez OpenClaw ; « a-chaque-mail » est un déclencheur : Helix regarde la
+ * chez OpenClaw ; « a-chaque-mail » est un déclencheur : OxoAI regarde la
  * boîte branchée toutes les deux minutes et confie chaque nouveau message à la
  * mission (voir `tourCourrier`).
  */
 export type Rythme = "jours-ouvres" | "chaque-jour" | "chaque-heure" | "chaque-semaine" | "chaque-mois" | "a-chaque-mail";
 
 /**
- * Jusqu'où va un employé avec les outils propres à OpenClaw (ceux d'Helix
+ * Jusqu'où va un employé avec les outils propres à OpenClaw (ceux d'OxoAI
  * passent toujours par la barrière d'approbation, sauf s'il est « autonome ») :
  *  - `encadre` : ses fichiers de travail, sa mémoire, ses objectifs ;
  *  - `etendu`  : en plus, le web (recherche, lecture de pages), un navigateur,
@@ -106,7 +106,7 @@ interface ChampCanal {
 }
 
 /**
- * Messageries d'OpenClaw proposées par Helix : celles qui fonctionnent depuis
+ * Messageries d'OpenClaw proposées par OxoAI : celles qui fonctionnent depuis
  * une machine sans adresse publique (connexion sortante), avec un jeton ou un
  * QR code. Telegram est livré avec OpenClaw ; les autres sont des extensions
  * officielles, installées depuis npm au premier branchement.
@@ -147,7 +147,7 @@ export interface CanalEmploye {
   type: TypeCanal;
   /**
    * Qui peut lui écrire : `appairage` (une personne inconnue reçoit un code,
-   * le propriétaire l'accepte dans Helix) ou `liste` (seulement les
+   * le propriétaire l'accepte dans OxoAI) ou `liste` (seulement les
    * identifiants donnés : numéros, identifiants Telegram…).
    */
   acces: "appairage" | "liste";
@@ -222,7 +222,7 @@ export interface Employe {
   canaux?: CanalEmploye[];
   /**
    * Agent de l'interface dont il est la mise en service (collection `agents`).
-   * Un agent créé dans Helix est déployé tout seul : l'employé en est le
+   * Un agent créé dans OxoAI est déployé tout seul : l'employé en est le
    * versant « toujours actif » (missions, messageries, mémoire).
    */
   agentId?: string;
@@ -253,7 +253,7 @@ export interface Employe {
   modele: string;
 }
 
-/** Un échange d'une personne avec un employé : gardé par Helix, chiffré, exportable. */
+/** Un échange d'une personne avec un employé : gardé par OxoAI, chiffré, exportable. */
 export interface Echange {
   quand: string;
   question: string;
@@ -343,7 +343,7 @@ export interface LectureDesBases {
  * audience (son propriétaire, ou les membres des groupes de son agent). Les
  * conditions de sortie, toutes vérifiables dans ce qui est enregistré ici :
  *  - **aucune messagerie** : sur un canal, écrivent des gens qui n'ont pas de
- *    compte Helix, et sa mémoire leur répond ;
+ *    compte OxoAI, et sa mémoire leur répond ;
  *  - aucune mission **à chaque mail** : c'est un texte venu de n'importe qui
  *    qui le fait travailler ;
  *  - palier **encadré** : au-delà, il lit des pages web (une adresse peut
@@ -669,7 +669,7 @@ export async function detecterMoteur(forcer = false): Promise<{ moteur: Moteur |
     const trouve = examiner(bin);
     if (!trouve) continue;
     const { version, lancement } = trouve;
-    // Le premier candidat valable parmi l'imposé et l'installé par Helix l'emporte ; ailleurs, le plus récent.
+    // Le premier candidat valable parmi l'imposé et l'installé par OxoAI l'emporte ; ailleurs, le plus récent.
     if (meilleur && (meilleur.bin === binaireGere() || meilleur.bin === deployment().openclaw?.chemin)) continue;
     if (meilleur && auMoins(versionNum(meilleur.version), versionNum(version))) continue;
     if (!auMoins(versionNum(version), OPENCLAW_MIN)) {
@@ -693,13 +693,13 @@ export async function detecterMoteur(forcer = false): Promise<{ moteur: Moteur |
 /* ------------------------------------------------------------------ */
 
 const dossier = () =>
-  join(process.env.HELIX_DATA_DIR ?? join(homedir(), ".helix", "data"), "openclaw");
+  join(process.env.OXOAI_DATA_DIR ?? join(homedir(), ".oxoai", "data"), "openclaw");
 const fichierConfig = () => join(dossier(), "openclaw.json");
 const espaceDe = (id: string) => join(dossier(), "employes", id);
 const portOpenClaw = () => deployment().openclaw?.port ?? 18800;
 
 /** Côté OpenClaw, tout ce qui appartient à un employé porte ce nom : agent, fournisseur, serveur d'outils. */
-export const nomOpenClaw = (id: string) => `helix-${id}`;
+export const nomOpenClaw = (id: string) => `oxoai-${id}`;
 
 /**
  * Le second profil de chaque employé chez OpenClaw, celui qui traite les
@@ -707,17 +707,17 @@ export const nomOpenClaw = (id: string) => `helix-${id}`;
  * soit efficace et évite l'injection de prompt »). Un mail vient du dehors :
  * son texte peut être écrit pour détourner l'agent. Ce profil garde ce qu'il
  * faut pour faire le travail (lire le mail et les fichiers de son espace,
- * chercher dans sa mémoire, ses outils Helix : la boîte, les brouillons, les
+ * chercher dans sa mémoire, ses outils OxoAI : la boîte, les brouillons, les
  * documents), et rien de ce qui ferait sortir quoi que ce soit : ni le web, ni
  * un navigateur, ni une messagerie, ni une commande, ni l'écriture d'un
- * fichier. Ses outils Helix qui modifient attendent toujours une personne
+ * fichier. Ses outils OxoAI qui modifient attendent toujours une personne
  * (serveurOutils.ts, `traiteUnMailRecu`), quel que soit son palier.
  */
 export const nomCourrier = (id: string) => `${nomOpenClaw(id)}-courrier`;
 /** L'employé d'un agent OpenClaw, que ce soit son profil ordinaire ou celui du courrier. */
-const employeDeLAgent = (agent: string) => agent.replace(/^helix-/, "").replace(/-courrier$/, "");
+const employeDeLAgent = (agent: string) => agent.replace(/^oxoai-/, "").replace(/-courrier$/, "");
 
-/** Ce que le profil du courrier peut faire : lire, se souvenir, ses outils Helix. Rien d'autre. */
+/** Ce que le profil du courrier peut faire : lire, se souvenir, ses outils OxoAI. Rien d'autre. */
 function politiqueCourrier(e: Employe): Record<string, unknown> {
   return {
     alsoAllow: ["read", "session_status", "memory_search", "memory_get", `${nomOpenClaw(e.id)}__*`],
@@ -754,7 +754,7 @@ function secretFichier(nom: string): string {
 const jetonOpenClaw = () => secretFichier(".jeton");
 
 /**
- * Clé qui prouve à la passerelle Helix qu'une requête vient bien de l'instance
+ * Clé qui prouve à la passerelle OxoAI qu'une requête vient bien de l'instance
  * OpenClaw qu'elle a lancée : le jeton d'instance, lui, est sur tous les postes.
  */
 const cleEmployes = () => secretFichier(".cle");
@@ -780,7 +780,7 @@ export function cleValide(fournie: string | undefined, id: string): boolean {
 
 let passerelle: { url: string; jeton: string } | null = null;
 
-/** Appelé par index.ts une fois la passerelle Helix à l'écoute. */
+/** Appelé par index.ts une fois la passerelle OxoAI à l'écoute. */
 export function connaitrePasserelle(p: { url: string; jeton: string }): void {
   passerelle = p;
 }
@@ -792,7 +792,7 @@ export function connaitrePasserelle(p: { url: string; jeton: string }): void {
  * par là), et sous Windows ce sans quoi un processus ne démarre pas.
  *
  * Test d'intrusion du 27/09/2026 : OpenClaw recevait tout `process.env` de la
- * passerelle, moins les `HELIX_*` et `ELECTRON_*`. Vérifié avec le faux
+ * passerelle, moins les `OXOAI_*` et `ELECTRON_*`. Vérifié avec le faux
  * OpenClaw de la batterie : une clé de l'hôte (`AWS_SECRET_ACCESS_KEY`) lui
  * arrivait. C'est l'environnement des commandes d'un employé « libre » (`exec`,
  * dont la sortie part au modèle) et celui où OpenClaw cherche ses clés de
@@ -874,7 +874,7 @@ const OUTILS_DE_BASE = [
  * Refusés à tous les paliers : la configuration de la passerelle OpenClaw
  * (`gateway`), l'installation d'extensions (`plugins`), l'atelier de
  * procédures, les appareils appairés, l'écran et le terminal. Un employé ne
- * défait pas lui-même le verrouillage qu'Helix lui a posé.
+ * défait pas lui-même le verrouillage qu'OxoAI lui a posé.
  */
 const TOUJOURS_REFUSES = ["gateway", "plugins", "skill_workshop", "group:nodes", "screen", "terminal", "canvas"];
 
@@ -882,7 +882,7 @@ const TOUJOURS_REFUSES = ["gateway", "plugins", "skill_workshop", "group:nodes",
  * Ce que les personnes qui écrivent sur un canal ne peuvent pas lui faire
  * faire : ses outils de l'entreprise (sauf si on les leur ouvre), les
  * commandes et les rappels. La règle vaut pour tout expéditeur venu d'une
- * messagerie ; les conversations ouvertes depuis Helix n'ont pas d'expéditeur
+ * messagerie ; les conversations ouvertes depuis OxoAI n'ont pas d'expéditeur
  * de canal et n'y sont pas soumises.
  */
 function restrictionsCanaux(e: Employe): Record<string, unknown> {
@@ -898,19 +898,19 @@ function politiqueOutils(e: Employe): Record<string, unknown> {
 }
 
 function politiqueParPalier(e: Employe): Record<string, unknown> {
-  const helix = `${nomOpenClaw(e.id)}__*`;
+  const oxoai = `${nomOpenClaw(e.id)}__*`;
   const etendus = ["group:web", "browser", "message"];
   switch (e.liberte ?? "encadre") {
     case "libre":
       return {
-        alsoAllow: [...OUTILS_DE_BASE, ...etendus, "group:runtime", "cron", "heartbeat_respond", "group:sessions", "apply_patch", helix],
+        alsoAllow: [...OUTILS_DE_BASE, ...etendus, "group:runtime", "cron", "heartbeat_respond", "group:sessions", "apply_patch", oxoai],
         deny: TOUJOURS_REFUSES,
         exec: { mode: "full", host: "gateway" },
         fs: { workspaceOnly: false },
       };
     case "etendu":
       return {
-        alsoAllow: [...OUTILS_DE_BASE, ...etendus, helix],
+        alsoAllow: [...OUTILS_DE_BASE, ...etendus, oxoai],
         // Pas de rappels à ce palier : une automatisation OpenClaw peut exécuter une commande.
         deny: [...TOUJOURS_REFUSES, "group:runtime", "group:automation", "cron", "group:media"],
         exec: { mode: "deny" },
@@ -918,7 +918,7 @@ function politiqueParPalier(e: Employe): Record<string, unknown> {
       };
     default:
       return {
-        alsoAllow: [...OUTILS_DE_BASE, helix],
+        alsoAllow: [...OUTILS_DE_BASE, oxoai],
         deny: [...TOUJOURS_REFUSES, "group:runtime", "group:web", "group:ui", "group:automation", "cron", "group:media", "message"],
         exec: { mode: "deny" },
         fs: { workspaceOnly: true },
@@ -977,7 +977,7 @@ const objet = (v: unknown): Record<string, unknown> =>
   v && typeof v === "object" && !Array.isArray(v) ? (v as Record<string, unknown>) : {};
 
 /**
- * Écrit la configuration de l'instance dédiée. Helix réécrit toutes les parties
+ * Écrit la configuration de l'instance dédiée. OxoAI réécrit toutes les parties
  * dont il a la charge ; il garde ce qu'OpenClaw y a ajouté lui-même (dossiers
  * d'état des agents, métadonnées de migration).
  */
@@ -1041,7 +1041,7 @@ function appliquerConfiguration(employes: Employe[], tailles?: Map<string, numbe
       baseUrl: `${passerelle.url}/v1`,
       api: "openai-completions",
       apiKey: passerelle.jeton,
-      headers: { "X-Helix-Employe": e.id, "X-Helix-Cle": cleDe(e.id) },
+      headers: { "X-OxoAI-Employe": e.id, "X-OxoAI-Cle": cleDe(e.id) },
       models: [{ id: e.modele, name: e.modele, ...(taille ? { contextWindow: taille } : {}) }],
     };
   }
@@ -1079,9 +1079,9 @@ function appliquerConfiguration(employes: Employe[], tailles?: Map<string, numbe
   const serveurs: Record<string, unknown> = {};
   for (const e of employes) {
     serveurs[nomOpenClaw(e.id)] = {
-      url: `${passerelle.url}/helix/employes/${e.id}/outils`,
+      url: `${passerelle.url}/oxoai/employes/${e.id}/outils`,
       transport: "streamable-http",
-      headers: { Authorization: `Bearer ${passerelle.jeton}`, "X-Helix-Cle": cleDe(e.id) },
+      headers: { Authorization: `Bearer ${passerelle.jeton}`, "X-OxoAI-Cle": cleDe(e.id) },
       /*
        * Un appel peut attendre l'accord d'une personne (deux minutes au plus,
        * approbation.ts). Au délai par défaut d'OpenClaw, l'appel était coupé
@@ -1094,7 +1094,7 @@ function appliquerConfiguration(employes: Employe[], tailles?: Map<string, numbe
 
   /*
    * Canaux : un compte par employé et par messagerie, routé vers lui seul.
-   * Helix est seul maître de cette partie : ce qui n'est pas dans sa liste
+   * OxoAI est seul maître de cette partie : ce qui n'est pas dans sa liste
    * n'existe pas (pas de compte oublié qui continuerait d'écouter).
    */
   const canaux: Record<string, { accounts: Record<string, unknown> }> = {};
@@ -1150,14 +1150,14 @@ function appliquerConfiguration(employes: Employe[], tailles?: Map<string, numbe
     plugins: false,
     debug: false,
     restart: false,
-    ownerAllowFrom: ["helix:personne"],
+    ownerAllowFrom: ["oxoai:personne"],
   };
 
   const agents = objet(cfg.agents);
   const anciens = objet(agents.entries);
-  // Les agents qu'OpenClaw crée de lui-même (« main ») restent ; ceux d'Helix sont réécrits.
+  // Les agents qu'OpenClaw crée de lui-même (« main ») restent ; ceux d'OxoAI sont réécrits.
   const entrees: Record<string, unknown> = Object.fromEntries(
-    Object.entries(anciens).filter(([k]) => !k.startsWith("helix-")),
+    Object.entries(anciens).filter(([k]) => !k.startsWith("oxoai-")),
   );
   for (const e of employes) {
     const id = nomOpenClaw(e.id);
@@ -1168,7 +1168,7 @@ function appliquerConfiguration(employes: Employe[], tailles?: Map<string, numbe
       identity: { name: e.nom },
       model: `${id}/${e.modele}`,
       skills: [],
-      // Ses propres outils Helix, et les outils d'OpenClaw de son palier.
+      // Ses propres outils OxoAI, et les outils d'OpenClaw de son palier.
       tools: politiqueOutils(e),
     };
     // Son profil pour les mails reçus : même modèle, même espace (en lecture), sans aucune sortie.
@@ -1194,7 +1194,7 @@ function appliquerConfiguration(employes: Employe[], tailles?: Map<string, numbe
   };
 
   mkdirSync(dossier(), { recursive: true, mode: 0o700 });
-  const tmp = `${fichierConfig()}.helix-tmp`;
+  const tmp = `${fichierConfig()}.oxoai-tmp`;
   writeFileSync(tmp, JSON.stringify(cfg, null, 2), { mode: 0o600 });
   // Sous Windows, un renommage peut échouer un instant (OpenClaw relit le fichier, l'antivirus l'inspecte) : réessayé.
   renommerSur(tmp, fichierConfig());
@@ -1437,7 +1437,7 @@ async function lancerProcessus(moteur: Moteur): Promise<void> {
   const p = spawn(moteur.lancement.fichier, [...moteur.lancement.prefixe, "gateway", "run", "--port", String(portOpenClaw())], {
     env: envOpenClaw(moteur),
     stdio: ["ignore", "pipe", "pipe"],
-    // Sous Windows, pas de fenêtre de console qui s'ouvre derrière Helix.
+    // Sous Windows, pas de fenêtre de console qui s'ouvre derrière OxoAI.
     windowsHide: true,
   });
   processus = p;
@@ -1490,7 +1490,7 @@ async function lancerProcessus(moteur: Moteur): Promise<void> {
    * Quatre minutes pour ouvrir son port, tant que le processus vit
    * (30/09/2026). La limite était de 45 s. Sur le PC Windows de Medhi, l'écran
    * a dit plusieurs fois « ne s'est pas ouverte à temps » avant que l'agent
-   * soit en service : à chaque fois Helix arrêtait OpenClaw en plein
+   * soit en service : à chaque fois OxoAI arrêtait OpenClaw en plein
    * démarrage et le relançait, l'essai repartant de zéro. Cause supposée, pas
    * mesurée sur ce PC : un premier démarrage lent (des milliers de fichiers
    * lus pour la première fois, l'antivirus qui les regarde). L'essai sous
@@ -1521,7 +1521,7 @@ async function lancerProcessus(moteur: Moteur): Promise<void> {
   throw new Error(t("L'instance de vos agents ne s'est pas ouverte à temps. Elle va être relancée : réessayez dans une minute."));
 }
 
-/** Arrête l'instance dédiée, à la fermeture d'Helix. */
+/** Arrête l'instance dédiée, à la fermeture d'OxoAI. */
 export function arreterEmployes(): void {
   if (minuterieCourrier) clearInterval(minuterieCourrier);
   minuterieCourrier = null;
@@ -1605,14 +1605,14 @@ async function retirerAutomatisations(filtre: (t: { id?: string; agentId?: strin
 
 async function balayer(employes: Employe[]): Promise<void> {
   const connus = new Set(employes.flatMap((e) => [nomOpenClaw(e.id), nomCourrier(e.id)]));
-  await retirerAutomatisations((t) => Boolean(t.agentId?.startsWith("helix-") && !connus.has(t.agentId)));
+  await retirerAutomatisations((t) => Boolean(t.agentId?.startsWith("oxoai-") && !connus.has(t.agentId)));
   const espaces = join(dossier(), "employes");
   for (const d of existsSync(espaces) ? readdirSync(espaces) : []) {
     if (d !== "_defaut" && !connus.has(nomOpenClaw(d))) rmSync(join(espaces, d), { recursive: true, force: true });
   }
   const etats = join(dossier(), "agents");
   for (const d of existsSync(etats) ? readdirSync(etats) : []) {
-    if (d.startsWith("helix-") && !connus.has(d)) rmSync(join(etats, d), { recursive: true, force: true });
+    if (d.startsWith("oxoai-") && !connus.has(d)) rmSync(join(etats, d), { recursive: true, force: true });
   }
   const memoires = join(racineDonnees(), "memoires-employes");
   for (const d of existsSync(memoires) ? readdirSync(memoires) : []) {
@@ -1621,12 +1621,12 @@ async function balayer(employes: Employe[]): Promise<void> {
   const comptes = await publicAccounts();
   const tout = await tousLesEchanges();
   for (const qui of Object.keys(tout)) if (!comptes.some((c) => c.id === qui)) await oublierPersonne(qui);
-  // Conversations OpenClaw au nom d'un compte disparu, même si Helix n'en gardait plus trace.
+  // Conversations OpenClaw au nom d'un compte disparu, même si OxoAI n'en gardait plus trace.
   const actives = new Set(comptes.map((c) => cleSession(c.id)));
   for (const e of employes) {
     const agent = nomOpenClaw(e.id);
     const sortie = (await oc(["sessions", "--agent", agent, "--json", "--limit", "all"])).sortie;
-    const cles = new Set(sortie.match(new RegExp(`agent:${agent}:helix-[0-9a-f]{24}(?![\\w-])`, "g")) ?? []);
+    const cles = new Set(sortie.match(new RegExp(`agent:${agent}:oxoai-[0-9a-f]{24}(?![\\w-])`, "g")) ?? []);
     for (const cle of cles) {
       if (actives.has(cle.slice(`agent:${agent}:`.length))) continue;
       await oc(["sessions", "delete", cle, "--agent", agent, "--yes", "--json"]);
@@ -1672,7 +1672,7 @@ async function instanceMuette(): Promise<string | null> {
  * « EPERM » sur `realpath`. Les PC retirés avant le correctif du 04/10/2026
  * restent dans cet état tant que la même instance tourne.
  */
-const FICHIER_AGENT_COINCE = /EPERM[\s\S]{0,200}realpath[\s\S]{0,600}[\\/]agents[\\/]helix-/i;
+const FICHIER_AGENT_COINCE = /EPERM[\s\S]{0,200}realpath[\s\S]{0,600}[\\/]agents[\\/]oxoai-/i;
 
 /** Commande OpenClaw contre l'instance dédiée. */
 async function oc(args: string[], delaiMs = 60_000, reprise = false): Promise<Sortie> {
@@ -1709,8 +1709,8 @@ async function oc(args: string[], delaiMs = 60_000, reprise = false): Promise<So
  * `cles` : conversations dont on retire aussi les archives de remise à zéro
  * (`reset`), celles d'une personne effacée. `personnes` : les conversations de
  * personnes encore là ; les archives de conversation de personne (clé
- * `helix-<empreinte>`) qui n'y sont pas partent aussi. Les archives de
- * conversations supprimées partent toutes : Helix n'en garde aucune.
+ * `oxoai-<empreinte>`) qui n'y sont pas partent aussi. Les archives de
+ * conversations supprimées partent toutes : OxoAI n'en garde aucune.
  */
 async function effacerArchives(agent: string, cles: string[] = [], personnes?: string[]): Promise<void> {
   const base = join(dossier(), "agents", agent, "agent", "openclaw-agent.sqlite");
@@ -1725,7 +1725,7 @@ async function effacerArchives(agent: string, cles: string[] = [], personnes?: s
         'const { DatabaseSync } = require("node:sqlite");',
         "const base = process.argv[1];",
         "const { cles, personnes } = JSON.parse(process.argv[2]);",
-        "const orpheline = (k) => Array.isArray(personnes) && /:helix-[0-9a-f]{24}$/.test(k) && !personnes.includes(k);",
+        "const orpheline = (k) => Array.isArray(personnes) && /:oxoai-[0-9a-f]{24}$/.test(k) && !personnes.includes(k);",
         "const d = new DatabaseSync(base);",
         'd.exec("PRAGMA busy_timeout = 15000");',
         "const noms = [];",
@@ -1760,14 +1760,14 @@ async function effacerArchives(agent: string, cles: string[] = [], personnes?: s
  *  - ses conversations (transcriptions dans la base SQLite de l'agent,
  *    résultats d'outils compris), et leurs archives ;
  *  - l'index de sa mémoire et son cache d'embeddings, dans la même base.
- * Avant qu'un changement élargisse son audience, Helix met ses notes de côté
+ * Avant qu'un changement élargisse son audience, OxoAI met ses notes de côté
  * (copie chiffrée, que son propriétaire peut restaurer tant que l'audience
  * n'est pas plus large qu'au moment de la copie), puis vide les trois, et
  * vérifie. Si l'une des étapes échoue, le changement est refusé : il ne prend
  * jamais effet sur une mémoire pleine.
  */
 
-const racineDonnees = () => process.env.HELIX_DATA_DIR ?? join(homedir(), ".helix", "data");
+const racineDonnees = () => process.env.OXOAI_DATA_DIR ?? join(homedir(), ".oxoai", "data");
 /**
  * Hors du dossier d'OpenClaw : au palier « libre », l'employé lit et écrit
  * partout sur la machine, et ne doit ni effacer la trace de ses lectures ni
@@ -1779,8 +1779,8 @@ const indexCopies = (id: string) => join(dossierMemoire(id), "copies.json");
 const fichierCopie = (id: string, copie: string) => join(dossierMemoire(id), `${copie}.hlx`);
 const placeCopie = (id: string, copie: string) => `memoire-employe:${id}:${copie}`;
 
-/** Fichiers de son espace qu'Helix réécrit à chaque changement : ce n'est pas sa mémoire. */
-const FICHIERS_HELIX = new Set(["SOUL.md", "AGENTS.md", "IDENTITY.md", "USER.md"]);
+/** Fichiers de son espace qu'OxoAI réécrit à chaque changement : ce n'est pas sa mémoire. */
+const FICHIERS_OXOAI = new Set(["SOUL.md", "AGENTS.md", "IDENTITY.md", "USER.md"]);
 /** Au-delà, la copie n'est pas faite (et le changement refusé) : rien n'est vidé sans copie. */
 const COPIE_MAX_OCTETS = 64 * 1024 * 1024;
 const COPIE_MAX_FICHIERS = 5_000;
@@ -1819,7 +1819,7 @@ function aPuLireHorsEquipe(e: Employe): boolean {
   return (e.connaissances?.length ?? 0) > 0 && lectureDesBases(e).regle !== "equipe";
 }
 
-/** Ses notes : tout son espace, sauf les fiches qu'Helix réécrit et les documents confiés par son propriétaire. */
+/** Ses notes : tout son espace, sauf les fiches qu'OxoAI réécrit et les documents confiés par son propriétaire. */
 function fichiersDeMemoire(id: string): { chemin: string; taille: number; lien: boolean }[] {
   const espace = espaceDe(id);
   const liste: { chemin: string; taille: number; lien: boolean }[] = [];
@@ -1832,7 +1832,7 @@ function fichiersDeMemoire(id: string): { chemin: string; taille: number; lien: 
       return;
     }
     for (const n of noms) {
-      if (!rel && (FICHIERS_HELIX.has(n) || n === "documents" || n === DOSSIER_ETAT_OPENCLAW)) continue;
+      if (!rel && (FICHIERS_OXOAI.has(n) || n === "documents" || n === DOSSIER_ETAT_OPENCLAW)) continue;
       const r = rel ? `${rel}/${n}` : n;
       let st;
       try {
@@ -2033,7 +2033,7 @@ export async function copiesMemoire(id: string, qui: string): Promise<Resultat<{
  * exactement ce que le vidage a empêché. Un fichier du même nom déjà là
  * n'est pas écrasé : la note restaurée arrive à côté. Les conversations ne
  * reviennent pas (elles ont été effacées chez OpenClaw) ; les échanges que
- * Helix garde pour chacun restent, eux, à l'écran.
+ * OxoAI garde pour chacun restent, eux, à l'écran.
  */
 export async function restaurerMemoire(id: string, copie: string, qui: string): Promise<Resultat<{ fichiers: number }>> {
   const e = await employe(id);
@@ -2062,11 +2062,11 @@ export async function restaurerMemoire(id: string, copie: string, qui: string): 
     if (typeof f.chemin !== "string" || typeof f.contenu !== "string") continue;
     const parts = f.chemin.split("/");
     /*
-     * Rien hors de son espace, rien dans les fiches qu'Helix écrit. Sous
+     * Rien hors de son espace, rien dans les fiches qu'OxoAI écrit. Sous
      * Windows, `\` et `C:` sont aussi des séparateurs : un morceau qui en
      * porte sortirait de l'espace par `join` (28/09/2026).
      */
-    if (parts.some((p) => !p || p === "." || p === ".." || /[\\:]/.test(p)) || (parts.length === 1 && FICHIERS_HELIX.has(parts[0]!)) || parts[0] === "documents") continue;
+    if (parts.some((p) => !p || p === "." || p === ".." || /[\\:]/.test(p)) || (parts.length === 1 && FICHIERS_OXOAI.has(parts[0]!)) || parts[0] === "documents") continue;
     let cible = join(espace, ...parts);
     // Le suffixe va avant l'extension du fichier, jamais dans le nom d'un dossier (`C:\a.b\notes` sous Windows).
     if (existsSync(cible)) cible = cible.replace(/(\.[^./\\]+)?$/, (ext) => `.restaure${ext}`);
@@ -2137,7 +2137,7 @@ async function retirerMissions(missions: Mission[]): Promise<void> {
 async function planifier(e: Employe): Promise<string | null> {
   if (e.enPause) return null;
   for (const m of e.missions) {
-    // Déclenchée par un mail, pas par l'horloge : c'est Helix qui la lance (`tourCourrier`).
+    // Déclenchée par un mail, pas par l'horloge : c'est OxoAI qui la lance (`tourCourrier`).
     if (m.rythme === "a-chaque-mail") continue;
     const r = await oc([
       "automations",
@@ -2155,7 +2155,7 @@ async function planifier(e: Employe): Promise<string | null> {
       // Sans `--light-context` : seul, sans personne au bout, il a d'autant plus besoin de sa fiche de poste et de ses règles.
       "--no-deliver",
       "--declaration-key",
-      `helix:${e.id}:${m.id}`,
+      `oxoai:${e.id}:${m.id}`,
       "--json",
     ]);
     const cree = lireJson<{ id?: string; jobId?: string; job?: { id?: string } }>(r.sortie);
@@ -2289,7 +2289,7 @@ export async function deployer(brut: Record<string, unknown>, qui: string, model
       .replace(/[\u0300-\u036f]/g, "")
       .replace(/[^a-z0-9]+/g, "-")
       .replace(/^-|-$/g, "")
-      // Court : le nom des outils côté modèle (« helix-<id>__famille__outil ») ne doit pas dépasser 64 caractères.
+      // Court : le nom des outils côté modèle (« oxoai-<id>__famille__outil ») ne doit pas dépasser 64 caractères.
       .slice(0, 16)
       .replace(/-$/, "") || "employe";
   let id = base;
@@ -2463,7 +2463,7 @@ async function retirer(e: Employe, reste: Employe[]): Promise<void> {
    * Effacé pendant qu'il la tient, le fichier ne disparaît pas sous Windows :
    * il reste « en attente de suppression » tant que le processus vit, et toute
    * commande OpenClaw qui parcourt les agents bute dessus (« EPERM: operation
-   * not permitted, realpath … helix-test\agent\openclaw-agent.sqlite »). Vu
+   * not permitted, realpath … oxoai-test\agent\openclaw-agent.sqlite »). Vu
    * sur le PC de Medhi : après le retrait de l'agent « test », plus aucun agent
    * ne se déployait. macOS et Linux effacent un fichier ouvert sans histoire.
    * `reconfigurer`, plus bas, relance l'instance s'il reste des agents.
@@ -2476,7 +2476,7 @@ async function retirer(e: Employe, reste: Employe[]): Promise<void> {
   try {
     await reconfigurer(reste);
   } catch {
-    /* OpenClaw absent : on retire quand même l'employé d'Helix */
+    /* OpenClaw absent : on retire quand même l'employé d'OxoAI */
   }
   if (reste.length === 0) arreterEmployes();
   await enregistrer(reste);
@@ -2526,7 +2526,7 @@ const travaux = new Map<string, Travail>();
  * qui compare ces clés aux comptes existants, prenait d'ailleurs chaque
  * conversation pour celle d'un compte disparu, et l'effaçait.
  */
-const cleSession = (qui: string) => `helix-${createHash("sha256").update(qui).digest("hex").slice(0, 24)}`;
+const cleSession = (qui: string) => `oxoai-${createHash("sha256").update(qui).digest("hex").slice(0, 24)}`;
 
 /**
  * Envoie un message à l'employé, dans la conversation de cette personne. Un
@@ -2624,7 +2624,7 @@ export async function echangesDe(qui: string): Promise<Record<string, Echange[]>
 
 /**
  * Effacement d'un compte : ce que la personne a échangé avec les employés
- * (chez Helix, et la conversation chez OpenClaw, mémoire indexée comprise), et
+ * (chez OxoAI, et la conversation chez OpenClaw, mémoire indexée comprise), et
  * les employés qu'elle avait déployés.
  */
 export async function oublierPersonne(qui: string): Promise<{ echanges: number; employes: number }> {
@@ -2670,7 +2670,7 @@ export async function activite(id: string): Promise<{ executions: Execution[]; a
   if (!e) return { executions: [] };
   let avertissement: string | undefined;
   await synchroniserJournal().catch(() => undefined);
-  // Les missions « à chaque mail » : lancées par Helix, leurs résultats sont chez Helix.
+  // Les missions « à chaque mail » : lancées par OxoAI, leurs résultats sont chez OxoAI.
   const sortie: Execution[] = [...((await toutesLesExecutions())[id] ?? [])];
   for (const m of e.missions) {
     if (!m.tache) continue;
@@ -2783,7 +2783,7 @@ export async function etatMoteur(): Promise<{
     enMarche,
     ...(vc && vc.etat !== "present" ? { visualCpp: vc.etat } : {}),
     raison,
-    // Installé par Helix, ou trouvé sur la machine (une installation qui existait déjà).
+    // Installé par OxoAI, ou trouvé sur la machine (une installation qui existait déjà).
     gere: moteur?.bin === binaireGere(),
     installation: etatInstallation(),
     ...(moteur && plusRecente(visee, moteur.version) ? { miseAJour: visee } : {}),
@@ -2872,7 +2872,7 @@ export function vueCanaux(e: Employe): (CanalEmploye & { nom: string })[] {
 }
 
 /**
- * Branche une messagerie. Les jetons sont gardés chiffrés par Helix et passés
+ * Branche une messagerie. Les jetons sont gardés chiffrés par OxoAI et passés
  * à OpenClaw par l'environnement ; OpenClaw redémarre pour les lire (les
  * autres employés sont interrompus quelques secondes).
  */
@@ -2953,7 +2953,7 @@ export async function retirerCanal(id: string, type: string, qui: string): Promi
   try {
     await reconfigurer(liste, true);
   } catch {
-    /* OpenClaw absent : le canal est retiré de Helix quand même */
+    /* OpenClaw absent : le canal est retiré de OxoAI quand même */
   }
   await enregistrer(liste);
   journaliser("employe.canal_retire", qui, { employe: e.id, canal: type });
@@ -3067,7 +3067,7 @@ export async function etatCanaux(id: string): Promise<Record<string, { enMarche:
 /* ------------------------------------------------------------------ */
 
 /*
- * Les outils d'Helix sont consignés au passage (serveurOutils.ts). Ceux
+ * Les outils d'OxoAI sont consignés au passage (serveurOutils.ts). Ceux
  * d'OpenClaw (recherche web, navigateur, commandes au palier « libre »,
  * messages envoyés) s'exécutent chez lui : on recopie son registre d'activité,
  * qui ne garde que des métadonnées (outil, issue, heure), jamais le contenu
@@ -3094,9 +3094,9 @@ export async function synchroniserJournal(): Promise<void> {
       .filter(
         (x) =>
           x.action === "tool.action.finished" &&
-          x.agentId?.startsWith("helix-") &&
+          x.agentId?.startsWith("oxoai-") &&
           x.toolName &&
-          !x.toolName.startsWith("helix-") &&
+          !x.toolName.startsWith("oxoai-") &&
           typeof x.occurredAt === "number",
       )
       .sort((a, b) => (a.occurredAt ?? 0) - (b.occurredAt ?? 0));
@@ -3135,7 +3135,7 @@ const dossierDocuments = (id: string) => join(espaceDe(id), "documents");
 function nomSur(nom: unknown): string | null {
   if (typeof nom !== "string") return null;
   const base = nom.split(/[\\/]/).pop()?.replace(/[\u0000-\u001f\u007f]/g, "").trim() ?? "";
-  if (!base || base.startsWith(".") || base.length > 120 || base.endsWith(".helix.txt")) return null;
+  if (!base || base.startsWith(".") || base.length > 120 || base.endsWith(".oxoai.txt")) return null;
   return base;
 }
 
@@ -3161,10 +3161,10 @@ export function listerDocuments(id: string): DocumentAgent[] {
   }
   return noms
     // Ni les textes extraits, ni un envoi en cours (fichier caché « .….partiel »).
-    .filter((n) => !n.endsWith(".helix.txt") && !n.startsWith("."))
+    .filter((n) => !n.endsWith(".oxoai.txt") && !n.startsWith("."))
     .sort((a, b) => a.localeCompare(b))
     .map((nom) => {
-      const extrait = `${nom}.helix.txt`;
+      const extrait = `${nom}.oxoai.txt`;
       const aTexte = noms.includes(extrait);
       let taille = 0;
       try {
@@ -3236,7 +3236,7 @@ export async function ajouterDocumentEnFlux(
     else await effacer(partiel, { force: true });
   }
   if (!complet) return { ok: false, statut: 400, message: t("Document vide.") };
-  const extrait = join(dossierDocs, `${nom}.helix.txt`);
+  const extrait = join(dossierDocs, `${nom}.oxoai.txt`);
   if (typeof entete.texte === "string" && entete.texte.trim()) {
     writeFileSync(extrait, entete.texte.slice(0, 2_000_000), { mode: 0o600 });
   } else {
@@ -3254,7 +3254,7 @@ export async function retirerDocument(id: string, nom: string, qui: string): Pro
   const sur = nomSur(nom);
   if (!sur || !listerDocuments(id).some((d) => d.nom === sur)) return { ok: false, statut: 404, message: t("Document introuvable.") };
   rmSync(join(dossierDocuments(id), sur), { force: true });
-  rmSync(join(dossierDocuments(id), `${sur}.helix.txt`), { force: true });
+  rmSync(join(dossierDocuments(id), `${sur}.oxoai.txt`), { force: true });
   ecrireEspace(e);
   journaliser("employe.document_retire", qui, { employe: id, document: sur });
   return { ok: true, valeur: listerDocuments(id) };
@@ -3361,7 +3361,7 @@ async function traiterMailRecu(e: Employe, m: Mission, msg: courrier.MessageRecu
     journaliser("employe.mission_courrier", `employe:${e.id}`, { employe: e.id, mission: m.id, ok: false, profilCourrier: false });
     return;
   }
-  const cle = `helix-courrier-${m.id}-${msg.identifiant}-${randomBytes(3).toString("hex")}`;
+  const cle = `oxoai-courrier-${m.id}-${msg.identifiant}-${randomBytes(3).toString("hex")}`;
   const agent = nomCourrier(e.id);
   /*
    * Des bornes tirées au sort pour chaque mail : un texte qui écrirait
@@ -3454,13 +3454,13 @@ export async function tourCourrier(): Promise<number> {
           if (m.rythme !== "a-chaque-mail" || !correspond(m, msg)) continue;
           confies++;
           await declencher(e, m, msg).catch((err: unknown) =>
-            console.warn(`[helix] mission « ${m.nom} » de ${e.nom} : ${messageErreur(err)}`),
+            console.warn(`[oxoai] mission « ${m.nom} » de ${e.nom} : ${messageErreur(err)}`),
           );
         }
       }
     }
   } catch (err) {
-    console.warn(`[helix] boîte mail non relevée : ${messageErreur(err)}`);
+    console.warn(`[oxoai] boîte mail non relevée : ${messageErreur(err)}`);
   } finally {
     tourEnCours = false;
   }

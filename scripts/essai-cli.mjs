@@ -1,5 +1,5 @@
 /*
- * Essai de la ligne de commande (cli/helix.mjs) contre une instance jetable.
+ * Essai de la ligne de commande (cli/oxoai.mjs) contre une instance jetable.
  *
  *   npm run essai:cli                 sans modèle : connexion, séance, erreurs, listes, conversation
  *   npm run essai:cli -- --modele     avec le modèle de LM Studio : Chat, outils et accord, Code
@@ -7,7 +7,7 @@
  * Comme la batterie de sécurité, il démarre une passerelle neuve sur un port
  * libre, avec des dossiers temporaires (données, projet, espace de Cowork) et
  * un fichier de séance temporaire : il ne touche ni à l'instance du poste, ni à
- * ~/.helix. Il se comporte ensuite comme quelqu'un au terminal. Les parties
+ * ~/.oxoai. Il se comporte ensuite comme quelqu'un au terminal. Les parties
  * interactives (mot de passe masqué, conversation, question d'accord, Ctrl+C)
  * passent par un vrai pseudo-terminal, ouvert par le module `pty` de Python :
  * sans Python 3, elles sont sautées, et l'essai le dit.
@@ -23,7 +23,7 @@ import { fileURLToPath } from "node:url";
 import { createServer } from "node:net";
 
 const RACINE = join(dirname(fileURLToPath(import.meta.url)), "..");
-const CLI = join(RACINE, "cli", "helix.mjs");
+const CLI = join(RACINE, "cli", "oxoai.mjs");
 const AVEC_MODELE = process.argv.includes("--modele");
 
 const portLibre = () =>
@@ -36,14 +36,14 @@ const portLibre = () =>
   });
 
 const PORT = await portLibre();
-const BANC = mkdtempSync(join(tmpdir(), "helix-essai-cli-"));
+const BANC = mkdtempSync(join(tmpdir(), "oxoai-essai-cli-"));
 const DONNEES = join(BANC, "donnees");
 const PROJET = join(BANC, "projet");
 const ESPACE = join(BANC, "espace");
 for (const d of [DONNEES, PROJET, ESPACE, join(BANC, "lume")]) mkdirSync(d, { recursive: true });
 const G = `http://127.0.0.1:${PORT}`;
 const SEANCE = join(BANC, "cli-seance");
-const CONFIG = join(BANC, "helix.config.json");
+const CONFIG = join(BANC, "oxoai.config.json");
 writeFileSync(CONFIG, JSON.stringify({ connecteursLibres: true }));
 const CARNET = join(BANC, "carnet.txt");
 const TRACE = join(BANC, "trace-mcp.txt");
@@ -51,16 +51,16 @@ const TRACE = join(BANC, "trace-mcp.txt");
 const passerelle = spawn(process.execPath, [join(RACINE, "gateway", "src", "index.ts")], {
   env: {
     ...process.env,
-    HELIX_GATEWAY_PORT: String(PORT),
-    HELIX_DATA_DIR: DONNEES,
-    HELIX_CODE_DIR: PROJET,
-    HELIX_WORKSPACE: ESPACE,
-    HELIX_LUME_DIR: join(BANC, "lume"),
-    HELIX_EXO_URL: "http://127.0.0.1:9/v1",
-    ...(AVEC_MODELE ? {} : { HELIX_LMSTUDIO_URL: "http://127.0.0.1:9/v1" }),
+    OXOAI_GATEWAY_PORT: String(PORT),
+    OXOAI_DATA_DIR: DONNEES,
+    OXOAI_CODE_DIR: PROJET,
+    OXOAI_WORKSPACE: ESPACE,
+    OXOAI_LUME_DIR: join(BANC, "lume"),
+    OXOAI_EXO_URL: "http://127.0.0.1:9/v1",
+    ...(AVEC_MODELE ? {} : { OXOAI_LMSTUDIO_URL: "http://127.0.0.1:9/v1" }),
     // Commandes libres permises à cette instance jetable seulement : le connecteur d'essai (mcp-essai.mjs) n'est pas au catalogue.
-    HELIX_CONFIG: CONFIG,
-    HELIX_GATEWAY_HOST: "",
+    OXOAI_CONFIG: CONFIG,
+    OXOAI_GATEWAY_HOST: "",
   },
   stdio: ["ignore", "pipe", "pipe"],
   // Chef de son groupe : à la fin, on arrête d'un coup la passerelle et ce qu'elle a lancé (OpenCode).
@@ -97,9 +97,9 @@ const MOT_DE_PASSE = "Essai-CLI-2026!";
 const EMAIL = "essai@example.test";
 const ENV_CLI = {
   ...process.env,
-  HELIX_ADRESSE: G,
-  HELIX_DATA_DIR: DONNEES,
-  HELIX_CLI_SEANCE: SEANCE,
+  OXOAI_ADRESSE: G,
+  OXOAI_DATA_DIR: DONNEES,
+  OXOAI_CLI_SEANCE: SEANCE,
   NO_COLOR: "1",
 };
 
@@ -186,7 +186,7 @@ print(json.dumps({"ok": ok, "manque": manque, "sortie": tout.decode("utf8", "rep
 const PYTHON = spawnSync("python3", ["-c", "import pty"], { encoding: "utf8" }).status === 0;
 
 function terminal(args, etapes, { cwd = PROJET } = {}) {
-  const commande = ["/usr/bin/env", ...Object.entries({ ...ENV_CLI, TERM: "dumb" }).filter(([k]) => /^(HELIX_|NO_COLOR|TERM|PATH|HOME)/.test(k)).map(([k, v]) => `${k}=${v}`), process.execPath, CLI, ...args];
+  const commande = ["/usr/bin/env", ...Object.entries({ ...ENV_CLI, TERM: "dumb" }).filter(([k]) => /^(OXOAI_|NO_COLOR|TERM|PATH|HOME)/.test(k)).map(([k, v]) => `${k}=${v}`), process.execPath, CLI, ...args];
   const r = spawnSync("python3", ["-c", PTY, JSON.stringify(commande), JSON.stringify(etapes)], {
     cwd,
     encoding: "utf8",
@@ -205,7 +205,7 @@ const api = (chemin, { methode = "GET", corps, seance } = {}) =>
     headers: {
       Authorization: `Bearer ${JETON}`,
       "Content-Type": "application/json",
-      ...(seance ? { "X-Helix-Session": seance } : {}),
+      ...(seance ? { "X-OxoAI-Session": seance } : {}),
     },
     body: corps ? JSON.stringify(corps) : undefined,
   });
@@ -215,25 +215,25 @@ try {
   console.log("\n1. Sans compte, sans séance, sans instance");
   {
     const r = cli(["aide"]);
-    verifier("« helix aide » décrit les commandes", r.code === 0 && /helix code/.test(r.sortie) && /--adresse/.test(r.sortie), r.sortie);
+    verifier("« oxoai aide » décrit les commandes", r.code === 0 && /oxoai code/.test(r.sortie) && /--adresse/.test(r.sortie), r.sortie);
     verifier("aucun tiret cadratin dans l'aide", !r.sortie.includes("\u2014"), r.sortie);
   }
   {
     const port = await portLibre();
     // Un jeton donné : celui du poste n'est lu que pour le port que l'application a ouvert (instance-port).
-    const r = cli(["modeles"], { env: { HELIX_ADRESSE: `http://127.0.0.1:${port}`, HELIX_JETON: "jeton-d-essai" } });
+    const r = cli(["modeles"], { env: { OXOAI_ADRESSE: `http://127.0.0.1:${port}`, OXOAI_JETON: "jeton-d-essai" } });
     verifier("instance injoignable : le dit, et dit d'ouvrir l'application", r.code === 1 && /ne répond pas/.test(r.erreur) && /Ouvrez l'application/.test(r.erreur), r.erreur);
   }
   {
-    const r = cli(["modeles"], { env: { HELIX_ADRESSE: "http://instance.example.test" } });
+    const r = cli(["modeles"], { env: { OXOAI_ADRESSE: "http://instance.example.test" } });
     verifier("http vers une autre machine : refusé avant tout envoi", r.code === 1 && /en http/.test(r.erreur), r.erreur);
   }
   {
-    const r = cli(["modeles"], { env: { HELIX_JETON: "faux-jeton-de-la-bonne-longueur-xx" } });
+    const r = cli(["modeles"], { env: { OXOAI_JETON: "faux-jeton-de-la-bonne-longueur-xx" } });
     verifier("jeton d'instance faux : dit que c'est le jeton", r.code === 1 && /refuse ce jeton/.test(r.erreur), r.erreur);
   }
   {
-    const r = cli(["modeles"], { env: { HELIX_DATA_DIR: join(BANC, "inexistant") } });
+    const r = cli(["modeles"], { env: { OXOAI_DATA_DIR: join(BANC, "inexistant") } });
     verifier("pas de jeton sur le poste : dit quoi faire", r.code === 1 && /Aucun jeton d'instance/.test(r.erreur), r.erreur);
   }
   {
@@ -241,7 +241,7 @@ try {
     verifier("connexion sans aucun compte : le dit", r.code === 1 && /Aucun compte/.test(r.erreur), r.erreur);
   }
 
-  const creation = await api("/helix/auth/create", {
+  const creation = await api("/oxoai/auth/create", {
     methode: "POST",
     corps: { fullName: "Essai CLI", email: EMAIL, password: MOT_DE_PASSE },
   });
@@ -249,9 +249,9 @@ try {
 
   {
     const r = cli(["code", "écris un fichier"]);
-    verifier("Code sans séance : demande de se connecter", r.code === 1 && /helix connexion/.test(r.erreur), r.erreur);
+    verifier("Code sans séance : demande de se connecter", r.code === 1 && /oxoai connexion/.test(r.erreur), r.erreur);
     const o = cli(["chat", "--outils", "liste mes fichiers"]);
-    verifier("Chat avec outils sans séance : demande de se connecter", o.code === 1 && /helix connexion/.test(o.erreur), o.erreur);
+    verifier("Chat avec outils sans séance : demande de se connecter", o.code === 1 && /oxoai connexion/.test(o.erreur), o.erreur);
   }
 
   /* ----------------------------------------------------------------------- */
@@ -274,11 +274,11 @@ try {
     verifier("le mot de passe n'est pas dans le fichier de séance", contenu && !contenu.includes(MOT_DE_PASSE), contenu);
     seance = JSON.parse(contenu || "{}")?.instances?.[G]?.seance ?? "";
     verifier("la séance est rangée sous l'adresse de l'instance", Boolean(seance), contenu);
-    const moi = await api("/helix/approbation", { seance });
+    const moi = await api("/oxoai/approbation", { seance });
     verifier("la séance enregistrée est acceptée par l'instance", moi.ok, moi.status);
   }
   {
-    const r = cli(["modeles"], { env: { HELIX_ADRESSE: `http://localhost:${PORT}` } });
+    const r = cli(["modeles"], { env: { OXOAI_ADRESSE: `http://localhost:${PORT}` } });
     verifier("la séance n'est envoyée qu'à l'adresse qui l'a ouverte", r.code === 0 || /Aucun modèle|Modèles/.test(r.sortie + r.erreur), r.erreur);
   }
 
@@ -286,9 +286,9 @@ try {
   console.log("\n3. Listes");
   {
     const r = cli(["outils"]);
-    verifier("« helix outils » liste les groupes et le niveau d'accord", r.code === 0 && /Fichiers/.test(r.sortie) && /Accord demandé : avant chaque modification/.test(r.sortie), r.sortie + r.erreur);
+    verifier("« oxoai outils » liste les groupes et le niveau d'accord", r.code === 0 && /Fichiers/.test(r.sortie) && /Accord demandé : avant chaque modification/.test(r.sortie), r.sortie + r.erreur);
     const m = cli(["modeles"]);
-    verifier("« helix modeles » répond", m.code === 0 && (AVEC_MODELE ? /Modèles de l'instance/.test(m.sortie) : /Aucun modèle|Modèles/.test(m.sortie)), m.sortie + m.erreur);
+    verifier("« oxoai modeles » répond", m.code === 0 && (AVEC_MODELE ? /Modèles de l'instance/.test(m.sortie) : /Aucun modèle|Modèles/.test(m.sortie)), m.sortie + m.erreur);
   }
 
   /* ----------------------------------------------------------------------- */
@@ -298,7 +298,7 @@ try {
   } else {
     const secret = "Mot-De-Passe-Pty-9876!";
     // Un second compte ne s'ouvre qu'avec la séance d'un collègue (ou une invitation).
-    const second = await api("/helix/auth/create", { methode: "POST", seance, corps: { fullName: "Pty", email: "pty@example.test", password: secret } });
+    const second = await api("/oxoai/auth/create", { methode: "POST", seance, corps: { fullName: "Pty", email: "pty@example.test", password: secret } });
     verifier("second compte créé par un collègue connecté", second.ok, second.status);
     const seanceAvant = readFileSync(SEANCE, "utf8");
     const t = terminal(["connexion", "--compte", "pty@example.test"], [
@@ -340,14 +340,14 @@ try {
       let demande = null;
       for (let i = 0; i < 240 && !demande; i++) {
         await attendre(1000);
-        const r = await api("/helix/approbation", { seance });
+        const r = await api("/oxoai/approbation", { seance });
         demande = r.ok ? (await r.json()).enAttente?.[0] : null;
       }
       verifier("Chat avec outils : l'écriture attend un accord", Boolean(demande), p.sortie());
       if (demande) {
         await attendre(1500);
         verifier("sans terminal, la ligne de commande dit de répondre dans l'application", /répondez dans l'application/.test(p.sortie()), p.sortie());
-        await api("/helix/approbation/repondre", { methode: "POST", seance, corps: { id: demande.id, accord: false } });
+        await api("/oxoai/approbation/repondre", { methode: "POST", seance, corps: { id: demande.id, accord: false } });
       }
       const r = await p.fin;
       verifier(`refusée : le fichier n'est pas écrit (${Math.round(r.ms / 1000)} s)`, !existsSync(cible), r.sortie);
@@ -375,11 +375,11 @@ try {
       let demande = null;
       for (let i = 0; i < 300 && !demande; i++) {
         await attendre(1000);
-        const e = await api("/helix/approbation", { seance });
+        const e = await api("/oxoai/approbation", { seance });
         demande = e.ok ? ((await e.json()).enAttente ?? []).find((d) => d.detail?.surface === "code") : null;
       }
       verifier("Code : l'écriture de l'agent de code attend un accord (carte « code »)", /^code__(write|edit|apply_patch)$/.test(demande?.detail?.outil ?? ""), JSON.stringify(demande) + p.sortie());
-      if (demande) await api("/helix/approbation/repondre", { methode: "POST", seance, corps: { id: demande.id, accord: true } });
+      if (demande) await api("/oxoai/approbation/repondre", { methode: "POST", seance, corps: { id: demande.id, accord: true } });
       const r = await p.fin;
       const fichier = join(PROJET, "bonjour.txt");
       const contenu = existsSync(fichier) ? readFileSync(fichier, "utf8") : "";
@@ -387,13 +387,13 @@ try {
       verifier("Code : l'action s'affiche (« ✓ Écriture bonjour.txt »)", /✓ Écriture bonjour\.txt/.test(r.sortie), r.sortie);
     }
     /*
-     * Un connecteur MCP dans Helix Code (ajouté le 25/09/2026) : le serveur
+     * Un connecteur MCP dans OxoAI Code (ajouté le 25/09/2026) : le serveur
      * d'essai scripts/mcp-essai.mjs, sans compte. La trace qu'il écrit prouve
      * de l'extérieur si l'outil a été exécuté ou non.
      */
     const lire = (f) => (existsSync(f) ? readFileSync(f, "utf8") : "");
     {
-      const ajout = await api("/helix/connecteurs/ajouter", {
+      const ajout = await api("/oxoai/connecteurs/ajouter", {
         methode: "POST",
         seance,
         corps: { id: "carnet", label: "Carnet d'essai", command: process.execPath, args: [join(RACINE, "scripts", "mcp-essai.mjs"), CARNET, TRACE] },
@@ -403,11 +403,11 @@ try {
       let demande = null;
       for (let i = 0; i < 300 && !demande; i++) {
         await attendre(1000);
-        const r = await api("/helix/approbation", { seance });
+        const r = await api("/oxoai/approbation", { seance });
         demande = r.ok ? ((await r.json()).enAttente ?? []).find((d) => d.detail?.outil === "carnet__noter") : null;
       }
       verifier("Code : l'outil du connecteur demande un accord, à la personne qui a envoyé la demande", demande?.detail?.outil === "carnet__noter", JSON.stringify(demande) + p.sortie());
-      if (demande) await api("/helix/approbation/repondre", { methode: "POST", seance, corps: { id: demande.id, accord: false } });
+      if (demande) await api("/oxoai/approbation/repondre", { methode: "POST", seance, corps: { id: demande.id, accord: false } });
       const r = await p.fin;
       verifier(`Code : refusé, l'outil n'est pas exécuté (${Math.round(r.ms / 1000)} s)`, !/noter/.test(lire(TRACE)), lire(TRACE) + r.sortie);
       verifier("Code : le refus s'affiche (« ✗ Connecteur carnet »)", /✗ Connecteur carnet/.test(r.sortie), r.sortie);
@@ -481,12 +481,12 @@ try {
   {
     const r = cli(["deconnexion"]);
     verifier("déconnexion : fermée sur l'instance", r.code === 0 && /fermée sur l'instance/.test(r.sortie), r.sortie + r.erreur);
-    const apres = await api("/helix/approbation", { seance });
+    const apres = await api("/oxoai/approbation", { seance });
     verifier("l'ancienne séance ne vaut plus rien", apres.status === 401, apres.status);
     const f = existsSync(SEANCE) ? readFileSync(SEANCE, "utf8") : "";
     verifier("la séance n'est plus dans le fichier", !f.includes(seance), f);
     const c = cli(["code", "x"]);
-    verifier("après déconnexion, Code redemande une connexion", c.code === 1 && /helix connexion/.test(c.erreur), c.erreur);
+    verifier("après déconnexion, Code redemande une connexion", c.code === 1 && /oxoai connexion/.test(c.erreur), c.erreur);
   }
   {
     writeFileSync(SEANCE, "{ illisible", { mode: 0o600 });
@@ -514,6 +514,6 @@ try {
 
 console.log(`\n${reussis} réussis, ${echecs.length} échoués.`);
 if (echecs.length) {
-  if (process.env.HELIX_ESSAI_JOURNAL) console.log(journal.slice(-4000));
+  if (process.env.OXOAI_ESSAI_JOURNAL) console.log(journal.slice(-4000));
   process.exit(1);
 }

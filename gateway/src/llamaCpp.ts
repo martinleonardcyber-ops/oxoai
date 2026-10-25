@@ -37,7 +37,7 @@ import { renommer } from "./processus.ts";
 import { tarDuSysteme } from "./pythonPrive.ts";
 
 /**
- * Le moteur ouvert : llama.cpp (MIT), posé et démarré par Helix là où LM
+ * Le moteur ouvert : llama.cpp (MIT), posé et démarré par OxoAI là où LM
  * Studio n'existe pas, c'est-à-dire sur les Mac à processeur Intel.
  *
  * ── Pourquoi ────────────────────────────────────────────────────────────────
@@ -66,7 +66,7 @@ import { tarDuSysteme } from "./pythonPrive.ts";
  *  - Les modèles : les fichiers GGUF que Qwen publie lui-même (dépôts
  *    `Qwen/Qwen3-*-GGUF`, Apache 2.0), à une révision figée, vérifiés par
  *    l'empreinte que Hugging Face donne de chaque fichier (l'identifiant LFS
- *    est son SHA-256). Seulement des modèles déjà essayés avec Helix sous LM
+ *    est son SHA-256). Seulement des modèles déjà essayés avec OxoAI sous LM
  *    Studio (`verifie` du catalogue) : Qwen3 1.7B, 4B, 8B et 30B A3B.
  *    Qwen3.5 est écarté ici : c'est avec llama.cpp au processeur qu'il
  *    rendait « 不 時//// » sur le PC de Medhi (PROJET.md, 27/09/2026).
@@ -75,7 +75,7 @@ import { tarDuSysteme } from "./pythonPrive.ts";
  *
  * `llama-server` en mode « routeur » : un seul processus sur 127.0.0.1, qui
  * connaît tous les modèles posés (fichier `modeles.ini`) et en charge un à la
- * fois (`--models-max 1`), à la demande, sous le nom du catalogue de Helix
+ * fois (`--models-max 1`), à la demande, sous le nom du catalogue de OxoAI
  * (« qwen3-4b ») : les notes, l'essai de santé et le sélecteur le
  * reconnaissent comme sous LM Studio. Il exige une clé (llamaCppBase.ts),
  * n'a ni interface web ni accès au réseau (`--no-webui`, `--offline`), et
@@ -105,7 +105,7 @@ export interface FichierGguf {
 }
 
 /**
- * Les modèles que le moteur ouvert sait poser, par clé du catalogue de Helix
+ * Les modèles que le moteur ouvert sait poser, par clé du catalogue de OxoAI
  * (provision.ts). Quantification Q4_K_M, celle que Qwen montre en premier ;
  * Qwen3 1.7B n'est publié qu'en Q8_0.
  */
@@ -330,7 +330,7 @@ async function poser(avancer: (a: AvanceeLlama) => void): Promise<string> {
     if (!essai.includes(VERSION.slice(1))) throw new Error(t("Le moteur s'est installé mais ne démarre pas sur cette machine."));
     rmSync(dossierVersion(), { recursive: true, force: true });
     renommer(dedans, dossierVersion());
-    console.log(`[helix] llama.cpp ${VERSION} posé dans ${dossierVersion()}.`);
+    console.log(`[oxoai] llama.cpp ${VERSION} posé dans ${dossierVersion()}.`);
     return serveurLlamaCpp();
   } finally {
     rmSync(travail, { recursive: true, force: true });
@@ -390,7 +390,7 @@ export function installerModeleLlama(cle: string, avancer: (a: AvanceeLlama) => 
  */
 function ecrirePreset(): void {
   const lignes = [
-    "; Écrit par la passerelle Helix (gateway/src/llamaCpp.ts) : réécrit à chaque modèle posé.",
+    "; Écrit par la passerelle OxoAI (gateway/src/llamaCpp.ts) : réécrit à chaque modèle posé.",
     "version = 1",
     "",
     "[*]",
@@ -473,7 +473,7 @@ export function assurerServeurLlama(): Promise<boolean> {
    */
   demarrage ??= lancer()
     .catch((err: unknown) => {
-      console.warn(`[helix] llama.cpp n'a pas pu démarrer : ${err instanceof Error ? err.message : String(err)}`);
+      console.warn(`[oxoai] llama.cpp n'a pas pu démarrer : ${err instanceof Error ? err.message : String(err)}`);
       return false;
     })
     .finally(() => {
@@ -483,7 +483,7 @@ export function assurerServeurLlama(): Promise<boolean> {
 }
 
 /**
- * Le programme qui écoute sur le port est-il le `llama-server` posé par Helix ?
+ * Le programme qui écoute sur le port est-il le `llama-server` posé par OxoAI ?
  *
  * Test d'intrusion du 28/09/2026 (SECURITE.md § 58) : la passerelle
  * demandait d'abord « le serveur répond-il avec notre clé ? », à quiconque
@@ -523,7 +523,7 @@ function ecouteurReconnu(): boolean {
 let reconnu: number | null = null;
 
 /**
- * Le PID d'un `llama-server` posé par Helix qui écoute sur le port sans avoir
+ * Le PID d'un `llama-server` posé par OxoAI qui écoute sur le port sans avoir
  * été lancé par cette passerelle : celui d'une passerelle arrêtée net
  * (revue du 28/09/2026). Reconnu comme `ecouteurReconnu`, au fichier qu'il
  * exécute (lu par `lsof`), jamais à sa ligne de commande, qu'un programme
@@ -572,7 +572,7 @@ const vivant = (pid: number): boolean => {
 async function arreterOrphelin(): Promise<boolean> {
   const orphelin = orphelinSurLePort();
   if (orphelin === null) return false;
-  console.log(`[helix] llama.cpp : serveur laissé par une passerelle précédente (PID ${orphelin}), arrêté.`);
+  console.log(`[oxoai] llama.cpp : serveur laissé par une passerelle précédente (PID ${orphelin}), arrêté.`);
   try {
     process.kill(orphelin, "SIGTERM");
   } catch {
@@ -598,7 +598,7 @@ async function lancer(): Promise<boolean> {
     if (!(await arreterOrphelin())) {
       // Le nôtre, mais il refuse de s'arrêter : gardé tel quel, comme avant, plutôt qu'un second à côté.
       if (ecouteurReconnu()) return llamaCppRepond();
-      console.warn(`[helix] llama.cpp : le port ${portLlamaCpp()} est déjà pris par un autre programme, qui n'est pas le moteur de Helix : rien ne lui est envoyé (HELIX_LLAMACPP_PORT pour changer de port).`);
+      console.warn(`[oxoai] llama.cpp : le port ${portLlamaCpp()} est déjà pris par un autre programme, qui n'est pas le moteur de OxoAI : rien ne lui est envoyé (OXOAI_LLAMACPP_PORT pour changer de port).`);
       return false;
     }
   }
@@ -628,10 +628,10 @@ async function lancer(): Promise<boolean> {
   lui.on("exit", (code, signal) => {
     if (serveur === lui) serveur = null;
     if (reconnu === lui.pid) reconnu = null;
-    if (code !== 0 && signal !== "SIGTERM") console.warn(`[helix] llama.cpp s'est arrêté (code ${code ?? signal}) : voir ${fichierJournal()}.`);
+    if (code !== 0 && signal !== "SIGTERM") console.warn(`[oxoai] llama.cpp s'est arrêté (code ${code ?? signal}) : voir ${fichierJournal()}.`);
   });
-  lui.on("error", (err) => console.warn(`[helix] llama.cpp n'a pas pu démarrer : ${err.message}`));
-  console.log(`[helix] llama.cpp démarré (PID ${lui.pid}) sur 127.0.0.1:${portLlamaCpp()}.`);
+  lui.on("error", (err) => console.warn(`[oxoai] llama.cpp n'a pas pu démarrer : ${err.message}`));
+  console.log(`[oxoai] llama.cpp démarré (PID ${lui.pid}) sur 127.0.0.1:${portLlamaCpp()}.`);
   return attendreReponse(20_000);
 }
 
@@ -803,7 +803,7 @@ export function menageLlama(): void {
    * Le dossier de travail d'une installation du moteur coupée (passerelle
    * arrêtée en plein téléchargement) : `poser` ne l'efface qu'en rendant la
    * main, et chaque coupure en laissait un de plus, archive et contenu
-   * ouvert compris (28/09/2026). Rangé dans `<données>/llamacpp`, à Helix seul.
+   * ouvert compris (28/09/2026). Rangé dans `<données>/llamacpp`, à OxoAI seul.
    */
   if (installationEnCours === null) {
     try {
@@ -817,7 +817,7 @@ export function menageLlama(): void {
   try {
     const connus = new Set(Object.values(MODELES_GGUF).flatMap((f) => [f.fichier, `${f.fichier}.partiel`]));
     for (const nom of readdirSync(dossierModeles())) {
-      if (connus.has(nom) || !/\.(partiel|copie-helix)$/.test(nom)) continue;
+      if (connus.has(nom) || !/\.(partiel|copie-oxoai)$/.test(nom)) continue;
       rmSync(join(dossierModeles(), nom), { force: true });
     }
   } catch {
@@ -834,7 +834,7 @@ export function menageLlama(): void {
  *  - Même disque : un renommage par fichier, instantané. Un renommage raté
  *    remet les précédents en place.
  *  - Autre disque : chaque fichier est copié sous un nom provisoire
- *    (`.copie-helix`, jamais par-dessus un fichier existant), écrit jusqu'au
+ *    (`.copie-oxoai`, jamais par-dessus un fichier existant), écrit jusqu'au
  *    disque (`fsync`), sa taille comparée à l'original (et, pour un modèle
  *    complet, à celle du catalogue), puis renommé. Le nouvel emplacement
  *    n'est retenu qu'une fois tout copié ; les originaux ne sont effacés
@@ -924,7 +924,7 @@ async function deplacer(cible: string | null, avancer: (a: AvanceeLlama) => void
 
   mkdirSync(destination, { recursive: true, mode: 0o700 });
   for (const nom of noms) {
-    if (existsSync(join(destination, nom)) || existsSync(join(destination, `${nom}.copie-helix`))) {
+    if (existsSync(join(destination, nom)) || existsSync(join(destination, `${nom}.copie-oxoai`))) {
       throw new Error(tf("Un fichier du même nom est déjà à la destination ({0}) : rien n'a été déplacé.", nom));
     }
   }
@@ -946,7 +946,7 @@ async function deplacer(cible: string | null, avancer: (a: AvanceeLlama) => void
         try {
           renommer(join(destination, nom), join(source, nom));
         } catch {
-          console.error(`[helix] llama.cpp : ${nom} n'a pas pu revenir dans ${source} ; il est dans ${destination}.`);
+          console.error(`[oxoai] llama.cpp : ${nom} n'a pas pu revenir dans ${source} ; il est dans ${destination}.`);
         }
       }
       throw new Error(tf("Le déplacement a échoué, les modèles restent où ils étaient : {0}", err instanceof Error ? err.message : String(err)));
@@ -961,7 +961,7 @@ async function deplacer(cible: string | null, avancer: (a: AvanceeLlama) => void
       let fait = 0;
       let dernier = -1;
       for (const nom of noms) {
-        const provisoire = join(destination, `${nom}.copie-helix`);
+        const provisoire = join(destination, `${nom}.copie-oxoai`);
         posees.push(provisoire);
         await copierFichier(join(source, nom), provisoire, (n) => {
           const p = Math.min(99, Math.floor(((fait + n) / total) * 100));
@@ -995,7 +995,7 @@ async function deplacer(cible: string | null, avancer: (a: AvanceeLlama) => void
       try {
         rmSync(join(source, nom), { force: true });
       } catch (err) {
-        console.warn(`[helix] llama.cpp : l'original ${nom} n'a pas pu être effacé de ${source} (${err instanceof Error ? err.message : err}) ; la copie sert.`);
+        console.warn(`[oxoai] llama.cpp : l'original ${nom} n'a pas pu être effacé de ${source} (${err instanceof Error ? err.message : err}) ; la copie sert.`);
       }
     }
   }

@@ -2,7 +2,7 @@
  * Garde-fou contre une réponse du modèle partie en boucle.
  *
  * Vu par Medhi le 27/09/2026 sur un PC Windows sans carte graphique (16 Go,
- * moteur llmster posé par Helix, Qwen3.5 4B) : à « Bonjour, tu vas bien ? »,
+ * moteur llmster posé par OxoAI, Qwen3.5 4B) : à « Bonjour, tu vas bien ? »,
  * la réflexion affichait « 不 », puis « 時//////… » sans fin. Le moteur ne
  * s'arrête pas de lui-même dans ce cas : il génère jusqu'au bout du contexte,
  * et au-delà si LM Studio fait glisser la conversation. La personne regardait
@@ -16,7 +16,7 @@
  *    une ligne de tableau Markdown (« |---|---| »), une règle « ===== » ou une
  *    liste de nombres qui changent, non ;
  *  - une réflexion plus longue que 160 000 caractères, soit plus de 40 000
- *    jetons : davantage que le contexte que Helix donne au modèle sur une
+ *    jetons : davantage que le contexte que OxoAI donne au modèle sur une
  *    machine de 36 Go ou moins (32 768 jetons, backends.ts). Passé ce cap, le
  *    moteur a forcément perdu le début de la conversation.
  *

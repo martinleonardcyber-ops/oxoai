@@ -3,7 +3,7 @@
  * seul (ni serveur de l'agence inscrit dans le paquet, ni instance à laquelle
  * il est rattaché).
  *
- * Décidé par Medhi le 27/09/2026 : « les autres PC » (qui téléchargent Helix
+ * Décidé par Medhi le 27/09/2026 : « les autres PC » (qui téléchargent OxoAI
  * depuis GitHub) doivent voir la fenêtre « Nouvelle version », et le dépôt
  * devient public. Ce qui revient sur la décision du 26/09 (« aucun GitHub »)
  * pour ces postes seulement ; les postes rattachés suivent toujours leur
@@ -38,7 +38,7 @@ function plusRecente(proposee, installee) {
 /**
  * Le paquet qui convient à ce poste, parmi les fichiers de la publication :
  * macOS l'image disque (lien de secours), Windows l'installateur, Linux
- * l'AppImage si c'est ainsi que Helix tourne, sinon le paquet Debian.
+ * l'AppImage si c'est ainsi que OxoAI tourne, sinon le paquet Debian.
  */
 function choisirPaquet(fichiers, { plateforme, arch, appImage }) {
   const noms = (fichiers ?? []).filter((f) => f && typeof f.name === "string" && typeof f.browser_download_url === "string");
@@ -67,7 +67,7 @@ const TAILLE_MANIFESTE_MAX = 64 * 1024;
  * sinon null, et l'écran garde « Télécharger ».
  */
 function manifesteDe(fichiers) {
-  const f = (fichiers ?? []).find((x) => x && x.name === "helix-mise-a-jour.json");
+  const f = (fichiers ?? []).find((x) => x && x.name === "oxoai-mise-a-jour.json");
   if (!f || !Number.isInteger(f.size) || f.size <= 0 || f.size > TAILLE_MANIFESTE_MAX) return null;
   return typeof f.browser_download_url === "string" && /^https:\/\//i.test(f.browser_download_url) ? f : null;
 }
@@ -84,7 +84,7 @@ function analyser(brut) {
 }
 
 /**
- * Le manifeste de la mise à jour macOS (`helix-mise-a-jour.json`, écrit à la
+ * Le manifeste de la mise à jour macOS (`oxoai-mise-a-jour.json`, écrit à la
  * publication par scripts/manifeste-mise-a-jour.mjs), vérifié champ par champ :
  * version, archive .zip, empreinte SHA-512 (base64), taille.
  *

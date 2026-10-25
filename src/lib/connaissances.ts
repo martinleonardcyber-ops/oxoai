@@ -100,14 +100,14 @@ async function lire<T>(res: Response): Promise<T> {
 const poster = (chemin: string, corps: unknown) =>
   apiFetch(chemin, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(corps) });
 
-const chemin = (id: string, action?: string) => `/helix/connaissances/${encodeURIComponent(id)}${action ? `/${action}` : ""}`;
+const chemin = (id: string, action?: string) => `/oxoai/connaissances/${encodeURIComponent(id)}${action ? `/${action}` : ""}`;
 
 export async function listerBases(): Promise<Base[]> {
-  return (await lire<{ bases: Base[] }>(await apiFetch("/helix/connaissances"))).bases;
+  return (await lire<{ bases: Base[] }>(await apiFetch("/oxoai/connaissances"))).bases;
 }
 
 export async function creerBase(d: { nom: string; description: string; visibilite: Visibilite; groupes: string[] }): Promise<Base> {
-  return (await lire<{ base: Base }>(await poster("/helix/connaissances", d))).base;
+  return (await lire<{ base: Base }>(await poster("/oxoai/connaissances", d))).base;
 }
 
 export async function modifierBase(
@@ -134,11 +134,11 @@ export async function reindexer(id: string, document?: string): Promise<Base> {
 }
 
 export async function documentsDisponibles(): Promise<DocumentDisponible[]> {
-  return (await lire<{ documents: DocumentDisponible[] }>(await apiFetch("/helix/connaissances/documents"))).documents;
+  return (await lire<{ documents: DocumentDisponible[] }>(await apiFetch("/oxoai/connaissances/documents"))).documents;
 }
 
 export async function essayerQuestion(bases: string[], question: string): Promise<Recherche> {
-  return lire(await poster("/helix/connaissances/chercher", { bases, question, nombre: 5 }));
+  return lire(await poster("/oxoai/connaissances/chercher", { bases, question, nombre: 5 }));
 }
 
 /**

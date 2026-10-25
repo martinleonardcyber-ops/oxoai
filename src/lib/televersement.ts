@@ -44,7 +44,7 @@ export function envoyerEnFlux<T>(
     const xhr = new XMLHttpRequest();
     xhr.open("POST", `${GATEWAY_BASE}${chemin}`);
     for (const [cle, valeur] of Object.entries(authHeaders())) xhr.setRequestHeader(cle, valeur);
-    xhr.setRequestHeader("Content-Type", "application/x-helix-document");
+    xhr.setRequestHeader("Content-Type", "application/x-oxoai-document");
     if (onProgression) {
       xhr.upload.onprogress = (e) => {
         if (e.lengthComputable && e.total > 0) onProgression(Math.min(1, e.loaded / e.total));

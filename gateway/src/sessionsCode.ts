@@ -3,7 +3,7 @@ import { t } from "./langue.ts";
 import { db } from "./db.ts";
 
 /**
- * Les sessions de Helix Code, séparées des Chats.
+ * Les sessions de OxoAI Code, séparées des Chats.
  *
  * ── Pourquoi ────────────────────────────────────────────────────────────────
  *
@@ -14,7 +14,7 @@ import { db } from "./db.ts";
  * (`modeleDeSession`, index.ts, perdu à chaque redémarrage) : on ne savait
  * même plus à qui elles étaient.
  *
- * Ce registre retient, pour chaque session ouverte par Helix Code, sa
+ * Ce registre retient, pour chaque session ouverte par OxoAI Code, sa
  * propriétaire, son dossier, son titre (le début de la première demande, comme
  * le fait Claude Code) et ses dates. Le **contenu** reste chez OpenCode, relu à
  * l'ouverture (`GET /session/<id>/message`) : rien n'est recopié, rien ne peut
@@ -32,7 +32,7 @@ import { db } from "./db.ts";
  * registre illisible laissait toute séance y envoyer des demandes et lire son
  * flux. Désormais une session ne s'utilise que si le registre la connaît et la
  * donne à la personne (index.ts, `refusSessionCode`) ; les sessions d'avant le
- * 25/09/2026, qui n'ont pas de propriétaire, ne s'ouvrent plus par Helix
+ * 25/09/2026, qui n'ont pas de propriétaire, ne s'ouvrent plus par OxoAI
  * (voulu : on ne sait pas à qui elles sont). Pour que cela tienne :
  *  - « Retirer de la liste » **masque** la session, sans l'oublier : elle
  *    garde sa propriétaire ;
@@ -94,7 +94,7 @@ export function titreDe(demande: string): string {
   return ligne.length > TITRE_MAX ? `${ligne.slice(0, TITRE_MAX - 1)}…` : ligne;
 }
 
-/** Une session vient d'être ouverte par Helix Code pour cette personne. */
+/** Une session vient d'être ouverte par OxoAI Code pour cette personne. */
 export function noterSession(s: Omit<SessionCode, "creee" | "maj" | "titre"> & { titre?: string }): Promise<void> {
   return enFile(async () => {
     const liste = await charger();
@@ -214,17 +214,17 @@ export interface MessageHistorique {
 
 const ARRET = /^\[La demande précédente a été arrêtée par la personne[^\]]*\]\s*/;
 /*
- * Ce que Helix ajoute à la demande pour le modèle (index.ts, design.ts,
+ * Ce que OxoAI ajoute à la demande pour le modèle (index.ts, design.ts,
  * application.ts) : retiré de l'historique, qui montre ce que la personne a
  * écrit. Vu le 26/09/2026 : la consigne d'une application préparée
  * réapparaissait en entier dans la bulle de la personne à la réouverture.
  */
 const AJOUTS = [
   "\n\n---\nDesign : ce projet a un design",
-  "\n\n---\nHelix a déjà construit",
-  "\n\n---\nMéthode de travail (Helix)",
-  "\n\n---\nPlan de Helix",
-  "\n\n---\nCarte du projet (Helix)",
+  "\n\n---\nOxoAI a déjà construit",
+  "\n\n---\nMéthode de travail (OxoAI)",
+  "\n\n---\nPlan de OxoAI",
+  "\n\n---\nCarte du projet (OxoAI)",
 ];
 /*
  * Une relance du contrôle automatique (controleCode.ts) est envoyée comme un
@@ -234,7 +234,7 @@ const AJOUTS = [
  */
 
 
-/** Ce que la personne a écrit, sans ce que Helix y a ajouté pour le modèle (index.ts, useCode.ts). */
+/** Ce que la personne a écrit, sans ce que OxoAI y a ajouté pour le modèle (index.ts, useCode.ts). */
 export function demandeAffichee(texte: string): string {
   let fin = texte.length;
   for (const a of AJOUTS) {
@@ -247,14 +247,14 @@ export function demandeAffichee(texte: string): string {
 const estRelance = (texte: string) => {
   const debut = texte.trimStart();
   const entete = (x: string) => x.slice(0, x.indexOf("]") + 1);
-  // Les étapes d'un plan de Helix (sequenceCode.ts) commencent toutes par « [Helix ».
-  return debut.startsWith("[Helix") || [entete(ENTETE_RELANCE), entete(t(ENTETE_RELANCE))].some((e) => e.length > 2 && debut.startsWith(e));
+  // Les étapes d'un plan de OxoAI (sequenceCode.ts) commencent toutes par « [OxoAI ».
+  return debut.startsWith("[OxoAI") || [entete(ENTETE_RELANCE), entete(t(ENTETE_RELANCE))].some((e) => e.length > 2 && debut.startsWith(e));
 };
 /** La ligne affichée à la place d'une relance : l'étape du plan, ou le contrôle automatique. */
 const noteDeRelance = (texte: string) => {
   const premiere = texte.trimStart().split("\n")[0] ?? "";
   const controle = [entete(ENTETE_RELANCE), entete(t(ENTETE_RELANCE))].some((e) => e.length > 2 && premiere.startsWith(e));
-  if (/^\[Helix\b/.test(premiere) && !controle) return premiere.replace(/^\[([^\]]+)\]\s*/, "$1 · ").slice(0, 200);
+  if (/^\[OxoAI\b/.test(premiere) && !controle) return premiere.replace(/^\[([^\]]+)\]\s*/, "$1 · ").slice(0, 200);
   return t("Contrôle automatique : problèmes trouvés, l'agent reprend son travail.");
 };
 const entete = (x: string) => x.slice(0, x.indexOf("]") + 1);
@@ -299,7 +299,7 @@ export function historiqueDe(
    * montré deux fois, moitié puis entier.
    *
    * `demandeEnAttente` : la demande que la personne vient d'envoyer, pas
-   * encore arrivée chez OpenCode (Helix prépare l'application ou le plan,
+   * encore arrivée chez OpenCode (OxoAI prépare l'application ou le plan,
    * plusieurs minutes avec un petit modèle). Sans elle, l'écran qui revenait
    * sur la session n'y montrait plus le message envoyé.
    */
@@ -335,7 +335,7 @@ export function historiqueDe(
       }
     }
     if (role === "user") {
-      // Une relance de Helix : la réponse continue, avec une ligne qui le dit (comme à l'écran pendant le travail).
+      // Une relance de OxoAI : la réponse continue, avec une ligne qui le dit (comme à l'écran pendant le travail).
       if (estRelance(textes.join("\n\n"))) {
         const precedent = rendu[rendu.length - 1];
         const note = `*${noteDeRelance(textes.join("\n\n"))}*`;

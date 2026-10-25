@@ -68,7 +68,7 @@ const entier = (n: number) => n.toLocaleString(locale());
  * Ce que la plateforme comprend, dans chaque formule. Chaque ligne existe
  * dans le logiciel (vérifié le 29/09/2026 : pages Chat, Cowork, Code, Agents,
  * Réunions ; connecteurs de la passerelle ; `extensions/vscode` et
- * `cli/helix.mjs`). Les agents tournent dans l'instance : « jour et nuit »
+ * `cli/oxoai.mjs`). Les agents tournent dans l'instance : « jour et nuit »
  * seulement tant que la machine qui l'héberge est allumée, et l'écran le dit.
  */
 function plateforme(): string[] {

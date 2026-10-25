@@ -43,25 +43,25 @@ const messageDe = async (res: Response, repli: string): Promise<string> => {
 };
 
 export async function lireEtatCodex(relire = false): Promise<EtatCodex> {
-  const res = await apiFetch(`/helix/codex${relire ? "?relire=1" : ""}`);
+  const res = await apiFetch(`/oxoai/codex${relire ? "?relire=1" : ""}`);
   if (!res.ok) throw new Error(await messageDe(res, tf("Codex indisponible ({0}).", res.status)));
   return res.json();
 }
 
 /** Lance `codex login` sur ce poste : le navigateur s'ouvre chez OpenAI. Rend le refus, ou null. */
 export async function connecterCodex(): Promise<string | null> {
-  const res = await apiFetch(`/helix/codex/connexion`, { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" });
+  const res = await apiFetch(`/oxoai/codex/connexion`, { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" });
   return res.ok ? null : messageDe(res, tf("Demande refusée ({0}).", res.status));
 }
 
 export async function annulerConnexionCodex(): Promise<void> {
-  await apiFetch(`/helix/codex/connexion/annuler`, { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" }).catch(() => undefined);
+  await apiFetch(`/oxoai/codex/connexion/annuler`, { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" }).catch(() => undefined);
 }
 
 /** Demande l'arrêt de la tâche en cours. `false` si l'instance ne l'a pas confirmé. */
 export async function arreterTacheCodex(): Promise<boolean> {
   try {
-    const res = await apiFetch(`/helix/codex/arreter`, { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" });
+    const res = await apiFetch(`/oxoai/codex/arreter`, { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" });
     return res.ok;
   } catch {
     return false;
@@ -79,7 +79,7 @@ export async function lancerTacheCodex(
   surEvenement: (e: EvenementCodex) => void,
   signal: AbortSignal,
 ): Promise<void> {
-  const res = await apiFetch(`/helix/codex/tache`, {
+  const res = await apiFetch(`/oxoai/codex/tache`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ texte, dossier: options.dossier, session: options.session }),
@@ -111,7 +111,7 @@ export async function lancerTacheCodex(
 
 /* Le moteur choisi pour l'écran Code, retenu sur ce poste seulement. */
 export type MoteurCode = "opencode" | "codex";
-const CLE_MOTEUR = "helix.code.moteur";
+const CLE_MOTEUR = "oxoai.code.moteur";
 
 export function moteurRetenu(): MoteurCode {
   try {

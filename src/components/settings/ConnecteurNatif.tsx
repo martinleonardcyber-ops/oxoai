@@ -296,7 +296,7 @@ export function ConnecteurNatif({ id, onChange, onOuvrir }: { id: IdNatif; onCha
         window.open(url, "_blank", "noopener,noreferrer");
       },
     );
-  const boucle = etat.retour.startsWith("http://127.0.0.1") && !etat.retour.includes("/helix/oauth/retour");
+  const boucle = etat.retour.startsWith("http://127.0.0.1") && !etat.retour.includes("/oxoai/oauth/retour");
   // X accepte une application « publique », sans secret (oauthNatif.ts, `secretFacultatif`).
   // Dropbox aussi : PKCE suffit, le secret est facultatif (natifs/documents.ts).
   const secretFacultatif = id === "x" || id === "dropbox";

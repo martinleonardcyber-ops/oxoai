@@ -29,7 +29,7 @@ const nomDeFichier = () => {
 };
 
 export async function telechargerMesDonnees(): Promise<ResumeExport> {
-  const res = await apiFetch("/helix/export");
+  const res = await apiFetch("/oxoai/export");
   if (!res.ok) {
     const corps = (await res.json().catch(() => ({}))) as { error?: { message?: string } };
     throw new Error(corps.error?.message ?? t("L'export a échoué."));

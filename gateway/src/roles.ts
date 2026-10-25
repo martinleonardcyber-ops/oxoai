@@ -16,7 +16,7 @@ import { publicAccounts } from "./accounts.ts";
  * ── Comment l'administrateur est désigné ────────────────────────────────────
  *
  * 1. Le **profil de déploiement** le dit : `administrateurs: ["…@…"]` dans
- *    `helix.config.json`. C'est un fichier posé sur la machine hôte par
+ *    `oxoai.config.json`. C'est un fichier posé sur la machine hôte par
  *    l'intégrateur, jamais modifiable par une requête. C'est la voie d'une
  *    instance d'entreprise.
  * 2. À défaut, le **premier compte créé** sur l'instance : celle ou celui qui

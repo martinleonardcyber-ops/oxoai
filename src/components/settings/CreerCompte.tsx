@@ -18,7 +18,7 @@ import { t, tf } from "@/lib/i18n";
  * d'ouvrir un second compte. La seconde personne n'avait pas d'autre choix
  * que le compte de la première, et ses Chats. Décision de Medhi : on l'ajoute.
  *
- * La passerelle savait déjà le faire (`/helix/auth/create`, administrateur
+ * La passerelle savait déjà le faire (`/oxoai/auth/create`, administrateur
  * seul) : le mot de passe choisi ici est provisoire, et la personne en choisit
  * un à elle à sa première connexion (LoginPage, étape « provisoire »). Personne
  * d'autre ne connaîtra donc le sien.

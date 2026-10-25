@@ -11,7 +11,7 @@
  * pour ces quatre lignes vaudrait pour tout le reste.
  */
 try {
-  var t = localStorage.getItem("helix:apparence-resolue");
+  var t = localStorage.getItem("oxoai:apparence-resolue");
   if (t === "sombre" || t === "clair") document.documentElement.dataset.theme = t;
 } catch (e) {
   /* stockage indisponible : le thème se posera au premier rendu */

@@ -4,7 +4,7 @@
  *   npm run essai:palmier        (lancé aussi par npm run securite, section 38)
  *
  * Palmier Pro (monteur vidéo pour Mac) sert un serveur MCP en HTTP sur
- * 127.0.0.1:19789 quand il est ouvert, sans authentification. Helix ne lui
+ * 127.0.0.1:19789 quand il est ouvert, sans authentification. OxoAI ne lui
  * parle qu'après avoir reconnu le programme qui écoute (gateway/src/palmier.ts)
  * et fait passer par la carte d'accord tout ce qui n'est pas une lecture pure
  * (gateway/src/palmierRegles.ts). Cet essai ne touche jamais au vrai port de
@@ -13,8 +13,8 @@
  *
  * Deux variables d'environnement, réservées aux essais (palmier.ts), sont
  * posées pour la passerelle d'essai :
- *  - HELIX_ESSAI_PALMIER_PORT : le port libre du faux serveur ;
- *  - HELIX_ESSAI_PALMIER_EXECUTABLE : l'exécutable qui doit écouter, lu par
+ *  - OXOAI_ESSAI_PALMIER_PORT : le port libre du faux serveur ;
+ *  - OXOAI_ESSAI_PALMIER_EXECUTABLE : l'exécutable qui doit écouter, lu par
  *    `lsof`, à la place de la signature de Palmier, Inc. (le faux serveur est
  *    ce processus-ci, donc Node). « Un autre programme » est `nc`, qui écoute
  *    sur le même port et note tout ce qu'il reçoit.
@@ -59,11 +59,11 @@ const portLibre = () =>
   });
 const attendre = (ms) => new Promise((r) => setTimeout(r, ms));
 const importer = (...p) => import(pathToFileURL(join(RACINE, ...p)).href);
-const AUX = mkdtempSync(join(tmpdir(), "helix-essai-palmier-"));
-// Les modules importés dans ce processus (partie A) : des dossiers jetables, jamais ~/.helix ni ~/Helix.
+const AUX = mkdtempSync(join(tmpdir(), "oxoai-essai-palmier-"));
+// Les modules importés dans ce processus (partie A) : des dossiers jetables, jamais ~/.oxoai ni ~/OxoAI.
 mkdirSync(join(AUX, "espace-a"), { recursive: true });
 writeFileSync(join(AUX, "profil-a.json"), JSON.stringify({ chiffrement: "fichier" }));
-Object.assign(process.env, { HELIX_DATA_DIR: join(AUX, "donnees-a"), HELIX_WORKSPACE: join(AUX, "espace-a"), HELIX_CONFIG: join(AUX, "profil-a.json") });
+Object.assign(process.env, { OXOAI_DATA_DIR: join(AUX, "donnees-a"), OXOAI_WORKSPACE: join(AUX, "espace-a"), OXOAI_CONFIG: join(AUX, "profil-a.json") });
 
 /*
  * Les outils de Palmier Pro 0.7.6, tels que son serveur MCP les liste
@@ -120,7 +120,7 @@ try {
    * refuser ; personne à l'écoute, l'application est dite fermée.
    */
   const { ecouteurPalmier } = await importer("gateway", "src", "palmier.ts");
-  delete process.env.HELIX_ESSAI_PALMIER_EXECUTABLE;
+  delete process.env.OXOAI_ESSAI_PALMIER_EXECUTABLE;
   const portSigne = await portLibre();
   const absent = await ecouteurPalmier(portSigne);
   const ecouteur = serveurTcp().listen(portSigne, "127.0.0.1");
@@ -346,16 +346,16 @@ async function lancerPasserelle() {
   const port = await portLibre();
   const env = {
     ...process.env,
-    HELIX_CONFIG: PROFIL,
-    HELIX_GATEWAY_PORT: String(port),
-    HELIX_DATA_DIR: DONNEES,
-    HELIX_WORKSPACE: ESPACE,
-    HELIX_CODE_DIR: ESPACE,
-    HELIX_LMSTUDIO_URL: "http://127.0.0.1:9/v1",
-    HELIX_EXO_URL: "http://127.0.0.1:9/v1",
-    HELIX_GATEWAY_HOST: "127.0.0.1",
-    HELIX_ESSAI_PALMIER_PORT: String(PORT_PALMIER),
-    HELIX_ESSAI_PALMIER_EXECUTABLE: EXECUTABLE,
+    OXOAI_CONFIG: PROFIL,
+    OXOAI_GATEWAY_PORT: String(port),
+    OXOAI_DATA_DIR: DONNEES,
+    OXOAI_WORKSPACE: ESPACE,
+    OXOAI_CODE_DIR: ESPACE,
+    OXOAI_LMSTUDIO_URL: "http://127.0.0.1:9/v1",
+    OXOAI_EXO_URL: "http://127.0.0.1:9/v1",
+    OXOAI_GATEWAY_HOST: "127.0.0.1",
+    OXOAI_ESSAI_PALMIER_PORT: String(PORT_PALMIER),
+    OXOAI_ESSAI_PALMIER_EXECUTABLE: EXECUTABLE,
   };
   const processus = spawn(process.execPath, ["--import", PREALABLE, join(RACINE, "gateway", "src", "index.ts")], { env, stdio: ["ignore", "pipe", "pipe"] });
   const inst = { port, processus, journal: "", G: `http://127.0.0.1:${port}` };
@@ -370,14 +370,14 @@ async function lancerPasserelle() {
     }
   }
   const jeton = readFileSync(join(DONNEES, "instance-token"), "utf8").trim();
-  inst.J = { "Content-Type": "application/json", Authorization: `Bearer ${jeton}`, "X-Helix-Langue": "fr" };
+  inst.J = { "Content-Type": "application/json", Authorization: `Bearer ${jeton}`, "X-OxoAI-Langue": "fr" };
   return inst;
 }
 const IDENTITE = { fullName: "Alice Essai", email: "alice@example.test", password: "Mot2PasseSolide!42" };
 async function ouvrirSeance(inst) {
-  const r = await fetch(`${inst.G}/helix/auth/create`, { method: "POST", headers: inst.J, body: JSON.stringify(IDENTITE) });
+  const r = await fetch(`${inst.G}/oxoai/auth/create`, { method: "POST", headers: inst.J, body: JSON.stringify(IDENTITE) });
   const corps = await r.json();
-  inst.A = { ...inst.J, "X-Helix-Session": corps.session?.token };
+  inst.A = { ...inst.J, "X-OxoAI-Session": corps.session?.token };
   return Boolean(corps.session?.token);
 }
 const api = async (inst, chemin, corps, entetes = inst.A) => {
@@ -396,11 +396,11 @@ async function chat(inst, plan, accorder = () => true, entetes = inst.A) {
   enCours.finally(() => (fini = true));
   const cartes = [];
   while (!fini) {
-    const e = await api(inst, "/helix/approbation", undefined, entetes);
+    const e = await api(inst, "/oxoai/approbation", undefined, entetes);
     for (const c of e.enAttente ?? []) {
       if (cartes.some((x) => x.id === c.id)) continue;
       cartes.push(c);
-      await api(inst, "/helix/approbation/repondre", { id: c.id, accord: accorder(c) }, entetes);
+      await api(inst, "/oxoai/approbation/repondre", { id: c.id, accord: accorder(c) }, entetes);
     }
     await attendre(120);
   }
@@ -411,7 +411,7 @@ async function chat(inst, plan, accorder = () => true, entetes = inst.A) {
     if (!ligne.startsWith("data: ") || ligne === "data: [DONE]") continue;
     try {
       const j = JSON.parse(ligne.slice(6));
-      if (j.helix) evenements.push(j.helix);
+      if (j.oxoai) evenements.push(j.oxoai);
       const d = j.choices?.[0]?.delta?.content;
       if (typeof d === "string") texte += d;
     } catch {
@@ -428,12 +428,12 @@ try {
   const seance = await ouvrirSeance(passerelle);
   verifier("la passerelle d'essai démarre et ouvre une séance (premier compte : administrateur)", seance, passerelle.journal.slice(-1500));
 
-  const etat0 = await api(passerelle, "/helix/connecteurs");
+  const etat0 = await api(passerelle, "/oxoai/connecteurs");
   const fiche = (etat0.catalogue ?? []).find((e) => e.id === "palmier");
   verifier("sur ce Mac, la fiche « Palmier Pro » est proposée, locale, sans adresse", Boolean(fiche?.local) && !fiche.url && fiche.label === "Palmier Pro", fiche);
 
   // 1. Application fermée : personne n'écoute sur son port.
-  const ferme = await api(passerelle, "/helix/connecteurs/connecter", { id: "palmier" });
+  const ferme = await api(passerelle, "/oxoai/connecteurs/connecter", { id: "palmier" });
   verifier(
     "application fermée : refus clair « Ouvrez Palmier Pro, puis réessayez », avec la page de téléchargement officielle, rien n'est branché",
     ferme.statut === 400 && /Ouvrez Palmier Pro, puis réessayez/.test(ferme.message) && /(^|[\s«(])https:\/\/github\.com\/palmier-io\/palmier-pro\/releases\/latest(?=$|[\s».,;)])/.test(ferme.message) && !(ferme.etat?.installes ?? []).some((c) => c.id === "palmier"),
@@ -442,7 +442,7 @@ try {
 
   // 2. Un autre programme écoute sur le port.
   const autre = await autreProgramme(PORT_PALMIER);
-  const refus = await api(passerelle, "/helix/connecteurs/connecter", { id: "palmier" });
+  const refus = await api(passerelle, "/oxoai/connecteurs/connecter", { id: "palmier" });
   await attendre(300);
   verifier(
     "un autre programme sur le port : refus « Un autre programme occupe le port de Palmier Pro », et il n'a rien reçu (ni requête, ni donnée)",
@@ -454,7 +454,7 @@ try {
   // 3. Le (faux) Palmier Pro, reconnu : branché d'un clic.
   palmier = await fauxPalmier(PORT_PALMIER);
   const leurre = await fauxPalmier(PORT_LEURRE);
-  const branche = await api(passerelle, "/helix/connecteurs/connecter", { id: "palmier", url: `http://127.0.0.1:${PORT_LEURRE}/mcp`, port: PORT_LEURRE, command: "/bin/sh" });
+  const branche = await api(passerelle, "/oxoai/connecteurs/connecter", { id: "palmier", url: `http://127.0.0.1:${PORT_LEURRE}/mcp`, port: PORT_LEURRE, command: "/bin/sh" });
   const inst = (branche.etat?.installes ?? []).find((c) => c.id === "palmier");
   verifier(
     `Palmier Pro reconnu : branché d'un clic, en marche, ses ${OUTILS_PALMIER.length} outils listés, marqué local`,
@@ -472,7 +472,7 @@ try {
     auPort.length > 0 && auPort.every((r) => r.entetes.host === `127.0.0.1:${PORT_PALMIER}` && new URL(r.chemin, "http://x").pathname === "/mcp" && !r.entetes.authorization && !r.entetes.cookie && !r.entetes.origin),
     auPort.map((r) => `${r.methode} ${r.chemin} ${r.entetes.host} ${r.entetes.authorization ?? ""}`),
   );
-  const ajout = await api(passerelle, "/helix/connecteurs/ajouter", { id: "palmier", command: "/bin/sh", args: ["-c", "id"] });
+  const ajout = await api(passerelle, "/oxoai/connecteurs/ajouter", { id: "palmier", command: "/bin/sh", args: ["-c", "id"] });
   verifier("la route « ajouter » (par jeton, avec commande) refuse Palmier Pro : il se branche d'un clic", ajout.statut === 400 && /se branche d'un clic/.test(ajout.message), ajout.message);
 
   // 4. Lecture sans carte, génération derrière la carte.
@@ -495,19 +495,19 @@ try {
   verifier("modifier la timeline : une carte à chaque appel (deux ajouts, deux cartes) ; un outil inconnu aussi", deux.cartes.length === 3 && deux.cartes.every((c) => c.detail?.unique === true) && deux.fins.every((f) => f.ok), `${deux.cartes.map((c) => c.detail?.outil)} ${JSON.stringify(deux.fins)}`);
 
   // 5. « Tout approuver » ne lève pas la carte d'une génération.
-  const niveau = await api(passerelle, "/helix/approbation/niveau", { niveau: "tout" });
+  const niveau = await api(passerelle, "/oxoai/approbation/niveau", { niveau: "tout" });
   const tout = await chat(passerelle, [["palmier__get_media", {}], ["palmier__generate_audio", { prompt: "une musique" }], ["palmier__move_clips", {}]]);
   verifier(
     "au niveau « Tout approuver » : la lecture passe seule, la génération et la modification demandent toujours",
     niveau.statut === 200 && tout.cartes.length === 2 && tout.cartes.map((c) => c.detail?.outil).join(",") === "palmier__generate_audio,palmier__move_clips" && tout.fins.every((f) => f.ok),
     `${niveau.statut} ${tout.cartes.map((c) => c.detail?.outil)} ${JSON.stringify(tout.fins)}`,
   );
-  await api(passerelle, "/helix/approbation/niveau", { niveau: "modifications" });
+  await api(passerelle, "/oxoai/approbation/niveau", { niveau: "modifications" });
 
   // 6. Un collègue (non administrateur) : il lit, mais ne dépense pas les crédits de la personne qui a ouvert Palmier Pro.
-  const cree = await api(passerelle, "/helix/auth/create", { fullName: "Collègue", email: "collegue@example.test", password: "Provisoire2Collegue!7" });
-  const connexion = await api(passerelle, "/helix/auth/mot-de-passe-provisoire", { accountId: cree.account?.id, password: "Provisoire2Collegue!7", nouveau: "Collegue2PasseSolide!9" }, passerelle.J);
-  const B = { ...passerelle.J, "X-Helix-Session": connexion.session?.token };
+  const cree = await api(passerelle, "/oxoai/auth/create", { fullName: "Collègue", email: "collegue@example.test", password: "Provisoire2Collegue!7" });
+  const connexion = await api(passerelle, "/oxoai/auth/mot-de-passe-provisoire", { accountId: cree.account?.id, password: "Provisoire2Collegue!7", nouveau: "Collegue2PasseSolide!9" }, passerelle.J);
+  const B = { ...passerelle.J, "X-OxoAI-Session": connexion.session?.token };
   const avantB = appelsPalmier().length;
   const genB = await chat(passerelle, [["palmier__get_timeline", {}], ["palmier__generate_video", { prompt: "au nom d'un collègue" }]], () => true, B);
   verifier(
@@ -533,12 +533,12 @@ try {
   const ferme2 = await chat(passerelle, [["palmier__get_timeline", {}]]);
   verifier("Palmier Pro fermé : l'appel échoue en disant de l'ouvrir", ferme2.fins[0]?.ok === false && /Ouvrez Palmier Pro/.test(`${ferme2.fins[0]?.preview ?? ""} ${ferme2.texte}`), JSON.stringify(ferme2.fins));
   palmier = await fauxPalmier(PORT_PALMIER);
-  const reessai = await api(passerelle, "/helix/connecteurs/connecter", { id: "palmier" });
+  const reessai = await api(passerelle, "/oxoai/connecteurs/connecter", { id: "palmier" });
   const apres = await chat(passerelle, [["palmier__get_timeline", {}]]);
   verifier("rouvert : « Réessayer » le rebranche, et la lecture repasse", reessai.statut === 200 && reessai.pret && apres.fins[0]?.ok && /REPERE-PALMIER get_timeline/.test(apres.texte), `${reessai.message} ${JSON.stringify(apres.fins)}`);
 
   // 9. Retrait.
-  const retrait = await api(passerelle, "/helix/connecteurs/retirer", { id: "palmier" });
+  const retrait = await api(passerelle, "/oxoai/connecteurs/retirer", { id: "palmier" });
   const plusLa = await chat(passerelle, [["palmier__get_timeline", {}]]);
   verifier("retiré : plus dans la liste, plus aucun outil proposé au modèle", retrait.ok && !(retrait.etat?.installes ?? []).some((c) => c.id === "palmier") && /OUTIL-ABSENT palmier__get_timeline/.test(plusLa.texte), `${retrait.message} ${plusLa.texte}`);
   await fermerServeur(leurre);

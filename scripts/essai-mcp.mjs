@@ -80,9 +80,9 @@ async function jusqua(condition, ms = 5000) {
   return Boolean(await condition());
 }
 
-const AUX = mkdtempSync(join(tmpdir(), "helix-essai-mcp-"));
+const AUX = mkdtempSync(join(tmpdir(), "oxoai-essai-mcp-"));
 /** Ce que ce processus porte de sensible : rien ne doit en arriver à un serveur MCP. */
-const FUITES = { OPENAI_API_KEY: "sk-ESSAI-FUITE-1234567890", HELIX_ESSAI_JETON: "SECRET-FUITE-0987654321", AWS_SECRET_ACCESS_KEY: "AWS-FUITE-111122223333" };
+const FUITES = { OPENAI_API_KEY: "sk-ESSAI-FUITE-1234567890", OXOAI_ESSAI_JETON: "SECRET-FUITE-0987654321", AWS_SECRET_ACCESS_KEY: "AWS-FUITE-111122223333" };
 Object.assign(process.env, FUITES);
 
 /* ------------------------------------------------------------------------- */
@@ -180,7 +180,7 @@ const ESPACE_A = join(AUX, "espace-a");
 mkdirSync(ESPACE_A, { recursive: true });
 const PROFIL_A = join(AUX, "profil-a.json");
 writeFileSync(PROFIL_A, JSON.stringify({ chiffrement: "fichier" }));
-Object.assign(process.env, { HELIX_DATA_DIR: DONNEES_A, HELIX_WORKSPACE: ESPACE_A, HELIX_CONFIG: PROFIL_A, HELIX_MCP_DELAI_MS: "1500" });
+Object.assign(process.env, { OXOAI_DATA_DIR: DONNEES_A, OXOAI_WORKSPACE: ESPACE_A, OXOAI_CONFIG: PROFIL_A, OXOAI_MCP_DELAI_MS: "1500" });
 // Ce que le gestionnaire écrit sur la sortie d'erreur (les lignes des serveurs y passent, masquées).
 const journalA = [];
 const erreurOrigine = console.error;
@@ -246,8 +246,8 @@ try {
 
   const env = JSON.parse((await mcp.callTool("base__env", {})).content);
   verifier(
-    "environnement du serveur : ni les clés de la passerelle (OPENAI_API_KEY, AWS_SECRET_ACCESS_KEY, HELIX_*), seulement PATH, HOME… et le secret du connecteur",
-    !Object.keys(FUITES).some((k) => k in env) && !Object.keys(env).some((k) => k.startsWith("HELIX_")) && env.JETON_DU_CONNECTEUR === "JETON-CONNECTEUR-4242" && typeof env.PATH === "string",
+    "environnement du serveur : ni les clés de la passerelle (OPENAI_API_KEY, AWS_SECRET_ACCESS_KEY, OXOAI_*), seulement PATH, HOME… et le secret du connecteur",
+    !Object.keys(FUITES).some((k) => k in env) && !Object.keys(env).some((k) => k.startsWith("OXOAI_")) && env.JETON_DU_CONNECTEUR === "JETON-CONNECTEUR-4242" && typeof env.PATH === "string",
     Object.keys(env),
   );
 
@@ -422,7 +422,7 @@ if (SANS_RESEAU) {
     const liens = await mcp.callTool("everything__get-resource-links", { count: 2 });
     verifier("get-resource-links : les adresses des liens arrivent au modèle", liens.ok && (liens.content.match(/demo:\/\//g) ?? []).length >= 2, liens.content);
     const envE = await mcp.callTool("everything__get-env", {});
-    verifier("get-env : aucune clé de la passerelle dans l'environnement du serveur", envE.ok && !Object.values(FUITES).some((v) => envE.content.includes(v)) && !/HELIX_/.test(envE.content), envE.content.slice(0, 300));
+    verifier("get-env : aucune clé de la passerelle dans l'environnement du serveur", envE.ok && !Object.values(FUITES).some((v) => envE.content.includes(v)) && !/OXOAI_/.test(envE.content), envE.content.slice(0, 300));
     const invalide = await mcp.callTool("everything__get-sum", { a: "deux" });
     verifier("arguments refusés par le serveur : échec rendu, le message dit pourquoi", invalide.ok === false && /a|number|valid/i.test(invalide.content), JSON.stringify(invalide));
     const long = await mcp.callTool("everything__trigger-long-running-operation", { duration: 3, steps: 3 });
@@ -716,16 +716,16 @@ async function lancerPasserelle() {
   const port = await portLibre();
   const env = {
     ...process.env,
-    HELIX_CONFIG: PROFIL,
-    HELIX_GATEWAY_PORT: String(port),
-    HELIX_DATA_DIR: DONNEES,
-    HELIX_WORKSPACE: ESPACE,
-    HELIX_CODE_DIR: ESPACE,
-    HELIX_LMSTUDIO_URL: "http://127.0.0.1:9/v1",
-    HELIX_EXO_URL: "http://127.0.0.1:9/v1",
-    HELIX_GATEWAY_HOST: "127.0.0.1",
+    OXOAI_CONFIG: PROFIL,
+    OXOAI_GATEWAY_PORT: String(port),
+    OXOAI_DATA_DIR: DONNEES,
+    OXOAI_WORKSPACE: ESPACE,
+    OXOAI_CODE_DIR: ESPACE,
+    OXOAI_LMSTUDIO_URL: "http://127.0.0.1:9/v1",
+    OXOAI_EXO_URL: "http://127.0.0.1:9/v1",
+    OXOAI_GATEWAY_HOST: "127.0.0.1",
   };
-  delete env.HELIX_MCP_DELAI_MS;
+  delete env.OXOAI_MCP_DELAI_MS;
   const processus = spawn(process.execPath, ["--import", PREALABLE, join(RACINE, "gateway", "src", "index.ts")], { env, stdio: ["ignore", "pipe", "pipe"] });
   const inst = { port, processus, journal: "", G: `http://127.0.0.1:${port}` };
   processus.stdout.on("data", (b) => (inst.journal += b));
@@ -739,16 +739,16 @@ async function lancerPasserelle() {
     }
   }
   const jeton = readFileSync(join(DONNEES, "instance-token"), "utf8").trim();
-  inst.J = { "Content-Type": "application/json", Authorization: `Bearer ${jeton}`, "X-Helix-Langue": "fr" };
+  inst.J = { "Content-Type": "application/json", Authorization: `Bearer ${jeton}`, "X-OxoAI-Langue": "fr" };
   return inst;
 }
 const IDENTITE = { fullName: "Alice Essai", email: "alice@example.test", password: "Mot2PasseSolide!42" };
 let compte = "";
 async function ouvrirSeance(inst, creer) {
-  const r = await fetch(`${inst.G}/helix/auth/${creer ? "create" : "verify"}`, { method: "POST", headers: inst.J, body: JSON.stringify(creer ? IDENTITE : { accountId: compte, password: IDENTITE.password }) });
+  const r = await fetch(`${inst.G}/oxoai/auth/${creer ? "create" : "verify"}`, { method: "POST", headers: inst.J, body: JSON.stringify(creer ? IDENTITE : { accountId: compte, password: IDENTITE.password }) });
   const corps = await r.json();
   if (creer) compte = corps.session?.userId ?? corps.account?.id ?? corps.user?.id ?? "";
-  inst.A = { ...inst.J, "X-Helix-Session": corps.session?.token };
+  inst.A = { ...inst.J, "X-OxoAI-Session": corps.session?.token };
   return Boolean(corps.session?.token);
 }
 const api = async (inst, chemin, corps) => {
@@ -771,11 +771,11 @@ async function chat(inst, plan, accorder = () => true) {
   enCours.finally(() => (fini = true));
   const cartes = [];
   while (!fini) {
-    const e = await api(inst, "/helix/approbation");
+    const e = await api(inst, "/oxoai/approbation");
     for (const c of e.enAttente ?? []) {
       if (cartes.some((x) => x.id === c.id)) continue;
       cartes.push(c);
-      await api(inst, "/helix/approbation/repondre", { id: c.id, accord: accorder(c) });
+      await api(inst, "/oxoai/approbation/repondre", { id: c.id, accord: accorder(c) });
     }
     await attendre(150);
   }
@@ -786,7 +786,7 @@ async function chat(inst, plan, accorder = () => true) {
     if (!ligne.startsWith("data: ") || ligne === "data: [DONE]") continue;
     try {
       const j = JSON.parse(ligne.slice(6));
-      if (j.helix) evenements.push(j.helix);
+      if (j.oxoai) evenements.push(j.oxoai);
       const d = j.choices?.[0]?.delta?.content;
       if (typeof d === "string") texte += d;
     } catch {
@@ -806,7 +806,7 @@ if (!seance) verifier("la passerelle d'essai démarre et ouvre une séance", fal
 
 console.log("\nC. MCP distant avec OAuth (faux Linear, faux serveur d'autorisation)");
 try {
-  const r = await api(passerelle, "/helix/connecteurs/connecter", { id: "linear" });
+  const r = await api(passerelle, "/oxoai/connecteurs/connecter", { id: "linear" });
   const adresse = r.adresse ? new URL(r.adresse) : null;
   const q = adresse?.searchParams;
   verifier(
@@ -818,7 +818,7 @@ try {
   const meta = inscription ? JSON.parse(inscription.corps) : {};
   verifier(
     "inscription automatique (RFC 7591) : code d'autorisation et actualisation, adresse de retour de l'instance",
-    meta.redirect_uris?.[0] === `${passerelle.G}/helix/oauth/retour` && meta.grant_types?.includes("refresh_token"),
+    meta.redirect_uris?.[0] === `${passerelle.G}/oxoai/oauth/retour` && meta.grant_types?.includes("refresh_token"),
     meta,
   );
   verifier(
@@ -835,7 +835,7 @@ try {
   const page = await fetch(retour);
   const echange = recues.find((x) => x.chemin === "/token" && /grant_type=authorization_code/.test(x.corps));
   verifier("le bon retour aboutit : code échangé avec le vérificateur PKCE", page.status === 200 && Boolean(echange) && /code_verifier=/.test(echange.corps), `${page.status} ${echange?.corps}`);
-  const etat = await api(passerelle, "/helix/connecteurs");
+  const etat = await api(passerelle, "/oxoai/connecteurs");
   const lin = (etat.installes ?? []).find((c) => c.id === "linear");
   verifier("Linear branché : en marche, un outil, autorisé", lin?.running && lin.toolCount === 1 && lin.distant && Boolean(lin.autoriseDepuis), lin);
 
@@ -879,7 +879,7 @@ try {
   const avantRedem = recues.length;
   passerelle = await lancerPasserelle();
   await ouvrirSeance(passerelle, false);
-  await jusqua(async () => ((await api(passerelle, "/helix/connecteurs")).installes ?? []).find((c) => c.id === "linear")?.running, 15000);
+  await jusqua(async () => ((await api(passerelle, "/oxoai/connecteurs")).installes ?? []).find((c) => c.id === "linear")?.running, 15000);
   const c3 = await chat(passerelle, [["linear__get_issue", { id: "LIN-3" }]]);
   const renouv2 = recues.slice(avantRedem).find((x) => x.chemin === "/token" && /grant_type=refresh_token/.test(x.corps));
   verifier("après redémarrage, jeton expiré : renouvelé avec l'inscription relue, l'outil passe", Boolean(renouv2) && c3.fins[0]?.ok && /LIN-3/.test(c3.texte), `${renouv2?.corps ?? "pas de renouvellement"} ${JSON.stringify(c3.fins)} ${passerelle.journal.slice(-600)}`);
@@ -889,8 +889,8 @@ try {
   const c4 = await chat(passerelle, [["linear__get_issue", { id: "LIN-4" }]]);
   verifier("accès révoqué chez le service : l'appel échoue et dit de reconnecter le service", c4.fins[0]?.ok === false && /reconnect/i.test(c4.fins[0]?.preview ?? ""), JSON.stringify(c4.fins));
 
-  const ret = await api(passerelle, "/helix/connecteurs/retirer", { id: "linear" });
-  const apres = await api(passerelle, "/helix/connecteurs");
+  const ret = await api(passerelle, "/oxoai/connecteurs/retirer", { id: "linear" });
+  const apres = await api(passerelle, "/oxoai/connecteurs");
   verifier("retiré : plus dans la liste, plus d'outil proposé", ret.ok && !(apres.installes ?? []).some((c) => c.id === "linear"), ret);
 
   /*
@@ -898,18 +898,18 @@ try {
    * « Ajouter un serveur MCP », mode « Adresse ») : l'autorisation passe par le
    * même chemin que « Se connecter », puis ses outils demandent l'accord.
    */
-  const perso = await api(passerelle, "/helix/connecteurs/personnalise", { mode: "adresse", id: "suivi-maison", label: "Suivi maison", url: RESSOURCE });
+  const perso = await api(passerelle, "/oxoai/connecteurs/personnalise", { mode: "adresse", id: "suivi-maison", label: "Suivi maison", url: RESSOURCE });
   const adressePerso = perso.adresse ? new URL(perso.adresse) : null;
   verifier("serveur ajouté par adresse, qui demande une autorisation : la page d'autorisation est rendue, PKCE S256", perso.statut === 200 && adressePerso?.origin === EMETTEUR && adressePerso.searchParams.get("code_challenge_method") === "S256", JSON.stringify(perso).slice(0, 400));
   if (adressePerso) {
     const accordPerso = await fetch(`http://127.0.0.1:${PORT_FAUX}${adressePerso.pathname}${adressePerso.search}`, { headers: { "x-hote": "auth.essai.example" }, redirect: "manual" });
     const pagePerso = await fetch(accordPerso.headers.get("location"));
-    const instPerso = ((await api(passerelle, "/helix/connecteurs")).installes ?? []).find((c) => c.id === "suivi-maison");
+    const instPerso = ((await api(passerelle, "/oxoai/connecteurs")).installes ?? []).find((c) => c.id === "suivi-maison");
     verifier("après l'accord : en marche, son outil listé, rangé parmi les serveurs ajoutés, l'adresse montrée à l'administratrice", pagePerso.status === 200 && instPerso?.running && instPerso.toolCount === 1 && instPerso.personnalise?.mode === "adresse" && instPerso.personnalise.cible === RESSOURCE, instPerso);
     const cPerso = await chat(passerelle, [["suivi-maison__get_issue", { id: "LIN-P" }]]);
     verifier("dans un Chat : son outil demande l'accord (écriture par défaut), accepté, il répond par le jeton", cPerso.cartes.some((c) => c.detail?.outil === "suivi-maison__get_issue") && cPerso.fins[0]?.ok && /REPERE-LINEAR/.test(cPerso.texte), `${JSON.stringify(cPerso.fins)} ${cPerso.texte.slice(0, 200)}`);
-    const retPerso = await api(passerelle, "/helix/connecteurs/retirer", { id: "suivi-maison" });
-    verifier("retiré : plus dans la liste", retPerso.ok && !((await api(passerelle, "/helix/connecteurs")).installes ?? []).some((c) => c.id === "suivi-maison"), retPerso);
+    const retPerso = await api(passerelle, "/oxoai/connecteurs/retirer", { id: "suivi-maison" });
+    verifier("retiré : plus dans la liste", retPerso.ok && !((await api(passerelle, "/oxoai/connecteurs")).installes ?? []).some((c) => c.id === "suivi-maison"), retPerso);
   }
 } catch (err) {
   verifier("partie C sans exception", false, err?.stack ?? String(err));
@@ -923,12 +923,12 @@ console.log("\nD. Un MCP personnalisé : ajouté, en ligne, utilisé dans un Cha
 try {
   const CARNET = join(AUX, "carnet.txt");
   const TRACE = join(AUX, "carnet-trace.txt");
-  const ajout = await api(passerelle, "/helix/connecteurs/ajouter", { id: "carnet", label: "Carnet d'essai", command: process.execPath, args: [join(RACINE, "scripts", "mcp-essai.mjs"), CARNET, TRACE] });
+  const ajout = await api(passerelle, "/oxoai/connecteurs/ajouter", { id: "carnet", label: "Carnet d'essai", command: process.execPath, args: [join(RACINE, "scripts", "mcp-essai.mjs"), CARNET, TRACE] });
   verifier("ajouté (instance qui autorise les serveurs internes) : démarré, deux outils", ajout.statut === 200 && ajout.ok && /2 outil/.test(ajout.message), ajout.message);
-  const etat = await api(passerelle, "/helix/connecteurs");
+  const etat = await api(passerelle, "/oxoai/connecteurs");
   const carnet = (etat.installes ?? []).find((c) => c.id === "carnet");
   verifier("l'écran des connecteurs le voit : en ligne, hors catalogue, deux outils", carnet?.running && carnet.libre && carnet.toolCount === 2, carnet);
-  const outils = await api(passerelle, "/helix/outils");
+  const outils = await api(passerelle, "/oxoai/outils");
   verifier("le menu « Outils » du Chat le compte parmi les groupes actifs", (outils.groupes ?? []).some((g) => g.id === "carnet" && g.actif && g.outils === 2), outils.groupes?.map((g) => g.id));
 
   const oui = await chat(passerelle, [["carnet__noter", { texte: "acheter du pain" }]]);
@@ -943,25 +943,25 @@ try {
 
   // L'environnement d'un serveur lancé par la passerelle : ni ses clés, ni les nôtres.
   const TRACE_ESPION = join(AUX, "espion");
-  await api(passerelle, "/helix/connecteurs/ajouter", { id: "espion", command: process.execPath, args: [FAUX, "base", TRACE_ESPION] });
+  await api(passerelle, "/oxoai/connecteurs/ajouter", { id: "espion", command: process.execPath, args: [FAUX, "base", TRACE_ESPION] });
   const vu = await chat(passerelle, [["espion__env", {}]]);
   const envVu = auModele.flatMap((d) => d.messages ?? []).filter((m) => m.role === "tool" && /"PATH"/.test(texteDe(m))).map(texteDe).at(-1) ?? "";
   verifier(
-    "un serveur lancé par la passerelle ne reçoit ni les clés de la passerelle ni ses réglages (HELIX_*)",
-    vu.fins[0]?.ok && envVu.length > 0 && !Object.values(FUITES).some((v) => envVu.includes(v)) && !/HELIX_/.test(envVu),
+    "un serveur lancé par la passerelle ne reçoit ni les clés de la passerelle ni ses réglages (OXOAI_*)",
+    vu.fins[0]?.ok && envVu.length > 0 && !Object.values(FUITES).some((v) => envVu.includes(v)) && !/OXOAI_/.test(envVu),
     envVu.slice(0, 300),
   );
 
   for (const [id, pourquoi] of [["a__b", "« __ »"], ["fin_", "souligné final"], ["courrier", "nom réservé"], ["fichiers", "serveur livré"], ["../x", "caractères"]]) {
-    const r = await api(passerelle, "/helix/connecteurs/ajouter", { id, command: process.execPath, args: [FAUX, "base"] });
+    const r = await api(passerelle, "/oxoai/connecteurs/ajouter", { id, command: process.execPath, args: [FAUX, "base"] });
     verifier(`identifiant refusé (${pourquoi}) : ${id}`, r.statut === 400 && !r.ok, r.message);
   }
 
   const pidCarnet = Number(execFileSync("ps", ["-A", "-o", "pid=,command="], { encoding: "utf8" }).split("\n").find((l) => l.includes("mcp-essai.mjs") && l.includes(CARNET))?.trim().split(/\s+/)[0]);
-  const retrait = await api(passerelle, "/helix/connecteurs/retirer", { id: "carnet" });
+  const retrait = await api(passerelle, "/oxoai/connecteurs/retirer", { id: "carnet" });
   await attendre(300);
-  const apres = await api(passerelle, "/helix/connecteurs");
-  const outilsApres = await api(passerelle, "/helix/outils");
+  const apres = await api(passerelle, "/oxoai/connecteurs");
+  const outilsApres = await api(passerelle, "/oxoai/outils");
   verifier(
     "retiré depuis l'écran : son processus est arrêté, il disparaît des connecteurs et du menu « Outils »",
     retrait.ok && pidCarnet > 0 && !vivant(pidCarnet) && !(apres.installes ?? []).some((c) => c.id === "carnet") && !(outilsApres.groupes ?? []).some((g) => g.id === "carnet"),
@@ -982,12 +982,12 @@ if (SANS_RESEAU) {
 } else {
   console.log("\nE. Connecteurs intégrés sans compte : fichiers, mémoire de travail, réflexion");
   try {
-    const DEHORS = mkdtempSync(join(tmpdir(), "helix-essai-mcp-dehors-"));
+    const DEHORS = mkdtempSync(join(tmpdir(), "oxoai-essai-mcp-dehors-"));
     writeFileSync(join(DEHORS, "secret.txt"), "CONTENU-HORS-ESPACE");
     writeFileSync(join(ESPACE, "lisible.txt"), "CONTENU-DANS-ESPACE");
     symlinkSync(DEHORS, join(ESPACE, "lien-dehors"));
-    const pret = await jusqua(async () => ((await api(passerelle, "/helix/outils")).groupes ?? []).some((g) => g.id === "fichiers" && g.actif), 60000);
-    verifier("le serveur de fichiers est en marche", pret, JSON.stringify((await api(passerelle, "/helix/outils")).groupes?.find((g) => g.id === "fichiers")));
+    const pret = await jusqua(async () => ((await api(passerelle, "/oxoai/outils")).groupes ?? []).some((g) => g.id === "fichiers" && g.actif), 60000);
+    verifier("le serveur de fichiers est en marche", pret, JSON.stringify((await api(passerelle, "/oxoai/outils")).groupes?.find((g) => g.id === "fichiers")));
     const lire = (chemin) => ["fichiers__read_text_file", { path: chemin }];
     const f = await chat(passerelle, [lire(join(ESPACE, "lisible.txt")), lire(join(ESPACE, "..", "..", DEHORS.split("/").pop())), lire(join(DEHORS, "secret.txt")), lire(join(ESPACE, "lien-dehors", "secret.txt")), lire(join(DONNEES, "instance-token"))]);
     const [dans, remonte, absolu, lien, protege] = f.fins;
@@ -998,13 +998,13 @@ if (SANS_RESEAU) {
     verifier("données de l'instance (jeton), même dans l'espace : refusé comme zone protégée", protege?.ok === false && /protégé/.test(protege.preview ?? ""), JSON.stringify(protege));
     verifier("rien de ce qui est dehors, ni le jeton de l'instance, n'est arrivé au modèle", !/CONTENU-HORS-ESPACE/.test(JSON.stringify(auModele.slice(-6))) && !JSON.stringify(auModele.slice(-6)).includes(readFileSync(join(DONNEES, "instance-token"), "utf8").trim()), "fuite");
 
-    const mem = await api(passerelle, "/helix/connecteurs/ajouter", { id: "memoire" });
+    const mem = await api(passerelle, "/oxoai/connecteurs/ajouter", { id: "memoire" });
     verifier("mémoire de travail branchée depuis le catalogue (sans compte)", mem.statut === 200 && mem.ok, mem.message);
     const m = await chat(passerelle, [["memoire__create_entities", { entities: [{ name: "Client Martin", entityType: "client", observations: ["préfère être appelé le matin"] }] }], ["memoire__read_graph", {}]]);
     verifier("mémoire : écrire passe par une carte, puis relire rend l'entité", m.cartes.some((c) => c.detail?.outil === "memoire__create_entities") && m.fins.every((x) => x.ok) && /Client Martin/.test(m.texte), `${JSON.stringify(m.fins)} ${m.texte.slice(0, 200)}`);
     verifier("le carnet de la mémoire est dans le dossier de données de l'instance, pas dans le cache de npx", existsSync(join(DONNEES, "memoire.jsonl")) && readFileSync(join(DONNEES, "memoire.jsonl"), "utf8").includes("Client Martin"), existsSync(join(DONNEES, "memoire.jsonl")));
 
-    const ref = await api(passerelle, "/helix/connecteurs/ajouter", { id: "reflexion" });
+    const ref = await api(passerelle, "/oxoai/connecteurs/ajouter", { id: "reflexion" });
     const rr = await chat(passerelle, [["reflexion__sequentialthinking", { thought: "Découper la question en deux.", thoughtNumber: 1, totalThoughts: 1, nextThoughtNeeded: false }]]);
     verifier("réflexion par étapes : branchée, une étape enregistrée", ref.ok && rr.fins[0]?.ok && /thoughtNumber|1/.test(rr.texte), `${ref.message} ${JSON.stringify(rr.fins)}`);
   } catch (err) {
@@ -1019,7 +1019,7 @@ if (SANS_RESEAU) {
 console.log("\nF. Arrêt de la passerelle");
 try {
   const TRACE_O = join(AUX, "orphelin-passerelle");
-  const r = await api(passerelle, "/helix/connecteurs/ajouter", { id: "orphelin", command: process.execPath, args: [FAUX, "orphelin", TRACE_O] });
+  const r = await api(passerelle, "/oxoai/connecteurs/ajouter", { id: "orphelin", command: process.execPath, args: [FAUX, "orphelin", TRACE_O] });
   const pid = pidDe(TRACE_O);
   const enfant = Number(readFileSync(`${TRACE_O}.enfant`, "utf8"));
   const tous = descendantsDe(passerelle.processus.pid).map((d) => d.pid);

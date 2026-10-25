@@ -66,7 +66,7 @@ const b64url = (b) => Buffer.from(b).toString("base64url");
 /* ------------------------------------------------------------------------- */
 
 const APPS = {
-  brevo: { id: "helix-essai-brevo", secret: "SECRET-BREVO-DE-TEST" },
+  brevo: { id: "oxoai-essai-brevo", secret: "SECRET-BREVO-DE-TEST" },
   mailchimp: { id: "123456789012", secret: "SECRET-MAILCHIMP-DE-TEST" },
   zoom: { id: "ZoomEssaiClient01", secret: "SECRET-ZOOM-DE-TEST" },
 };
@@ -350,9 +350,9 @@ const regler = (o) => fetch(`http://127.0.0.1:${PORT_FAUX}/__controle`, { method
 /* Passerelle jetable                                                         */
 /* ------------------------------------------------------------------------- */
 
-const AUX = mkdtempSync(join(tmpdir(), "helix-projets-aux-"));
-const DONNEES = mkdtempSync(join(tmpdir(), "helix-projets-donnees-"));
-const ESPACE = mkdtempSync(join(tmpdir(), "helix-projets-espace-"));
+const AUX = mkdtempSync(join(tmpdir(), "oxoai-projets-aux-"));
+const DONNEES = mkdtempSync(join(tmpdir(), "oxoai-projets-donnees-"));
+const ESPACE = mkdtempSync(join(tmpdir(), "oxoai-projets-espace-"));
 const PREALABLE = join(AUX, "prealable.mjs");
 writeFileSync(
   PREALABLE,
@@ -386,15 +386,15 @@ const PORT = await portLibre();
 const G = `http://127.0.0.1:${PORT}`;
 const ENV = {
   ...process.env,
-  HELIX_CONFIG: join(AUX, "profil.json"),
-  HELIX_GATEWAY_PORT: String(PORT),
-  HELIX_DATA_DIR: DONNEES,
-  HELIX_WORKSPACE: ESPACE,
-  HELIX_OPENCODE_BIN: FAUX_OPENCODE,
-  HELIX_CODE_DIR: ESPACE,
-  HELIX_LMSTUDIO_URL: "http://127.0.0.1:9/v1",
-  HELIX_EXO_URL: "http://127.0.0.1:9/v1",
-  HELIX_GATEWAY_HOST: "127.0.0.1",
+  OXOAI_CONFIG: join(AUX, "profil.json"),
+  OXOAI_GATEWAY_PORT: String(PORT),
+  OXOAI_DATA_DIR: DONNEES,
+  OXOAI_WORKSPACE: ESPACE,
+  OXOAI_OPENCODE_BIN: FAUX_OPENCODE,
+  OXOAI_CODE_DIR: ESPACE,
+  OXOAI_LMSTUDIO_URL: "http://127.0.0.1:9/v1",
+  OXOAI_EXO_URL: "http://127.0.0.1:9/v1",
+  OXOAI_GATEWAY_HOST: "127.0.0.1",
 };
 const passerelle = spawn(process.execPath, ["--import", PREALABLE, join(RACINE, "gateway", "src", "index.ts")], { env: ENV, stdio: ["ignore", "pipe", "pipe"] });
 let journal = "";
@@ -417,23 +417,23 @@ if (!demarree) {
 }
 
 const JETON = readFileSync(join(DONNEES, "instance-token"), "utf8").trim();
-const avecJeton = { "Content-Type": "application/json", Authorization: `Bearer ${JETON}`, "X-Helix-Langue": "fr" };
+const avecJeton = { "Content-Type": "application/json", Authorization: `Bearer ${JETON}`, "X-OxoAI-Langue": "fr" };
 const appel = (chemin, options = {}) => fetch(`${G}${chemin}`, { redirect: "manual", ...options });
 const poster = (chemin, entetes, corps) => appel(chemin, { method: "POST", headers: entetes, body: JSON.stringify(corps ?? {}) });
-const premier = await (await poster("/helix/auth/create", avecJeton, { fullName: "Alice Essai", email: "alice@example.test", password: "Mot2PasseSolide!42" })).json();
-const A = { ...avecJeton, "X-Helix-Session": premier.session?.token };
+const premier = await (await poster("/oxoai/auth/create", avecJeton, { fullName: "Alice Essai", email: "alice@example.test", password: "Mot2PasseSolide!42" })).json();
+const A = { ...avecJeton, "X-OxoAI-Session": premier.session?.token };
 const idA = premier.account?.id;
-const creeB = await (await poster("/helix/auth/create", A, { fullName: "Bruno Essai", email: "bruno@example.test", password: "Provisoire2Passe!11" })).json();
-const connB = await (await poster("/helix/auth/mot-de-passe-provisoire", avecJeton, { accountId: creeB.account?.id, password: "Provisoire2Passe!11", nouveau: "Bruno2PasseSolide!57" })).json();
-const B = { ...avecJeton, "X-Helix-Session": connB.session?.token };
+const creeB = await (await poster("/oxoai/auth/create", A, { fullName: "Bruno Essai", email: "bruno@example.test", password: "Provisoire2Passe!11" })).json();
+const connB = await (await poster("/oxoai/auth/mot-de-passe-provisoire", avecJeton, { accountId: creeB.account?.id, password: "Provisoire2Passe!11", nouveau: "Bruno2PasseSolide!57" })).json();
+const B = { ...avecJeton, "X-OxoAI-Session": connB.session?.token };
 const idB = creeB.account?.id;
 
-const mcpEtat = async () => (await (await appel("/helix/mcp", { headers: A })).json()).servers ?? [];
+const mcpEtat = async () => (await (await appel("/oxoai/mcp", { headers: A })).json()).servers ?? [];
 const outilsDe = async (id) => ((await mcpEtat()).find((s) => s.id === id)?.tools ?? []).map((o) => o.name);
 
 /** Lance « Se connecter » et rend l'adresse d'autorisation, décortiquée. */
 async function connecterMcp(id, corps = {}) {
-  const r = await poster("/helix/connecteurs/connecter", A, { id, ...corps });
+  const r = await poster("/oxoai/connecteurs/connecter", A, { id, ...corps });
   const j = await r.json().catch(() => ({}));
   const u = typeof j.adresse === "string" ? new URL(j.adresse) : null;
   return { statut: r.status, j, u, p: u?.searchParams ?? new URLSearchParams() };
@@ -442,7 +442,7 @@ async function connecterMcp(id, corps = {}) {
 async function revenir(id, depart, scopeRendue) {
   await regler({ scope: { [id]: scopeRendue } });
   // Un navigateur réglé en français : la page de retour est lue dans sa langue.
-  const r = await appel(`/helix/oauth/retour?code=CODE-${id}&state=${encodeURIComponent(depart.p.get("state") ?? "")}`, { headers: { "Accept-Language": "fr-FR,fr;q=0.9", "X-Helix-Langue": "fr" } });
+  const r = await appel(`/oxoai/oauth/retour?code=CODE-${id}&state=${encodeURIComponent(depart.p.get("state") ?? "")}`, { headers: { "Accept-Language": "fr-FR,fr;q=0.9", "X-OxoAI-Langue": "fr" } });
   return { statut: r.status, texte: await r.text() };
 }
 const verifPkce = (id, depart) => {
@@ -455,17 +455,17 @@ const verifPkce = (id, depart) => {
 console.log("\nA. Qui a le droit");
 {
   for (const id of ["trello", "zoom"]) {
-    const r = await poster("/helix/connecteurs/connecter", B, { id });
+    const r = await poster("/oxoai/connecteurs/connecter", B, { id });
     verifier(`un collègue qui n'administre pas ne branche pas ${id} (403)`, r.status === 403, r.status);
   }
   for (const [suite, corps] of [["/application", { service: "brevo", clientId: APPS.brevo.id, clientSecret: APPS.brevo.secret }], ["/connecter", { service: "mailchimp" }]]) {
-    const r = await poster(`/helix/natifs${suite}`, B, corps);
+    const r = await poster(`/oxoai/natifs${suite}`, B, corps);
     verifier(`un collègue qui n'administre pas : natifs${suite} refusé (403)`, r.status === 403, r.status);
   }
-  const vueB = await (await appel("/helix/natifs", { headers: B })).json();
+  const vueB = await (await appel("/oxoai/natifs", { headers: B })).json();
   verifier("un collègue voit Brevo et Mailchimp dans l'état, sans rien de secret", ["brevo", "mailchimp"].every((s) => vueB.services?.some((x) => x.id === s)) && vueB.administrateur === false, JSON.stringify(vueB).slice(0, 160));
   for (const id of ["brevo", "mailchimp"]) {
-    const r = await poster("/helix/connecteurs/ajouter", A, { id, command: "/bin/sh" });
+    const r = await poster("/oxoai/connecteurs/ajouter", A, { id, command: "/bin/sh" });
     const j = await r.json().catch(() => ({}));
     verifier(`un connecteur MCP ne peut pas prendre le préfixe « ${id} » (réservé)`, r.status === 400 && /intégré/.test(j.message ?? ""), JSON.stringify(j).slice(0, 160));
   }
@@ -476,11 +476,11 @@ console.log("\nB. Serveurs MCP : portées de lecture par défaut, relues au reto
   // Trello, lecture seule.
   const t = await connecterMcp("trello");
   const lecture = "offline_access read:me read:account read:board:trello read:organization:trello read:member:trello";
-  verifier("Trello : autorisation chez Atlassian, portées de lecture seules, PKCE S256, retour sur l'instance", t.statut === 200 && t.u?.hostname === "auth.atlassian.com" && t.p.get("scope") === lecture && t.p.get("code_challenge_method") === "S256" && /^[A-Za-z0-9_-]{43}$/.test(t.p.get("code_challenge") ?? "") && t.p.get("redirect_uri") === `${G}/helix/oauth/retour`, t.j.adresse ?? JSON.stringify(t.j));
+  verifier("Trello : autorisation chez Atlassian, portées de lecture seules, PKCE S256, retour sur l'instance", t.statut === 200 && t.u?.hostname === "auth.atlassian.com" && t.p.get("scope") === lecture && t.p.get("code_challenge_method") === "S256" && /^[A-Za-z0-9_-]{43}$/.test(t.p.get("code_challenge") ?? "") && t.p.get("redirect_uri") === `${G}/oxoai/oauth/retour`, t.j.adresse ?? JSON.stringify(t.j));
   const inscription = recues.find((x) => x.hote === "auth.atlassian.com" && x.chemin?.endsWith("/dcr/register"));
   verifier("Trello : l'instance s'est inscrite elle-même (RFC 7591) avec la seule portée de lecture", Boolean(inscription) && JSON.parse(inscription.corps).scope === lecture, inscription?.corps);
-  const faux1 = await appel(`/helix/oauth/retour?code=CODE-trello&state=faux-state`);
-  const faux2 = await appel(`/helix/oauth/retour?code=CODE-trello&state=${encodeURIComponent((t.p.get("state") ?? "") + "x")}`);
+  const faux1 = await appel(`/oxoai/oauth/retour?code=CODE-trello&state=faux-state`);
+  const faux2 = await appel(`/oxoai/oauth/retour?code=CODE-trello&state=${encodeURIComponent((t.p.get("state") ?? "") + "x")}`);
   verifier("un `state` faux ou allongé est refusé (400), et rien n'est branché", faux1.status === 400 && faux2.status === 400 && !(await mcpEtat()).some((s) => s.id === "trello"), `${faux1.status} ${faux2.status}`);
   const fin = await revenir("trello", t, lecture);
   verifier("Trello : retour avec le bon `state`, jeton échangé avec le vérificateur PKCE, branché", fin.statut === 200 && verifPkce("trello", t), fin.texte.slice(0, 300));
@@ -517,7 +517,7 @@ console.log("\nB. Serveurs MCP : portées de lecture par défaut, relues au reto
 
   // Zoom : une application, sans enregistrement automatique.
   const zSans = await connecterMcp("zoom");
-  verifier("Zoom sans application : refusé, le message donne l'adresse de retour à déclarer", zSans.statut === 400 && zSans.j.message?.includes(`${G}/helix/oauth/retour`), zSans.j.message);
+  verifier("Zoom sans application : refusé, le message donne l'adresse de retour à déclarer", zSans.statut === 400 && zSans.j.message?.includes(`${G}/oxoai/oauth/retour`), zSans.j.message);
   const z = await connecterMcp("zoom", { clientId: APPS.zoom.id, clientSecret: APPS.zoom.secret });
   verifier("Zoom : autorisation chez zoom.us, portées de lecture seules, PKCE", z.u?.hostname === "zoom.us" && (z.p.get("scope") ?? "").split(" ").every((s) => s.includes(":read:")) && z.p.get("code_challenge_method") === "S256", z.j.adresse ?? JSON.stringify(z.j));
   const zTrop = await revenir("zoom", z, "meeting:read:search meeting:write:meeting");
@@ -531,19 +531,19 @@ console.log("\nB. Serveurs MCP : portées de lecture par défaut, relues au reto
 console.log("\nC. Écrire dans un service MCP : carte à chaque fois, administrateur seul");
 {
   // Trello rebranché avec écriture.
-  const r = await poster("/helix/connecteurs/retirer", B, { id: "trello" });
+  const r = await poster("/oxoai/connecteurs/retirer", B, { id: "trello" });
   verifier("un collègue ne débranche pas Trello (403)", r.status === 403, r.status);
-  await poster("/helix/connecteurs/retirer", A, { id: "trello" });
+  await poster("/oxoai/connecteurs/retirer", A, { id: "trello" });
   const t = await connecterMcp("trello", { ecriture: true });
   verifier("Trello, écriture cochée : write:board:trello en plus, rien d'autre", t.p.get("scope") === "offline_access read:me read:account read:board:trello read:organization:trello read:member:trello write:board:trello", t.p.get("scope"));
   await revenir("trello", t, t.p.get("scope"));
   verifier("Trello avec écriture : create_card proposé", (await outilsDe("trello")).includes("create_card"), (await outilsDe("trello")).join(","));
 
-  await poster("/helix/approbation/niveau", A, { niveau: "tout" });
+  await poster("/oxoai/approbation/niveau", A, { niveau: "tout" });
   const chat = (entetes, question) => appel("/v1/chat/completions", { method: "POST", headers: entetes, body: JSON.stringify({ model: "essai-injection", stream: true, tools: true, messages: [{ role: "user", content: question }] }) }).then((x) => x.text());
   const carteDe = async (entetes, enCours, outil) => {
     for (let i = 0; i < 40; i++) {
-      const e = await (await appel("/helix/approbation", { headers: entetes })).json().catch(() => ({}));
+      const e = await (await appel("/oxoai/approbation", { headers: entetes })).json().catch(() => ({}));
       const c = (e.enAttente ?? []).find((d) => d.detail?.outil === outil);
       if (c) return c;
       if (await Promise.race([enCours.then(() => true), attendre(200).then(() => false)])) return null;
@@ -555,19 +555,19 @@ console.log("\nC. Écrire dans un service MCP : carte à chaque fois, administra
   const enCours = chat(A, "ECRIT-TRELLO : crée une carte.");
   const carte = await carteDe(A, enCours, "trello__create_card");
   verifier("écrire dans Trello pose une carte même au niveau « Tout approuver », avec les arguments entiers", Boolean(carte) && String(carte?.detail?.arguments ?? "").includes("FIN-DE-LA-CARTE") && carte?.detail?.unique === true && /modifier Trello/.test(carte?.resume ?? ""), JSON.stringify(carte ?? {}).slice(0, 300));
-  if (carte) await poster("/helix/approbation/repondre", A, { id: carte.id, accord: false });
+  if (carte) await poster("/oxoai/approbation/repondre", A, { id: carte.id, accord: false });
   await enCours;
   verifier("carte refusée : rien n'est écrit chez Trello", !appelsMcp.slice(avant).some((x) => x.outil === "create_card"), JSON.stringify(appelsMcp.slice(avant)));
   // Acceptée : écrit une fois.
   const enCours2 = chat(A, "ECRIT-TRELLO : crée une carte.");
   const carte2 = await carteDe(A, enCours2, "trello__create_card");
-  if (carte2) await poster("/helix/approbation/repondre", A, { id: carte2.id, accord: true });
+  if (carte2) await poster("/oxoai/approbation/repondre", A, { id: carte2.id, accord: true });
   await enCours2;
   verifier("carte acceptée par l'administrateur : la carte est créée, une fois", appelsMcp.filter((x) => x.outil === "create_card").length === 1, JSON.stringify(appelsMcp.filter((x) => x.outil === "create_card")));
   // Un collègue : sa carte, acceptée par lui, n'écrit rien.
   const enCoursB = chat(B, "ECRIT-TRELLO : crée une carte.");
   const carteB = await carteDe(B, enCoursB, "trello__create_card");
-  if (carteB) await poster("/helix/approbation/repondre", B, { id: carteB.id, accord: true });
+  if (carteB) await poster("/oxoai/approbation/repondre", B, { id: carteB.id, accord: true });
   const fluxB = await enCoursB;
   verifier("un collègue qui accepte sa propre carte : refusé au moment d'agir, rien n'est écrit", appelsMcp.filter((x) => x.outil === "create_card").length === 1 && /réservé à l'administrateur/.test(fluxB), fluxB.slice(-300));
 
@@ -576,23 +576,23 @@ console.log("\nC. Écrire dans un service MCP : carte à chaque fois, administra
   const avantP = appelsMcp.length;
   const enCoursP = chat(A, "RESUME-TRELLO : résume mes tableaux.");
   const carteP = await carteDe(A, enCoursP, "trello__create_card");
-  if (carteP) await poster("/helix/approbation/repondre", A, { id: carteP.id, accord: false });
+  if (carteP) await poster("/oxoai/approbation/repondre", A, { id: carteP.id, accord: false });
   const fluxP = await enCoursP;
   verifier("témoin : le modèle a lu les tableaux par un vrai appel", appelsMcp.slice(avantP).some((x) => x.outil === "get_boards"), JSON.stringify(appelsMcp.slice(avantP)));
   verifier("Trello : l'appel glissé dans une carte lue, recopié par le modèle, n'est pas lancé ; aucune carte, rien écrit, la citation reste du texte", !carteP && !appelsMcp.slice(avantP).some((x) => x.outil === "create_card") && /Carte glissée par un inconnu/.test(fluxP), carteP ? `carte posée : ${carteP.resume}` : fluxP.slice(-300));
   await regler({ piegeTrello: false });
-  await poster("/helix/approbation/niveau", A, { niveau: "modifications" });
+  await poster("/oxoai/approbation/niveau", A, { niveau: "modifications" });
 }
 
 console.log("\nE. Brevo et Mailchimp : connexion");
 {
   for (const id of ["brevo", "mailchimp"]) {
-    const r = await poster("/helix/natifs/application", A, { service: id, clientId: APPS[id].id, clientSecret: APPS[id].secret });
+    const r = await poster("/oxoai/natifs/application", A, { service: id, clientId: APPS[id].id, clientSecret: APPS[id].secret });
     const texte = await r.text();
     verifier(`${id} : application enregistrée, la réponse ne contient pas le secret`, r.status === 200 && !texte.includes(APPS[id].secret), `${r.status} ${texte.slice(0, 160)}`);
   }
   const depart = async (id, choix = []) => {
-    const r = await poster("/helix/natifs/connecter", A, { service: id, choix });
+    const r = await poster("/oxoai/natifs/connecter", A, { service: id, choix });
     const j = await r.json().catch(() => ({}));
     const u = typeof j.url === "string" ? new URL(j.url) : null;
     return { statut: r.status, j, u, p: u?.searchParams ?? new URLSearchParams() };
@@ -601,34 +601,34 @@ console.log("\nE. Brevo et Mailchimp : connexion");
   verifier("Brevo, lecture : chez oauth.brevo.com, account:read contacts:read campaigns.email:read, PKCE S256, `state` tiré au sort", b.u?.hostname === "oauth.brevo.com" && b.p.get("scope") === "account:read contacts:read campaigns.email:read" && b.p.get("code_challenge_method") === "S256" && /^natif\.[A-Za-z0-9_-]{43}$/.test(b.p.get("state") ?? ""), b.j.url);
   const bE = await depart("brevo", ["ecriture", "envoi"]);
   verifier("Brevo, brouillons et envoi : campaigns.email:write une seule fois en plus", bE.p.get("scope") === "account:read contacts:read campaigns.email:read campaigns.email:write", bE.p.get("scope"));
-  const faux1 = await appel(`/helix/oauth/retour?state=natif.faux&code=CODE-brevo`);
-  const enAttente = (await (await appel("/helix/natifs", { headers: A })).json()).services.find((s) => s.id === "brevo");
+  const faux1 = await appel(`/oxoai/oauth/retour?state=natif.faux&code=CODE-brevo`);
+  const enAttente = (await (await appel("/oxoai/natifs", { headers: A })).json()).services.find((s) => s.id === "brevo");
   verifier("Brevo : un `state` faux est refusé, la demande en cours n'est pas annulée", faux1.status === 400 && enAttente?.attente === true, `${faux1.status} ${JSON.stringify(enAttente).slice(0, 100)}`);
   // Brevo accorde plus que demandé : refusé et révoqué.
   await regler({ scopeBrevo: "account:read contacts:read campaigns.email:read campaigns.email:write contacts:write" });
-  const trop = await appel(`/helix/oauth/retour?state=${encodeURIComponent(bE.p.get("state"))}&code=CODE-brevo`);
-  verifier("Brevo : une portée en trop (contacts:write) fait tout refuser, et l'accès est révoqué chez Brevo", trop.status === 400 && revocations.some((x) => x.service === "brevo") && !(await (await appel("/helix/natifs", { headers: A })).json()).services.find((s) => s.id === "brevo")?.configure, `${trop.status} ${revocations.length}`);
+  const trop = await appel(`/oxoai/oauth/retour?state=${encodeURIComponent(bE.p.get("state"))}&code=CODE-brevo`);
+  verifier("Brevo : une portée en trop (contacts:write) fait tout refuser, et l'accès est révoqué chez Brevo", trop.status === 400 && revocations.some((x) => x.service === "brevo") && !(await (await appel("/oxoai/natifs", { headers: A })).json()).services.find((s) => s.id === "brevo")?.configure, `${trop.status} ${revocations.length}`);
   const bE2 = await depart("brevo", ["ecriture", "envoi"]);
   await regler({ scopeBrevo: "account:read contacts:read campaigns.email:read campaigns.email:write profile email" });
-  const ok = await appel(`/helix/oauth/retour?state=${encodeURIComponent(bE2.p.get("state"))}&code=CODE-brevo`);
+  const ok = await appel(`/oxoai/oauth/retour?state=${encodeURIComponent(bE2.p.get("state"))}&code=CODE-brevo`);
   const echange = [...recues].reverse().find((x) => x.hote === "oauth.brevo.com" && /grant_type=authorization_code/.test(x.corps));
   const v = new URLSearchParams(echange?.corps ?? "").get("code_verifier") ?? "";
   verifier("Brevo : branché (portées d'identité de Keycloak tolérées), vérificateur PKCE conforme au défi", ok.status === 200 && b64url(createHash("sha256").update(v).digest()) === bE2.p.get("code_challenge"), `${ok.status} ${(await ok.text()).slice(0, 200)}`);
 
   const m = await depart("mailchimp", ["ecriture", "envoi"]);
-  verifier("Mailchimp : chez login.mailchimp.com, aucune portée ni défi PKCE (non documentés), retour en 127.0.0.1", m.u?.hostname === "login.mailchimp.com" && !m.p.has("scope") && !m.p.has("code_challenge") && m.p.get("redirect_uri") === `${G}/helix/oauth/retour`, m.j.url);
+  verifier("Mailchimp : chez login.mailchimp.com, aucune portée ni défi PKCE (non documentés), retour en 127.0.0.1", m.u?.hostname === "login.mailchimp.com" && !m.p.has("scope") && !m.p.has("code_challenge") && m.p.get("redirect_uri") === `${G}/oxoai/oauth/retour`, m.j.url);
   await regler({ dcMalveillant: true });
-  const mal = await appel(`/helix/oauth/retour?state=${encodeURIComponent(m.p.get("state"))}&code=CODE-mailchimp`);
+  const mal = await appel(`/oxoai/oauth/retour?state=${encodeURIComponent(m.p.get("state"))}&code=CODE-mailchimp`);
   verifier("Mailchimp : un centre de données qui n'en a pas la forme est refusé, rien n'est enregistré", mal.status === 400, mal.status);
   await regler({ dcMalveillant: false });
   const m2 = await depart("mailchimp", ["ecriture", "envoi"]);
-  const okM = await appel(`/helix/oauth/retour?state=${encodeURIComponent(m2.p.get("state"))}&code=CODE-mailchimp`);
+  const okM = await appel(`/oxoai/oauth/retour?state=${encodeURIComponent(m2.p.get("state"))}&code=CODE-mailchimp`);
   verifier("Mailchimp : branché, compte lu par /oauth2/metadata", okM.status === 200 && recues.some((x) => x.hote === "login.mailchimp.com" && x.chemin === "/oauth2/metadata"), okM.status);
 }
 
 console.log("\nF. Jetons : jamais à l'écran, jamais en clair sur le disque, jamais au journal");
 {
-  for (const chemin of ["/helix/connecteurs", "/helix/mcp", "/helix/natifs", "/helix/outils"]) {
+  for (const chemin of ["/oxoai/connecteurs", "/oxoai/mcp", "/oxoai/natifs", "/oxoai/outils"]) {
     const texte = await (await appel(chemin, { headers: A })).text();
     verifier(`${chemin} : aucun jeton ni secret`, !SECRETS.test(texte), texte.match(SECRETS)?.[0]);
   }
@@ -652,14 +652,14 @@ console.log("\nF. Jetons : jamais à l'écran, jamais en clair sur le disque, ja
 console.log("\nG. Un appel recopié d'une campagne lue n'est pas lancé");
 {
   await regler({ piegeBrevo: true });
-  await poster("/helix/approbation/niveau", A, { niveau: "tout" });
+  await poster("/oxoai/approbation/niveau", A, { niveau: "tout" });
   const avant = envoisBrevo.length;
   const avantR = recues.length;
   const flux = await appel("/v1/chat/completions", { method: "POST", headers: A, body: JSON.stringify({ model: "essai-injection", stream: true, tools: true, messages: [{ role: "user", content: "RESUME-BREVO : résume mes campagnes." }] }) }).then((x) => x.text());
-  const cartes = (await (await appel("/helix/approbation", { headers: A })).json()).enAttente ?? [];
+  const cartes = (await (await appel("/oxoai/approbation", { headers: A })).json()).enAttente ?? [];
   verifier("Brevo : l'appel glissé dans un nom de campagne, recopié par le modèle, n'est pas lancé ; aucune carte, rien envoyé", envoisBrevo.length === avant && !cartes.some((c) => c.detail?.outil === "brevo__envoyer_campagne") && recues.slice(avantR).some((x) => x.chemin?.startsWith("/v3/emailCampaigns?")) && /brevo__envoyer_campagne/.test(flux), flux.slice(-300));
   await regler({ piegeBrevo: false });
-  await poster("/helix/approbation/niveau", A, { niveau: "modifications" });
+  await poster("/oxoai/approbation/niveau", A, { niveau: "modifications" });
 }
 
 passerelle.kill();
@@ -774,7 +774,7 @@ sortie.mcpSansPersonne = await outils.executerOutil("trello__create_card", { nam
 sortie.mcpA = await outils.executerOutil("trello__create_card", { name: "Par l'administrateur" }, A);
 sortie.lectureLibre = await Promise.race([ap.verifierOutil(null, "trello__get_boards", {}, A.userId), new Promise((r) => setTimeout(() => r("attente"), 300))]);
 const { avecLangueDe } = await import(${src("langue.ts")});
-await avecLangueDe({ "x-helix-langue": "fr" }, new URL("http://essai/"), async () => {
+await avecLangueDe({ "x-oxoai-langue": "fr" }, new URL("http://essai/"), async () => {
   sortie.oubliBrevo = await n.oublier("brevo", A.userId);
   sortie.oubliMc = await n.oublier("mailchimp", A.userId);
 });

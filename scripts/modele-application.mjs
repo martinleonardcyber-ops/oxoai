@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Rassemble les fichiers du modèle d'application de Helix Code
+ * Rassemble les fichiers du modèle d'application de OxoAI Code
  * (gateway/application/*) dans un seul JSON, que la passerelle importe : elle
  * est empaquetée en un fichier (esbuild), et un JSON s'importe aussi bien sous
  * Node que dans le paquet. `--verifier` échoue si le JSON n'est pas à jour.

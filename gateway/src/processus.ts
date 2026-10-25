@@ -25,7 +25,7 @@ import processusEnfants, { spawnSync, type ChildProcess } from "node:child_proce
 export function cacherLesConsoles(): void {
   if (process.platform !== "win32") return;
   const cp = processusEnfants as unknown as Record<string, unknown>;
-  if ((cp as { __helixCache?: boolean }).__helixCache) return;
+  if ((cp as { __oxoaiCache?: boolean }).__oxoaiCache) return;
   const estOptions = (v: unknown) => typeof v === "object" && v !== null && !Array.isArray(v);
   const avecDefaut = (o: Record<string, unknown>) => ("windowsHide" in o ? o : { ...o, windowsHide: true });
   /*
@@ -57,7 +57,7 @@ export function cacherLesConsoles(): void {
   };
   for (const nom of ["spawn", "spawnSync", "execFile", "execFileSync", "fork"]) envelopper(nom, true);
   for (const nom of ["exec", "execSync"]) envelopper(nom, false);
-  (cp as { __helixCache?: boolean }).__helixCache = true;
+  (cp as { __oxoaiCache?: boolean }).__oxoaiCache = true;
   // Les modules déjà écrits en `import { spawn } from "node:child_process"` voient la nouvelle version.
   syncBuiltinESMExports();
 }

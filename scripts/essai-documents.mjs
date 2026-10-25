@@ -285,9 +285,9 @@ await new Promise((ok) => faux.listen(PORT_FAUX, "127.0.0.1", ok));
 /* Passerelle jetable, transport remplacé par le module préalable            */
 /* ------------------------------------------------------------------------- */
 
-const AUX = mkdtempSync(join(tmpdir(), "helix-documents-aux-"));
-const DONNEES = mkdtempSync(join(tmpdir(), "helix-documents-donnees-"));
-const ESPACE = mkdtempSync(join(tmpdir(), "helix-documents-espace-"));
+const AUX = mkdtempSync(join(tmpdir(), "oxoai-documents-aux-"));
+const DONNEES = mkdtempSync(join(tmpdir(), "oxoai-documents-donnees-"));
+const ESPACE = mkdtempSync(join(tmpdir(), "oxoai-documents-espace-"));
 const PREALABLE = join(AUX, "prealable.mjs");
 writeFileSync(
   PREALABLE,
@@ -341,14 +341,14 @@ const PORT = await portLibre();
 const GW = `http://127.0.0.1:${PORT}`;
 const ENV = {
   ...process.env,
-  HELIX_CONFIG: join(AUX, "profil.json"),
-  HELIX_GATEWAY_PORT: String(PORT),
-  HELIX_DATA_DIR: DONNEES,
-  HELIX_WORKSPACE: ESPACE,
-  HELIX_CODE_DIR: ESPACE,
-  HELIX_LMSTUDIO_URL: "http://127.0.0.1:9/v1",
-  HELIX_EXO_URL: "http://127.0.0.1:9/v1",
-  HELIX_GATEWAY_HOST: "127.0.0.1",
+  OXOAI_CONFIG: join(AUX, "profil.json"),
+  OXOAI_GATEWAY_PORT: String(PORT),
+  OXOAI_DATA_DIR: DONNEES,
+  OXOAI_WORKSPACE: ESPACE,
+  OXOAI_CODE_DIR: ESPACE,
+  OXOAI_LMSTUDIO_URL: "http://127.0.0.1:9/v1",
+  OXOAI_EXO_URL: "http://127.0.0.1:9/v1",
+  OXOAI_GATEWAY_HOST: "127.0.0.1",
 };
 const passerelle = spawn(process.execPath, ["--import", PREALABLE, join(RACINE, "gateway", "src", "index.ts")], { env: ENV, stdio: ["ignore", "pipe", "pipe"] });
 let journal = "";
@@ -371,30 +371,30 @@ if (!demarree) {
 }
 
 const JETON = readFileSync(join(DONNEES, "instance-token"), "utf8").trim();
-const avecJeton = { "Content-Type": "application/json", Authorization: `Bearer ${JETON}`, "X-Helix-Langue": "fr" };
+const avecJeton = { "Content-Type": "application/json", Authorization: `Bearer ${JETON}`, "X-OxoAI-Langue": "fr" };
 const appel = (chemin, options = {}) => fetch(`${GW}${chemin}`, { redirect: "manual", ...options });
 const poster = (chemin, entetes, corps) => appel(chemin, { method: "POST", headers: entetes, body: JSON.stringify(corps ?? {}) });
-const premier = await (await poster("/helix/auth/create", avecJeton, { fullName: "Alice Essai", email: "alice@example.test", password: "Mot2PasseSolide!42" })).json();
-const A = { ...avecJeton, "X-Helix-Session": premier.session?.token };
+const premier = await (await poster("/oxoai/auth/create", avecJeton, { fullName: "Alice Essai", email: "alice@example.test", password: "Mot2PasseSolide!42" })).json();
+const A = { ...avecJeton, "X-OxoAI-Session": premier.session?.token };
 const idA = premier.account?.id;
-const creeB = await (await poster("/helix/auth/create", A, { fullName: "Bruno Essai", email: "bruno@example.test", password: "Provisoire2Passe!11" })).json();
-const connB = await (await poster("/helix/auth/mot-de-passe-provisoire", avecJeton, { accountId: creeB.account?.id, password: "Provisoire2Passe!11", nouveau: "Bruno2PasseSolide!57" })).json();
-const B = { ...avecJeton, "X-Helix-Session": connB.session?.token };
+const creeB = await (await poster("/oxoai/auth/create", A, { fullName: "Bruno Essai", email: "bruno@example.test", password: "Provisoire2Passe!11" })).json();
+const connB = await (await poster("/oxoai/auth/mot-de-passe-provisoire", avecJeton, { accountId: creeB.account?.id, password: "Provisoire2Passe!11", nouveau: "Bruno2PasseSolide!57" })).json();
+const B = { ...avecJeton, "X-OxoAI-Session": connB.session?.token };
 const idB = creeB.account?.id;
-const etatDe = async (entetes = A) => (await (await appel("/helix/natifs", { headers: entetes })).json()).services ?? [];
+const etatDe = async (entetes = A) => (await (await appel("/oxoai/natifs", { headers: entetes })).json()).services ?? [];
 const service = async (id) => (await etatDe()).find((s) => s.id === id);
 
 /* ------------------------------------------------------------------------- */
 console.log("\nA. Qui a le droit");
 {
-  const vueB = await (await appel("/helix/natifs", { headers: B })).json();
+  const vueB = await (await appel("/oxoai/natifs", { headers: B })).json();
   verifier("un collègue voit l'état des trois services, et l'écran sait qu'il n'administre pas", ["docs", "forms", "dropbox"].every((id) => vueB.services?.some((s) => s.id === id)) && vueB.administrateur === false, JSON.stringify(vueB).slice(0, 200));
   for (const [suite, corps] of [["/application", { service: "dropbox", clientId: APPS.dropbox.id }], ["/connecter", { service: "docs" }], ["/connecter", { service: "forms" }], ["/oublier", { service: "dropbox" }]]) {
-    const r = await poster(`/helix/natifs${suite}`, B, corps);
+    const r = await poster(`/oxoai/natifs${suite}`, B, corps);
     verifier(`un collègue qui n'administre pas : ${suite} (${corps.service}) refusé (403)`, r.status === 403, r.status);
   }
   for (const id of ["dropbox", "docs", "forms"]) {
-    const mcp = await poster("/helix/connecteurs/ajouter", A, { id, command: "/bin/sh" });
+    const mcp = await poster("/oxoai/connecteurs/ajouter", A, { id, command: "/bin/sh" });
     const j = await mcp.json().catch(() => ({}));
     verifier(`un connecteur MCP ne peut pas prendre le préfixe « ${id} » (réservé)`, mcp.status === 400 && /intégré/.test(j.message ?? ""), JSON.stringify(j).slice(0, 160));
   }
@@ -402,20 +402,20 @@ console.log("\nA. Qui a le droit");
 
 console.log("\nB. Applications : Google partagée, Dropbox publique ou confidentielle, le secret n'en ressort jamais");
 {
-  const g = await poster("/helix/google/client", A, { clientId: APPS.google.id, clientSecret: APPS.google.secret });
+  const g = await poster("/oxoai/google/client", A, { clientId: APPS.google.id, clientSecret: APPS.google.secret });
   verifier("application Google enregistrée (Docs et Forms la reprennent)", g.status === 200, g.status);
-  const docsApp = await poster("/helix/natifs/application", A, { service: "docs", clientId: "x", clientSecret: "y" });
+  const docsApp = await poster("/oxoai/natifs/application", A, { service: "docs", clientId: "x", clientSecret: "y" });
   verifier("Docs : pas d'application à part, celle de Google suffit (refusé)", docsApp.status === 400, docsApp.status);
-  const mal = await poster("/helix/natifs/application", A, { service: "dropbox", clientId: "Pas Une Clé !" });
+  const mal = await poster("/oxoai/natifs/application", A, { service: "dropbox", clientId: "Pas Une Clé !" });
   verifier("Dropbox : une « App key » mal formée est refusée", mal.status === 400, mal.status);
-  const pub = await poster("/helix/natifs/application", A, { service: "dropbox", clientId: APPS.dropbox.id });
+  const pub = await poster("/oxoai/natifs/application", A, { service: "dropbox", clientId: APPS.dropbox.id });
   const vue = await service("dropbox");
   verifier("Dropbox : application publique (PKCE seul) enregistrée sans secret", pub.status === 200 && vue?.application?.disponible === true && vue?.application?.avecSecret === false, `${pub.status} ${JSON.stringify(vue?.application)}`);
 }
 
 /** L'adresse d'autorisation, décortiquée. */
 async function depart(id, choix = []) {
-  const r = await poster("/helix/natifs/connecter", A, { service: id, choix });
+  const r = await poster("/oxoai/natifs/connecter", A, { service: id, choix });
   const j = await r.json().catch(() => ({}));
   const u = typeof j.url === "string" ? new URL(j.url) : null;
   return { statut: r.status, j, u, p: u?.searchParams ?? new URLSearchParams() };
@@ -437,7 +437,7 @@ console.log("\nC. Autorisation : portées minimales, PKCE, `state`");
   const db = await depart("dropbox");
   verifier(
     "Dropbox, lecture : chez dropbox.com, account_info.read files.metadata.read files.content.read, PKCE S256, jeton d'actualisation demandé, retour sur l'instance, `state` tiré au sort",
-    db.u?.origin === "https://www.dropbox.com" && db.u?.pathname === "/oauth2/authorize" && db.p.get("client_id") === APPS.dropbox.id && db.p.get("response_type") === "code" && db.p.get("scope") === DB_LECTURE && db.p.get("token_access_type") === "offline" && db.p.get("code_challenge_method") === "S256" && /^[A-Za-z0-9_-]{43}$/.test(db.p.get("code_challenge") ?? "") && db.p.get("redirect_uri") === `${GW}/helix/oauth/retour` && /^natif\.[A-Za-z0-9_-]{43}$/.test(db.p.get("state") ?? ""),
+    db.u?.origin === "https://www.dropbox.com" && db.u?.pathname === "/oauth2/authorize" && db.p.get("client_id") === APPS.dropbox.id && db.p.get("response_type") === "code" && db.p.get("scope") === DB_LECTURE && db.p.get("token_access_type") === "offline" && db.p.get("code_challenge_method") === "S256" && /^[A-Za-z0-9_-]{43}$/.test(db.p.get("code_challenge") ?? "") && db.p.get("redirect_uri") === `${GW}/oxoai/oauth/retour` && /^natif\.[A-Za-z0-9_-]{43}$/.test(db.p.get("state") ?? ""),
     db.j.url,
   );
   verifier("aucun secret dans les adresses d'autorisation", ![d, dE, fo, db].some((x) => SECRETS.test(x.j.url ?? "") || x.p.has("client_secret")), "secret");
@@ -446,9 +446,9 @@ console.log("\nC. Autorisation : portées minimales, PKCE, `state`");
 
   // Un `state` faux : ignoré, rien n'est échangé, la demande en cours reste en attente.
   const avant = recues.filter((r) => r.chemin === "/oauth2/token").length;
-  const faux1 = await appel(`/helix/oauth/retour?state=natif.faux&code=CODE-dropbox`);
-  const faux2 = await appel(`/helix/oauth/retour?state=${encodeURIComponent((dbE.p.get("state") ?? "") + "x")}&code=CODE-dropbox`);
-  const faux3 = await appel(`/helix/oauth/retour?state=natif.faux&error=access_denied`);
+  const faux1 = await appel(`/oxoai/oauth/retour?state=natif.faux&code=CODE-dropbox`);
+  const faux2 = await appel(`/oxoai/oauth/retour?state=${encodeURIComponent((dbE.p.get("state") ?? "") + "x")}&code=CODE-dropbox`);
+  const faux3 = await appel(`/oxoai/oauth/retour?state=natif.faux&error=access_denied`);
   const apres = await service("dropbox");
   verifier("Dropbox : un `state` faux (inventé, allongé, avec une erreur) est refusé, rien n'est échangé, la demande reste en attente", [faux1, faux2, faux3].every((r) => r.status === 400) && apres?.attente === true && apres?.configure === false && recues.filter((r) => r.chemin === "/oauth2/token").length === avant, `${faux1.status} ${faux2.status} ${faux3.status} ${JSON.stringify(apres).slice(0, 120)}`);
   const direct = await fetch(`${fo.p.get("redirect_uri")}?state=natif.faux&code=CODE-forms`).catch(() => null);
@@ -490,11 +490,11 @@ console.log("\nD. Retour vérifié : portée relue, compte lu, puis seulement en
   );
   const etatDb = await service("dropbox");
   verifier("Dropbox branché : l'écran nomme le compte (Équipe Essai), lecture et envoi, sans jeton ni secret", etatDb?.configure === true && etatDb?.compte === "Équipe Essai" && etatDb?.accordes?.includes("ecriture") && !SECRETS.test(JSON.stringify(etatDb)), JSON.stringify(etatDb).slice(0, 200));
-  const rejoue = await appel(`/helix/oauth/retour?state=${encodeURIComponent(db.p.get("state") ?? "")}&code=CODE-dropbox`);
+  const rejoue = await appel(`/oxoai/oauth/retour?state=${encodeURIComponent(db.p.get("state") ?? "")}&code=CODE-dropbox`);
   verifier("Dropbox : le même retour rejoué ne vaut plus rien", rejoue.status === 400, rejoue.status);
 
   // Application confidentielle : le secret s'enregistre, ne ressort pas, et part dans le corps de l'échange.
-  const conf = await poster("/helix/natifs/application", A, { service: "dropbox", clientId: APPS.dropbox.id, clientSecret: APPS.dropbox.secret });
+  const conf = await poster("/oxoai/natifs/application", A, { service: "dropbox", clientId: APPS.dropbox.id, clientSecret: APPS.dropbox.secret });
   const confTexte = await conf.text();
   verifier("Dropbox : le secret d'une application confidentielle s'enregistre, et la réponse ne le contient pas", conf.status === 200 && !SECRETS.test(confTexte), `${conf.status} ${confTexte.slice(0, 160)}`);
   const db2 = await depart("dropbox", ["ecriture"]);
@@ -506,11 +506,11 @@ console.log("\nD. Retour vérifié : portée relue, compte lu, puis seulement en
 console.log("\nE. Jetons : jamais à l'écran, jamais en clair sur le disque, jamais au journal");
 {
   for (const [nom, entetes] of [["administrateur", A], ["collègue", B]]) {
-    const brut = await (await appel("/helix/natifs", { headers: entetes })).text();
+    const brut = await (await appel("/oxoai/natifs", { headers: entetes })).text();
     const trois = (JSON.parse(brut).services ?? []).filter((s) => ["docs", "forms", "dropbox"].includes(s.id));
     verifier(`état (${nom}) : les trois services branchés, sans aucun jeton ni secret`, trois.length === 3 && trois.every((s) => s.configure) && !SECRETS.test(brut), `${trois.filter((s) => !s.configure).map((s) => s.id)} ${brut.match(SECRETS)?.[0] ?? ""}`);
   }
-  const outils = await (await appel("/helix/outils", { headers: A })).text();
+  const outils = await (await appel("/oxoai/outils", { headers: A })).text();
   verifier("la puce « Outils » nomme Google Docs, Google Forms et Dropbox (écriture après accord pour Dropbox), sans rien de secret", /Google Docs/.test(outils) && /Google Forms/.test(outils) && /Dropbox[^}]*après votre accord/.test(outils) && !SECRETS.test(outils), outils.slice(0, 300));
   const fichiers = [];
   const parcourir = (d) => {
@@ -534,7 +534,7 @@ console.log("\nG. Un appel recopié d'un document ou d'un fichier lu n'est pas u
   const chat = (question) => appel("/v1/chat/completions", { method: "POST", headers: A, body: JSON.stringify({ model: "essai-injection", stream: true, tools: true, messages: [{ role: "user", content: question }] }) }).then((r) => r.text());
   const guetter = async (enCours, outil) => {
     for (let t = 0; t < 8000; t += 200) {
-      const e = await (await appel("/helix/approbation", { headers: A })).json().catch(() => ({}));
+      const e = await (await appel("/oxoai/approbation", { headers: A })).json().catch(() => ({}));
       const carte = (e.enAttente ?? []).find((d) => d.detail?.outil === outil);
       if (carte) return carte;
       const fini = await Promise.race([enCours.then(() => true), attendre(200).then(() => false)]);
@@ -549,7 +549,7 @@ console.log("\nG. Un appel recopié d'un document ou d'un fichier lu n'est pas u
     const avant = recues.length;
     const enCours = chat(question);
     const carte = await guetter(enCours, outil);
-    if (carte) await poster("/helix/approbation/repondre", A, { id: carte.id, accord: false });
+    if (carte) await poster("/oxoai/approbation/repondre", A, { id: carte.id, accord: false });
     const flux = await enCours;
     const pendant = recues.slice(avant);
     verifier(`${outil}, témoin : le modèle a bien lu le contenu piégé par un vrai appel`, pendant.some(lu), pendant.map((x) => x.chemin).join(" "));
@@ -559,7 +559,7 @@ console.log("\nG. Un appel recopié d'un document ou d'un fichier lu n'est pas u
   const avantT = recues.length;
   const enCours = chat("ECRIT-DOC : ajoute un paragraphe au compte rendu.");
   const carte = await guetter(enCours, "docs__ajouter_texte");
-  if (carte) await poster("/helix/approbation/repondre", A, { id: carte.id, accord: false });
+  if (carte) await poster("/oxoai/approbation/repondre", A, { id: carte.id, accord: false });
   await enCours;
   verifier("témoin : un vrai appel d'écriture pose une carte dans le Chat, qui montre le texte entier, et un refus n'écrit rien", Boolean(carte) && String(carte?.detail?.arguments ?? "").includes("FIN-DE-LA-CARTE") && /fin du document Google Docs/.test(carte?.resume ?? "") && !recues.slice(avantT).some((x) => /batchUpdate/.test(x.chemin ?? "")), carte ? JSON.stringify(carte).slice(0, 300) : "aucune carte");
 }
@@ -661,7 +661,7 @@ sortie.barriere = { lectures: ["docs__lire", "forms__lire", "forms__reponses", "
 // Débrancher : révoqué chez Google et chez Dropbox ; le jeton Dropbox expiré est d'abord renouvelé.
 const { avecLangueDe } = await import(${src("langue.ts")});
 await controle("revokeExpire=1");
-await avecLangueDe({ "x-helix-langue": "fr" }, new URL("http://essai/"), async () => {
+await avecLangueDe({ "x-oxoai-langue": "fr" }, new URL("http://essai/"), async () => {
   for (const id of ["docs", "forms", "dropbox"]) sortie["oubli_" + id] = await n.oublier(id, A.userId);
 });
 await controle("revokeExpire=0");

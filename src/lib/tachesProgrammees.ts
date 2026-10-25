@@ -50,13 +50,13 @@ export interface AgentPossible {
   id: string;
   nom: string;
 }
-export const listerAgentsPossibles = () => appel<{ agents: AgentPossible[] }>("/helix/taches-programmees/agents");
+export const listerAgentsPossibles = () => appel<{ agents: AgentPossible[] }>("/oxoai/taches-programmees/agents");
 
-export const listerTaches = () => appel<{ taches: TacheProgrammee[] }>("/helix/taches-programmees");
-export const creerTache = (x: Envoi) => appel<{ tache: TacheProgrammee }>("/helix/taches-programmees", json(x));
-export const modifierTache = (id: string, x: Envoi) => appel<{ tache: TacheProgrammee }>(`/helix/taches-programmees/${encodeURIComponent(id)}`, json(x));
-export const supprimerTache = (id: string) => appel<{ supprimee: null }>(`/helix/taches-programmees/${encodeURIComponent(id)}`, { method: "DELETE" });
-export const lancerTache = (id: string) => appel<{ execution: Execution }>(`/helix/taches-programmees/${encodeURIComponent(id)}/lancer`, json({}));
+export const listerTaches = () => appel<{ taches: TacheProgrammee[] }>("/oxoai/taches-programmees");
+export const creerTache = (x: Envoi) => appel<{ tache: TacheProgrammee }>("/oxoai/taches-programmees", json(x));
+export const modifierTache = (id: string, x: Envoi) => appel<{ tache: TacheProgrammee }>(`/oxoai/taches-programmees/${encodeURIComponent(id)}`, json(x));
+export const supprimerTache = (id: string) => appel<{ supprimee: null }>(`/oxoai/taches-programmees/${encodeURIComponent(id)}`, { method: "DELETE" });
+export const lancerTache = (id: string) => appel<{ execution: Execution }>(`/oxoai/taches-programmees/${encodeURIComponent(id)}/lancer`, json({}));
 
 const JOURS = () => [t("dimanche"), t("lundi"), t("mardi"), t("mercredi"), t("jeudi"), t("vendredi"), t("samedi")];
 export const joursSemaine = JOURS;

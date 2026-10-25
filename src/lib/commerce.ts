@@ -41,7 +41,7 @@ export interface ResultatCommerce {
 
 export async function etatCommerce(): Promise<EtatsCommerce | null> {
   try {
-    const res = await apiFetch("/helix/commerce");
+    const res = await apiFetch("/oxoai/commerce");
     if (!res.ok) return null;
     return (await res.json()) as EtatsCommerce;
   } catch {
@@ -51,7 +51,7 @@ export async function etatCommerce(): Promise<EtatsCommerce | null> {
 
 async function poster(suite: string, corps: Record<string, unknown>): Promise<ResultatCommerce> {
   try {
-    const res = await apiFetch(`/helix/commerce${suite}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(corps) });
+    const res = await apiFetch(`/oxoai/commerce${suite}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(corps) });
     const json = (await res.json().catch(() => ({}))) as Partial<ResultatCommerce> & { error?: { message?: string } };
     if (json.error?.message) return { ok: false, message: json.error.message };
     return { ok: json.ok === true, message: json.message ?? tf("La demande a échoué ({0}).", res.status), url: typeof json.url === "string" ? json.url : undefined };

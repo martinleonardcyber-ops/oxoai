@@ -6,7 +6,7 @@ import { formesDuNom, indexerParNom } from "./nomsModeles.ts";
  * ── D'où viennent ces chiffres ──────────────────────────────────────────────
  *
  * Relevés le 27/09/2026 sur la page de prix officielle de chaque fournisseur
- * que Helix sait brancher par clé (fournisseurs.ts), et recopiés tels qu'ils
+ * que OxoAI sait brancher par clé (fournisseurs.ts), et recopiés tels qu'ils
  * y sont écrits : rien n'est déduit d'un graphique, converti d'une devise à
  * l'autre ni arrondi. Un modèle absent de la page n'a pas de ligne, et un
  * fournisseur dont la page ne donne pas de prix lisible (Groq pour Llama :

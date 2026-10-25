@@ -91,7 +91,7 @@ async function lireErreur(res: Response): Promise<string> {
 }
 
 async function appel<T>(chemin: string, corps?: unknown): Promise<T> {
-  const res = await apiFetch(`/helix/entrainement${chemin}`, corps === undefined ? {} : {
+  const res = await apiFetch(`/oxoai/entrainement${chemin}`, corps === undefined ? {} : {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(corps),

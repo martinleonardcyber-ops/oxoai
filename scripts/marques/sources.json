@@ -324,7 +324,7 @@
       "source": "https://mistral.ai/brand/ (symbole M en dégradé de l'en-tête de la page)",
       "page": "https://mistral.ai/brand/",
       "regle": "Version en dégradé préférée ; ni recoloration, ni cadre, ni fond coloré.",
-      "retouche": "Le kit (cms.globalaegis.net) est derrière une vérification anti-robot que Helix ne contourne pas : le symbole est recopié de la page de marque elle-même, où Mistral l'affiche en SVG.",
+      "retouche": "Le kit (cms.globalaegis.net) est derrière une vérification anti-robot que OxoAI ne contourne pas : le symbole est recopié de la page de marque elle-même, où Mistral l'affiche en SVG.",
       "empreintes": {
         "mistral.svg": "218fc7f6a83a14a75ab6db1182428135a21029063b839b16609bebba75d5d84a"
       }
@@ -773,7 +773,7 @@
       "source": "https://www.scaleway.com/favicon/website/favicon.svg",
       "page": "https://ultraviolet.scaleway.com/6dd9b5c45/p/6840d3-logo",
       "regle": "Décision de Medhi du 28/09/2026 : le vrai logo, en couleur, sans attendre l'accord de la marque. Icône du site officiel, telle que le site la sert (favicon), sans modification. Le symbole lavande de Scaleway.",
-      "retouche": "Le fichier passe au blanc quand le système est en thème sombre (règle `@media (prefers-color-scheme: dark)`) ; Helix choisit son thème lui-même, cette règle est donc ignorée par le générateur et la couleur lavande sert aux deux thèmes.",
+      "retouche": "Le fichier passe au blanc quand le système est en thème sombre (règle `@media (prefers-color-scheme: dark)`) ; OxoAI choisit son thème lui-même, cette règle est donc ignorée par le générateur et la couleur lavande sert aux deux thèmes.",
       "empreintes": {
         "scaleway.svg": "51c7ffa592c55e6801f218d9a5ee7072cffb716438e2d09702f50cc582a25f3b"
       }
@@ -917,7 +917,7 @@
       "source": "https://d1eipm3vz40hy0.cloudfront.net/images/logos/favicons/zendesk-icon.svg",
       "page": "https://www.zendesk.com/",
       "regle": "Décision de Medhi du 28/09/2026 : le vrai logo, en couleur, sans attendre l'accord de la marque. Icône du site officiel, telle que le site la sert (favicon), sans modification. Le symbole est dessiné « à la couleur du texte » (currentColor) : noir sur fond clair, blanc sur fond sombre, comme le prévoit le fichier.",
-      "retouche": "Le fichier passe au blanc quand le système est en thème sombre (règle `@media (prefers-color-scheme: dark)`) ; Helix choisit son thème lui-même, cette règle est ignorée par le générateur, et currentColor donne déjà le blanc en thème sombre.",
+      "retouche": "Le fichier passe au blanc quand le système est en thème sombre (règle `@media (prefers-color-scheme: dark)`) ; OxoAI choisit son thème lui-même, cette règle est ignorée par le générateur, et currentColor donne déjà le blanc en thème sombre.",
       "empreintes": {
         "zendesk.svg": "e8a769e596a357d82328b16093425b1094312fc6ec0aabbc803642a0d3debca5"
       }
@@ -996,5 +996,5 @@
     }
   },
   "neutres": {},
-  "decision": "28/09/2026, Medhi : « Les logos, on s'en fout : mets les vrais. Si j'ai un souci, ils viendront me voir. » Chaque service et chaque fournisseur de modèles affiché dans Helix porte son vrai logo, en couleur ; Medhi assume le risque lié aux marques. Aucune case « j'accepte les conditions » n'a été cochée pour les relever."
+  "decision": "28/09/2026, Medhi : « Les logos, on s'en fout : mets les vrais. Si j'ai un souci, ils viendront me voir. » Chaque service et chaque fournisseur de modèles affiché dans OxoAI porte son vrai logo, en couleur ; Medhi assume le risque lié aux marques. Aucune case « j'accepte les conditions » n'a été cochée pour les relever."
 }

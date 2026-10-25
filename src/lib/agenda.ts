@@ -73,7 +73,7 @@ export interface Resultat {
 export async function etat(adresse?: string): Promise<EtatAgenda | null> {
   try {
     const requete = adresse ? `?adresse=${encodeURIComponent(adresse)}` : "";
-    const res = await apiFetch(`/helix/agenda${requete}`);
+    const res = await apiFetch(`/oxoai/agenda${requete}`);
     if (!res.ok) return null;
     return (await res.json()) as EtatAgenda;
   } catch {
@@ -90,7 +90,7 @@ export async function etat(adresse?: string): Promise<EtatAgenda | null> {
  */
 export async function configurer(compte: AgendaASoumettre): Promise<Resultat> {
   try {
-    const res = await apiFetch("/helix/agenda/configurer", {
+    const res = await apiFetch("/oxoai/agenda/configurer", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(compte),
@@ -115,7 +115,7 @@ export async function configurer(compte: AgendaASoumettre): Promise<Resultat> {
 /** Retire l'agenda de l'instance. Les agents perdent aussitôt l'accès. */
 export async function oublier(): Promise<Resultat> {
   try {
-    const res = await apiFetch("/helix/agenda/oublier", { method: "POST" });
+    const res = await apiFetch("/oxoai/agenda/oublier", { method: "POST" });
     const corps = (await res.json().catch(() => ({}))) as Partial<Resultat> & {
       error?: { message?: string };
     };

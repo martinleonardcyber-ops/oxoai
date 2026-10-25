@@ -26,7 +26,7 @@ type Pont = {
 
 function pont(): Pont | null {
   try {
-    const p = (window as unknown as { helix?: { pressePapiers?: Partial<Pont> } }).helix?.pressePapiers;
+    const p = (window as unknown as { oxoai?: { pressePapiers?: Partial<Pont> } }).oxoai?.pressePapiers;
     return p && typeof p.ecrire === "function" && typeof p.vider === "function" ? (p as Pont) : null;
   } catch {
     return null;

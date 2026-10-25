@@ -18,7 +18,7 @@ import { t, tf } from "./langue.ts";
  *  - il marche sur toute instance, sans compte, sans clé ni abonnement ; la
  *    question part chez DuckDuckGo et nulle part ailleurs, ce que la puce
  *    peut dire sans condition ;
- *  - chaque sortie passe par la garde réseau de Helix (`sortieReseau.ts` :
+ *  - chaque sortie passe par la garde réseau de OxoAI (`sortieReseau.ts` :
  *    ni boucle locale, ni réseau de l'entreprise, ni métadonnées
  *    d'hébergeur, à chaque redirection), et ce qui est lu est borné (2 Mo
  *    lus, 15 000 caractères rendus). Avec Tavily ou Exa, c'est un programme

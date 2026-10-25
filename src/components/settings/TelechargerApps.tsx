@@ -30,13 +30,13 @@ import { t, tf, taille } from "@/lib/i18n";
  */
 const PUBLIES: Record<Plateforme, { fichier: (v: string) => string; detail: string }[]> = {
   macos: [
-    { fichier: (v) => `Helix-${v}-arm64.dmg`, detail: "Apple Silicon" },
-    { fichier: (v) => `Helix-${v}-x64.dmg`, detail: "Intel" },
+    { fichier: (v) => `OxoAI-${v}-arm64.dmg`, detail: "Apple Silicon" },
+    { fichier: (v) => `OxoAI-${v}-x64.dmg`, detail: "Intel" },
   ],
-  windows: [{ fichier: (v) => `Helix-Setup-${v}-x64.exe`, detail: "Windows 10/11, x64" }],
+  windows: [{ fichier: (v) => `OxoAI-Setup-${v}-x64.exe`, detail: "Windows 10/11, x64" }],
   linux: [
-    { fichier: (v) => `helix-plateforme_${v}_amd64.deb`, detail: "Ubuntu, Debian, x64" },
-    { fichier: (v) => `Helix-${v}.AppImage`, detail: "AppImage, x64" },
+    { fichier: (v) => `oxoai-plateforme_${v}_amd64.deb`, detail: "Ubuntu, Debian, x64" },
+    { fichier: (v) => `OxoAI-${v}.AppImage`, detail: "AppImage, x64" },
   ],
 };
 
@@ -199,22 +199,22 @@ export function TelechargerApps() {
               {/* Le paquet de la même version, sur la page de publication : sans lui, l'onglet ne menait nulle part. */}
               {PUBLIES[plateforme].map((p) => (
                 <a
-                  key={p.fichier(__HELIX_VERSION__)}
-                  href={`${branding.urls.sourceCode}/releases/download/v${__HELIX_VERSION__}/${p.fichier(__HELIX_VERSION__)}`}
+                  key={p.fichier(__OXOAI_VERSION__)}
+                  href={`${branding.urls.sourceCode}/releases/download/v${__OXOAI_VERSION__}/${p.fichier(__OXOAI_VERSION__)}`}
                   target="_blank"
                   rel="noreferrer"
                   className="flex flex-wrap items-center gap-3 rounded-xl border border-border px-4 py-3 hover:bg-muted/50"
                 >
                   <Download size={18} strokeWidth={1.75} className="shrink-0 text-foreground" />
                   <span className="min-w-0 flex-1">
-                    <span className="block break-all text-sm font-medium text-foreground">{p.fichier(__HELIX_VERSION__)}</span>
+                    <span className="block break-all text-sm font-medium text-foreground">{p.fichier(__OXOAI_VERSION__)}</span>
                     <span className="block text-xs text-muted-foreground">{p.detail}</span>
                   </span>
                 </a>
               ))}
               <p className="text-xs text-muted-foreground">
-                {tf("Même version que votre instance ({0}), depuis la page de publication.", __HELIX_VERSION__)}{" "}
-                <a className="underline" href={`${branding.urls.sourceCode}/releases/tag/v${__HELIX_VERSION__}`} target="_blank" rel="noreferrer">
+                {tf("Même version que votre instance ({0}), depuis la page de publication.", __OXOAI_VERSION__)}{" "}
+                <a className="underline" href={`${branding.urls.sourceCode}/releases/tag/v${__OXOAI_VERSION__}`} target="_blank" rel="noreferrer">
                   {t("Ouvrir la page")}
                 </a>
               </p>

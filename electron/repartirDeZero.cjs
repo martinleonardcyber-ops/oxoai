@@ -4,13 +4,13 @@
  * Pour un particulier seul sur son ordinateur qui ne s'en sort vraiment pas
  * (mot de passe oublié, pas de code de récupération) : désinstaller puis
  * réinstaller retrouvait le même compte, parce que les données restent dans
- * `~/.helix` et dans le profil de l'application. Cette porte, derrière la
+ * `~/.oxoai` et dans le profil de l'application. Cette porte, derrière la
  * même reconnaissance par l'ordinateur que « Mot de passe oublié ? »
  * (motDePasseOublie.cjs) et un mot à taper :
  *
  *  - **ne supprime rien**. Elle **déplace** deux dossiers à côté d'eux, sous
  *    un nom daté que l'écran donne avant de confirmer :
- *    `~/.helix` devient `~/.helix-ancien-AAAA-MM-JJ-hhmm`, et le profil de
+ *    `~/.oxoai` devient `~/.oxoai-ancien-AAAA-MM-JJ-hhmm`, et le profil de
  *    l'application (Chats gardés sur le poste, préférences, coffre) devient
  *    `<profil>-ancien-AAAA-MM-JJ-hhmm` ;
  *  - puis relance l'application, qui démarre comme au premier lancement.
@@ -19,7 +19,7 @@
  * (`appliquerAvantNom`, `appliquerApresNom`, appelés tout en haut de
  * main.cjs) : à ce moment, ni la passerelle, ni Chromium, ni le coffre n'ont
  * ouvert un fichier de ces dossiers. Demander le départ ne fait qu'écrire un
- * témoin à côté de `~/.helix` (`~/.helix-repartir.json`), puis quitter
+ * témoin à côté de `~/.oxoai` (`~/.oxoai-repartir.json`), puis quitter
  * proprement (la passerelle arrête ce qu'elle a lancé).
  *
  * Les clés : rien n'est effacé ni remplacé. Sous Windows et Linux, la clé des
@@ -108,7 +108,7 @@ function demander({ donnees, profil }) {
 }
 
 /**
- * Au lancement : une étape `donnees` (avant nomTrousseau, qui lit `~/.helix`)
+ * Au lancement : une étape `donnees` (avant nomTrousseau, qui lit `~/.oxoai`)
  * puis une étape `profil` (après, quand le chemin du profil est fixé). Rend
  * l'état du témoin, ou null.
  */
@@ -139,7 +139,7 @@ function appliquer(donnees, etape, profil) {
       const vers = prevu && prevu.de === de ? prevu.vers : libre(`${de}-ancien-${horodatage()}`);
       const erreur = deplacer(de, vers);
       if (erreur) {
-        // Jamais à moitié : `~/.helix` revient à sa place, rien n'a changé.
+        // Jamais à moitié : `~/.oxoai` revient à sa place, rien n'a changé.
         const d = dossiers.find((x) => x.de === donnees);
         if (d && fs.existsSync(d.vers) && !fs.existsSync(d.de)) deplacer(d.vers, d.de);
         ecrireJson(temoin, { ...t, etat: "echec", erreur, le: new Date().toISOString() });

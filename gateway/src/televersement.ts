@@ -17,7 +17,7 @@ import { t } from "./langue.ts";
  * mémoire tenue par un envoi ne dépend plus de la taille du document.
  */
 
-export const TYPE_ENVOI = "application/x-helix-document";
+export const TYPE_ENVOI = "application/x-oxoai-document";
 
 /** Taille d'un document : un gigaoctet. La mémoire n'en dépend plus ; le disque, si. */
 export const DOCUMENT_MAX = 1024 * 1024 * 1024;

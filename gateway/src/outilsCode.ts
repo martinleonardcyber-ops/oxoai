@@ -22,13 +22,13 @@ import { estEcriturePalmier } from "./palmierRegles.ts";
 /**
  * Les connecteurs de l'instance, servis par MCP à l'agent de code (OpenCode).
  *
- * Jusqu'ici, Helix Code n'avait que les outils d'OpenCode : lire, écrire,
+ * Jusqu'ici, OxoAI Code n'avait que les outils d'OpenCode : lire, écrire,
  * chercher, lancer une commande dans le dossier du projet. Les connecteurs
  * branchés dans Paramètres (Google Drive, Slack, courrier, agenda, serveurs
  * MCP du catalogue) n'existaient que pour le Chat et Cowork, parce que c'est
  * la boucle de `chat.ts` qui les exécute, et qu'OpenCode tient sa propre
  * boucle. Demandé le 25/09/2026 : « les différents MCP » doivent marcher aussi
- * depuis le terminal, c'est-à-dire dans Helix Code.
+ * depuis le terminal, c'est-à-dire dans OxoAI Code.
  *
  * OpenCode sait parler à un serveur MCP distant (`mcp` de sa configuration,
  * type « remote », en-têtes fixes). Vérifié le 25/09/2026 sur OpenCode
@@ -51,16 +51,16 @@ import { estEcriturePalmier } from "./palmierRegles.ts";
  * (`external_directory: deny`, opencode.ts). Pour les fichiers du projet, il a
  * déjà les siens.
  *
- * **Pourquoi Helix Code passe par l'ancienne API d'OpenCode.** Les sessions de
+ * **Pourquoi OxoAI Code passe par l'ancienne API d'OpenCode.** Les sessions de
  * sa nouvelle API (`/api/session`) ne proposent au modèle que les outils
  * livrés avec OpenCode : son registre d'outils « v2 » n'a aucune place pour
  * ceux des serveurs MCP (lu dans le code d'OpenCode 1.18.32, voir
  * fluxCode.ts), et le modèle répondait que l'outil n'existait pas. Les
  * sessions de l'ancienne API (`/session`), elles, reçoivent les outils MCP.
- * Depuis le 25/09/2026, Helix Code ouvre donc ses sessions par l'ancienne API,
+ * Depuis le 25/09/2026, OxoAI Code ouvre donc ses sessions par l'ancienne API,
  * et la passerelle traduit son flux pour les clients (fluxCode.ts). Vérifié le
  * même jour avec Qwen3 8B, un serveur MCP d'essai (scripts/mcp-essai.mjs) et
- * `helix code` comme la route de l'écran : l'outil est proposé et appelé, la
+ * `oxoai code` comme la route de l'écran : l'outil est proposé et appelé, la
  * carte d'accord arrive chez la personne qui a envoyé la demande, le refus
  * empêche l'appel, l'accord le laisse partir, le journal le note
  * (`surface: "code"`), et deux personnes au travail en même temps font
@@ -69,7 +69,7 @@ import { estEcriturePalmier } from "./palmierRegles.ts";
  * **Pour qui l'agent travaille.** OpenCode ne dit pas, dans un appel d'outil,
  * de quelle session il vient : un seul client MCP sert toutes ses sessions
  * (vérifié : aucun en-tête ni champ ne la porte). La passerelle, elle, sait qui
- * a envoyé chaque demande à Helix Code (`noterDemande`), et OpenCode dit
+ * a envoyé chaque demande à OxoAI Code (`noterDemande`), et OpenCode dit
  * quelles sessions travaillent en ce moment (voir `titulaire`). Un appel
  * d'outil vient forcément d'une session au travail : si toutes celles qui
  * travaillent appartiennent à la même personne, c'est elle. Sinon — deux
@@ -78,7 +78,7 @@ import { estEcriturePalmier } from "./palmierRegles.ts";
  * l'action d'un autre. Un contrôle qui ne sait pas refuse.
  */
 
-/** Demandes envoyées à Helix Code : session OpenCode → personne et dossier. */
+/** Demandes envoyées à OxoAI Code : session OpenCode → personne et dossier. */
 const demandes = new Map<string, { userId: string; dossier: string; depuis: number }>();
 
 /** Une demande part : la session appartient, pour ce tour, à cette personne. */
@@ -100,13 +100,13 @@ async function titulaire(): Promise<string | null> {
   const auTravail = new Set<string>();
   /*
    * Deux listes, parce qu'OpenCode tient deux familles de sessions : celles de
-   * l'ancienne API (`/session`, celles de Helix Code depuis le 25/09/2026),
+   * l'ancienne API (`/session`, celles de OxoAI Code depuis le 25/09/2026),
    * actives dans `/session/status` (mesuré : `{"ses_…":{"type":"busy"}}`
    * pendant un tour), et celles de la nouvelle, dans `/api/session/active`
    * (`{"data":{"ses_…":{"type":"running"}}}`), que la première ne voit pas.
-   * Helix n'ouvre plus de session de la nouvelle API : une session active qui
+   * OxoAI n'ouvre plus de session de la nouvelle API : une session active qui
    * n'est pas dans `demandes`, de l'une ou l'autre famille, n'a pas été
-   * ouverte par Helix, compte comme inconnue, donc fait refuser.
+   * ouverte par OxoAI, compte comme inconnue, donc fait refuser.
    */
   for (const dossier of dossiers) {
     const d = encodeURIComponent(dossier);
@@ -139,7 +139,7 @@ async function titulaire(): Promise<string | null> {
     const racine = destinataireDe(id)?.session;
     let qui = demandes.get(id)?.userId ?? (racine ? demandes.get(racine)?.userId : undefined);
     if (!qui) qui = (await sessionCode(id).catch(() => undefined))?.userId;
-    // Une session au travail que Helix n'a pas lancée (ouverte hors de la passerelle) : inconnue, donc ambiguë.
+    // Une session au travail que OxoAI n'a pas lancée (ouverte hors de la passerelle) : inconnue, donc ambiguë.
     personnes.add(qui ?? "?");
   }
   if (personnes.size !== 1) return null;
@@ -206,7 +206,7 @@ async function releverContenus(userId: string | undefined): Promise<void> {
  * tournait n'existait pas pour l'agent de code (« Aucun outil disponible pour
  * ajouter des notes »), jusqu'au redémarrage d'OpenCode. Avant chaque demande,
  * si la liste a changé depuis la dernière connexion, on demande à OpenCode de
- * se reconnecter (`POST /mcp/helix/connect`), ce qui la lui fait relire.
+ * se reconnecter (`POST /mcp/oxoai/connect`), ce qui la lui fait relire.
  */
 const listesVues = new Map<string, string>();
 
@@ -221,7 +221,7 @@ export async function rafraichirOutilsCode(dossier: string, userId?: string): Pr
     .join(",");
   if (listesVues.get(cle) === signature) return;
   try {
-    const r = await api(`/mcp/helix/connect?directory=${encodeURIComponent(dossier)}`, {
+    const r = await api(`/mcp/oxoai/connect?directory=${encodeURIComponent(dossier)}`, {
       method: "POST",
       signal: AbortSignal.timeout(10_000),
     });
@@ -242,10 +242,10 @@ export async function servirOutilsCode(
   res: http.ServerResponse,
   corps: unknown,
 ): Promise<boolean> {
-  const cle = req.headers["x-helix-cle"];
+  const cle = req.headers["x-oxoai-cle"];
   if (!cleOutilsValide(cle)) return false;
 
-  const serveur = new Server({ name: "helix-code-outils", version: "1.0.0" }, { capabilities: { tools: {} } });
+  const serveur = new Server({ name: "oxoai-code-outils", version: "1.0.0" }, { capabilities: { tools: {} } });
 
   serveur.setRequestHandler(ListToolsRequestSchema, async () => ({
     tools: outilsPourCode().map((o) => ({

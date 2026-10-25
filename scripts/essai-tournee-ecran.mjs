@@ -11,7 +11,7 @@
  *
  * Tout vit dans un dossier temporaire : dossier personnel neuf, données
  * neuves, faux `security`, `lms`, `opencode` et `rtk`. Le moteur est llama.cpp
- * (HELIX_MOTEUR=llamacpp, macOS seulement) ; son téléchargement est refusé
+ * (OXOAI_MOTEUR=llamacpp, macOS seulement) ; son téléchargement est refusé
  * par un module préalable (aucun `fetch` de la passerelle ne sort, chacun est
  * noté), puis un faux `llama-server` est posé à sa place, comme un moteur
  * arrivé autrement. Seul le serveur de fichiers livré (MCP) est pris par
@@ -56,7 +56,7 @@ if (process.platform !== "darwin") {
   process.exit(0);
 }
 
-const TMP = realpathSync(mkdtempSync(join(tmpdir(), "helix-essai-tournee-")));
+const TMP = realpathSync(mkdtempSync(join(tmpdir(), "oxoai-essai-tournee-")));
 const MAISON = join(TMP, "maison");
 const BIN = join(TMP, "bin");
 const DONNEES = join(TMP, "donnees");
@@ -94,17 +94,17 @@ const passerelle = spawn(process.execPath, ["--import", PREALABLE, join(RACINE, 
     PATH: [BIN, "/usr/bin", "/bin", "/usr/sbin", "/sbin"].join(":"),
     HOME: MAISON,
     LANG: "C",
-    HELIX_CONFIG: join(TMP, "profil.json"),
-    HELIX_DATA_DIR: DONNEES,
-    HELIX_GATEWAY_PORT: String(port),
-    HELIX_WORKSPACE: join(TMP, "espace"),
-    HELIX_MOTEUR: "llamacpp",
-    HELIX_LLAMACPP_PORT: String(await portLibre()),
-    HELIX_LMSTUDIO_URL: "http://127.0.0.1:9/v1",
-    HELIX_EXO_URL: "http://127.0.0.1:9/v1",
-    HELIX_APPS_DIR: join(TMP, "Applications"),
-    HELIX_OPENCODE_BIN: join(BIN, "opencode"),
-    HELIX_RTK_BIN: join(BIN, "rtk"),
+    OXOAI_CONFIG: join(TMP, "profil.json"),
+    OXOAI_DATA_DIR: DONNEES,
+    OXOAI_GATEWAY_PORT: String(port),
+    OXOAI_WORKSPACE: join(TMP, "espace"),
+    OXOAI_MOTEUR: "llamacpp",
+    OXOAI_LLAMACPP_PORT: String(await portLibre()),
+    OXOAI_LMSTUDIO_URL: "http://127.0.0.1:9/v1",
+    OXOAI_EXO_URL: "http://127.0.0.1:9/v1",
+    OXOAI_APPS_DIR: join(TMP, "Applications"),
+    OXOAI_OPENCODE_BIN: join(BIN, "opencode"),
+    OXOAI_RTK_BIN: join(BIN, "rtk"),
   },
   stdio: ["ignore", "pipe", "pipe"],
 });
@@ -122,12 +122,12 @@ try {
     }
   }
   if (!JETON) throw new Error(`passerelle muette :\n${journal.slice(-2000)}`);
-  const entetes = (seance) => ({ "Content-Type": "application/json", Authorization: `Bearer ${JETON}`, "X-Helix-Langue": "fr", ...(seance ? { "X-Helix-Session": seance } : {}) });
+  const entetes = (seance) => ({ "Content-Type": "application/json", Authorization: `Bearer ${JETON}`, "X-OxoAI-Langue": "fr", ...(seance ? { "X-OxoAI-Session": seance } : {}) });
   const appel = async (chemin, seance, corps) => {
     const r = await fetch(`${G}${chemin}`, corps === undefined ? { headers: entetes(seance) } : { method: "POST", headers: entetes(seance), body: JSON.stringify(corps) });
     return { statut: r.status, json: await r.json().catch(() => ({})) };
   };
-  const etat = async () => (await appel("/helix/provision")).json;
+  const etat = async () => (await appel("/oxoai/provision")).json;
   const attendrePhase = async (phase) => {
     for (let i = 0; i < 120; i++) {
       const e = await etat();
@@ -137,13 +137,13 @@ try {
     return etat();
   };
 
-  const admin = await appel("/helix/auth/create", null, { fullName: "Admin Essai", email: "admin@example.test", password: "Admin2Essai!Solide42" });
+  const admin = await appel("/oxoai/auth/create", null, { fullName: "Admin Essai", email: "admin@example.test", password: "Admin2Essai!Solide42" });
   const seance = admin.json.session?.token ?? "";
 
   console.log("A. L'échec d'installation du moteur, puis le moteur arrivé autrement");
   const e0 = await etat();
   verifier("au départ : llama.cpp, moteur absent, rien en cours", e0.moteur === "llamacpp" && e0.moteurInstalle === false && e0.state?.phase === "idle", JSON.stringify(e0.state));
-  const pose = await appel("/helix/provision/moteur", seance, {});
+  const pose = await appel("/oxoai/provision/moteur", seance, {});
   verifier("l'installation du moteur démarre (202)", pose.statut === 202, `${pose.statut} ${JSON.stringify(pose.json).slice(0, 200)}`);
   const e1 = await attendrePhase("error");
   verifier("téléchargement refusé : l'échec est dit (« L'installation du moteur a échoué. »)", e1.state?.phase === "error" && /L'installation du moteur a échoué/.test(e1.state?.message ?? "") && e1.moteurInstalle === false, JSON.stringify(e1.state));
@@ -160,7 +160,7 @@ try {
   verifier("et il ne revient pas à la lecture suivante", e3.state?.phase === "idle", JSON.stringify(e3.state));
 
   console.log("B. Un échec qui ne vient pas du moteur reste affiché");
-  const modele = await appel("/helix/provision/start", seance, {});
+  const modele = await appel("/oxoai/provision/start", seance, {});
   verifier("le téléchargement du modèle démarre", modele.statut === 202 || modele.statut === 200, `${modele.statut} ${JSON.stringify(modele.json).slice(0, 200)}`);
   const e4 = await attendrePhase("error");
   verifier("téléchargement du modèle refusé : l'échec est dit", e4.state?.phase === "error" && /téléchargement/i.test(e4.state?.message ?? ""), JSON.stringify(e4.state));
@@ -177,7 +177,7 @@ try {
   passerelle.kill("SIGTERM");
   await Promise.race([fin, attendre(10_000)]);
   if (passerelle.exitCode === null) passerelle.kill("SIGKILL");
-  if (echecs.length && process.env.HELIX_ESSAI_BAVARD) console.log(journal.slice(-4000));
+  if (echecs.length && process.env.OXOAI_ESSAI_BAVARD) console.log(journal.slice(-4000));
   // Un fils de la passerelle peut écrire encore un instant après son arrêt (ENOTEMPTY vu le 28/09/2026) : on réessaie, sans faire échouer l'essai.
   await attendre(1500);
   try {

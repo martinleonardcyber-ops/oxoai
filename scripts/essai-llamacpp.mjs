@@ -5,7 +5,7 @@
  *   node scripts/essai-llamacpp.mjs
  *
  * Écrit le 28/09/2026 (gateway/src/llamaCpp.ts). Sur un Mac Intel, c'est le
- * moteur par défaut ; ailleurs, `HELIX_MOTEUR=llamacpp` le choisit, et c'est
+ * moteur par défaut ; ailleurs, `OXOAI_MOTEUR=llamacpp` le choisit, et c'est
  * ce que fait cet essai (sur un Mac à puce Apple, l'archive arm64 de la même
  * publication). Une passerelle jetable (dossier personnel, données neuves,
  * clé en fichier, faux `security`, LM Studio éteint) :
@@ -19,7 +19,7 @@
  *  - le serveur écoute sur 127.0.0.1 seulement et refuse une requête sans
  *    sa clé ; il s'arrête avec la passerelle.
  *
- * `HELIX_ESSAI_DONNEES=<dossier>` garde les données (moteur et modèles) d'une
+ * `OXOAI_ESSAI_DONNEES=<dossier>` garde les données (moteur et modèles) d'une
  * fois sur l'autre : le modèle ne se retélécharge pas. Sans lui, tout vit dans
  * un dossier temporaire, effacé à la fin (1,8 Go téléchargés à chaque fois).
  */
@@ -45,9 +45,9 @@ const portLibre = () =>
   });
 const attendre = (ms) => new Promise((r) => setTimeout(r, ms));
 
-const TMP = mkdtempSync(join(tmpdir(), "helix-essai-llamacpp-"));
+const TMP = mkdtempSync(join(tmpdir(), "oxoai-essai-llamacpp-"));
 const MAISON = join(TMP, "maison");
-const DONNEES = process.env.HELIX_ESSAI_DONNEES ?? join(TMP, "donnees");
+const DONNEES = process.env.OXOAI_ESSAI_DONNEES ?? join(TMP, "donnees");
 const BIN = join(TMP, "bin");
 for (const d of [MAISON, DONNEES, BIN]) mkdirSync(d, { recursive: true });
 writeFileSync(join(BIN, "security"), `#!/bin/sh\necho "$@" >> "${join(TMP, "security.log")}"\nexit 44\n`);
@@ -68,13 +68,13 @@ function demarrer() {
       PATH,
       HOME: MAISON,
       LANG: "C",
-      HELIX_CONFIG: join(TMP, "profil.json"),
-      HELIX_DATA_DIR: DONNEES,
-      HELIX_GATEWAY_PORT: String(PORT),
-      HELIX_MOTEUR: "llamacpp",
-      HELIX_LLAMACPP_PORT: String(PORT_LLAMA),
-      HELIX_LMSTUDIO_URL: "http://127.0.0.1:9/v1",
-      HELIX_EXO_URL: "http://127.0.0.1:9/v1",
+      OXOAI_CONFIG: join(TMP, "profil.json"),
+      OXOAI_DATA_DIR: DONNEES,
+      OXOAI_GATEWAY_PORT: String(PORT),
+      OXOAI_MOTEUR: "llamacpp",
+      OXOAI_LLAMACPP_PORT: String(PORT_LLAMA),
+      OXOAI_LMSTUDIO_URL: "http://127.0.0.1:9/v1",
+      OXOAI_EXO_URL: "http://127.0.0.1:9/v1",
     },
     stdio: ["ignore", "pipe", "pipe"],
   });
@@ -124,7 +124,7 @@ const verifier = (nom, ok, obtenu) => {
 
 let JETON = "";
 let seance = "";
-const avecSeance = () => ({ "Content-Type": "application/json", Authorization: `Bearer ${JETON}`, "X-Helix-Session": seance });
+const avecSeance = () => ({ "Content-Type": "application/json", Authorization: `Bearer ${JETON}`, "X-OxoAI-Session": seance });
 const appel = (chemin, options = {}) => fetch(`${G}${chemin}`, { headers: avecSeance(), ...options });
 const json = async (chemin, options) => (await appel(chemin, options)).json().catch(() => ({}));
 async function pret() {
@@ -142,7 +142,7 @@ async function suivreProvision(jusqua, delaiMs) {
   const fin = Date.now() + delaiMs;
   let etat = {};
   while (Date.now() < fin) {
-    etat = (await json("/helix/provision")).state ?? {};
+    etat = (await json("/oxoai/provision")).state ?? {};
     if (jusqua(etat)) return etat;
     await attendre(1000);
   }
@@ -154,7 +154,7 @@ try {
   await pret();
   JETON = readFileSync(join(DONNEES, "instance-token"), "utf8").trim();
   const compte = await (
-    await fetch(`${G}/helix/auth/create`, {
+    await fetch(`${G}/oxoai/auth/create`, {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${JETON}` },
       body: JSON.stringify({ fullName: "Essai llama.cpp", email: "essai-llamacpp@example.test", password: "Essai2Llama!Solide42" }),
@@ -163,7 +163,7 @@ try {
   seance = compte.session?.token ?? "";
 
   console.log("\nÉcran de mise en route");
-  const statut = await json("/helix/provision");
+  const statut = await json("/oxoai/provision");
   verifier("le moteur présenté est llama.cpp", statut.moteur === "llamacpp", statut.moteur);
   verifier("rien d'installé au départ (sauf données gardées)", statut.moteurInstalle === existsSync(join(LLAMA, "b11146", "llama-server")), statut.moteurInstalle);
   verifier("poste non piloté par l'intégrateur : l'installation est proposée", statut.managed === false, statut.managed);
@@ -174,11 +174,11 @@ try {
   );
   const conseil = statut.recommended?.key;
   verifier("un modèle conseillé pour cette machine, pris dans ce catalogue", ["qwen3-1.7b", "qwen3-4b", "qwen3-8b", "qwen/qwen3-30b-a3b"].includes(conseil), conseil);
-  const sansSeance = await fetch(`${G}/helix/provision/moteur`, { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${JETON}` }, body: "{}" });
+  const sansSeance = await fetch(`${G}/oxoai/provision/moteur`, { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${JETON}` }, body: "{}" });
   verifier("installer le moteur demande une séance", sansSeance.status === 401, sansSeance.status);
 
   console.log("\nInstallation du moteur, sans conditions à accepter");
-  const lance = await appel("/helix/provision/moteur", { method: "POST", body: "{}" });
+  const lance = await appel("/oxoai/provision/moteur", { method: "POST", body: "{}" });
   verifier("installation acceptée sans `conditionsAcceptees`", lance.status === 202, lance.status);
   // Le moteur (11 Mo), puis le téléchargement du modèle conseillé commence.
   const enCours = await suivreProvision((e) => (e.phase === "downloading" && e.model) || e.phase === "error" || e.phase === "ready", 5 * 60_000);
@@ -204,7 +204,7 @@ try {
   console.log("\nQwen3 1.7B : téléchargement coupé, repris, vérifié");
   const leger = "Qwen3-1.7B-Q8_0.gguf";
   if (!existsSync(join(LLAMA, "modeles", leger))) {
-    await appel("/helix/provision/start", { method: "POST", body: JSON.stringify({ model: "qwen3-1.7b" }) });
+    await appel("/oxoai/provision/start", { method: "POST", body: JSON.stringify({ model: "qwen3-1.7b" }) });
     const partiel = join(LLAMA, "modeles", `${leger}.partiel`);
     for (let i = 0; i < 600 && !(existsSync(partiel) && statSync(partiel).size > 300_000_000); i++) await attendre(500);
     const avant = existsSync(partiel) ? statSync(partiel).size : 0;
@@ -212,12 +212,12 @@ try {
     verifier("coupé en route (plus de 300 Mo reçus)", avant > 300_000_000, avant);
     demarrer();
     await pret();
-    await appel("/helix/provision/start", { method: "POST", body: JSON.stringify({ model: "qwen3-1.7b" }) });
+    await appel("/oxoai/provision/start", { method: "POST", body: JSON.stringify({ model: "qwen3-1.7b" }) });
     await attendre(3000);
     const repris = existsSync(partiel) ? statSync(partiel).size : -1;
     verifier("la reprise part de ce qui était reçu (requête `Range`)", repris >= avant || existsSync(join(LLAMA, "modeles", leger)), `${avant} → ${repris}`);
   } else {
-    await appel("/helix/provision/start", { method: "POST", body: JSON.stringify({ model: "qwen3-1.7b" }) });
+    await appel("/oxoai/provision/start", { method: "POST", body: JSON.stringify({ model: "qwen3-1.7b" }) });
   }
   const fini = await suivreProvision((e) => e.phase === "ready" || e.phase === "error", 30 * 60_000);
   verifier("Qwen3 1.7B téléchargé, empreinte vérifiée, chargé, essai de santé passé", fini.phase === "ready", JSON.stringify(fini));
@@ -263,7 +263,7 @@ try {
     messages: [{ role: "user", content: "Quel temps fait-il à Lyon ? Utilise l'outil meteo." }],
     tools: [{ type: "function", function: { name: "meteo", description: "Donne la météo d'une ville.", parameters: { type: "object", properties: { ville: { type: "string" } }, required: ["ville"] } } }],
   });
-  if (process.env.HELIX_ESSAI_FLUX_OUTIL) writeFileSync(process.env.HELIX_ESSAI_FLUX_OUTIL, outil);
+  if (process.env.OXOAI_ESSAI_FLUX_OUTIL) writeFileSync(process.env.OXOAI_ESSAI_FLUX_OUTIL, outil);
   // Les arguments arrivent en morceaux (« L », « yon ») : on les recolle, comme le fait un client.
   const argumentsRecus = outil
     .split("\n")
@@ -285,7 +285,7 @@ try {
   /*
    * Passerelle tuée net (28/09/2026) : le llama-server qu'elle laisse était
    * gardé au redémarrage, sans que personne ne sache plus l'arrêter (il
-   * survivait à la fermeture de Helix) ni lui faire voir un modèle posé
+   * survivait à la fermeture de OxoAI) ni lui faire voir un modèle posé
    * depuis. Il est désormais arrêté par son PID, puis remplacé.
    */
   console.log("\nPasserelle tuée net");
@@ -295,7 +295,7 @@ try {
   verifier("son llama-server lui survit (orphelin)", orphelins.length >= 1 && orphelins.every(vivant), orphelins);
   demarrer();
   await pret();
-  await json("/helix/provision");
+  await json("/oxoai/provision");
   let remplacants = [];
   for (let i = 0; i < 60; i++) {
     remplacants = serveursDeLEssai();
@@ -329,7 +329,7 @@ try {
       /* parti */
     }
   }
-  if (echecs.length && process.env.HELIX_ESSAI_BAVARD) console.log(journal.slice(-4000));
+  if (echecs.length && process.env.OXOAI_ESSAI_BAVARD) console.log(journal.slice(-4000));
   rmSync(TMP, { recursive: true, force: true });
 }
 console.log(`\n${reussis} réussis, ${echecs.length} échecs`);

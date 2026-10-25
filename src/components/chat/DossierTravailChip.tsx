@@ -39,12 +39,12 @@ interface Contenu {
  */
 declare global {
   interface Window {
-    helix?: { choisirDossier?: (options?: { titre?: string; message?: string; bouton?: string }) => Promise<string | null> };
+    oxoai?: { choisirDossier?: (options?: { titre?: string; message?: string; bouton?: string }) => Promise<string | null> };
   }
 }
 
 const selecteurNatif = () =>
-  typeof window !== "undefined" ? window.helix?.choisirDossier : undefined;
+  typeof window !== "undefined" ? window.oxoai?.choisirDossier : undefined;
 
 /** Affiche un chemin de façon lisible : « ~/Projets/site ». */
 function abreger(chemin: string): string {
@@ -92,8 +92,8 @@ export function DossierTravailChip({
 
   const parcourir = useCallback((chemin?: string) => {
     const url = chemin
-      ? `/helix/dossiers?chemin=${encodeURIComponent(chemin)}`
-      : "/helix/dossiers";
+      ? `/oxoai/dossiers?chemin=${encodeURIComponent(chemin)}`
+      : "/oxoai/dossiers";
     void apiFetch(url)
       .then((r) => (r.ok ? r.json() : Promise.reject(new Error(String(r.status)))))
       .then((d: Contenu) => {

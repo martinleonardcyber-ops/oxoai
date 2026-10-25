@@ -95,7 +95,7 @@ interface ModeleBase {
   fichiers: FichierBase[];
   /** Octets des poids, pour estimer la mémoire et le disque. */
   poids: number;
-  /** Essayé de bout en bout avec Helix, sur une machine réelle. */
+  /** Essayé de bout en bout avec OxoAI, sur une machine réelle. */
   verifie: boolean;
   /** Pas d'entraînement mesuré par seconde (batch de 4), sur un Mac M4 de 16 Go. */
   pasParSeconde: number;
@@ -214,7 +214,7 @@ const INDEX_TORCH_CUDA = "https://download.pytorch.org/whl/cu128";
  * dans PROJET.md § 3.12). Sur Mac, Unsloth passe lui-même par MLX : on garde
  * MLX-LM directement.
  *
- * Les deux roues sont téléchargées par Helix et vérifiées par empreinte
+ * Les deux roues sont téléchargées par OxoAI et vérifiées par empreinte
  * (relevées sur PyPI le 25/09/2026), puis installées depuis le disque ; leurs
  * dépendances (trl, datasets, xformers, triton...) viennent de PyPI sans
  * empreinte, comme le reste de la pile NVIDIA. Compatibles avec les versions
@@ -332,17 +332,17 @@ function capaciteDe(hw: Hardware, mac: number | null): Capacite {
 /**
  * Le moteur (venv, modèles de base) vit à côté de l'atelier ; les projets,
  * qui portent les exemples de quelqu'un, avec les données de l'instance.
- * `HELIX_DATA_DIR` prime pour les deux, comme dans atelier.ts : un essai ne
+ * `OXOAI_DATA_DIR` prime pour les deux, comme dans atelier.ts : un essai ne
  * touche rien de la machine.
  */
 const racineMoteur = () =>
-  process.env.HELIX_DATA_DIR ? join(process.env.HELIX_DATA_DIR, "entrainement-moteur") : join(homedir(), ".helix", "entrainement");
+  process.env.OXOAI_DATA_DIR ? join(process.env.OXOAI_DATA_DIR, "entrainement-moteur") : join(homedir(), ".oxoai", "entrainement");
 const dossierPython = () => join(racineMoteur(), "python");
 const dossierBases = () => join(racineMoteur(), "modeles");
 const dossierBase = (b: ModeleBase) => join(dossierBases(), b.cle);
 const dossierLlamaCpp = () => join(racineMoteur(), "llama.cpp", LLAMACPP.dossier);
 const temoin = () => join(racineMoteur(), "pret.json");
-const dossierProjets = () => join(process.env.HELIX_DATA_DIR ?? join(homedir(), ".helix", "data"), "entrainement");
+const dossierProjets = () => join(process.env.OXOAI_DATA_DIR ?? join(homedir(), ".oxoai", "data"), "entrainement");
 const dossierProjet = (id: string) => join(dossierProjets(), id);
 
 const pythonVenv = () =>
@@ -351,11 +351,11 @@ const pythonVenv = () =>
 /**
  * Dossier des modèles de LM Studio : celui que ses réglages désignent, sinon
  * l'emplacement par défaut. Les modèles entraînés vont dans un « éditeur » à
- * part, `helix-entrainement`, pour qu'on ne retire jamais que les nôtres.
+ * part, `oxoai-entrainement`, pour qu'on ne retire jamais que les nôtres.
  */
-const EDITEUR_LMSTUDIO = "helix-entrainement";
+const EDITEUR_LMSTUDIO = "oxoai-entrainement";
 function dossierLmStudio(): string {
-  const force = process.env.HELIX_LMSTUDIO_MODELES;
+  const force = process.env.OXOAI_LMSTUDIO_MODELES;
   if (force) return force;
   /*
    * Le dossier de LM Studio que suit la passerelle (engine.ts), pointeur
@@ -526,7 +526,7 @@ function expliquer(err: unknown): string {
   return brut.split("\n").slice(-3).join(" ").slice(0, 600);
 }
 
-const MARQUEUR = "@@HELIX@@";
+const MARQUEUR = "@@OXOAI@@";
 function lireMarqueur<T>(sortie: string): T {
   const rang = sortie.lastIndexOf(MARQUEUR);
   if (rang < 0) throw new Error(t("Le calcul n'a rien rendu."));
@@ -558,7 +558,7 @@ for q in questions:
     reponses.append(generate(model, tok, invite, max_tokens=jetons, sampler=make_sampler(temp=0.0)).strip())
     json.dump(reponses, open(sortie, "w", encoding="utf-8"), ensure_ascii=False)
     print("@@REPONSE@@" + str(len(reponses)), flush=True)
-sys.stdout.write("@@HELIX@@" + json.dumps({"n": len(reponses)}) + "\n")
+sys.stdout.write("@@OXOAI@@" + json.dumps({"n": len(reponses)}) + "\n")
 `;
 
 /** Essai après installation : les bibliothèques se chargent-elles ? */
@@ -566,7 +566,7 @@ const SCRIPT_MLX_ESSAI = String.raw`
 import json, sys
 import mlx.core as mx
 import mlx_lm
-sys.stdout.write("@@HELIX@@" + json.dumps({"mlx": mx.__version__, "mlx_lm": mlx_lm.__version__, "gpu": str(mx.default_device())}) + "\n")
+sys.stdout.write("@@OXOAI@@" + json.dumps({"mlx": mx.__version__, "mlx_lm": mlx_lm.__version__, "gpu": str(mx.default_device())}) + "\n")
 `;
 
 /**
@@ -653,7 +653,7 @@ args = TrainingArguments(output_dir=sortie + "-etapes", per_device_train_batch_s
     eval_strategy="steps" if len(validation) else "no", eval_steps=max(10, reglages["pas"] // 4), lr_scheduler_type="constant")
 Trainer(model=model, args=args, train_dataset=entrainement, eval_dataset=validation if len(validation) else None, data_collator=assembler, callbacks=[Suivi()]).train()
 model.save_pretrained(sortie)
-sys.stdout.write("@@HELIX@@" + json.dumps({"ok": True}) + "\n")
+sys.stdout.write("@@OXOAI@@" + json.dumps({"ok": True}) + "\n")
 `;
 
 /** NVIDIA : mêmes réponses que SCRIPT_MLX_REPONDRE, par transformers et peft. Pas vérifié. */
@@ -674,7 +674,7 @@ for q in json.load(open(entree, encoding="utf-8")):
     reponses.append(tok.decode(out[0][ids.shape[1]:], skip_special_tokens=True).strip())
     json.dump(reponses, open(sortie, "w", encoding="utf-8"), ensure_ascii=False)
     print("@@REPONSE@@" + str(len(reponses)), flush=True)
-sys.stdout.write("@@HELIX@@" + json.dumps({"n": len(reponses)}) + "\n")
+sys.stdout.write("@@OXOAI@@" + json.dumps({"n": len(reponses)}) + "\n")
 `;
 
 /** NVIDIA : fond l'adaptateur dans le modèle en 16 bits, pour la conversion GGUF. Pas vérifié. */
@@ -687,7 +687,7 @@ model = AutoModelForCausalLM.from_pretrained(modele, torch_dtype=torch.float16, 
 model = PeftModel.from_pretrained(model, adaptateur).merge_and_unload()
 model.save_pretrained(sortie, safe_serialization=True)
 AutoTokenizer.from_pretrained(modele).save_pretrained(sortie)
-sys.stdout.write("@@HELIX@@" + json.dumps({"ok": True}) + "\n")
+sys.stdout.write("@@OXOAI@@" + json.dumps({"ok": True}) + "\n")
 `;
 
 /* ------------------------------------------------------------------ */
@@ -753,7 +753,7 @@ const minimumPython = (moteur: string | null): [number, number] => (moteur === "
 
 /**
  * Le Python à partir duquel créer l'environnement d'entraînement : celui du
- * système s'il est assez récent, sinon celui que Helix pose (3.12). `installer`
+ * système s'il est assez récent, sinon celui que OxoAI pose (3.12). `installer`
  * seulement à l'installation.
  */
 async function pythonPourEntrainement(moteur: string | null, installer: boolean): Promise<string | null> {
@@ -791,7 +791,7 @@ export async function etat(qui: string): Promise<EtatEntrainement> {
   const obstacles: string[] = [];
   const venvLa = existsSync(pythonVenv());
   /*
-   * Sans Python assez récent sur la machine, Helix pose le sien (Python 3.12,
+   * Sans Python assez récent sur la machine, OxoAI pose le sien (Python 3.12,
    * pythonPrive.ts, décidé par Medhi le 27/09/2026) : un obstacle seulement là
    * où il ne sait pas le faire.
    */
@@ -942,7 +942,7 @@ export function installer(qui: string): Promise<void> {
     if (cap.moteur === "mlx") {
       versions = lireMarqueur<Record<string, string>>(await lancer(pythonVenv(), ["-I", "-c", SCRIPT_MLX_ESSAI], { delai: 5 * 60_000 }));
     } else {
-      const sortie = await lancer(pythonVenv(), ["-I", "-c", "import json,torch,peft,bitsandbytes;print('@@HELIX@@'+json.dumps({'torch':torch.__version__,'cuda':str(torch.cuda.is_available())}))"], { delai: 5 * 60_000 });
+      const sortie = await lancer(pythonVenv(), ["-I", "-c", "import json,torch,peft,bitsandbytes;print('@@OXOAI@@'+json.dumps({'torch':torch.__version__,'cuda':str(torch.cuda.is_available())}))"], { delai: 5 * 60_000 });
       versions = lireMarqueur<Record<string, string>>(sortie);
       if (versions.cuda !== "True") throw new Error(t("PyTorch est installé mais ne voit pas la carte NVIDIA. Mettez à jour le pilote NVIDIA, puis réessayez."));
     }
@@ -1944,7 +1944,7 @@ export function publier(qui: string, id: unknown): Travail {
       cpSync(join(dossierBase(b), "LICENSE"), join(sortie, "LICENSE"));
       writeFileSync(
         join(sortie, "README.md"),
-        `# ${p.nom}\n\nModèle entraîné sur la machine par Helix, le ${new Date().toISOString().slice(0, 10)}.\n\n` +
+        `# ${p.nom}\n\nModèle entraîné sur la machine par OxoAI, le ${new Date().toISOString().slice(0, 10)}.\n\n` +
           `- Modèle de départ : ${b.depot} (révision ${b.revision}), licence Apache 2.0 (fichier LICENSE).\n` +
           `- Méthode : LoRA (${tem.moteur === "mlx" ? "MLX-LM" : "peft"}), ${p.entrainement?.exemplesAppris ?? 0} exemples, fondu et compressé en 8 bits.\n`,
       );
@@ -1977,7 +1977,7 @@ export function publier(qui: string, id: unknown): Travail {
 /**
  * Retire le modèle de LM Studio : déchargé s'il est au repos, refusé s'il est
  * en train de répondre à quelqu'un, puis effacé. Seul un dossier rangé par
- * nous, sous `helix-entrainement`, peut être effacé.
+ * nous, sous `oxoai-entrainement`, peut être effacé.
  */
 export async function retirer(qui: string, id: unknown): Promise<Projet> {
   const p = projetDe(id, qui);
@@ -1999,7 +1999,7 @@ export async function retirer(qui: string, id: unknown): Promise<Projet> {
     }
   }
   if (sous(dossierNosModeles(), p.publie.dossier) && existsSync(p.publie.dossier)) rmSync(p.publie.dossier, { recursive: true, force: true });
-  // Plus aucun modèle entraîné : le dossier `helix-entrainement` part aussi, LM Studio redevient tel qu'avant.
+  // Plus aucun modèle entraîné : le dossier `oxoai-entrainement` part aussi, LM Studio redevient tel qu'avant.
   try {
     if (readdirSync(dossierNosModeles()).filter((n) => n !== ".DS_Store").length === 0) rmSync(dossierNosModeles(), { recursive: true, force: true });
   } catch {

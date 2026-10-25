@@ -78,9 +78,9 @@ interface Tour {
  * se retire, donc on a l'impression qu'il ne travaille plus ». L'écran n'avait
  * qu'une conversation : passer à une autre session ou à une nouvelle la
  * vidait, flux fermé, pendant que l'agent continuait chez OpenCode ; y revenir
- * relisait l'historique, où la demande n'était pas encore (Helix prépare
+ * relisait l'historique, où la demande n'était pas encore (OxoAI prépare
  * l'application ou le plan avant de l'envoyer) et où OpenCode se disait au
- * repos (Helix contrôle le code écrit entre deux tours). Comme le Chat depuis
+ * repos (OxoAI contrôle le code écrit entre deux tours). Comme le Chat depuis
  * le 26/09 (`reponsesEnCours`, useChat.ts), une conversation qui travaille
  * vit maintenant hors de l'écran (`enFond`), flux ouvert, et continue de se
  * remplir ; l'écran s'y rebranche en revenant, sans rien relire ni rejouer.
@@ -148,7 +148,7 @@ const memoire = {
 const prevenir = () => memoire.abonnes.forEach((f) => f());
 
 /** Évènement de fenêtre : une session de Code a commencé ou fini de travailler (liste des sessions). */
-export const CODE_EN_COURS = "helix:code-en-cours";
+export const CODE_EN_COURS = "oxoai:code-en-cours";
 
 /** L'agent travaille-t-il sur cette session, vu de cet écran (affichée ou quittée en plein travail) ? */
 export function sessionCodeEnCours(id: string): boolean {
@@ -289,7 +289,7 @@ function rouvrir(conv: ConversationCode, tour: Tour) {
 function appliquer(conv: ConversationCode, tour: Tour, event: CodeEvent, recu = Date.now()) {
   if (event.kind === "demande") {
     /*
-     * Une relance du contrôle automatique de Helix est la suite de notre
+     * Une relance du contrôle automatique de OxoAI est la suite de notre
      * demande : même bulle, et le tour rendu se rouvre. Sans cela, l'écran
      * disait « terminé » pendant que l'agent corrigeait derrière.
      */
@@ -417,7 +417,7 @@ function listen(conv: ConversationCode, sessionID: string) {
    * premier des deux à la passerelle.
    */
   const fermer = ouvrirFlux(
-    `/helix/code/events?sessionID=${encodeURIComponent(sessionID)}${suite}`,
+    `/oxoai/code/events?sessionID=${encodeURIComponent(sessionID)}${suite}`,
     (donnees) => {
       let parsed: { durable?: { seq?: unknown } };
       try {
@@ -437,7 +437,7 @@ function listen(conv: ConversationCode, sessionID: string) {
       const tour = conv.tour;
       if (!tour || tour.sessionID !== sessionID) return;
       /*
-       * Helix prépare une application avant d'envoyer la demande (plusieurs
+       * OxoAI prépare une application avant d'envoyer la demande (plusieurs
        * minutes avec un petit modèle) : l'étape en cours s'affiche tout de
        * suite, sans attendre l'identifiant de la demande.
        */
@@ -468,7 +468,7 @@ function listen(conv: ConversationCode, sessionID: string) {
         const tour = conv.tour;
         /*
          * Au repos, rien à faire : l'envoi suivant se réabonnera. Sauf juste
-         * après un tour : le contrôle automatique de Helix peut encore relancer
+         * après un tour : le contrôle automatique de OxoAI peut encore relancer
          * l'agent (gateway/src/controleCode.ts). Vu le 26/09/2026 : le flux
          * tombé entre deux corrections, l'écran ratait toutes les suivantes.
          */
@@ -788,7 +788,7 @@ export function useCode(dossier?: string, reglages: ReglagesCode = {}) {
    * travaillait, elle est encore ici, flux ouvert : l'écran la reprend telle
    * quelle, sans rien relire ni rejouer. Sinon, son historique est relu chez
    * OpenCode par l'instance (rien n'est gardé en double ici) ; si l'agent ou
-   * Helix y travaille encore (ouverte ailleurs, page rechargée), l'écran se
+   * OxoAI y travaille encore (ouverte ailleurs, page rechargée), l'écran se
    * rebranche sur son flux à partir du dernier évènement vu par l'instance.
    * La session déjà affichée (retour depuis une autre page) n'est pas relue.
    *
@@ -845,7 +845,7 @@ export function useCode(dossier?: string, reglages: ReglagesCode = {}) {
          * L'agent travaille encore : sa réponse commencée (le dernier message,
          * s'il est de lui) reçoit la suite du flux, outils en cours compris,
          * au lieu d'une seconde bulle qui répéterait le début. Le dernier
-         * message est celui de la personne quand Helix prépare encore la
+         * message est celui de la personne quand OxoAI prépare encore la
          * demande : une bulle attend alors la suite.
          */
         const derniere = liste[liste.length - 1];
@@ -874,7 +874,7 @@ export function useCode(dossier?: string, reglages: ReglagesCode = {}) {
     [],
   );
 
-  /** Relit l'état du moteur de code (après son installation par Helix). */
+  /** Relit l'état du moteur de code (après son installation par OxoAI). */
   const rafraichirStatut = useCallback(() => fetchCodeStatus().then(setStatus), []);
 
   return { status, messages, busy, error, send, stop, arreterAction, reset, suivi, sessionId, nouvelle, ouvrir, rafraichirStatut };

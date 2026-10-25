@@ -11,9 +11,9 @@ import {
   type DonneesCompetence,
 } from "@/lib/store/competences";
 
-const CHANGE = "helix:competences-changed";
+const CHANGE = "oxoai:competences-changed";
 /** L'interrupteur personnel d'une compétence partagée vit dans le profil. */
-const PROFIL = "helix:profile-changed";
+const PROFIL = "oxoai:profile-changed";
 
 function prevenir(): void {
   window.dispatchEvent(new Event(CHANGE));

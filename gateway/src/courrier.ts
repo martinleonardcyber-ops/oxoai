@@ -52,9 +52,9 @@ import { t, tf } from "./langue.ts";
 import { parcourirBalises } from "./texteBrut.ts";
 
 /**
- * Connecteur courrier de Helix, en IMAP.
+ * Connecteur courrier de OxoAI, en IMAP.
  *
- * Pourquoi IMAP et pas une API de fournisseur : Helix s'adresse à des PME
+ * Pourquoi IMAP et pas une API de fournisseur : OxoAI s'adresse à des PME
  * françaises sur l'argument de la souveraineté. Un connecteur Gmail ne servirait
  * qu'un fournisseur américain et lierait le produit à ses conditions d'API,
  * révocables. IMAP est un protocole ouvert : le même code atteint OVH,
@@ -1949,7 +1949,7 @@ export async function configurer(
   if (!verdict.ok) return { ok: false, message: verdict.message };
 
   /*
-   * Refus net plutôt que dégradation silencieuse. Ailleurs dans Helix, une
+   * Refus net plutôt que dégradation silencieuse. Ailleurs dans OxoAI, une
    * donnée non chiffrable est écrite en clair en le disant ; un mot de passe de
    * boîte, non : sa fuite donne accès à toute la correspondance de l'entreprise,
    * et souvent à la réinitialisation des autres comptes.
@@ -1958,7 +1958,7 @@ export async function configurer(
     return {
       ok: false,
       message:
-        tf("Le chiffrement des données n'est pas actif sur cette machine : {0} refuse d'enregistrer un mot de passe de messagerie en clair. Déverrouillez le trousseau du compte hôte, ou réglez « chiffrement » sur « fichier » dans helix.config.json, puis recommencez.", nomProduit()),
+        tf("Le chiffrement des données n'est pas actif sur cette machine : {0} refuse d'enregistrer un mot de passe de messagerie en clair. Déverrouillez le trousseau du compte hôte, ou réglez « chiffrement » sur « fichier » dans oxoai.config.json, puis recommencez.", nomProduit()),
     };
   }
 
@@ -2802,20 +2802,20 @@ const envoisRecents: number[] = [];
 const rangeSeul = (serveurSmtp: string) => /(^|\.)(gmail\.com|googlemail\.com|office365\.com|outlook\.com)$/i.test(serveurSmtp);
 
 /**
- * Envoi d'un mail **écrit par Helix lui-même**, à la demande explicite d'une
+ * Envoi d'un mail **écrit par OxoAI lui-même**, à la demande explicite d'une
  * personne qui a l'adresse sous les yeux et qui vient de cliquer.
  *
  * Pourquoi cela ne passe pas par la barrière d'approbation : cette barrière
  * existe pour ce qu'un **modèle** décide d'envoyer. Ici, ni le destinataire ni
- * le texte ne viennent d'un modèle — le texte est écrit dans le code de Helix,
+ * le texte ne viennent d'un modèle — le texte est écrit dans le code de OxoAI,
  * l'adresse est celle que la personne vient de taper, et le clic *est*
  * l'accord. Lui redemander « voulez-vous vraiment ? » serait du bruit.
  *
  * Le seul usage aujourd'hui est l'invitation d'un collègue (invitations.ts).
- * Toute nouvelle utilisation doit garder ces deux propriétés : texte de Helix,
+ * Toute nouvelle utilisation doit garder ces deux propriétés : texte de OxoAI,
  * destinataire donné par un humain dans le geste même.
  */
-export async function envoyerDeHelix(
+export async function envoyerDeOxoAI(
   a: string,
   objet: string,
   corps: string,

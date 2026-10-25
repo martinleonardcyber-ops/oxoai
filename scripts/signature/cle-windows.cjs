@@ -12,9 +12,9 @@
  * posait. `afterPack` et non `afterSign` : electron-builder ne lance
  * `afterSign` que s'il a signé quelque chose.
  *
- * Seule la clé publique est écrite ; la privée (~/.helix-editeur/, ou
- * HELIX_CLE_EDITEUR) est lue sans être copiée. Sans elle, la fabrication
- * s'arrête, sauf avec HELIX_SANS_CLE_EDITEUR=1 : les postes de cette
+ * Seule la clé publique est écrite ; la privée (~/.oxoai-editeur/, ou
+ * OXOAI_CLE_EDITEUR) est lue sans être copiée. Sans elle, la fabrication
+ * s'arrête, sauf avec OXOAI_SANS_CLE_EDITEUR=1 : les postes de cette
  * application garderont alors « Télécharger ».
  */
 const fs = require("node:fs");
@@ -25,15 +25,15 @@ const { FICHIER_CLE, cleDesRessources, empreinteCle } = require("../../electron/
 
 exports.default = async function poserCleWindows(context) {
   if (context.electronPlatformName !== "win32") return;
-  const chemin = process.env.HELIX_CLE_EDITEUR || path.join(os.homedir(), ".helix-editeur", "cle-privee-mises-a-jour.pem");
+  const chemin = process.env.OXOAI_CLE_EDITEUR || path.join(os.homedir(), ".oxoai-editeur", "cle-privee-mises-a-jour.pem");
   if (!fs.existsSync(chemin)) {
-    if (process.env.HELIX_SANS_CLE_EDITEUR === "1") {
-      console.log("  • clé de l'éditeur (Windows) : aucune (HELIX_SANS_CLE_EDITEUR=1) ; ces postes garderont « Télécharger »");
+    if (process.env.OXOAI_SANS_CLE_EDITEUR === "1") {
+      console.log("  • clé de l'éditeur (Windows) : aucune (OXOAI_SANS_CLE_EDITEUR=1) ; ces postes garderont « Télécharger »");
       return;
     }
     throw new Error(
       `Clé d'éditeur introuvable (${chemin}). Créez-la une fois avec « npm run cle:editeur », ` +
-        "ou fabriquez sans mise à jour d'un clic avec HELIX_SANS_CLE_EDITEUR=1.",
+        "ou fabriquez sans mise à jour d'un clic avec OXOAI_SANS_CLE_EDITEUR=1.",
     );
   }
   const privee = crypto.createPrivateKey(fs.readFileSync(chemin, "utf8"));

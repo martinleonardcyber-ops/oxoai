@@ -83,7 +83,7 @@ export function fabriquerAutoSigne(nom: string, noms: string[], ips: string[], j
   const brute = spki.subarray(spki.length - 65);
   const idCle = createHash("sha1").update(brute).digest();
 
-  const cn = nom.replace(/[^\x20-\x7e]/g, "").slice(0, 64) || "helix";
+  const cn = nom.replace(/[^\x20-\x7e]/g, "").slice(0, 64) || "oxoai";
   const sujet = sequence(ensemble(sequence(oid("2.5.4.3"), tlv(0x0c, Buffer.from(cn, "utf8")))));
   const maintenant = Date.now();
   const validite = sequence(date(new Date(maintenant - 24 * 3600 * 1000)), date(new Date(maintenant + jours * 24 * 3600 * 1000)));

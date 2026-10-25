@@ -47,18 +47,18 @@ const poster = (chemin: string, corps: unknown) =>
   apiFetch(chemin, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(corps) });
 
 export async function chargerClesApi(): Promise<EtatClesApi> {
-  return lire(await apiFetch("/helix/cles-api"));
+  return lire(await apiFetch("/oxoai/cles-api"));
 }
 
 /** Rend la clé en clair : c'est la seule fois qu'elle existe hors du programme qui la recevra. */
 export async function creerCleApi(nom: string, jours: number | null, motDePasse: string, code?: string): Promise<{ cle: CleApi; secret: string }> {
-  return lire(await poster("/helix/cles-api", { nom, jours, motDePasse, ...(code ? { code } : {}) }));
+  return lire(await poster("/oxoai/cles-api", { nom, jours, motDePasse, ...(code ? { code } : {}) }));
 }
 
 export async function renommerCleApi(id: string, nom: string): Promise<CleApi> {
-  return (await lire<{ cle: CleApi }>(await poster(`/helix/cles-api/${encodeURIComponent(id)}`, { nom }))).cle;
+  return (await lire<{ cle: CleApi }>(await poster(`/oxoai/cles-api/${encodeURIComponent(id)}`, { nom }))).cle;
 }
 
 export async function revoquerCleApi(id: string): Promise<void> {
-  await lire(await poster(`/helix/cles-api/${encodeURIComponent(id)}/revoquer`, {}));
+  await lire(await poster(`/oxoai/cles-api/${encodeURIComponent(id)}/revoquer`, {}));
 }

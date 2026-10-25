@@ -17,12 +17,12 @@ release
 # Captures de référence du cadrage (autre produit) : gardées sur le poste, pas dans le dépôt.
 screenshots/
 
-# Clés et certificats : jamais dans le dépôt. La clé de l'éditeur vit dans ~/.helix-editeur (SIGNATURE.md),
+# Clés et certificats : jamais dans le dépôt. La clé de l'éditeur vit dans ~/.oxoai-editeur (SIGNATURE.md),
 # ce filet rattrape une copie posée ici par erreur (audit du 27/09/2026).
 *.pem
 *.p12
 *.p8
 *.key
-.helix-editeur/
+.oxoai-editeur/
 .env
 .env.*

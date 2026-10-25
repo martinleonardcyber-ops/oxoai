@@ -120,6 +120,7 @@ export function SignalerProbleme() {
         </Card>
       )}
 
+      {branding.urls.supportEmail && (
       <Card className="space-y-3">
         <p className="text-sm font-medium text-foreground">{t("Envoyer par mail")}</p>
         <p className="text-sm text-muted-foreground">
@@ -136,6 +137,7 @@ export function SignalerProbleme() {
           )}
         </div>
       </Card>
+      )}
 
       <p className="text-xs leading-relaxed text-muted-foreground">
         {t("Rien ne part en arrière-plan : l'application ne détient aucun accès à GitHub ni à une messagerie. C'est vous qui envoyez, après avoir relu.")}

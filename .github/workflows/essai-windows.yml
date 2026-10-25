@@ -1,11 +1,11 @@
 # Essai Windows de bout en bout (28/09/2026) : sur une vraie machine Windows jetable,
-# l'application empaquetée (win-unpacked\Helix.exe) fait le parcours d'une personne :
+# l'application empaquetée (win-unpacked\OxoAI.exe) fait le parcours d'une personne :
 # compte administrateur, moteur de LM Studio, modèle local, une question au Chat.
 # Le pilotage est dans scripts/essai-windows-ci.mjs (mode d'emploi en tête) ; les journaux
 # (passerelle.log, sortie de l'application, dossier de LM Studio) sont gardés en artefact,
 # que l'essai passe ou non. Avant chaque publication, cet essai doit être vert (docs/GUIDE.md).
 # Depuis le 29/09/2026, il garde aussi le flux brut de la réflexion du modèle (moteur seul, relais
-# et Chat de Helix, scripts/essai-reflexion-ci.mjs), et le même essai tourne sous Linux (llmster).
+# et Chat de OxoAI, scripts/essai-reflexion-ci.mjs), et le même essai tourne sous Linux (llmster).
 name: Essai Windows
 
 on:
@@ -16,7 +16,7 @@ on:
       - "gateway/**"
       - "electron/**"
       - "src/**"
-      # La commande helix (04/10/2026) : l'étape 7 de l'essai la met en place et la lance.
+      # La commande oxoai (04/10/2026) : l'étape 7 de l'essai la met en place et la lance.
       - "cli/**"
       - "package.json"
       - "scripts/essai-windows-ci.mjs"
@@ -61,14 +61,14 @@ jobs:
       - name: Empaqueter l'application Windows (dossier, sans signature ni publication)
         env:
           # Pas de clé d'éditeur sur cette machine : l'application d'essai garde « Télécharger » pour ses mises à jour.
-          HELIX_SANS_CLE_EDITEUR: "1"
+          OXOAI_SANS_CLE_EDITEUR: "1"
           CSC_IDENTITY_AUTO_DISCOVERY: "false"
         run: npx electron-builder --win dir --x64 --publish never
 
       - name: Parcours d'une personne (application empaquetée)
         env:
-          HELIX_ESSAI_MACHINE_JETABLE: "1"
-        run: node scripts/essai-windows-ci.mjs --app release/win-unpacked/Helix.exe --modele qwen3-1.7b --sortie essai-windows-sortie --delai-minutes 45
+          OXOAI_ESSAI_MACHINE_JETABLE: "1"
+        run: node scripts/essai-windows-ci.mjs --app release/win-unpacked/OxoAI.exe --modele qwen3-1.7b --sortie essai-windows-sortie --delai-minutes 45
 
       - name: Garder les journaux
         if: always()
@@ -97,7 +97,7 @@ jobs:
           node-version: 24
           cache: npm
 
-      # La passerelle importe le SDK MCP (gateway/src/mcp.ts) : sans lui elle ne démarre pas (vu le 02/10/2026). OpenCode, lui, est celui que Helix pose.
+      # La passerelle importe le SDK MCP (gateway/src/mcp.ts) : sans lui elle ne démarre pas (vu le 02/10/2026). OpenCode, lui, est celui que OxoAI pose.
       - name: Dépendances
         run: npm ci
 
@@ -132,9 +132,9 @@ jobs:
       - name: Dépendances
         run: npm ci
 
-      - name: Réflexion du modèle (moteur seul, relais et Chat de Helix)
+      - name: Réflexion du modèle (moteur seul, relais et Chat de OxoAI)
         env:
-          HELIX_ESSAI_MACHINE_JETABLE: "1"
+          OXOAI_ESSAI_MACHINE_JETABLE: "1"
         run: node scripts/essai-reflexion-ci.mjs --modeles qwen3-1.7b,qwen/qwen3.5-2b --sortie essai-reflexion-sortie
 
       - name: Garder les flux et les journaux

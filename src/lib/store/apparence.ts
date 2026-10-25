@@ -11,9 +11,9 @@ import { t } from "@/lib/i18n";
  * de l'atelier.
  */
 
-const CLE = "helix:apparence";
+const CLE = "oxoai:apparence";
 /** Dernier thème réellement appliqué : sert à peindre juste avant le premier rendu. */
-const CLE_RESOLU = "helix:apparence-resolue";
+const CLE_RESOLU = "oxoai:apparence-resolue";
 
 export type ModeApparence = "clair" | "sombre" | "soleil" | "systeme";
 export type Theme = "clair" | "sombre";

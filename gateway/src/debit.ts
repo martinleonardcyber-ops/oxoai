@@ -2,8 +2,8 @@
  * Limitation de débit.
  *
  * La passerelle n'en avait aucune. Deux routes suffisaient à la mettre à
- * genoux : `GET /helix/export` relit tout le magasin **et** quatre-vingt-dix
- * jours de journal, et `GET /helix/audit` relit le fichier du jour deux fois,
+ * genoux : `GET /oxoai/export` relit tout le magasin **et** quatre-vingt-dix
+ * jours de journal, et `GET /oxoai/audit` relit le fichier du jour deux fois,
  * dont un passage qui recalcule un HMAC par ligne. Quelques appels simultanés
  * d'une seule séance, et le processus tombe — c'est-à-dire que le produit
  * s'arrête, pour tout le monde.
@@ -32,37 +32,37 @@ interface Regle {
  */
 const REGLES: { methode: string; chemin: string; regle: Regle }[] = [
   // Relit tout le magasin et 90 jours de journal, en une requête.
-  { methode: "GET", chemin: "/helix/export", regle: { max: 3, fenetreMs: 60_000 } },
+  { methode: "GET", chemin: "/oxoai/export", regle: { max: 3, fenetreMs: 60_000 } },
   // Relit et rehache le journal du jour, deux fois.
-  { methode: "GET", chemin: "/helix/audit", regle: { max: 30, fenetreMs: 60_000 } },
+  { methode: "GET", chemin: "/oxoai/audit", regle: { max: 30, fenetreMs: 60_000 } },
   // Fait tourner un interpréteur sur un fichier son.
-  { methode: "POST", chemin: "/helix/dictee", regle: { max: 30, fenetreMs: 60_000 } },
+  { methode: "POST", chemin: "/oxoai/dictee", regle: { max: 30, fenetreMs: 60_000 } },
   /*
    * Authentification : le verrouillage par compte existe déjà (accounts.ts),
    * mais il ne coûte rien d'essayer mille comptes différents. Ici on compte
    * par appelant, quel que soit le compte visé.
    */
-  { methode: "POST", chemin: "/helix/auth/verify", regle: { max: 30, fenetreMs: 60_000 } },
-  { methode: "POST", chemin: "/helix/auth/deux-facteurs", regle: { max: 30, fenetreMs: 60_000 } },
-  { methode: "POST", chemin: "/helix/auth/premier-mot-de-passe", regle: { max: 10, fenetreMs: 60_000 } },
-  { methode: "POST", chemin: "/helix/auth/mot-de-passe-provisoire", regle: { max: 10, fenetreMs: 60_000 } },
-  { methode: "POST", chemin: "/helix/auth/create", regle: { max: 10, fenetreMs: 60_000 } },
+  { methode: "POST", chemin: "/oxoai/auth/verify", regle: { max: 30, fenetreMs: 60_000 } },
+  { methode: "POST", chemin: "/oxoai/auth/deux-facteurs", regle: { max: 30, fenetreMs: 60_000 } },
+  { methode: "POST", chemin: "/oxoai/auth/premier-mot-de-passe", regle: { max: 10, fenetreMs: 60_000 } },
+  { methode: "POST", chemin: "/oxoai/auth/mot-de-passe-provisoire", regle: { max: 10, fenetreMs: 60_000 } },
+  { methode: "POST", chemin: "/oxoai/auth/create", regle: { max: 10, fenetreMs: 60_000 } },
   /*
    * Mot de passe oublié (23/10/2026). Un code de récupération fait dix
    * caractères d'un alphabet de 31 (environ 49 bits) : le deviner est hors de
    * portée, le blocage par compte s'ajoute. Tirer des codes et réinitialiser
    * un collègue redemandent un mot de passe : même frein que la connexion.
    */
-  { methode: "POST", chemin: "/helix/auth/recuperer", regle: { max: 10, fenetreMs: 60_000 } },
-  { methode: "POST", chemin: "/helix/auth/codes-recuperation", regle: { max: 10, fenetreMs: 60_000 } },
-  { methode: "POST", chemin: "/helix/auth/reinitialiser", regle: { max: 10, fenetreMs: 60_000 } },
+  { methode: "POST", chemin: "/oxoai/auth/recuperer", regle: { max: 10, fenetreMs: 60_000 } },
+  { methode: "POST", chemin: "/oxoai/auth/codes-recuperation", regle: { max: 10, fenetreMs: 60_000 } },
+  { methode: "POST", chemin: "/oxoai/auth/reinitialiser", regle: { max: 10, fenetreMs: 60_000 } },
   /*
    * Rattachement par code d'invitation : c'est la seule route publique qui
    * remet le jeton d'instance. Un code fait quatre groupes de quatre
    * caractères tirés d'un alphabet de trente, soit environ 82 bits : le
    * deviner est hors de portée. La limite est là pour que personne n'essaie.
    */
-  { methode: "POST", chemin: "/helix/invitations/rejoindre", regle: { max: 10, fenetreMs: 60_000 } },
+  { methode: "POST", chemin: "/oxoai/invitations/rejoindre", regle: { max: 10, fenetreMs: 60_000 } },
   /*
    * Notifications de WhatsApp (natifs/messageries.ts) : publiques, et chacune
    * coûte un HMAC. Meta les groupe (jusqu'à 1000 par envoi) : 300 par minute
@@ -73,8 +73,8 @@ const REGLES: { methode: string; chemin: string; regle: Regle }[] = [
    * signature de la bonne forme (natifs/messageries.ts, `CHEMIN_DEBIT_SIGNE`,
    * tournée du 28/09/2026) : ce chemin n'est celui d'aucune requête.
    */
-  { methode: "POST", chemin: "/helix/messageries/whatsapp/webhook#signee", regle: { max: 300, fenetreMs: 60_000 } },
-  { methode: "GET", chemin: "/helix/messageries/whatsapp/webhook", regle: { max: 30, fenetreMs: 60_000 } },
+  { methode: "POST", chemin: "/oxoai/messageries/whatsapp/webhook#signee", regle: { max: 300, fenetreMs: 60_000 } },
+  { methode: "GET", chemin: "/oxoai/messageries/whatsapp/webhook", regle: { max: 30, fenetreMs: 60_000 } },
 ];
 
 /** Plus ancien que la plus longue fenêtre : on peut oublier l'appelant. */

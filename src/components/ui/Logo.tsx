@@ -4,12 +4,9 @@ import { cn } from "@/lib/cn";
 import { t, tf } from "@/lib/i18n";
 
 /**
- * Logos Helix (assets pilotes par branding.ts — rebrander = changer branding.ts).
- * Le mark est un trace filaire noir sur fond transparent : la classe
- * `.logo-marque` (voir styles/index.css) l'inverse en blanc en theme sombre,
- * sans quoi un trace noir sur fond sombre ne se verrait plus du tout. Un logo
- * livre sur fond blanc opaque se prepare une fois avec
- * `scripts/icones/marque-transparente.mjs`.
+ * Logos OxoAI (assets pilotes par branding.ts — rebrander = changer branding.ts).
+ * Le mark est la tuile en dégradé d'OxoAI (scripts/marque/oxoai_marque.py) :
+ * en couleur, il se lit sur les deux thèmes et n'est donc jamais inversé.
  */
 
 interface LogoMarkProps {
@@ -29,7 +26,7 @@ export function LogoMark({ size = 40, className, animated }: LogoMarkProps) {
       height={size}
       draggable={false}
       className={cn(
-        "select-none object-contain logo-marque",
+        "select-none object-contain",
         animated && "animate-logo",
         className,
       )}
@@ -41,7 +38,7 @@ export function LogoMark({ size = 40, className, animated }: LogoMarkProps) {
 interface LogoProps {
   /** Hauteur du mark en px. */
   height?: number;
-  /** Affiche le mot-repere « Helix » a cote du mark. */
+  /** Affiche le mot-repere « OxoAI » a cote du mark. */
   withWordmark?: boolean;
   className?: string;
 }

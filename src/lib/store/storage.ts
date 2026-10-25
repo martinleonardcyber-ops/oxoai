@@ -12,7 +12,7 @@ import { ecrireSecret, lireSecret } from "@/lib/coffre";
 import { auGrand, ecrireGrand, lireGrand } from "./grandStockage";
 import { refuseesParLeNavigateur } from "./secours";
 
-const PREFIX = "helix:";
+const PREFIX = "oxoai:";
 
 /**
  * Collection concernée par une clé locale, s'il y en a une.
@@ -85,7 +85,7 @@ export const storage = {
     } catch {
       // Quota dépassé : gardée en mémoire, et envoyée quand même à l'instance (secours.ts).
       refuseesParLeNavigateur.set(PREFIX + key, JSON.stringify(value));
-      console.warn(`[helix] stockage du navigateur plein : « ${key} » est gardé en mémoire et envoyé à l'instance.`);
+      console.warn(`[oxoai] stockage du navigateur plein : « ${key} » est gardé en mémoire et envoyé à l'instance.`);
     }
     const collection = collectionOf(key);
     if (collection) void push(collection);

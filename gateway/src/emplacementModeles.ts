@@ -37,15 +37,15 @@ import { deplacerModelesLlama, deplacementLlamaEnCours, octetsModelesLlama, tele
  * ── Comment ─────────────────────────────────────────────────────────────────
  *
  *  - LM Studio, avant la première installation (ni moteur, ni modèle, ni
- *    téléchargement commencé, nulle part) : Helix écrit
+ *    téléchargement commencé, nulle part) : OxoAI écrit
  *    `~/.lmstudio-home-pointer` vers `<dossier choisi>/LM Studio`. C'est le
  *    fichier par lequel LM Studio trouve son dossier tout entier (engine.ts,
  *    code ouvert lu le 28/09/2026) : moteur, téléchargements en cours et
  *    modèles vont alors sur ce disque. Jamais après : déplacer le dossier
  *    d'un LM Studio qui tourne peut abîmer ce qu'il écrit. L'écran dit
- *    alors comment faire soi-même, Helix fermé.
+ *    alors comment faire soi-même, OxoAI fermé.
  *  - llama.cpp (Mac Intel) : les modèles vont dans
- *    `<dossier choisi>/modeles-llamacpp` (llamaCppBase.ts). Après coup, Helix
+ *    `<dossier choisi>/modeles-llamacpp` (llamaCppBase.ts). Après coup, OxoAI
  *    les déplace lui-même (llamaCpp.ts, `deplacerModelesLlama`) : le moteur
  *    est à lui, il sait l'arrêter.
  *
@@ -65,7 +65,7 @@ import { deplacerModelesLlama, deplacementLlamaEnCours, octetsModelesLlama, tele
 
 export type MoteurLocal = "lmstudio" | "llamacpp";
 
-/** Le sous-dossier créé dans le dossier choisi : les données de Helix n'y sont jamais mêlées à ce qui s'y trouve. */
+/** Le sous-dossier créé dans le dossier choisi : les données de OxoAI n'y sont jamais mêlées à ce qui s'y trouve. */
 export const sousDossier = (moteur: MoteurLocal): string => (moteur === "lmstudio" ? "LM Studio" : SOUS_DOSSIER_LLAMA);
 
 /** Forme de comparaison : macOS et Windows ignorent la casse. */
@@ -274,7 +274,7 @@ export function validerEmplacement(brut: unknown, moteur: MoteurLocal, creer: bo
       annuler();
       return refus(t("Ce dossier appartient à un autre compte de la machine : choisissez-en un à vous."));
     }
-    const sonde = join(dossier, `.helix-essai-${randomBytes(4).toString("hex")}`);
+    const sonde = join(dossier, `.oxoai-essai-${randomBytes(4).toString("hex")}`);
     writeFileSync(sonde, "essai", { flag: "wx" });
     rmSync(sonde, { force: true });
   } catch (err) {
@@ -547,7 +547,7 @@ function choisirLlama(brut: unknown): Issue {
   })
     .then(() => {
       deplacement = { phase: "fini", message: t("Modèles déplacés."), percent: 100 };
-      console.log(`[helix] modèles du moteur ouvert déplacés vers ${dossierModelesLlama()}.`);
+      console.log(`[oxoai] modèles du moteur ouvert déplacés vers ${dossierModelesLlama()}.`);
     })
     .catch((err: unknown) => {
       retirerCrees(cible ?? dossierModelesParDefaut(), cree);

@@ -1,13 +1,13 @@
 /**
- * La signature de l'éditeur sur une application Helix, pour les mises à jour
+ * La signature de l'éditeur sur une application OxoAI, pour les mises à jour
  * d'un clic sans signature Apple.
  *
  * Pourquoi (revue de sécurité du 26/09/2026, SECURITE.md § 28, décidé par
  * Medhi le 27/09) : un poste se met à jour depuis l'instance à laquelle il est
  * rattaché, qui lui donne l'annonce, l'archive ET son empreinte. Une instance
  * piratée pouvait donc faire installer n'importe quelle application sous le
- * nom de Helix, avec l'empreinte qui va avec, et elle aurait hérité des
- * autorisations de macOS accordées à Helix (écran, accessibilité, micro).
+ * nom de OxoAI, avec l'empreinte qui va avec, et elle aurait hérité des
+ * autorisations de macOS accordées à OxoAI (écran, accessibilité, micro).
  *
  * Désormais :
  *  - à la fabrication (`npm run package`, scripts/signature/signer-mise-a-jour.cjs),
@@ -37,9 +37,9 @@ const crypto = require("node:crypto");
 const fs = process.versions.electron ? require("original-fs") : require("node:fs");
 const path = require("node:path");
 
-const FICHIER_SIGNATURE = "helix-signature.json";
+const FICHIER_SIGNATURE = "oxoai-signature.json";
 const FICHIER_CLE = "cle-editeur.pem";
-const ENTETE = "helix-mise-a-jour-v1";
+const ENTETE = "oxoai-mise-a-jour-v1";
 
 const ressources = (app) => path.join(app, "Contents", "Resources");
 
@@ -79,7 +79,7 @@ function estMachO(chemin) {
 
 async function empreinteSansSignatureDeCode(chemin) {
   if (process.platform !== "darwin" || !estMachO(chemin)) return empreinteFichier(chemin);
-  const dossier = fs.mkdtempSync(path.join(require("node:os").tmpdir(), "helix-releve-"));
+  const dossier = fs.mkdtempSync(path.join(require("node:os").tmpdir(), "oxoai-releve-"));
   const copie = path.join(dossier, "programme");
   try {
     fs.copyFileSync(chemin, copie);
@@ -102,7 +102,7 @@ async function empreinteSansSignatureDeCode(chemin) {
  * quelle forme, ils laissaient une archive ajouter des fichiers où elle
  * voulait (`Contents/Resources/_CodeSignature/…`, ou un lien de ce nom) sans
  * toucher au relevé signé. L'application publiée n'en a pas d'autres (relevé
- * sur release/mac-arm64/Helix.app : neuf, tous à ces places) : le relevé d'une
+ * sur release/mac-arm64/OxoAI.app : neuf, tous à ces places) : le relevé d'une
  * application authentique ne change pas, et les postes déjà installés,
  * qui écartent encore tout `_CodeSignature`, calculent le même.
  */
@@ -153,7 +153,7 @@ async function releve(app, { droits = null } = {}) {
  * d'installation déplaçait le tout dans /Applications. N'importe quel autre
  * compte du Mac (ou un service qui tourne sous un autre utilisateur) pouvait
  * ensuite remplacer `app.asar`, et son code tournait sous le compte de la
- * personne, avec les autorisations accordées à Helix (écran, accessibilité,
+ * personne, avec les autorisations accordées à OxoAI (écran, accessibilité,
  * micro, trousseau).
  *
  * Le relevé lui-même ne change pas : le poste qui vérifie n'est pas celui qui
@@ -161,7 +161,7 @@ async function releve(app, { droits = null } = {}) {
  * suivantes aux postes déjà installés. Les droits sont donc remis d'aplomb
  * avant la vérification (`assainirDroits`), puis contrôlés à part : écriture
  * pour le groupe ou pour les autres, setuid, setgid, sticky. L'application
- * publiée n'en porte aucun (relevé sur Helix-2026.927.4-arm64-mac.zip).
+ * publiée n'en porte aucun (relevé sur OxoAI-2026.927.4-arm64-mac.zip).
  */
 const DROITS_INTERDITS = 0o7022;
 
@@ -196,8 +196,8 @@ function assainirDroits(app) {
  * `com.apple.security.cs.allow-dyld-environment-variables` : la signature de
  * l'éditeur passait. Reproduit sur une copie de programme : relevé identique,
  * durcissement perdu. Un programme du même compte pouvait ensuite faire
- * charger sa bibliothèque à Helix (DYLD_INSERT_LIBRARIES) ou s'y attacher, et
- * agir avec les autorisations accordées à Helix (écran, accessibilité, micro).
+ * charger sa bibliothèque à OxoAI (DYLD_INSERT_LIBRARIES) ou s'y attacher, et
+ * agir avec les autorisations accordées à OxoAI (écran, accessibilité, micro).
  *
  * La règle : rien de plus que l'application qui tourne. Chaque droit d'un
  * programme de la nouvelle doit exister, avec la même valeur, dans
@@ -319,7 +319,7 @@ function cleDeLApplication(app) {
 async function verifierApplication(app, clePubliquePem, { identifiant, version }) {
   /*
    * Un vrai dossier, pas un lien symbolique (test d'intrusion du 27/09/2026) :
-   * une archive dont « Helix.app » n'était qu'un lien vers une application
+   * une archive dont « OxoAI.app » n'était qu'un lien vers une application
    * signée posée ailleurs passait la vérification (le relevé lisait à travers
    * le lien), puis le script d'installation déplaçait le lien lui-même dans
    * /Applications. Ce qui s'ouvrait ensuite était ce que la cible du lien
@@ -359,7 +359,7 @@ async function verifierApplication(app, clePubliquePem, { identifiant, version }
  * vrai PC : « que Windows se mette à jour tout seul, d'un clic, comme le Mac »).
  *
  * Sous Windows, ce qui s'installe est un seul fichier, l'installateur NSIS
- * (`Helix-Setup-<version>-x64.exe`), et il arrive tel qu'il a été fabriqué :
+ * (`OxoAI-Setup-<version>-x64.exe`), et il arrive tel qu'il a été fabriqué :
  * pas d'instance qui refait une archive. La signature porte donc sur ses
  * octets (empreinte SHA-512), avec son nom, sa taille, l'identifiant et la
  * version, et elle est écrite dans le manifeste de la publication
@@ -368,7 +368,7 @@ async function verifierApplication(app, clePubliquePem, { identifiant, version }
  * la fabrication par scripts/signature/cle-windows.cjs), jamais avec une clé
  * venue de la publication.
  */
-const ENTETE_WINDOWS = "helix-installateur-windows-v1";
+const ENTETE_WINDOWS = "oxoai-installateur-windows-v1";
 
 const donneesInstallateur = ({ identifiant, version, fichier, sha512, octets }) =>
   Buffer.from(`${ENTETE_WINDOWS}\n${identifiant}\n${version}\n${fichier}\n${sha512}\n${octets}`, "utf8");
@@ -400,7 +400,7 @@ function verifierInstallateur(clePubliquePem, signature, description) {
 
 /**
  * La clé publique posée dans un dossier de ressources (`process.resourcesPath`
- * d'une application empaquetée : `Helix.app/Contents/Resources` sur macOS,
+ * d'une application empaquetée : `OxoAI.app/Contents/Resources` sur macOS,
  * `<dossier d'installation>\resources` sous Windows), ou null.
  */
 function cleDesRessources(dossier) {

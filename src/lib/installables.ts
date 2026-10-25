@@ -20,7 +20,7 @@ export interface ModeleInstallable {
   raisonne?: boolean;
   /** Architecture à experts : rapide même sans carte graphique. */
   moe?: boolean;
-  /** Essayé avec Helix (raisonnement, outils) ; sinon proposé en le disant. */
+  /** Essayé avec OxoAI (raisonnement, outils) ; sinon proposé en le disant. */
   verifie: boolean;
 }
 
@@ -68,7 +68,7 @@ interface Reponse {
  * (profil client) ou si le moteur est absent : rien à proposer alors.
  */
 export async function lireInstallables(): Promise<{ liste: ModeleInstallable[]; etat?: EtatInstallation; local: boolean }> {
-  const res = await apiFetch("/helix/provision");
+  const res = await apiFetch("/oxoai/provision");
   if (!res.ok) return { liste: [], local: false };
   const corps = (await res.json().catch(() => ({}))) as Reponse;
   // `local` : les modèles s'installent sur cette machine (pas d'intégrateur qui les prépare).
@@ -83,7 +83,7 @@ export async function lireInstallables(): Promise<{ liste: ModeleInstallable[]; 
  * catalogue vide qu'on croirait réel.
  */
 export async function lireCatalogue(): Promise<EtatCatalogue> {
-  const res = await apiFetch("/helix/provision");
+  const res = await apiFetch("/oxoai/provision");
   if (!res.ok) throw new Error(t("L'instance n'a pas répondu."));
   const corps = (await res.json().catch(() => ({}))) as Reponse;
   return {
@@ -103,7 +103,7 @@ export async function lireCatalogue(): Promise<EtatCatalogue> {
  */
 export async function demanderInstallation(m: Pick<ModeleInstallable, "key" | "role">): Promise<string | null> {
   try {
-    const res = await apiFetch("/helix/provision/start", {
+    const res = await apiFetch("/oxoai/provision/start", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ model: m.key, role: m.role }),

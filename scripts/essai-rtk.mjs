@@ -1,5 +1,5 @@
 /*
- * RTK de bout en bout dans Helix Code, avec le vrai OpenCode et le vrai RTK.
+ * RTK de bout en bout dans OxoAI Code, avec le vrai OpenCode et le vrai RTK.
  *
  *   node scripts/essai-rtk.mjs
  *
@@ -10,7 +10,7 @@
  *    fichier, faux `security` en tête du PATH, LM Studio éteint) pose RTK
  *    elle-même : téléchargement de la version épinglée depuis github.com,
  *    empreinte vérifiée ;
- *  - le vrai OpenCode (`~/.opencode/bin/opencode`, ou `HELIX_ESSAI_OPENCODE`)
+ *  - le vrai OpenCode (`~/.opencode/bin/opencode`, ou `OXOAI_ESSAI_OPENCODE`)
  *    tourne avec un dossier personnel jetable, et **aucun modèle** : un faux
  *    fournisseur, servi ici, joue le modèle et demande une commande `bash` ;
  *  - la carte d'accord montre la commande d'origine, l'accord la fait passer
@@ -22,7 +22,7 @@
  *    marque d'envoi (témoin sans la variable, réseau coupé par sandbox-exec).
  *
  * Rien n'est installé sur le poste : tout vit dans un dossier temporaire,
- * effacé à la fin. Aucun port fixe, ni `~/.helix`, ni trousseau, ni `lms`.
+ * effacé à la fin. Aucun port fixe, ni `~/.oxoai`, ni trousseau, ni `lms`.
  */
 import { execFileSync, spawn } from "node:child_process";
 import { chmodSync, copyFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
@@ -33,7 +33,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const RACINE = join(dirname(fileURLToPath(import.meta.url)), "..");
-const OPENCODE = process.env.HELIX_ESSAI_OPENCODE ?? join(homedir(), ".opencode", "bin", "opencode");
+const OPENCODE = process.env.OXOAI_ESSAI_OPENCODE ?? join(homedir(), ".opencode", "bin", "opencode");
 if (!existsSync(OPENCODE)) {
   console.log(`OpenCode introuvable (${OPENCODE}) : essai impossible sur ce poste.`);
   process.exit(2);
@@ -48,7 +48,7 @@ const portLibre = () =>
   });
 const attendre = (ms) => new Promise((r) => setTimeout(r, ms));
 
-const TMP = mkdtempSync(join(tmpdir(), "helix-essai-rtk-"));
+const TMP = mkdtempSync(join(tmpdir(), "oxoai-essai-rtk-"));
 const MAISON = join(TMP, "maison");
 const DONNEES = join(TMP, "donnees");
 const PROJET = join(TMP, "projet");
@@ -147,13 +147,13 @@ const passerelle = spawn(process.execPath, [join(RACINE, "gateway", "src", "inde
     HOME: MAISON,
     LANG: "C",
     SHELL: "/bin/zsh",
-    HELIX_CONFIG: join(TMP, "profil.json"),
-    HELIX_DATA_DIR: DONNEES,
-    HELIX_GATEWAY_PORT: String(PORT),
-    HELIX_OPENCODE_BIN: OPENCODE,
-    HELIX_CODE_DIR: PROJET,
-    HELIX_LMSTUDIO_URL: "http://127.0.0.1:9/v1",
-    HELIX_EXO_URL: `http://127.0.0.1:${PORT_LOCAL}/v1`,
+    OXOAI_CONFIG: join(TMP, "profil.json"),
+    OXOAI_DATA_DIR: DONNEES,
+    OXOAI_GATEWAY_PORT: String(PORT),
+    OXOAI_OPENCODE_BIN: OPENCODE,
+    OXOAI_CODE_DIR: PROJET,
+    OXOAI_LMSTUDIO_URL: "http://127.0.0.1:9/v1",
+    OXOAI_EXO_URL: `http://127.0.0.1:${PORT_LOCAL}/v1`,
   },
   stdio: ["ignore", "pipe", "pipe"],
 });
@@ -184,39 +184,39 @@ try {
   }
   const JETON = readFileSync(join(DONNEES, "instance-token"), "utf8").trim();
   const avecJeton = { "Content-Type": "application/json", Authorization: `Bearer ${JETON}` };
-  const compte = await (await fetch(`${G}/helix/auth/create`, { method: "POST", headers: avecJeton, body: JSON.stringify({ fullName: "Essai RTK", email: "essai-rtk@example.test", password: "Essai2Rtk!Solide42" }) })).json();
-  const avecSeance = { ...avecJeton, "X-Helix-Session": compte.session?.token ?? "" };
+  const compte = await (await fetch(`${G}/oxoai/auth/create`, { method: "POST", headers: avecJeton, body: JSON.stringify({ fullName: "Essai RTK", email: "essai-rtk@example.test", password: "Essai2Rtk!Solide42" }) })).json();
+  const avecSeance = { ...avecJeton, "X-OxoAI-Session": compte.session?.token ?? "" };
   const appel = (chemin, options = {}) => fetch(`${G}${chemin}`, { headers: avecSeance, ...options });
   const json = async (chemin, options) => (await appel(chemin, options)).json().catch(() => ({}));
 
-  const ouvrir = async (modele) => (await json("/helix/code/session", { method: "POST", body: JSON.stringify({ model: modele, dossier: PROJET }) })).data?.id;
+  const ouvrir = async (modele) => (await json("/oxoai/code/session", { method: "POST", body: JSON.stringify({ model: modele, dossier: PROJET }) })).data?.id;
   console.log("\nInstallation de RTK par la passerelle");
   const premiere = await ouvrir("nuage-essai");
   let etat = {};
   for (let i = 0; i < 240; i++) {
-    etat = (await json("/helix/code/rtk")).etat ?? {};
+    etat = (await json("/oxoai/code/rtk")).etat ?? {};
     if (etat.installe || etat.installation?.erreur) break;
     await attendre(500);
   }
   verifier("RTK 0.50.0 posé par la passerelle dans ses données (version épinglée, empreinte vérifiée)", etat.installe === true && existsSync(join(DONNEES, "rtk", "0.50.0", "rtk")), JSON.stringify(etat));
   const config = JSON.parse(readFileSync(join(DONNEES, "opencode", "opencode.json"), "utf8"));
-  verifier("OpenCode lance ses commandes par l'enveloppe de Helix", config.shell === join(DONNEES, "rtk", "shell-code"), config.shell);
+  verifier("OpenCode lance ses commandes par l'enveloppe de OxoAI", config.shell === join(DONNEES, "rtk", "shell-code"), config.shell);
 
   /** Une demande, et la carte qu'elle fait naître : on la lit, on y répond. */
   const tour = async ({ modele, repere, rtk, accord = true, session }) => {
     const id = session ?? (await ouvrir(modele));
     const avant = RESULTATS.length;
-    const envoi = appel("/helix/code/prompt", { method: "POST", body: JSON.stringify({ sessionID: id, text: `Lance la commande prévue. ${repere}`, model: modele, rtk }) }).then((r) => r.text());
+    const envoi = appel("/oxoai/code/prompt", { method: "POST", body: JSON.stringify({ sessionID: id, text: `Lance la commande prévue. ${repere}`, model: modele, rtk }) }).then((r) => r.text());
     let carte;
     for (let i = 0; i < 120 && !carte; i++) {
-      carte = ((await json("/helix/approbation")).enAttente ?? []).find((c) => c.detail?.surface === "code");
+      carte = ((await json("/oxoai/approbation")).enAttente ?? []).find((c) => c.detail?.surface === "code");
       if (!carte) await attendre(250);
     }
-    if (carte) await appel("/helix/approbation/repondre", { method: "POST", body: JSON.stringify({ id: carte.id, accord }) });
+    if (carte) await appel("/oxoai/approbation/repondre", { method: "POST", body: JSON.stringify({ id: carte.id, accord }) });
     await envoi;
     for (let i = 0; i < 120 && RESULTATS.length === avant; i++) await attendre(250);
-    // `HELIX_ESSAI_BAVARD=1` : ce que le modèle a lu, pour le relever (PROJET.md).
-    if (process.env.HELIX_ESSAI_BAVARD) console.log(`    [${modele}, ${repere}, ${rtk ?? "cloud"}] ${JSON.stringify(RESULTATS.slice(avant).map((x) => x.contenu).join("\n"))}`);
+    // `OXOAI_ESSAI_BAVARD=1` : ce que le modèle a lu, pour le relever (PROJET.md).
+    if (process.env.OXOAI_ESSAI_BAVARD) console.log(`    [${modele}, ${repere}, ${rtk ?? "cloud"}] ${JSON.stringify(RESULTATS.slice(avant).map((x) => x.contenu).join("\n"))}`);
     return { id, carte, resultat: RESULTATS.slice(avant).map((r) => r.contenu).join("\n") };
   };
 
@@ -224,7 +224,7 @@ try {
   const a = await tour({ modele: "nuage-essai", repere: "RTK-GIT", session: premiere });
   verifier("la carte d'accord montre la commande d'origine (« git status », pas « rtk git status »)", a.carte?.detail?.commande === "git status", JSON.stringify(a.carte?.detail ?? a.carte));
   verifier("la sortie lue par le modèle est celle de RTK (condensée, sans les phrases de git)", /\* main/.test(a.resultat) && !/Changes not staged|Untracked files|On branch/.test(a.resultat), a.resultat);
-  const gain = await json(`/helix/code/rtk?sessionID=${a.id}`);
+  const gain = await json(`/oxoai/code/rtk?sessionID=${a.id}`);
   verifier("jetons économisés mesurés par RTK pour cette session", gain.session?.actif === true && gain.session?.economies?.jetons > 0, JSON.stringify(gain.session));
   console.log(`    (${gain.session?.economies?.jetons} jetons économisés sur ${gain.session?.economies?.commandes} commande(s))`);
 
@@ -248,7 +248,7 @@ try {
    * un tel modèle cloud partait sans RTK en réglage « cloud ».
    */
   console.log("\nModèle cloud d'une clé personnelle");
-  const cle = await json("/helix/fournisseurs", {
+  const cle = await json("/oxoai/fournisseurs", {
     method: "POST",
     body: JSON.stringify({ fournisseur: "compatible", adresse: `http://127.0.0.1:${PORT_PERSO}/v1`, cle: "cle-essai-perso", nom: "Perso d'essai", modeles: ["perso-essai"], portee: "moi" }),
   });
@@ -262,7 +262,7 @@ try {
   rmSync(join(DONNEES, "rtk", "0.50.0"), { recursive: true, force: true });
   const sans = await tour({ modele: "nuage-essai", repere: "RTK-GIT" });
   verifier("RTK retiré : la commande passe quand même, sortie brute", /Changes not staged|On branch/.test(sans.resultat), sans.resultat);
-  await json(`/helix/code/rtk?sessionID=${sans.id}`);
+  await json(`/oxoai/code/rtk?sessionID=${sans.id}`);
   verifier("le repli est au journal de la passerelle", /\[rtk\] repli : .*RTK absent/.test(journal), journal.split("\n").filter((x) => x.includes("[rtk]")).join(" | "));
 } finally {
   passerelle.kill("SIGTERM");
@@ -272,7 +272,7 @@ try {
 /*
  * Télémétrie : RTK n'envoie rien que si un consentement est écrit dans sa
  * configuration. On l'écrit, dans un dossier personnel jetable, puis on lance
- * RTK comme Helix (variable posée) et sans elle (témoin). La marque
+ * RTK comme OxoAI (variable posée) et sans elle (témoin). La marque
  * `.telemetry_last_ping` est posée juste avant l'envoi (lu dans son code) :
  * elle dit si l'envoi aurait eu lieu. Réseau coupé pour le témoin.
  */

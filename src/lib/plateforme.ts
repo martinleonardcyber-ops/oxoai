@@ -7,7 +7,7 @@ export type Plateforme = "darwin" | "win32" | "linux";
 
 export function plateformePoste(): Plateforme | null {
   try {
-    const p = (window as unknown as { helix?: { plateforme?: unknown } }).helix?.plateforme;
+    const p = (window as unknown as { oxoai?: { plateforme?: unknown } }).oxoai?.plateforme;
     return p === "darwin" || p === "win32" || p === "linux" ? p : null;
   } catch {
     return null;

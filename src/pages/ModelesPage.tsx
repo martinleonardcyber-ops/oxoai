@@ -33,7 +33,7 @@ import {
  * Ouverte depuis le sélecteur de modèles du Chat (« Voir tous les modèles »),
  * qui garde sa courte liste.
  *
- * Même route d'installation que le sélecteur (`/helix/provision/start`) :
+ * Même route d'installation que le sélecteur (`/oxoai/provision/start`) :
  * une installation à la fois, suivie ici par l'état relu chaque seconde.
  */
 

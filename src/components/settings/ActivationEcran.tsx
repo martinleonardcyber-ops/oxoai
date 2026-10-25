@@ -18,7 +18,7 @@ type Systeme = "linux" | "macos";
  *
  * Deux possibilités, dans l'ordre où on les conseille :
  *  - **la machine de l'agent** (`sandbox`) : un ordinateur à part, isolé, que
- *    Helix prépare et démarre lui-même (gateway/src/machine.ts). C'était la
+ *    OxoAI prépare et démarre lui-même (gateway/src/machine.ts). C'était la
  *    décision de départ : une erreur de l'agent y reste enfermée, et la
  *    personne continue de travailler sur le sien. Le diagnostic dit si cet
  *    ordinateur peut la porter, et sinon pourquoi ;

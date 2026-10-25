@@ -3,7 +3,7 @@ import { journaliser } from "./audit.ts";
 import { applicationDeclaree, choixMoteurLmStudio, llmsterDeclare, retenirChoixMoteur, seuleApplicationDeclaree, type ChoixMoteurLmStudio } from "./engine.ts";
 
 /**
- * Quel moteur de LM Studio Helix a le droit de démarrer (23/10/2026) : voir
+ * Quel moteur de LM Studio OxoAI a le droit de démarrer (23/10/2026) : voir
  * engine.ts, « L'application LM Studio de la personne, et Bionic ».
  *
  * Le choix est rangé dans la collection interne `reglages` (comme le mode de
@@ -15,13 +15,13 @@ import { applicationDeclaree, choixMoteurLmStudio, llmsterDeclare, retenirChoixM
  * Les ports où `lms` cherche un service déjà à l'écoute avant d'en lancer un
  * (lmstudio-js, `lms-common/src/apiServerPorts.ts`, lu le 23/10/2026), et le
  * chemin qu'il interroge (`/lms-status`, réponse avec `package` et `version`).
- * `HELIX_PORTS_SERVICE_LMSTUDIO` (liste séparée par des virgules) les remplace
+ * `OXOAI_PORTS_SERVICE_LMSTUDIO` (liste séparée par des virgules) les remplace
  * pour les essais : jamais le LM Studio de la machine qui les fait tourner.
  */
 const PORTS_SERVICE = [41343, 52993, 16141, 39414, 22931];
 
 function portsDuService(): number[] {
-  const force = process.env.HELIX_PORTS_SERVICE_LMSTUDIO;
+  const force = process.env.OXOAI_PORTS_SERVICE_LMSTUDIO;
   if (force === undefined) return PORTS_SERVICE;
   return force
     .split(",")
@@ -50,7 +50,7 @@ export async function serviceLmStudioEcoute(): Promise<boolean> {
 }
 
 /**
- * Helix peut-il lancer une commande `lms` qui démarrerait un moteur ?
+ * OxoAI peut-il lancer une commande `lms` qui démarrerait un moteur ?
  *  - llmster déclaré, ou aucune application déclarée : oui (rien ne s'ouvre ;
  *    sans rien de déclaré, `lms` ne démarre rien du tout) ;
  *  - seule l'application de bureau est déclarée : si son service tourne déjà
@@ -62,7 +62,7 @@ export async function reveilPermis(): Promise<boolean> {
   return serviceLmStudioEcoute();
 }
 
-/** L'application LM Studio est fermée, et Helix attend que la personne choisisse : l'écran le dit. */
+/** L'application LM Studio est fermée, et OxoAI attend que la personne choisisse : l'écran le dit. */
 export async function applicationEnAttenteDeChoix(): Promise<boolean> {
   return seuleApplicationDeclaree() && choixMoteurLmStudio() === null && !(await serviceLmStudioEcoute());
 }

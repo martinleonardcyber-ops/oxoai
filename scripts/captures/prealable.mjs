@@ -8,7 +8,7 @@
  *    celle de Mistral pour la passerelle : c'est à elle qu'elle reconnaît le
  *    fournisseur et ses prix publiés (prixPublies.ts) ;
  *  - toute autre adresse hors de la boucle locale est refusée et notée dans
- *    le fichier `HELIX_CAPTURES_SORTIES` (le capteur dit à la fin ce qui a
+ *    le fichier `OXOAI_CAPTURES_SORTIES` (le capteur dit à la fin ce qui a
  *    voulu sortir) ;
  *  - le nom api.mistral.ai se résout sans DNS (une adresse de documentation,
  *    RFC 5737), pour que le contrôle des adresses sortantes (sortieReseau.ts)
@@ -18,8 +18,8 @@ import { appendFileSync } from "node:fs";
 import dns from "node:dns/promises";
 import { syncBuiltinESMExports } from "node:module";
 
-const FAUX = process.env.HELIX_CAPTURES_FAUX ?? "";
-const SORTIES = process.env.HELIX_CAPTURES_SORTIES ?? "";
+const FAUX = process.env.OXOAI_CAPTURES_FAUX ?? "";
+const SORTIES = process.env.OXOAI_CAPTURES_SORTIES ?? "";
 const LOCAUX = new Set(["127.0.0.1", "localhost", "[::1]", "::1"]);
 
 const lookupOrigine = dns.lookup;

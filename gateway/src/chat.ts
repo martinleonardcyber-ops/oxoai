@@ -89,7 +89,7 @@ import * as rechercheWeb from "./rechercheWeb.ts";
  *
  * Le modèle peut demander l'exécution d'outils MCP ; la passerelle les exécute
  * et relance le modèle avec les résultats, jusqu'à une réponse finale. Le front
- * reçoit un flux SSE compatible OpenAI, enrichi d'événements `helix` décrivant
+ * reçoit un flux SSE compatible OpenAI, enrichi d'événements `oxoai` décrivant
  * l'activité des outils.
  */
 
@@ -104,7 +104,7 @@ import * as rechercheWeb from "./rechercheWeb.ts";
  * Un petit modèle en consomme davantage qu'un grand — il se trompe de chemin,
  * relit, recommence. C'est précisément lui qu'il faut laisser respirer.
  */
-const MAX_ITERATIONS = Number(process.env.HELIX_MAX_ETAPES ?? 30);
+const MAX_ITERATIONS = Number(process.env.OXOAI_MAX_ETAPES ?? 30);
 
 /**
  * Marge de fin : avant d'atteindre le plafond, on demande à l'agent de
@@ -140,8 +140,8 @@ function emitContent(res: http.ServerResponse, text: string): void {
   sse(res, { choices: [{ index: 0, delta: { content: text } }] });
 }
 
-function emitHelix(res: http.ServerResponse, event: Record<string, unknown>): void {
-  sse(res, { helix: event });
+function emitOxoAI(res: http.ServerResponse, event: Record<string, unknown>): void {
+  sse(res, { oxoai: event });
 }
 
 /**
@@ -166,14 +166,14 @@ function attenteAffichee(res: http.ServerResponse, texte: (secondes: number) => 
     const secondes = Math.floor((Date.now() - debut) / 1000);
     if (fini || secondes < 3 || res.writableEnded) return;
     dit = true;
-    emitHelix(res, { type: "statut", message: texte(secondes) });
+    emitOxoAI(res, { type: "statut", message: texte(secondes) });
   }, 1000);
   minuterie.unref?.();
   return () => {
     if (fini) return;
     fini = true;
     clearInterval(minuterie);
-    if (dit && !res.writableEnded) emitHelix(res, { type: "statut", message: "" });
+    if (dit && !res.writableEnded) emitOxoAI(res, { type: "statut", message: "" });
   };
 }
 
@@ -255,7 +255,7 @@ async function consumeUpstream(
       const n = Math.min(m.requalifie, content.length);
       const deplace = content.slice(content.length - n);
       content = content.slice(0, content.length - n);
-      emitHelix(res, { type: "reflexion_requalifiee", caracteres: n, depuisMs: premierTexte ? Date.now() - premierTexte : 0 });
+      emitOxoAI(res, { type: "reflexion_requalifiee", caracteres: n, depuisMs: premierTexte ? Date.now() - premierTexte : 0 });
       if (reflexion.length < 200_000) reflexion += deplace;
       premierTexte = 0;
       // La réponse repart de zéro à l'écran : pas de second séparateur de paragraphe devant elle.
@@ -521,7 +521,7 @@ function basePayload(
   messages: unknown[],
 ): Record<string, unknown> {
   /*
-   * `connaissances` est une extension Helix, déjà traduite en consigne : un
+   * `connaissances` est une extension OxoAI, déjà traduite en consigne : un
    * fournisseur cloud refuse volontiers un champ qu'il ne connaît pas.
    */
   /*
@@ -969,7 +969,7 @@ class ReponseEntiere {
       ],
       ...(this.consommation ? { usage: this.consommation } : {}),
       // Extension : les passages des bases de connaissances qui ont servi (champ `connaissances`).
-      ...(sources ? { helix: { sources } } : {}),
+      ...(sources ? { oxoai: { sources } } : {}),
     };
   }
 }
@@ -1029,17 +1029,17 @@ export async function handleChatRequest(
    * modèles locaux et ceux de l'instance, eux, restent ouverts à tous.
    */
   /*
-   * L'écran de Helix, ou un client ordinaire de l'API compatible ?
+   * L'écran de OxoAI, ou un client ordinaire de l'API compatible ?
    *
    * L'écran envoie toujours `tools` en booléen (true ou false) : c'est
-   * l'extension Helix. Un client ordinaire — OpenCode, un script — envoie une
+   * l'extension OxoAI. Un client ordinaire — OpenCode, un script — envoie une
    * liste d'outils ou rien. La différence compte : le découpage des tâches et
-   * les événements `helix` n'ont de sens que pour l'écran. Glissés dans le
+   * les événements `oxoai` n'ont de sens que pour l'écran. Glissés dans le
    * flux d'OpenCode, ils faisaient échouer la validation de son SDK
-   * (« AI_TypeValidationError: Value: {"helix":{"type":"plan_debut"…}} ») :
+   * (« AI_TypeValidationError: Value: {"oxoai":{"type":"plan_debut"…}} ») :
    * l'agent de code ne répondait pas, et rien ne le disait.
    */
-  const interfaceHelix = typeof body.tools === "boolean";
+  const interfaceOxoAI = typeof body.tools === "boolean";
   /*
    * Un client ordinaire (l'agent de code) : on note que sa demande a atteint le
    * modèle. Seulement l'appel **qui porte ses outils** : OpenCode envoie aussi,
@@ -1048,8 +1048,8 @@ export async function handleChatRequest(
    * travail, lui, n'était jamais parti.
    */
   if (
-    !interfaceHelix &&
-    !req.headers["x-helix-employe"] &&
+    !interfaceOxoAI &&
+    !req.headers["x-oxoai-employe"] &&
     Array.isArray(body.tools) &&
     body.tools.length > 0
   ) {
@@ -1057,7 +1057,7 @@ export async function handleChatRequest(
   }
   /** Un événement pour l'écran ; rien pour un client qui ne le comprendrait pas. */
   const signaler = (evenement: Record<string, unknown>) => {
-    if (interfaceHelix) emitHelix(res, evenement);
+    if (interfaceOxoAI) emitOxoAI(res, evenement);
   };
   /** Réponse unique en JSON (clé d'API sans `stream: true`), avec les mêmes en-têtes de sécurité que le flux. */
   const repondreJson = (statut: number, corps: unknown) => {
@@ -1079,7 +1079,7 @@ export async function handleChatRequest(
    */
   const signalerErreur = (message: string, code?: "context_length_exceeded") => {
     const erreur = code ? { message: `${message} (context length exceeded)`, type: "invalid_request_error", code } : { message };
-    if (interfaceHelix) emitHelix(res, { type: "error", message });
+    if (interfaceOxoAI) emitOxoAI(res, { type: "error", message });
     else if (nonFlux) repondreJson(code ? 400 : 502, { error: erreur });
     else sse(res, { error: erreur });
   };
@@ -1095,7 +1095,7 @@ export async function handleChatRequest(
   if ("error" in resolution) {
     /*
      * Avec les en-têtes d'origine (27/09/2026). Écrit sans eux, ce refus
-     * n'était pas lisible par l'application (origine `helix://app`, ou le
+     * n'était pas lisible par l'application (origine `oxoai://app`, ou le
      * navigateur d'un poste) : l'écran ne voyait qu'une requête bloquée et
      * disait « L'instance ne répond pas » au lieu de la raison (aucun modèle,
      * « Auto » qui ne prend pas un modèle branché par clé, modèle réservé).
@@ -1107,8 +1107,8 @@ export async function handleChatRequest(
 
   /*
    * Deux façons de demander des outils :
-   *  - `tools: true`  extension Helix, la passerelle injecte ses outils MCP et
-   *                   exécute la boucle elle-même (interface Helix) ;
+   *  - `tools: true`  extension OxoAI, la passerelle injecte ses outils MCP et
+   *                   exécute la boucle elle-même (interface OxoAI) ;
    *  - `tools: [...]` format OpenAI standard, l'appelant fournit et exécute ses
    *                   propres outils (OpenCode, ou tout client compatible).
    * Dans le second cas la passerelle relaie sans rien exécuter : c'est le client
@@ -1143,7 +1143,7 @@ export async function handleChatRequest(
   // La bibliothèque de l'équipe et les réunions transcrites : ce que la personne y voit, en lecture.
   const outilsBibliotheque = qui ? [...bibliotheque.toolsForModel(), ...reunions.toolsForModel()] : [];
   // Programmer une tâche (tachesProgrammees.ts) : pour une personne identifiée, jamais pour une tâche programmée elle-même.
-  const outilsTaches = qui && !req.headers["x-helix-tache"] ? tachesProgrammees.toolsForModel() : [];
+  const outilsTaches = qui && !req.headers["x-oxoai-tache"] ? tachesProgrammees.toolsForModel() : [];
 
   const useTools =
     body.tools === true &&
@@ -1189,13 +1189,13 @@ export async function handleChatRequest(
 
   /*
    * Recherche sur le web (rechercheWeb.ts, 28/09/2026) : seulement l'écran de
-   * Helix, et seulement quand la personne a activé la bascule du menu « + »
+   * OxoAI, et seulement quand la personne a activé la bascule du menu « + »
    * (`web: true`). Sans elle, aucun outil web n'est proposé, et un appel à
    * l'un d'eux est refusé comme tout outil non proposé : rien ne part.
    * Interdite par le profil de déploiement, la demande est refusée entière,
    * en le disant, plutôt que de répondre sans le web comme si de rien n'était.
    */
-  const demandeWeb = interfaceHelix && !callerTools && body.web === true;
+  const demandeWeb = interfaceOxoAI && !callerTools && body.web === true;
   if (demandeWeb) {
     const etatWeb = rechercheWeb.etat();
     if (!etatWeb.autorisee) {
@@ -1224,8 +1224,8 @@ export async function handleChatRequest(
     res.writeHead(200, {
       ...entetesFlux(req),
       "X-Accel-Buffering": "no",
-      "X-Helix-Model": model.uid,
-      "X-Helix-Backend": backend.id,
+      "X-OxoAI-Model": model.uid,
+      "X-OxoAI-Backend": backend.id,
     });
   }
 
@@ -1257,7 +1257,7 @@ export async function handleChatRequest(
    * pendant les quelques secondes que prend la mise en mémoire.
    */
   /*
-   * Un appel de Helix Code (OpenCode joint l'identifiant de sa session) :
+   * Un appel de OxoAI Code (OpenCode joint l'identifiant de sa session) :
    * tant que le modèle n'a rien rendu, chargement compris, la passerelle dit
    * aux clients où il en est (attenteModele.ts). Mesuré le 25/09/2026 :
    * jusqu'à 146,9 s de lecture avant le premier mot, que l'écran prenait pour
@@ -1265,7 +1265,7 @@ export async function handleChatRequest(
    */
   // Seulement l'appel qui porte les outils : le titre de la session, demandé à côté, n'est pas le travail.
   const attente =
-    interfaceHelix || !Array.isArray(body.tools) || body.tools.length === 0
+    interfaceOxoAI || !Array.isArray(body.tools) || body.tools.length === 0
       ? null
       : suivreAppelModele(req.headers, model.id, backend, JSON.stringify(body.messages).length + JSON.stringify(body.tools).length);
   if (moteurDeLaMachine(model.backendKind) && model.loaded === false) {
@@ -1289,8 +1289,8 @@ export async function handleChatRequest(
   /*
    * Déjà en mémoire, mais avec une petite taille de conversation (16/10/2026,
    * « des fois ça se coupe ») : chargé par LM Studio seul, à 4 096 jetons
-   * d'ordinaire. Sur le moteur de Helix, et au repos, il est rechargé avec la
-   * taille de Helix (`agrandirLaConversation`, backends.ts) ; ailleurs (dans
+   * d'ordinaire. Sur le moteur de OxoAI, et au repos, il est rechargé avec la
+   * taille de OxoAI (`agrandirLaConversation`, backends.ts) ; ailleurs (dans
    * l'application LM Studio de la personne), rien n'est touché, et ce qui part
    * est réduit plus bas, en le disant.
    */
@@ -1325,7 +1325,7 @@ export async function handleChatRequest(
    * messagerie peut être connectée. Constaté le 23/09/2026 : à « et si je te
    * connecte (à mes mails) ? », il a répondu qu'aucune fonction ne le
    * permettait, au lieu de dire oui et d'indiquer où le faire. Seulement pour
-   * l'interface Helix : un client tiers a ses propres réglages.
+   * l'interface OxoAI : un client tiers a ses propres réglages.
    */
   /*
    * Chat sans outils (le bouton « Outils » de la zone de saisie est éteint) :
@@ -1381,9 +1381,9 @@ export async function handleChatRequest(
    * Les droits se jugent ici, pas dans l'écran : une base ou un document que
    * la personne ne voit pas n'en sort pas (connaissances.ts).
    */
-  /** Passages cités, rendus dans la réponse JSON d'un appel par clé d'API (`helix.sources`). */
+  /** Passages cités, rendus dans la réponse JSON d'un appel par clé d'API (`oxoai.sources`). */
   let sourcesCitees: unknown[] | undefined;
-  if ((interfaceHelix || options.parCleApi) && qui && Array.isArray(body.connaissances) && body.connaissances.length > 0) {
+  if ((interfaceOxoAI || options.parCleApi) && qui && Array.isArray(body.connaissances) && body.connaissances.length > 0) {
     signaler({ type: "statut", message: t("Recherche dans les bases de connaissances...") });
     const r = await connaissances.contextePourChat(body.connaissances, messages, qui);
     messages = avecConsigne(messages, r.consigne);
@@ -1407,10 +1407,10 @@ export async function handleChatRequest(
    * celles de l'organisation seulement pour un employé. Toutes en entier si
    * elles tiennent, sinon l'index et celles qui correspondent à la demande.
    */
-  const employeDemandeur = typeof req.headers["x-helix-employe"] === "string";
-  if ((interfaceHelix && qui && (body as { competences?: unknown }).competences === true) || (!interfaceHelix && employeDemandeur)) {
+  const employeDemandeur = typeof req.headers["x-oxoai-employe"] === "string";
+  if ((interfaceOxoAI && qui && (body as { competences?: unknown }).competences === true) || (!interfaceOxoAI && employeDemandeur)) {
     const choix = await competences.pourLaDemande(
-      interfaceHelix ? qui! : null,
+      interfaceOxoAI ? qui! : null,
       petits.texteDuDernierMessage(body.messages),
       await contexteDuModele(model, backend).catch(() => 8192),
     );
@@ -1514,9 +1514,9 @@ export async function handleChatRequest(
         }
       },
       progression: (message) => signaler({ type: "statut", message }),
-      // L'historique sera raccourci plus bas (`tenirDansLaPlace`) : seulement pour l'écran de Helix, taille connue.
+      // L'historique sera raccourci plus bas (`tenirDansLaPlace`) : seulement pour l'écran de OxoAI, taille connue.
       historiqueCoupe:
-        !callerTools && interfaceHelix && (moteurDeLaMachine(model.backendKind) || Boolean(backend.contexte) || Boolean(model.contextePublie)),
+        !callerTools && interfaceOxoAI && (moteurDeLaMachine(model.backendKind) || Boolean(backend.contexte) || Boolean(model.contextePublie)),
     });
     if (arret.signal.aborted) {
       res.end();
@@ -1536,7 +1536,7 @@ export async function handleChatRequest(
    * la boucle. Sans outils du tout, c'est le même relais : une demande de
    * titre d'OpenCode n'a pas à passer par le découpage des tâches.
    */
-  if (callerTools || !interfaceHelix) {
+  if (callerTools || !interfaceOxoAI) {
     /*
      * Garde-fou contre la boucle (voir `repetitionsOutil`). À trois fois la
      * même action, une note le dit au modèle ; à cinq, on lui retire les
@@ -1578,7 +1578,7 @@ export async function handleChatRequest(
      * le moteur a envoyé ; la mesure n'y ajoute ni n'y retire un octet.
      */
     let releve: usage.Releve | undefined;
-    // Une ligne au journal pour chaque appel de Helix Code, sans contenu : la taille de ce qui part au modèle.
+    // Une ligne au journal pour chaque appel de OxoAI Code, sans contenu : la taille de ce qui part au modèle.
     if (attente) {
       const corpsEnvoye = JSON.stringify(payload);
       attente.taille(corpsEnvoye.length);
@@ -1643,7 +1643,7 @@ export async function handleChatRequest(
 
   /*
    * La conversation entière mesurée contre la taille chargée (historique.ts,
-   * 27/09/2026) : au-delà, Helix retire lui-même les plus anciens échanges, en
+   * 27/09/2026) : au-delà, OxoAI retire lui-même les plus anciens échanges, en
    * gardant toujours la consigne système et la question, au lieu de laisser le
    * moteur couper au hasard ; et il le dit. Seulement quand la taille est
    * sue : LM Studio (celle du chargement, relue par `lms ps`), ou un service
@@ -1729,13 +1729,13 @@ export async function handleChatRequest(
   /*
    * Mémoire de la conversation (memoireConversation.ts, 16/10/2026) : ce qui
    * sort de la place y est rangé, et les passages en rapport avec la question
-   * reviennent au modèle. Seulement pour l'écran de Helix, une personne
+   * reviennent au modèle. Seulement pour l'écran de OxoAI, une personne
    * identifiée et un Chat nommé : un client de l'API n'a pas de Chat, et un
    * employé toujours actif a déjà la mémoire d'OpenClaw.
    */
   const memoireDemandee = (body as { memoire?: { chat?: unknown; autresChats?: unknown } }).memoire;
   const memoireChat =
-    qui && !req.headers["x-helix-employe"] && memoireDemandee && memoire.chatValide(memoireDemandee.chat)
+    qui && !req.headers["x-oxoai-employe"] && memoireDemandee && memoire.chatValide(memoireDemandee.chat)
       ? { chat: memoireDemandee.chat, autresChats: memoireDemandee.autresChats === true }
       : null;
   {
@@ -1919,7 +1919,7 @@ export async function handleChatRequest(
      * coupe ») :
      *  - `questionDuFil` : la demande de cette boucle, pour raccourcir ce qui
      *    la précède quand le moteur refuse une demande trop longue ;
-     *  - `budgetFil` : la place, revue à la baisse après un tel refus (Helix
+     *  - `budgetFil` : la place, revue à la baisse après un tel refus (OxoAI
      *    l'estime à 3 caractères par jeton, et le moteur a dit qu'il en a
      *    moins) ;
      *  - `prefixe`, `suites` : une réponse coupée par sa longueur
@@ -2005,7 +2005,7 @@ export async function handleChatRequest(
             continue;
           }
         }
-        emitHelix(res, { type: "error", message: erreurDuMoteur(upstream.status, detail, model.id, backend, contexteConversation || undefined) });
+        emitOxoAI(res, { type: "error", message: erreurDuMoteur(upstream.status, detail, model.id, backend, contexteConversation || undefined) });
         return { texte, interrompu: "moteur", modifications, echecs, lectures, derniereErreur, releves, refus };
       }
 
@@ -2032,12 +2032,12 @@ export async function handleChatRequest(
        * s'arrête là au lieu d'enchaîner sur une étape qui n'a rien produit.
        */
       if (result.degenere) {
-        emitHelix(res, { type: "error", message: await noterBoucle(model, result.degenere, !body.model) });
+        emitOxoAI(res, { type: "error", message: await noterBoucle(model, result.degenere, !body.model) });
         return { texte, interrompu: "moteur", modifications, echecs, lectures, derniereErreur, releves, refus };
       }
       // Le fournisseur a dit une erreur en cours de flux (27/09/2026) : dite, et comptée comme une panne du moteur.
       if (result.erreur) {
-        emitHelix(res, { type: "error", message: erreurDuMoteur(result.erreur.statut, result.erreur.detail, model.id, backend) });
+        emitOxoAI(res, { type: "error", message: erreurDuMoteur(result.erreur.statut, result.erreur.detail, model.id, backend) });
         return { texte, interrompu: "moteur", modifications, echecs, lectures, derniereErreur, releves, refus };
       }
 
@@ -2066,7 +2066,7 @@ export async function handleChatRequest(
           }
         }
         if (ecrits.length > 0) {
-          result.toolCalls = ecrits.map((e, k) => ({ id: `helix_texte_${iteration}_${k}`, name: e.name, args: e.args }));
+          result.toolCalls = ecrits.map((e, k) => ({ id: `oxoai_texte_${iteration}_${k}`, name: e.name, args: e.args }));
           result.content = petits.sansAppelsEcrits(result.content);
           texte = result.content;
           console.log(`[chat] ${ecrits.length} appel(s) d'outil écrit(s) dans le texte par ${model.id} : lancé(s) comme de vrais appels.`);
@@ -2115,12 +2115,12 @@ export async function handleChatRequest(
           }
           console.log(`[chat] réponse de ${model.id} coupée par la longueur (${vide ? "vide" : `${result.content.length} caractères`}, reste ~${reste} jetons)`);
           if (vide) {
-            emitHelix(res, {
+            emitOxoAI(res, {
               type: "error",
               message: tf("La réflexion de {0} a occupé toute la place : la réponse n'a pas pu s'écrire. Choisissez un niveau de réflexion plus bas, ou ouvrez un nouveau Chat.", model.id),
             });
           } else {
-            emitHelix(res, { type: "coupee", message: tf("La réponse de {0} a été coupée : elle était plus longue que la place restante.", model.id) });
+            emitOxoAI(res, { type: "coupee", message: tf("La réponse de {0} a été coupée : elle était plus longue que la place restante.", model.id) });
           }
           return { texte, interrompu: false, modifications, echecs, lectures, derniereErreur, releves, refus };
         }
@@ -2224,7 +2224,7 @@ export async function handleChatRequest(
         siArrete();
         const args = call.args;
 
-        emitHelix(res, { type: "tool_start", name: call.name, args });
+        emitOxoAI(res, { type: "tool_start", name: call.name, args });
 
         /*
          * Barrière d'approbation. Elle est posée **avant** l'aiguillage vers
@@ -2377,7 +2377,7 @@ export async function handleChatRequest(
         if (outcome.ok) petits.noterAppel(fichiersSuivis, call.name, args, workspace());
         if (call.notes.length > 0) outcome.content = `[Note de l'instance : ${call.notes.join(" ; ")}.]\n${outcome.content}`;
 
-        emitHelix(res, {
+        emitOxoAI(res, {
           type: "tool_end",
           name: call.name,
           ok: outcome.ok,
@@ -2385,7 +2385,7 @@ export async function handleChatRequest(
         });
         if (recherche) {
           // Les sources à jour sous la réponse, au fil des recherches et des pages lues.
-          if (rechercheWeb.estOutilWeb(call.name)) emitHelix(res, { type: "sources_web", sources: recherche.liste(), moteur: rechercheWeb.MOTEUR });
+          if (rechercheWeb.estOutilWeb(call.name)) emitOxoAI(res, { type: "sources_web", sources: recherche.liste(), moteur: rechercheWeb.MOTEUR });
           /*
            * Une adresse rendue par un autre outil (un fichier, un mail) devient
            * ouvrable ; jamais celles que le modèle a écrites, et plus aucune
@@ -2463,7 +2463,7 @@ export async function handleChatRequest(
          */
         if (outcome.capture) {
           const { base64, largeur, hauteur } = outcome.capture;
-          emitHelix(res, { type: "capture", largeur, hauteur });
+          emitOxoAI(res, { type: "capture", largeur, hauteur });
           fil.push({
             role: "user",
             content: [
@@ -2544,12 +2544,12 @@ export async function handleChatRequest(
 
     const avecOutils = Boolean(tools && tools.length > 0);
     /*
-     * Actions accordées à une étape ; `HELIX_BUDGET_ETAPE` le fixe (réglage
+     * Actions accordées à une étape ; `OXOAI_BUDGET_ETAPE` le fixe (réglage
      * d'administration, et essais). Quatre au moins : agir, regarder le
      * résultat et conclure en demandent déjà trois. Mesuré à deux : le travail
      * était fait, mais le contrôle n'avait pas le temps de le constater.
      */
-    const budgetEtape = Math.max(4, Math.trunc(Number(process.env.HELIX_BUDGET_ETAPE)) || regime.budgetParEtape);
+    const budgetEtape = Math.max(4, Math.trunc(Number(process.env.OXOAI_BUDGET_ETAPE)) || regime.budgetParEtape);
     /**
      * Le message système de la conversation, repris par chaque étape. Pris dans
      * `messages`, et non plus dans `body.messages` : c'est là que les passages
@@ -2653,7 +2653,7 @@ export async function handleChatRequest(
      */
     const webSeul = Boolean(recherche) && body.tools !== true;
     if (regime.decoupe && !webSeul && !avecImage && !avecDocuments && !pilotageEcran && demande.trim() && !estReplique(demande) && !(!avecOutils && estQuestionSimple(demande))) {
-      emitHelix(res, { type: "plan_debut", regime: regime.raison });
+      emitOxoAI(res, { type: "plan_debut", regime: regime.raison });
       plan = lirePlan(
         await demanderAuModele(
           consigneDePlan(demande, {
@@ -2680,7 +2680,7 @@ export async function handleChatRequest(
        * activer les outils.
        */
       if (!avecOutils && plan.etapes.some((e) => etapeExigeAction(e))) plan.etapes = [];
-      emitHelix(res, { type: "plan", etapes: plan.etapes });
+      emitOxoAI(res, { type: "plan", etapes: plan.etapes });
     }
 
     if (plan.etapes.length === 0) {
@@ -2715,17 +2715,17 @@ export async function handleChatRequest(
       let ecrit = "";
       for (let i = 0; i < plan.etapes.length; i++) {
         const chemin = String(i + 1);
-        emitHelix(res, { type: "etape", index: i, chemin, total: plan.etapes.length, titre: plan.etapes[i] });
+        emitOxoAI(res, { type: "etape", index: i, chemin, total: plan.etapes.length, titre: plan.etapes[i] });
         if (i > 0) ecrire("\n\n");
         const fil = [...fondation(), { role: "user", content: consigneDePartie(plan.objectif, plan.etapes, i, ecrit) }];
         let r = await boucleOutils(fil, 1);
         if (!r.interrompu && !r.texte.trim()) {
-          emitHelix(res, { type: "etape_reprise", index: i, chemin });
+          emitOxoAI(res, { type: "etape_reprise", index: i, chemin });
           r = await boucleOutils(fil, 1);
         }
         const ok = !r.interrompu && Boolean(r.texte.trim());
         if (ok) ecrit += `\n\n${r.texte}`;
-        emitHelix(res, { type: "etape_fin", index: i, chemin, ok, resume: r.texte.slice(0, 300) });
+        emitOxoAI(res, { type: "etape_fin", index: i, chemin, ok, resume: r.texte.slice(0, 300) });
         if (!ok) {
           ecrire(
             // Écrit dans la réponse elle-même : dans la langue de la personne, comme le reste de l'écran.
@@ -2793,7 +2793,7 @@ export async function handleChatRequest(
           return { texte, cause: "refus" as const, erreur: r.derniereErreur, releves };
         }
         if (!cause && (r.echecs > 0 || riennaMarche || (r.modifications === 0 && etapeExigeAction(titre)))) {
-          emitHelix(res, { type: "etape_reprise", chemin: repere });
+          emitOxoAI(res, { type: "etape_reprise", chemin: repere });
           fil.push({ role: "assistant", content: texte || "" });
           fil.push({ role: "user", content: consigneDeRattrapage(titre, r.derniereErreur || undefined) });
           const reprise = await boucleOutils(fil, budgetEtape);
@@ -2840,7 +2840,7 @@ export async function handleChatRequest(
          */
         const aControler = r.modifications > 0 || r.echecs > 0 || etapeExigeAction(titre);
         if (aControler && (!cause || cause === "outils" || cause === "inaction")) {
-          emitHelix(res, { type: "etape_verification", chemin: repere });
+          emitOxoAI(res, { type: "etape_verification", chemin: repere });
           fil.push({ role: "assistant", content: texte || "" });
           fil.push({ role: "user", content: consigneDeVerification(titre, suivantes) });
           const v = await boucleOutils(fil, budgetEtape);
@@ -2868,7 +2868,7 @@ export async function handleChatRequest(
          * inventent.
          */
         if (!cause && !texte.trim()) {
-          emitHelix(res, { type: "etape_reprise", chemin: repere });
+          emitOxoAI(res, { type: "etape_reprise", chemin: repere });
           fil.push({ role: "user", content: consigneDeCompteRendu(titre) });
           const dit = await boucleOutils(fil, 3);
           if (dit.texte.trim()) texte = dit.texte;
@@ -2893,7 +2893,7 @@ export async function handleChatRequest(
         repere: string,
         suivantes: string[] = [],
       ): Promise<{ texte: string; cause: Cause | false; erreur: string; releves: { cible: string; extrait: string }[] }> => {
-        emitHelix(res, { type: "etape_verification", chemin: repere });
+        emitOxoAI(res, { type: "etape_verification", chemin: repere });
         const fil: unknown[] = [
           ...fondation(),
           { role: "user", content: consigneDEtape(plan.objectif, titre, repere, faits) },
@@ -2927,14 +2927,14 @@ export async function handleChatRequest(
             return false;
           }
           executees += 1;
-          emitHelix(res, { type: "etape", index, chemin, total: liste.length, titre });
+          emitOxoAI(res, { type: "etape", index, chemin, total: liste.length, titre });
           if (faits.length > 0) ecrire("\n\n");
           const r = await executerEtape(titre, chemin, [...liste.slice(i + 1), ...aVenir]);
 
           if (!r.cause) {
             faits.push({ titre, resultat: r.texte || "fait", ok: true, releves: r.releves });
             marquer(chemin, "fait");
-            emitHelix(res, { type: "etape_fin", index, chemin, ok: true, resume: r.texte.slice(0, 300) });
+            emitOxoAI(res, { type: "etape_fin", index, chemin, ok: true, resume: r.texte.slice(0, 300) });
             continue;
           }
 
@@ -2966,7 +2966,7 @@ export async function handleChatRequest(
               marquer(chemin, "decoupee");
               const place = suivi.findIndex((x) => x.chemin === chemin);
               suivi.splice(place + 1, 0, ...sous.map((t, k) => ({ chemin: `${chemin}.${k + 1}`, titre: t, etat: "attente" as const })));
-              emitHelix(res, { type: "plan_sous", chemin, etapes: sous });
+              emitOxoAI(res, { type: "plan_sous", chemin, etapes: sous });
               let fini = await executerListe(sous, chemin, profondeur + 1, [...liste.slice(i + 1), ...aVenir]);
               /*
                * Toutes les parties ont réussi : l'étape d'origine est-elle
@@ -2983,7 +2983,7 @@ export async function handleChatRequest(
                 faits.push({ titre: `${titre} (contrôle)`, resultat: c.texte || "contrôlée", ok: !c.cause, releves: c.releves });
               }
               marquer(chemin, fini ? "fait" : "echec");
-              emitHelix(res, { type: "etape_fin", index, chemin, ok: fini });
+              emitOxoAI(res, { type: "etape_fin", index, chemin, ok: fini });
               if (!fini) return false;
               continue;
             }
@@ -2999,7 +2999,7 @@ export async function handleChatRequest(
            */
           faits.push({ titre, resultat: r.texte || "étape non terminée", ok: false, releves: r.releves });
           marquer(chemin, "echec");
-          emitHelix(res, { type: "etape_fin", index, chemin, ok: false, cause: r.cause, resume: r.texte.slice(0, 300) });
+          emitOxoAI(res, { type: "etape_fin", index, chemin, ok: false, cause: r.cause, resume: r.texte.slice(0, 300) });
           arret = { chemin, cause: r.cause, erreur: r.erreur };
           return false;
         }
@@ -3027,7 +3027,7 @@ export async function handleChatRequest(
        */
       const aRevoir = modificationsDemande > 0 || etapeExigeAction(plan.objectif);
       for (let tour = 1; fini && aRevoir && tour <= 2; tour++) {
-        emitHelix(res, { type: "revue", etat: "encours", tour });
+        emitOxoAI(res, { type: "revue", etat: "encours", tour });
         // Ce qu'un programme sait vérifier dans le code web modifié : liens, fonctions, éléments, syntaxe.
         const auto = controleWeb.controlerTouches([...fichiersTouches], { langue: langueDemande });
         /*
@@ -3054,11 +3054,11 @@ export async function handleChatRequest(
         }
         if (conclusion === "fait" && (v.lectures > 0 || contenus !== "") && apres.problemes.length === 0) {
           revue = "fait";
-          emitHelix(res, { type: "revue", etat: "fait", tour });
+          emitOxoAI(res, { type: "revue", etat: "fait", tour });
           break;
         }
         revue = "incomplet";
-        emitHelix(res, { type: "revue", etat: "incomplet", tour });
+        emitOxoAI(res, { type: "revue", etat: "incomplet", tour });
         if (tour === 2) break;
         const constat =
           v.texte +
@@ -3078,10 +3078,10 @@ export async function handleChatRequest(
         const titreComplement = t("Compléments demandés par la revue finale");
         suivi.push({ chemin: prefixe, titre: titreComplement, etat: "decoupee" });
         suivi.push(...complement.map((t, k) => ({ chemin: `${prefixe}.${k + 1}`, titre: t, etat: "attente" as const })));
-        emitHelix(res, { type: "plan_ajout", chemin: prefixe, titre: titreComplement, etapes: complement });
+        emitOxoAI(res, { type: "plan_ajout", chemin: prefixe, titre: titreComplement, etapes: complement });
         fini = await executerListe(complement, prefixe, 1);
         marquer(prefixe, fini ? "fait" : "echec");
-        emitHelix(res, { type: "etape_fin", chemin: prefixe, ok: fini });
+        emitOxoAI(res, { type: "etape_fin", chemin: prefixe, ok: fini });
       }
       // Ce qui reste, dit tel quel : le récapitulatif ne cache pas un problème que le programme voit encore.
       const restants = controleWeb.controlerTouches([...fichiersTouches], { langue: langueDemande }).problemes;
@@ -3134,7 +3134,7 @@ export async function handleChatRequest(
   } catch (err) {
     // Arrêtée par la personne : rien à lui dire, elle ne lit plus ce flux.
     if (!arret.signal.aborted) {
-      emitHelix(res, {
+      emitOxoAI(res, {
         type: "error",
         // Coupure du moteur en pleine réponse : « terminated » ne disait rien à personne.
         message:
