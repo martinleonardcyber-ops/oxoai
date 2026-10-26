@@ -13,7 +13,7 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 }
 
 const variantClass: Record<Variant, string> = {
-  primary: "bg-primary text-primary-foreground hover:opacity-90",
+  primary: "fond-marque",
   secondary: "border border-border bg-card text-foreground hover:bg-muted",
   ghost: "text-muted-foreground hover:bg-muted hover:text-foreground",
   destructive: "bg-destructive text-destructive-foreground hover:opacity-90",
@@ -34,7 +34,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
       ref={ref}
       type="button"
       className={cn(
-        "inline-flex items-center justify-center rounded-full font-medium transition-colors",
+        "inline-flex items-center justify-center rounded-full font-medium transition-[color,background-color,box-shadow,filter]",
         // Un bouton desactive doit se voir : sans cela il garde l'aspect d'un
         // bouton actif, et l'utilisateur clique en boucle sans rien obtenir.
         "disabled:cursor-not-allowed disabled:opacity-45",

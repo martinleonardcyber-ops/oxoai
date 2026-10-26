@@ -189,7 +189,28 @@
       "nsis": "1.2.1"
     },
     "dmg": {
-      "artifactName": "${productName}-${version}-${arch}.${ext}"
+      "artifactName": "${productName}-${version}-${arch}.${ext}",
+      "title": "OxoAI",
+      "background": "build/dmg-fond.tiff",
+      "iconSize": 112,
+      "iconTextSize": 13,
+      "window": {
+        "width": 660,
+        "height": 436
+      },
+      "contents": [
+        {
+          "x": 180,
+          "y": 205,
+          "type": "file"
+        },
+        {
+          "x": 480,
+          "y": 205,
+          "type": "link",
+          "path": "/Applications"
+        }
+      ]
     }
   },
   "devDependencies": {

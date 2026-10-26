@@ -7,7 +7,7 @@ import {
 import { cn } from "@/lib/cn";
 
 const baseControl =
-  "w-full rounded-lg border border-input bg-card px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground transition-colors focus:outline-none focus:border-ring/60 focus:ring-2 focus:ring-ring/15";
+  "w-full rounded-xl border border-input bg-card px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground transition-colors focus:outline-none focus:border-ring/60 focus:ring-4 focus:ring-ring/12";
 
 export const Input = forwardRef<HTMLInputElement, InputHTMLAttributes<HTMLInputElement>>(
   function Input({ className, ...props }, ref) {

@@ -38,6 +38,22 @@
   size-adjust: 106%;
 }
 
+/* --- Police des titres : Instrument Serif (OFL 1.1, public/fonts/OFL-instrument-serif.txt) --- */
+@font-face {
+  font-family: "Instrument Serif";
+  src: url("/fonts/instrument-serif.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Instrument Serif";
+  src: url("/fonts/instrument-serif-italic.woff2") format("woff2");
+  font-weight: 400;
+  font-style: italic;
+  font-display: swap;
+}
+
 @layer base {
   * {
     @apply border-border;
@@ -330,5 +346,46 @@
       transparent 1px
     );
     background-size: 22px 22px;
+  }
+}
+
+/* =============================================================================
+ * Touches de marque OxoAI : le dégradé de la famille Oxo, posé avec retenue
+ * (boutons principaux, mot en italique des grands titres, halo des pages
+ * d'accueil). Tout le reste passe par les tokens.
+ * ========================================================================== */
+@layer components {
+  .fond-marque {
+    background-image: var(--grad-marque);
+    color: #fff;
+    box-shadow: 0 8px 22px -10px rgba(124, 92, 255, 0.75), inset 0 1px 0 rgba(255, 255, 255, 0.22);
+  }
+  .fond-marque:hover:not(:disabled) {
+    filter: brightness(1.06) saturate(1.05);
+    box-shadow: 0 12px 28px -10px rgba(124, 92, 255, 0.85), inset 0 1px 0 rgba(255, 255, 255, 0.25);
+  }
+  .titre-marque {
+    font-family: var(--font-titre);
+    font-weight: 400;
+    letter-spacing: -0.012em;
+    line-height: 1.05;
+  }
+  .texte-marque {
+    font-style: italic;
+    background-image: var(--grad-marque);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    padding-inline-end: 0.06em;
+  }
+  .halo-marque {
+    background-image: var(--halo-marque);
+    background-repeat: no-repeat;
+  }
+  .bord-marque {
+    border: 1px solid transparent;
+    background:
+      linear-gradient(hsl(var(--card)), hsl(var(--card))) padding-box,
+      linear-gradient(115deg, rgba(124, 92, 255, 0.55), hsl(var(--border)) 40%, hsl(var(--border)) 60%, rgba(255, 122, 89, 0.5)) border-box;
   }
 }

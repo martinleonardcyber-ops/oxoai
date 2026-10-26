@@ -473,7 +473,7 @@ export function HomePage() {
   /* --- Conversation en cours ------------------------------------------- */
   if (chat.messages.length > 0) {
     return (
-      <div className="flex h-full flex-col">
+      <div className="halo-marque flex h-full flex-col">
         <div className="min-h-0 flex-1 overflow-y-auto">
           <div className="mx-auto w-full max-w-[760px] px-6 py-8">
             <MessageList messages={chat.messages} onContinuer={chat.busy ? undefined : () => void chat.send(t("Continue ta réponse."))} />
@@ -491,11 +491,11 @@ export function HomePage() {
 
   /* --- Accueil (état vide) --------------------------------------------- */
   return (
-    <div className="flex h-full flex-col overflow-y-auto">
+    <div className="halo-marque flex h-full flex-col overflow-y-auto">
       <div className="mx-auto flex w-full max-w-[760px] flex-1 flex-col justify-center px-6 pb-20 pt-12">
-        <div className="mb-7 flex items-center justify-center gap-3">
-          <LogoMark size={44} animated />
-          <h1 className="text-3xl font-medium tracking-tight text-foreground">
+        <div className="mb-9 flex flex-col items-center gap-5 text-center">
+          <LogoMark size={56} animated className="drop-shadow-[0_12px_28px_rgba(124,92,255,0.35)]" />
+          <h1 className="titre-marque text-[52px] text-foreground">
             {t("Sur quoi voulez-vous travailler ?")}
           </h1>
         </div>

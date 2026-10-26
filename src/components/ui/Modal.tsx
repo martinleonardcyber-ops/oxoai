@@ -46,7 +46,7 @@ export function Modal({
    */
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-overlay/50 p-4 animate-[popover-center_120ms_ease-out]"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-overlay/45 p-4 backdrop-blur-[3px] animate-[popover-center_120ms_ease-out]"
       onPointerDown={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
@@ -56,7 +56,7 @@ export function Modal({
         aria-modal="true"
         // Plus haute que la fenêtre, elle défile : sinon ses boutons du bas deviennent inaccessibles.
         className={cn(
-          "relative max-h-[calc(100vh-2rem)] w-full overflow-y-auto rounded-2xl border border-border bg-popover p-6 text-popover-foreground shadow-pop",
+          "relative max-h-[calc(100vh-2rem)] w-full overflow-y-auto rounded-3xl border border-border bg-popover p-6 text-popover-foreground shadow-pop",
           sizeClass[size],
           className,
         )}

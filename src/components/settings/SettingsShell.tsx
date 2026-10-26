@@ -164,8 +164,8 @@ function SettingsNav() {
                   cn(
                     "flex shrink-0 items-center gap-2.5 whitespace-nowrap rounded-lg px-3 py-2 text-sm transition-colors md:whitespace-normal",
                     isActive
-                      ? "bg-muted font-medium text-foreground"
-                      : "text-muted-foreground hover:bg-muted/60 hover:text-foreground",
+                      ? "relative bg-card font-medium text-foreground shadow-sm ring-1 ring-inset ring-border [&>svg]:text-accent md:before:absolute md:before:inset-y-2 md:before:start-0 md:before:w-[3px] md:before:rounded-full md:before:bg-[image:var(--grad-marque)]"
+                      : "text-muted-foreground hover:bg-muted/70 hover:text-foreground",
                   )
                 }
               >
@@ -185,7 +185,7 @@ export function SettingsLayout() {
   return (
     <div className="flex h-full flex-col">
       <div className="px-6 pb-3 pt-6">
-        <h1 className="text-lg font-semibold text-foreground">{t("Réglages")}</h1>
+        <h1 className="titre-marque text-[30px] text-foreground">{t("Réglages")}</h1>
       </div>
       <div className="flex min-h-0 flex-1 flex-col md:flex-row">
         <SettingsNav />
@@ -211,7 +211,7 @@ export function SettingsPage({
 }) {
   return (
     <div className="mx-auto max-w-4xl px-8 py-8">
-      <h2 className="text-2xl font-semibold tracking-tight text-foreground">{title}</h2>
+      <h2 className="titre-marque text-[40px] text-foreground">{title}</h2>
       {subtitle && <p className="mt-1 text-sm text-muted-foreground">{subtitle}</p>}
       {/*
        * Conteneur de requête : les sections se mettent sur deux colonnes selon

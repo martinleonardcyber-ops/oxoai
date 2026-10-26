@@ -150,11 +150,11 @@ export function InstanceSetupPage({
   };
 
   return (
-    <div className="flex h-screen w-screen flex-col items-center justify-center bg-background px-6">
+    <div className="halo-marque flex h-screen w-screen flex-col items-center justify-center bg-background px-6">
       <div className="w-full max-w-md">
         <div className="mb-8 flex flex-col items-center gap-3 text-center">
           <LogoMark size={52} animated />
-          <h1 className="text-2xl font-semibold tracking-tight text-foreground">
+          <h1 className="titre-marque text-[44px] text-foreground">
             {tf("Bienvenue dans {0}", branding.name)}
           </h1>
           <p className="text-sm text-muted-foreground">
@@ -171,10 +171,10 @@ export function InstanceSetupPage({
             <button
               type="button"
               onClick={standalone}
-              className="flex w-full items-start gap-3 rounded-xl border border-border bg-card p-4 text-start transition-colors hover:bg-muted"
+              className="group flex w-full items-start gap-3 rounded-2xl border border-border bg-card p-4 text-start shadow-sm transition-[border-color,box-shadow,transform] hover:-translate-y-px hover:border-accent/40 hover:shadow-lg"
             >
-              <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-muted">
-                <Laptop size={18} strokeWidth={1.75} className="text-foreground" />
+              <span className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-accent/10 text-accent">
+                <Laptop size={19} strokeWidth={1.75} />
               </span>
               <span className="min-w-0 flex-1">
                 <span className="block font-medium text-foreground">{t("Poste autonome")}</span>
@@ -182,16 +182,16 @@ export function InstanceSetupPage({
                   {t("Tout fonctionne sur cette machine. Un modèle adapté sera installé automatiquement.")}
                 </span>
               </span>
-              <ArrowRight size={16} strokeWidth={1.75} className="mt-1 shrink-0 text-muted-foreground" />
+              <ArrowRight size={16} strokeWidth={1.75} className="mt-1 shrink-0 text-muted-foreground transition-[color,transform] group-hover:translate-x-0.5 group-hover:text-accent rtl:rotate-180" />
             </button>
 
             <button
               type="button"
               onClick={() => setMode("rejoindre")}
-              className="flex w-full items-start gap-3 rounded-xl border border-border bg-card p-4 text-start transition-colors hover:bg-muted"
+              className="group flex w-full items-start gap-3 rounded-2xl border border-border bg-card p-4 text-start shadow-sm transition-[border-color,box-shadow,transform] hover:-translate-y-px hover:border-accent/40 hover:shadow-lg"
             >
-              <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-muted">
-                <Server size={18} strokeWidth={1.75} className="text-foreground" />
+              <span className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-accent/10 text-accent">
+                <Server size={19} strokeWidth={1.75} />
               </span>
               <span className="min-w-0 flex-1">
                 <span className="block font-medium text-foreground">
@@ -205,7 +205,7 @@ export function InstanceSetupPage({
                   {t("sur cette machine.")}
                 </span>
               </span>
-              <ArrowRight size={16} strokeWidth={1.75} className="mt-1 shrink-0 text-muted-foreground" />
+              <ArrowRight size={16} strokeWidth={1.75} className="mt-1 shrink-0 text-muted-foreground transition-[color,transform] group-hover:translate-x-0.5 group-hover:text-accent rtl:rotate-180" />
             </button>
           </div>
         ) : (

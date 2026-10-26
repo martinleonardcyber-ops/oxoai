@@ -8,27 +8,27 @@
 
 :root {
   /* --- Base neutre : sombre chaud sur creme ------------------------------- */
-  --primary: 30 8% 9%; /* #19170F texte & boutons pleins (dominant) */
-  --primary-foreground: 40 22% 97%;
-  --background: 40 22% 97%; /* #F9F6EF creme */
-  --foreground: 30 8% 9%;
-  --card: 40 22% 97%;
-  --card-foreground: 30 8% 9%;
+  --primary: 250 24% 12%; /* #19170F texte & boutons pleins (dominant) */
+  --primary-foreground: 0 0% 100%;
+  --background: 250 33% 98%; /* #F9F6EF creme */
+  --foreground: 250 24% 11%;
+  --card: 0 0% 100%;
+  --card-foreground: 250 24% 11%;
   --popover: 0 0% 100%;
-  --popover-foreground: 30 8% 9%;
+  --popover-foreground: 250 24% 11%;
 
-  --muted: 40 16% 93%; /* surfaces atténuées */
-  --muted-foreground: 30 6% 38%; /* texte secondaire */
-  --secondary: 40 16% 93%;
-  --secondary-foreground: 30 8% 9%;
+  --muted: 250 28% 95.5%; /* surfaces atténuées */
+  --muted-foreground: 250 9% 44%; /* texte secondaire */
+  --secondary: 250 28% 95.5%;
+  --secondary-foreground: 250 24% 11%;
 
-  --border: 40 10% 88%;
-  --input: 40 10% 88%;
-  --ring: 30 8% 9%;
+  --border: 250 20% 90%;
+  --input: 250 20% 88%;
+  --ring: 253 85% 62%;
 
   /* --- Accents ------------------------------------------------------------ */
   --accent: 253 85% 62%; /* #6A4CF0 iris (famille Oxo) : accent interactif, badges, liens */
-  --accent-foreground: 40 22% 97%;
+  --accent-foreground: 0 0% 100%;
   --info: 221 83% 53%; /* #2563EB bleu : encarts d'information */
   --info-foreground: 40 22% 97%;
 
@@ -50,11 +50,11 @@
   --overlay: 240 10% 10%;
 
   /* --- Barre laterale ----------------------------------------------------- */
-  --sidebar: 40 20% 96%; /* legerement distincte de la zone principale */
-  --sidebar-foreground: 30 8% 9%;
-  --sidebar-muted: 30 6% 45%;
-  --sidebar-border: 40 12% 90%;
-  --sidebar-active: 40 24% 99%; /* pastille claire surelevee de l'element actif */
+  --sidebar: 250 33% 96.5%; /* legerement distincte de la zone principale */
+  --sidebar-foreground: 250 24% 11%;
+  --sidebar-muted: 250 9% 44%;
+  --sidebar-border: 250 22% 91%;
+  --sidebar-active: 0 0% 100%; /* pastille claire surelevee de l'element actif */
 
   /*
    * Fond clair derriere un logo de marque sombre, en theme sombre (LogoMarque,
@@ -73,6 +73,13 @@
   --neutral-80: 240 3% 86%;
   --neutral-90: 0 0% 95%;
 
+  /* --- Dégradé de la famille Oxo (iris, orchidée, braise) ---------------- */
+  --marque-iris: #8b6cff;
+  --marque-orchidee: #e266b2;
+  --marque-braise: #ff7a59;
+  --grad-marque: linear-gradient(115deg, #7c5cff 0%, #c25ce6 48%, #ff7a59 100%);
+  --halo-marque: radial-gradient(60% 55% at 30% 0%, rgba(139, 108, 255, 0.16), transparent 70%), radial-gradient(45% 45% at 85% 10%, rgba(255, 122, 89, 0.10), transparent 70%);
+
   /* --- Rayons ------------------------------------------------------------- */
   --radius-sm: 8px;
   --radius-md: 12px;
@@ -83,10 +90,10 @@
   --radius-full: 9999px;
 
   /* --- Ombres (tres discretes) -------------------------------------------- */
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.03);
-  --shadow-md: 0 2px 8px rgba(0, 0, 0, 0.04);
-  --shadow-lg: 0 4px 16px rgba(0, 0, 0, 0.06);
-  --shadow-pop: 0 8px 30px rgba(0, 0, 0, 0.08);
+  --shadow-sm: 0 1px 2px rgba(40, 24, 96, 0.05);
+  --shadow-md: 0 2px 10px -2px rgba(40, 24, 96, 0.08);
+  --shadow-lg: 0 10px 30px -10px rgba(40, 24, 96, 0.16);
+  --shadow-pop: 0 22px 60px -18px rgba(40, 24, 96, 0.28);
 
   /* --- Echelle typographique (rem) ---------------------------------------- */
   --text-xs: 0.75rem; /* 12 */
@@ -111,6 +118,8 @@
   /* --- Typographie -------------------------------------------------------- */
  --font-body: "Plus Jakarta Sans", "Plus Jakarta Sans Fallback", ui-sans-serif, system-ui, sans-serif;
   --font-display: "Plus Jakarta Sans", "Plus Jakarta Sans Fallback", ui-sans-serif, system-ui, sans-serif;
+  /* Titres de page et d’accueil, comme OxoFlow (latin seulement : les autres écritures retombent sur la police du corps). */
+  --font-titre: "Instrument Serif", var(--font-body);
 
   /* Indique au systeme quelles couleurs natives employer (ascenseurs, champs). */
   color-scheme: light;
@@ -157,26 +166,26 @@
  * ========================================================================== */
 
 :root[data-theme="sombre"] {
-  --primary: 40 20% 94%; /* les boutons pleins s'inversent : clair sur sombre */
-  --primary-foreground: 30 8% 10%;
-  --background: 30 8% 8%;
-  --foreground: 40 18% 93%;
-  --card: 30 7% 11%;
-  --card-foreground: 40 18% 93%;
-  --popover: 30 7% 13%;
-  --popover-foreground: 40 18% 93%;
+  --primary: 250 30% 96%; /* les boutons pleins s'inversent : clair sur sombre */
+  --primary-foreground: 250 22% 8%;
+  --background: 250 20% 6%;
+  --foreground: 250 25% 95%;
+  --card: 250 17% 9%;
+  --card-foreground: 250 25% 95%;
+  --popover: 250 17% 11%;
+  --popover-foreground: 250 25% 95%;
 
-  --muted: 30 6% 16%;
-  --muted-foreground: 40 7% 64%;
-  --secondary: 30 6% 16%;
-  --secondary-foreground: 40 18% 93%;
+  --muted: 250 15% 13.5%;
+  --muted-foreground: 250 10% 66%;
+  --secondary: 250 15% 13.5%;
+  --secondary-foreground: 250 25% 95%;
 
-  --border: 30 6% 20%;
-  --input: 30 6% 20%;
-  --ring: 40 18% 93%;
+  --border: 250 13% 17%;
+  --input: 250 13% 20%;
+  --ring: 250 100% 79%;
 
   --accent: 250 100% 79%; /* #A493FF : iris éclairci pour le fond sombre */
-  --accent-foreground: 30 8% 8%;
+  --accent-foreground: 250 22% 8%;
   --info: 221 83% 63%;
   --info-foreground: 30 8% 8%;
 
@@ -190,11 +199,11 @@
   /* Le fond est deja tres bas : seul un noir franc creuse encore l'ecart. */
   --overlay: 0 0% 0%;
 
-  --sidebar: 30 8% 10%;
-  --sidebar-foreground: 40 18% 93%;
-  --sidebar-muted: 40 6% 60%;
-  --sidebar-border: 30 6% 18%;
-  --sidebar-active: 30 6% 17%; /* pastille surelevee : plus claire que le rail */
+  --sidebar: 250 20% 7.5%;
+  --sidebar-foreground: 250 25% 95%;
+  --sidebar-muted: 250 9% 62%;
+  --sidebar-border: 250 14% 13%;
+  --sidebar-active: 250 15% 14%; /* pastille surelevee : plus claire que le rail */
 
   /* Echelle de neutres retournee : ce qui etait clair devient sombre. */
   --neutral-15: 0 0% 95%;
@@ -207,10 +216,12 @@
   --neutral-90: 240 10% 14%;
 
   /* Sur fond sombre une ombre portee ne se voit plus : il faut l'appuyer. */
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
-  --shadow-md: 0 2px 8px rgba(0, 0, 0, 0.45);
-  --shadow-lg: 0 4px 16px rgba(0, 0, 0, 0.5);
-  --shadow-pop: 0 8px 30px rgba(0, 0, 0, 0.6);
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.5);
+  --shadow-md: 0 2px 10px rgba(0, 0, 0, 0.5);
+  --shadow-lg: 0 12px 32px -10px rgba(0, 0, 0, 0.7);
+  --shadow-pop: 0 24px 64px -16px rgba(0, 0, 0, 0.8);
+
+  --halo-marque: radial-gradient(60% 55% at 30% 0%, rgba(139, 108, 255, 0.22), transparent 70%), radial-gradient(45% 45% at 85% 10%, rgba(255, 122, 89, 0.12), transparent 70%);
 
   color-scheme: dark;
 }

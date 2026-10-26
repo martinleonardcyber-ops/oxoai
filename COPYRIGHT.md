@@ -11,8 +11,11 @@ l'exige l'article 5 de cette licence :
   données, pour ne pas se mélanger avec un HelixAI installé sur la même
   machine ; les mises à jour, qui viennent de ce dépôt et sont signées par sa
   propre clé ; les contacts (les tickets GitHub remplacent les adresses de
-  l'agence) ; l'écran d'abonnement, retiré. Le détail est dans l'historique
-  Git de ce dépôt.
+  l'agence) ; l'écran d'abonnement, retiré. Le 26/10/2026 : l'interface
+  redessinée (palette, police des titres Instrument Serif, dégradé de la
+  marque sur les boutons principaux, accueil, chat, barre latérale, réglages)
+  et la fenêtre d'installation du .dmg. Le détail est dans l'historique Git
+  de ce dépôt.
 - **Licence** : OxoAI reste sous GNU AGPL-3.0 ([LICENSE](LICENSE)). Son code
   complet est publié sur https://github.com/martinleonardcyber-ops/oxoai.
 - **Droits** : les droits d'auteur sur le code d'origine restent à Medhi

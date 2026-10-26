@@ -42,23 +42,21 @@ export function PageHeader({
           </button>
         )}
         {Icon && (
-          <Icon
-            size={size === "lg" ? 30 : 26}
-            strokeWidth={1.75}
-            className="mt-0.5 shrink-0 text-foreground"
-          />
+          <span className="mt-1 grid size-10 shrink-0 place-items-center rounded-xl bg-accent/10 text-accent ring-1 ring-inset ring-accent/15">
+            <Icon size={size === "lg" ? 22 : 20} strokeWidth={1.75} />
+          </span>
         )}
         <div className="min-w-0">
           <h1
             className={cn(
-              "font-semibold tracking-tight text-foreground",
-              size === "lg" ? "text-3xl" : "text-2xl",
+              "titre-marque text-foreground",
+              size === "lg" ? "text-[44px]" : "text-[38px]",
             )}
           >
             {title}
           </h1>
           {subtitle && (
-            <p className="mt-0.5 text-sm text-muted-foreground">{subtitle}</p>
+            <p className="mt-1.5 text-sm text-muted-foreground">{subtitle}</p>
           )}
         </div>
       </div>

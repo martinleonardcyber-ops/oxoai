@@ -542,11 +542,11 @@ export function LoginPage({ onSignedIn }: { onSignedIn: () => void }) {
     // `my-auto` plutôt que `justify-center` : centré quand tout tient, et
     // défilable quand la fenêtre est basse. Avec `justify-center`, le haut de la
     // carte sortait de l'écran sans qu'on puisse y remonter.
-    <div className="flex h-screen w-screen flex-col items-center overflow-y-auto bg-background px-6 py-10">
+    <div className="halo-marque flex h-screen w-screen flex-col items-center overflow-y-auto bg-background px-6 py-10">
       <div className="my-auto w-full max-w-sm">
         <div className="mb-8 flex flex-col items-center gap-3 text-center">
           <LogoMark size={52} animated />
-          <h1 className="text-2xl font-semibold tracking-tight text-foreground">
+          <h1 className="titre-marque text-[44px] text-foreground">
             {branding.name}
           </h1>
           <p className="text-sm text-muted-foreground">
@@ -611,7 +611,7 @@ export function LoginPage({ onSignedIn }: { onSignedIn: () => void }) {
                 key={account.id}
                 type="button"
                 onClick={() => pick(account)}
-                className="flex w-full items-center gap-3 rounded-xl border border-border bg-card px-4 py-3 text-start transition-colors hover:bg-muted"
+                className="flex w-full items-center gap-3 rounded-2xl border border-border bg-card px-4 py-3 text-start shadow-sm transition-[border-color,box-shadow] hover:border-accent/40 hover:shadow-md"
               >
                 <Avatar size={36} initials={account.initials} photo={account.photo} nom={account.fullName} />
                 <span className="min-w-0 flex-1">

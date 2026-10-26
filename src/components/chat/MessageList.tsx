@@ -504,7 +504,7 @@ function Bubble({ message, onContinuer }: { message: Message; onContinuer?: () =
         <div className="flex max-w-[80%] flex-col items-end gap-2">
           <PiecesJointesMessage pieces={pieces} />
           {texte && (
-            <div className="max-w-full rounded-2xl rounded-ee-md bg-muted px-4 py-2.5 text-[15px] leading-relaxed text-foreground">
+            <div className="max-w-full rounded-[20px] rounded-ee-md bg-accent/[0.09] px-4 py-2.5 text-[15px] leading-relaxed text-foreground ring-1 ring-inset ring-accent/15">
               {/*
                 Une adresse ou un chemin long, sans espace, passe à la ligne
                 n'importe où (tournée à l'écran du 28/09/2026) : à 375 px, il

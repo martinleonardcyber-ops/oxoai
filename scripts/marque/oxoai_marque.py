@@ -8,6 +8,7 @@ blanc et l'étincelle de l'IA posée sur son bord. Sorties :
   src/assets/oxoai-mark.png, public/brand/oxoai-mark.png   marque seule (accueil)
   src/assets/oxoai-logo.png, public/brand/oxoai-logo.png   marque + nom (barre latérale)
   public/brand/app-icon-256.png                       favicon
+  build/dmg-fond.png, build/dmg-fond@2x.png           fenêtre d'installation du .dmg (660x400)
 
 Il faut Pillow, fontTools et brotli (la police est en woff2) :
   uv pip install pillow fonttools brotli && python scripts/marque/oxoai_marque.py
@@ -107,7 +108,7 @@ def icone(taille=1024, corps=0.805, ombre=True):
     return sortie.resize((taille, taille), Image.LANCZOS)
 
 
-def police(px):
+def police(px, graisse=700):
     f = TTFont(os.path.join(ICI, "figtree.woff2"))
     f.flavor = None
     tampon = io.BytesIO()
@@ -115,7 +116,7 @@ def police(px):
     tampon.seek(0)
     p = ImageFont.truetype(tampon, px)
     try:
-        p.set_variation_by_axes([700])
+        p.set_variation_by_axes([graisse])
     except Exception:
         pass
     return p
@@ -132,6 +133,57 @@ def logo(l=2068, h=760):
     p = police(round(H * 0.42))
     d.text((round(H * 0.19) + cote + round(H * 0.17), H / 2), "OxoAI", font=p, fill=ENCRE + (255,), anchor="lm")
     return im.resize((l, h), Image.LANCZOS)
+
+
+def police_fichier(chemin, px):
+    f = TTFont(chemin)
+    f.flavor = None
+    tampon = io.BytesIO()
+    f.save(tampon)
+    tampon.seek(0)
+    return ImageFont.truetype(tampon, px)
+
+
+def halo(fond, centre, rayon, couleur, alpha):
+    w, h = fond.size
+    m = Image.new("L", (w, h), 0)
+    x, y = centre
+    ImageDraw.Draw(m).ellipse((x - rayon, y - rayon, x + rayon, y + rayon), fill=alpha)
+    m = m.filter(ImageFilter.GaussianBlur(rayon * 0.55))
+    return Image.composite(Image.new("RGB", (w, h), couleur), fond, m)
+
+
+def dmg_fond(k=1):
+    """660x400. Icônes à (180,205) et (480,205), 112 px (voir package.json, build.dmg).
+
+    Sur une image de fond, le Finder écrit le nom des icônes en noir, quel que
+    soit le thème : elles reposent donc sur une carte claire.
+    """
+    W, H = 660 * k, 400 * k
+    u = lambda v: round(v * k)  # noqa: E731
+    f = Image.new("RGB", (W, H), (14, 13, 20))
+    f = halo(f, (u(90), u(40)), u(260), IRIS, 120)
+    f = halo(f, (u(600), u(400)), u(250), BRAISE, 95)
+    carte = Image.new("L", (W, H), 0)
+    ImageDraw.Draw(carte).rounded_rectangle((u(60), u(118), u(600), u(340)), radius=u(26), fill=255)
+    f = Image.composite(diagonale((W, H), (226, 220, 250), (240, 222, 240), (252, 226, 214)), f, carte.point(lambda v: v * 0.94))
+    bord = Image.new("L", (W, H), 0)
+    ImageDraw.Draw(bord).rounded_rectangle((u(60), u(118), u(600), u(340)), radius=u(26), outline=255, width=max(1, u(1)))
+    f = Image.composite(Image.new("RGB", (W, H), (255, 255, 255)), f, bord.point(lambda v: v * 0.6))
+    d = ImageDraw.Draw(f)
+    titre = police_fichier(os.path.join(RACINE, "public", "fonts", "instrument-serif-italic.woff2"), u(40))
+    corps = police(u(14), 400)
+    d.text((W / 2, u(56)), "Bienvenue dans OxoAI", font=titre, fill=(250, 247, 255), anchor="mm")
+    d.text((W / 2, u(92)), "Glisse l’icône dans le dossier Applications", font=corps, fill=(200, 196, 214), anchor="mm")
+    fleche = Image.new("L", (W, H), 0)
+    a = ImageDraw.Draw(fleche)
+    y = u(205)
+    a.rounded_rectangle((u(270), y - u(3), u(388), y + u(3)), radius=u(3), fill=255)
+    a.polygon([(u(386), y - u(14)), (u(408), y), (u(386), y + u(14))], fill=255)
+    f = Image.composite(diagonale((W, H), IRIS, ORCHIDEE, BRAISE), f, fleche.filter(ImageFilter.GaussianBlur(k * 0.4)))
+    d = ImageDraw.Draw(f)
+    d.text((W / 2, u(372)), "Ton espace de travail IA · tout reste sur ton Mac", font=police(u(11), 400), fill=(150, 146, 166), anchor="mm")
+    return f
 
 
 def ecrire(image, *chemins):
@@ -154,6 +206,8 @@ def main():
     ecrire(icone(1254, corps=0.94, ombre=False), "src/assets/oxoai-mark.png", "public/brand/oxoai-mark.png")
     ecrire(logo(), "src/assets/oxoai-logo.png", "public/brand/oxoai-logo.png")
     ecrire(serre.resize((256, 256), Image.LANCZOS), "public/brand/app-icon-256.png")
+    ecrire(dmg_fond(1), "build/dmg-fond.png")
+    ecrire(dmg_fond(2), "build/dmg-fond@2x.png")
     print("marque OxoAI écrite")
 
 

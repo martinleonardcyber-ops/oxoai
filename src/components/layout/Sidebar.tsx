@@ -130,8 +130,8 @@ function LigneSession({
         className={cn(
           "flex w-full items-center gap-2 rounded-lg py-2 ps-2.5 pe-7 text-start text-sm transition-colors",
           actif
-            ? "bg-muted font-medium text-foreground"
-            : "text-muted-foreground hover:bg-muted/60 hover:text-foreground",
+            ? "relative bg-sidebar-active font-medium text-foreground shadow-sm ring-1 ring-inset ring-sidebar-border [&>svg]:text-accent before:absolute before:inset-y-2 before:start-0 before:w-[3px] before:rounded-full before:bg-[image:var(--grad-marque)]"
+            : "text-muted-foreground hover:bg-muted/70 hover:text-foreground",
         )}
       >
         {enCours ? (
@@ -424,7 +424,7 @@ function PrimaryItem({ item }: { item: NavItem }) {
           "flex min-w-0 grow items-center justify-center gap-1 rounded-xl px-1.5 py-1.5 [:lang(ja)_&]:gap-0.5 [:lang(ja)_&]:px-1",
           "text-[13px] font-medium transition-colors",
           isActive
-            ? "border border-sidebar-border bg-sidebar-active text-foreground shadow-sm"
+            ? "border border-sidebar-border bg-sidebar-active text-foreground shadow-sm [&>svg]:text-accent"
             : "border border-transparent text-muted-foreground hover:text-foreground",
         )
       }
@@ -463,8 +463,8 @@ function SecondaryItem({ item }: { item: NavItem }) {
         cn(
           "flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm transition-colors",
           isActive
-            ? "bg-muted font-medium text-foreground"
-            : "text-muted-foreground hover:bg-muted/60 hover:text-foreground",
+            ? "relative bg-sidebar-active font-medium text-foreground shadow-sm ring-1 ring-inset ring-sidebar-border [&>svg]:text-accent before:absolute before:inset-y-2 before:start-0 before:w-[3px] before:rounded-full before:bg-[image:var(--grad-marque)]"
+            : "text-muted-foreground hover:bg-muted/70 hover:text-foreground",
         )
       }
     >
@@ -527,9 +527,11 @@ function ExpandedSidebar({ onToggle }: { onToggle: () => void }) {
           <button
             type="button"
             onClick={() => navigate(accueilDu(modeCode, modeCowork))}
-            className="flex w-full items-center gap-2.5 rounded-xl border border-sidebar-border bg-sidebar-active px-3 py-2 text-sm font-medium text-foreground shadow-sm transition-colors hover:bg-muted"
+            className="bord-marque flex w-full items-center gap-2.5 rounded-xl px-2.5 py-2 text-sm font-medium text-foreground shadow-sm transition-shadow hover:shadow-md"
           >
-            <Plus size={18} strokeWidth={1.75} />
+            <span className="fond-marque grid size-6 place-items-center rounded-lg">
+              <Plus size={15} strokeWidth={2.25} />
+            </span>
             <span>{modeSessions ? t("Nouvelle session") : t("Nouveau Chat")}</span>
           </button>
         </div>
@@ -622,7 +624,7 @@ function RailItem({ item, primaire }: { item: NavItem; primaire?: boolean }) {
           "relative inline-flex h-9 w-9 items-center justify-center rounded-xl text-muted-foreground transition-colors",
           isActive
             ? primaire
-              ? "border border-sidebar-border bg-sidebar-active text-foreground shadow-sm"
+              ? "border border-sidebar-border bg-sidebar-active text-foreground shadow-sm [&>svg]:text-accent"
               : "bg-muted text-foreground"
             : "border border-transparent hover:bg-muted/60 hover:text-foreground",
         )

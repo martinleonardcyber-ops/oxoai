@@ -2639,7 +2639,7 @@ console.log("\n7 sexies. Réponse partie en boucle : coupée, et dite (27/09/202
     }
     return null;
   };
-  const prose = ["README.fr.md", "PROJET.md"].map((f) => readFileSync(join(RACINE, f), "utf8").slice(0, 60_000)).join("\n");
+  const prose = ["README.md", "PROJET.md"].map((f) => readFileSync(join(RACINE, f), "utf8").slice(0, 60_000)).join("\n");
   const tableau = `| ${Array.from({ length: 30 }, (_, i) => `Col ${i}`).join(" | ")} |\n|${"---|".repeat(30)}\n` + Array.from({ length: 40 }, (_, l) => `| ${Array.from({ length: 30 }, (_, i) => l * 30 + i).join(" | ")} |`).join("\n");
   verifier(
     "garde-fou : « 不 時//// » est reconnu comme une boucle, la prose du dépôt, un grand tableau et une règle ===== non",
@@ -6527,7 +6527,11 @@ console.log("\n14 bis. Seconde tournée de l'audit : dépendances npm à date fi
   let messages = "";
   try {
     suivis = execFileSync("git", ["ls-files", "-z"], { cwd: RACINE, encoding: "utf8" }).split("\0").filter(Boolean);
-    messages = execFileSync("git", ["log", "--format=%B", "HEAD"], { cwd: RACINE, encoding: "utf8", maxBuffer: 64 * 1024 * 1024 });
+    // OxoAI : la règle vaut pour l'historique hérité de HelixAI ; les commits
+    // d'OxoAI, eux, disent qui y a participé. Sans la branche d'origine (clone
+    // sans « upstream »), la vérification ne porte sur rien.
+    const base = execFileSync("git", ["merge-base", "HEAD", "upstream/main"], { cwd: RACINE, encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] }).trim();
+    messages = execFileSync("git", ["log", "--format=%B", base], { cwd: RACINE, encoding: "utf8", maxBuffer: 64 * 1024 * 1024 });
   } catch {
     /* pas un dépôt git */
   }
@@ -9089,7 +9093,7 @@ console.log("\n42. Réflexion du modèle : canal séparé, `reasoning`, `<think>
     };
     const debut = "Thinking Process:\n\n1.  **Analyze the Request:**\n    *   Input: \"Combien font 17 fois 23 ?\"\n";
     const boucle = debut + bloc.repeat(12);
-    const prose = ["README.fr.md", "PROJET.md"].map((f) => src(f).slice(0, 60_000)).join("\n");
+    const prose = ["README.md", "PROJET.md"].map((f) => src(f).slice(0, 60_000)).join("\n");
     const tableau = Array.from({ length: 200 }, (_, l) => `| ${Array.from({ length: 12 }, (_, i) => `valeur ${l * 12 + i}`).join(" | ")} |`).join("\n");
     const vue = suivre(boucle, g.gardesDeFlux().reflexion);
     verifier(

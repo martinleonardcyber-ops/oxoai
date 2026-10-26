@@ -37,7 +37,7 @@ export function SuggestionList({
       <div className="px-1 pb-1.5">
         <span className="text-sm text-muted-foreground">{t("Suggestions pour vous")}</span>
       </div>
-      <ul className="space-y-0.5">
+      <ul className="grid gap-2 sm:grid-cols-2">
         {liste.map((s) => {
           const Icone = s.icone;
           return (
@@ -51,9 +51,11 @@ export function SuggestionList({
                       ? onBase?.(s.base)
                       : onDemander?.(s.question, s.outils)
                 }
-                className="flex w-full items-center gap-3 rounded-lg px-2 py-2 text-start text-sm text-foreground transition-colors hover:bg-muted"
+                className="group flex h-full w-full items-center gap-3 rounded-2xl border border-border bg-card/70 px-3 py-2.5 text-start text-sm text-foreground shadow-sm transition-[border-color,box-shadow,transform] hover:-translate-y-px hover:border-accent/35 hover:shadow-md"
               >
-                <Icone size={17} strokeWidth={1.5} className="shrink-0 text-muted-foreground" />
+                <span className="grid size-8 shrink-0 place-items-center rounded-xl bg-accent/10 text-accent transition-colors group-hover:bg-accent/15">
+                  <Icone size={16} strokeWidth={1.75} />
+                </span>
                 <span>{s.libelle}</span>
               </button>
             </li>

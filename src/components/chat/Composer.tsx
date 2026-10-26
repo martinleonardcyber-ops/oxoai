@@ -240,7 +240,7 @@ export function Composer({
 
   return (
     <div className={cn("w-full", className)}>
-      <div className="rounded-2xl bg-muted/50 p-1.5">
+      <div className="rounded-[22px] bg-muted/60 p-1.5 shadow-lg ring-1 ring-inset ring-border/70">
         {enTete}
         {contextBar && (
           /*
@@ -270,9 +270,9 @@ export function Composer({
         )}
         <div
           className={cn(
-            // Au focus, comme ailleurs : le bord fonce à peine et l'ombre s'étoffe, en gris, sans couleur.
+            // Au focus : un liseré iris et un halo doux, la couleur de la marque.
             // `cq` : la barre du bas se règle sur la largeur réelle du champ, pas sur celle de la fenêtre.
-            "cq rounded-xl border border-border bg-card shadow-sm transition-[border-color,box-shadow] duration-150 focus-within:border-foreground/20 focus-within:shadow-md",
+            "cq rounded-2xl border border-border bg-card shadow-sm transition-[border-color,box-shadow] duration-200 focus-within:border-accent/45 focus-within:shadow-[0_0_0_4px_hsl(var(--accent)/0.12),var(--shadow-md)]",
             survol && "border-accent",
           )}
         >
@@ -481,10 +481,10 @@ export function Composer({
                   onClick={() => canSend && onSubmit?.()}
                   disabled={controlled && !canSend}
                   className={cn(
-                    "ms-1 inline-flex shrink-0 h-9 w-9 items-center justify-center rounded-full bg-primary text-primary-foreground transition-opacity",
+                    "ms-1 inline-flex shrink-0 h-9 w-9 items-center justify-center rounded-full transition-[background-color,box-shadow,filter]",
                     controlled && !canSend
-                      ? "opacity-40"
-                      : "hover:opacity-90",
+                      ? "bg-muted text-muted-foreground"
+                      : "fond-marque",
                   )}
                 >
                   <ArrowUp size={18} strokeWidth={2} />
