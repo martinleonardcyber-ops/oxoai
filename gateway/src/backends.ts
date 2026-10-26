@@ -209,14 +209,35 @@ async function fetchJson(
  *
  * On le démarre donc nous-mêmes, sans bruit.
  */
-const LMSTUDIO_URL = BACKENDS.find((b) => b.id === "lmstudio")?.baseUrl ?? "";
+const BACKEND_LMSTUDIO = BACKENDS.find((b) => b.id === "lmstudio");
+/** L'adresse actuelle du serveur de LM Studio (elle peut suivre son port, voir `suivrePortLmStudio`). */
+const urlLmStudio = (): string => BACKEND_LMSTUDIO?.baseUrl ?? "";
+/** Adresse choisie exprès (OXOAI_LMSTUDIO_URL, ou le fichier de déploiement) : jamais remplacée. */
+const URL_LMSTUDIO_FIXEE = Boolean(process.env.OXOAI_LMSTUDIO_URL) || urlLmStudio() !== "http://localhost:1234/v1";
+
+/**
+ * OxoAI (26/10/2026) : LM Studio sert déjà, mais sur un autre port que 1234
+ * (réglé ainsi dans l'application LM Studio). `lms server status` le dit ;
+ * OxoAI s'y branche au lieu d'attendre en vain sur 1234. Avant, il concluait
+ * « le serveur tourne, ne rien démarrer » tout en interrogeant 1234 : la mise
+ * en route restait muette, « Installer et démarrer » semblait ne rien faire.
+ */
+function suivrePortLmStudio(port: unknown): boolean {
+  if (URL_LMSTUDIO_FIXEE || !BACKEND_LMSTUDIO) return false;
+  if (typeof port !== "number" || !Number.isInteger(port) || port <= 0 || port > 65_535) return false;
+  const url = `http://localhost:${port}/v1`;
+  if (BACKEND_LMSTUDIO.baseUrl === url) return false;
+  console.log(`[oxoai] LM Studio sert déjà sur le port ${port} : OxoAI s'y branche.`);
+  BACKEND_LMSTUDIO.baseUrl = url;
+  return true;
+}
 
 /** Ne pas relancer en boucle quand la machine n'a tout simplement pas LM Studio. */
 let dernierEssai = 0;
 const DELAI_ENTRE_ESSAIS_MS = 30_000;
 
 /** Le serveur de LM Studio répond-il ? (après un démarrage, pour le dire à l'écran). */
-export const lmStudioRepond = (): Promise<boolean> => (LMSTUDIO_URL ? repond(LMSTUDIO_URL) : Promise.resolve(false));
+export const lmStudioRepond = (): Promise<boolean> => (urlLmStudio() ? repond(urlLmStudio()) : Promise.resolve(false));
 
 async function repond(url: string): Promise<boolean> {
   try {
@@ -302,10 +323,10 @@ export function ensureLmStudioServer(): Promise<boolean> {
 }
 
 async function demarrerServeurLmStudio(): Promise<boolean> {
-  if (!LMSTUDIO_URL) return false;
+  if (!urlLmStudio()) return false;
   // Avant tout, même serveur déjà en marche : sans ce dossier, llmster ne charge aucun modèle (engine.ts).
   preparerDossiersLlmster();
-  if (await repond(LMSTUDIO_URL)) return true;
+  if (await repond(urlLmStudio())) return true;
   /*
    * Mac à puce Apple sans moteur que `lms` sache démarrer (engine.ts) : rien à
    * allumer, le moteur est à installer. Sans ce garde, la simple lecture de
@@ -332,8 +353,8 @@ async function demarrerServeurLmStudio(): Promise<boolean> {
    */
   try {
     const { stdout } = await exec(lms, ["server", "status", "--json"], { timeout: 10_000 });
-    const etat = JSON.parse(String(stdout).trim() || "{}") as { running?: boolean };
-    if (etat.running) return false;
+    const etat = JSON.parse(String(stdout).trim() || "{}") as { running?: boolean; port?: unknown };
+    if (etat.running) return suivrePortLmStudio(etat.port) ? repond(urlLmStudio()) : false;
   } catch {
     /*
      * Statut illisible (ancienne version de `lms`, ou commande en échec quand
@@ -387,7 +408,7 @@ async function demarrerServeurLmStudio(): Promise<boolean> {
         break;
       } catch (err) {
         // Refusé, mais le serveur écoute quand même (lancé entre-temps) : c'est ce qui compte.
-        if (await repond(LMSTUDIO_URL)) break;
+        if (await repond(urlLmStudio())) break;
         if (n >= essais) throw err;
         const detail = `${(err as { stderr?: unknown }).stderr ?? ""}${(err as Error).message ?? ""}`;
         console.warn(`[oxoai] \`lms server start\` refusé (essai ${n}/${essais}), nouvel essai dans 5 s :`, detail.slice(-200));
@@ -418,7 +439,7 @@ async function demarrerServeurLmStudio(): Promise<boolean> {
 
   // Le serveur met un instant à écouter : on lui laisse le temps.
   for (let i = 0; i < 10; i++) {
-    if (await repond(LMSTUDIO_URL)) {
+    if (await repond(urlLmStudio())) {
       console.log("[oxoai] serveur LM Studio démarré.");
       return true;
     }
@@ -1074,7 +1095,7 @@ export async function loadModel(modelKey: string, options: { auto?: boolean } = 
   const essaye = aEssayer(modelKey) && !/embed|nomic|rerank|bge-|e5-/i.test(modelKey);
   const r = await chargerModele(modelKey);
   if (!r.ok || !r.neuf || !essaye) return r;
-  const verdict = await essayerModele(LMSTUDIO_URL, modelKey);
+  const verdict = await essayerModele(urlLmStudio(), modelKey);
   noterEssai(modelKey, verdict);
   if (verdict.ok) return r;
   const lms = await findLms();
