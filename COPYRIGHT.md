@@ -14,7 +14,9 @@ l'exige l'article 5 de cette licence :
   l'agence) ; l'écran d'abonnement, retiré. Le 26/10/2026 : l'interface
   redessinée (palette, police des titres Instrument Serif, dégradé de la
   marque sur les boutons principaux, accueil, chat, barre latérale, réglages)
-  et la fenêtre d'installation du .dmg. Le détail est dans l'historique Git
+  et la fenêtre d'installation du .dmg ; le branchement sur LM Studio quand
+  il sert sur un autre port ; le niveau de réflexion « Adaptatif », par
+  défaut. Le détail est dans l'historique Git
   de ce dépôt.
 - **Licence** : OxoAI reste sous GNU AGPL-3.0 ([LICENSE](LICENSE)). Son code
   complet est publié sur https://github.com/martinleonardcyber-ops/oxoai.
