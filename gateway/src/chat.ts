@@ -5,6 +5,7 @@ import { readFileSync } from "node:fs";
 import { isAbsolute, relative, resolve as resoudreChemin, sep } from "node:path";
 import { entetesFlux } from "./entetes.ts";
 import { niveauEffort } from "./config.ts";
+import { choisirEffort } from "./effortAdaptatif.ts";
 import { resolve, invalidate, peutVoir } from "./router.ts";
 import { loadModel } from "./backends.ts";
 import { toolsForModel, hasTools, workspace, status as etatMcp } from "./mcp.ts";
@@ -1011,6 +1012,8 @@ export async function handleChatRequest(
   } = {},
 ): Promise<void> {
   const nonFlux = options.parCleApi === true && options.nonFlux === true;
+  // Niveau « adaptatif » : réfléchir seulement quand la demande le mérite (effortAdaptatif.ts).
+  if (body.effort === "adaptatif") body.effort = choisirEffort(body.messages);
   // Une demande de plus en cours : le résumé de mémoire au repos attend qu'il n'y en ait plus (memoireConversation.ts).
   res.on("close", memoire.debutDemande());
   /*
@@ -1330,16 +1333,19 @@ export async function handleChatRequest(
   /*
    * Chat sans outils (le bouton « Outils » de la zone de saisie est éteint) :
    * le modèle ne peut rien créer ni modifier. Sans le lui dire, il raconte
-   * volontiers qu'il l'a fait.
+   * volontiers qu'il l'a fait. OxoAI (26/10/2026) : sans la dernière phrase,
+   * un petit modèle local (Qwen 3.5 9B) le rappelait à chaque message, même
+   * en réponse à « salut » ou à une demande de message d'anniversaire.
    */
   if (body.tools === false) {
     const note =
       (demandeWeb
         ? "Dans cette conversation, tu n'as que la recherche sur le web : tu ne peux ni créer, ni lire, ni modifier, ni déplacer de fichier, "
         : "Dans cette conversation, tu n'as aucun outil : tu ne peux ni créer, ni lire, ni modifier, ni déplacer de fichier, ") +
-      "ni agir sur quoi que ce soit en dehors de ta réponse écrite. Si on te le demande, dis-le franchement, sans jamais " +
-      "prétendre l'avoir fait, et indique que la personne peut activer « Outils » sous la zone de saisie (ou passer dans Cowork). " +
-      "Tu peux proposer le contenu à copier elle-même.";
+      "ni agir sur quoi que ce soit en dehors de ta réponse écrite. N'en parle que si la demande exige une telle action : " +
+      "dis-le alors franchement, sans jamais prétendre l'avoir fait, et indique que la personne peut activer « Outils » " +
+      "sous la zone de saisie (ou passer dans Cowork). Tu peux proposer le contenu à copier elle-même. Pour une salutation, " +
+      "une question ou un texte à écrire, réponds simplement, sans évoquer tes outils.";
     const premier = messages[0] as { role?: string; content?: unknown } | undefined;
     messages =
       premier?.role === "system" && typeof premier.content === "string"

@@ -16,6 +16,7 @@ export interface Memory {
 
 /** Niveaux de raisonnement, plus les trois anciens encore enregistrés. */
 export type NiveauRaisonnement =
+  | "adaptatif"
   | "aucun"
   | "faible"
   | "moyen"

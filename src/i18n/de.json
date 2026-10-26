@@ -4211,5 +4211,7 @@
   "y travaille": "arbeitet daran",
   "Zone de danger": "Gefahrenzone",
   "{0} est une version modifiée de {1}, logiciel créé par {2}. Les droits d'auteur sur le code d'origine restent les siens.": "{0} ist eine veränderte Fassung von {1}, einer Software von {2}. Das Urheberrecht am ursprünglichen Code verbleibt bei ihm.",
-  "Projet d'origine": "Ursprüngliches Projekt"
+  "Projet d'origine": "Ursprüngliches Projekt",
+  "Adaptatif": "Adaptiv",
+  "Réfléchit seulement quand la question le demande.": "Denkt nur nach, wenn die Frage es verlangt."
 }

@@ -4211,5 +4211,7 @@
   "y travaille": "が作業中です",
   "Zone de danger": "危険な操作",
   "{0} est une version modifiée de {1}, logiciel créé par {2}. Les droits d'auteur sur le code d'origine restent les siens.": "{0} は {1} の改変版です。{1} は {2} が作成したソフトウェアで、元のコードの著作権は引き続き作者に帰属します。",
-  "Projet d'origine": "元のプロジェクト"
+  "Projet d'origine": "元のプロジェクト",
+  "Adaptatif": "アダプティブ",
+  "Réfléchit seulement quand la question le demande.": "質問が必要とするときだけ考えます。"
 }

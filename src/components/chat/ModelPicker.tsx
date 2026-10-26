@@ -632,6 +632,15 @@ export function ModelBehaviorPicker({
  * gateway/src/config.ts), qui accepte encore les anciens pour les postes dont
  * les préférences datent d'avant.
  */
+/**
+ * « Adaptatif » (OxoAI, 26/10/2026) : la passerelle choisit, message par
+ * message, entre aucun, faible et moyen (gateway/src/effortAdaptatif.ts). Un
+ * « bonjour » ne fait plus réfléchir un modèle local pendant une minute.
+ * Proposé là où la demande passe par la passerelle (Chat, Cowork), pas pour
+ * l'agent de code, qui a ses propres niveaux.
+ */
+const ADAPTATIF = { id: "adaptatif", label: t("Adaptatif"), aide: t("Réfléchit seulement quand la question le demande.") };
+
 const levels = [
   { id: "aucun", label: t("Aucun"), aide: t("Répond directement, sans réfléchir avant.") },
   { id: "faible", label: t("Faible"), aide: t("Un court temps de réflexion.") },
@@ -648,15 +657,19 @@ const ANCIENS_NIVEAUX: Record<string, string> = {
 };
 
 export function ReasoningPicker({
-  value = "moyen",
+  value = "adaptatif",
   onChange,
+  adaptatif = true,
 }: {
   value?: string;
   onChange?: (id: string) => void;
+  /** Proposer le niveau « Adaptatif » (Chat, Cowork). */
+  adaptatif?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const id = ANCIENS_NIVEAUX[value] ?? value;
-  const current = levels.find((l) => l.id === id) ?? levels[2];
+  const liste = adaptatif ? [ADAPTATIF, ...levels] : levels;
+  const current = liste.find((l) => l.id === id) ?? liste.find((l) => l.id === "moyen") ?? liste[0];
   return (
     <Popover
       open={open}
@@ -686,7 +699,7 @@ export function ReasoningPicker({
       <p className="px-2 pb-0.5 pt-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
         {t("Raisonnement")}
       </p>
-      {levels.map((l) => (
+      {liste.map((l) => (
         <button
           key={l.id}
           type="button"

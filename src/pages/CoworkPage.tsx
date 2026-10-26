@@ -288,7 +288,7 @@ export function CoworkPage() {
   const modelUid =
     profile.preferredModelUid ??
     (capaciteEcran?.mode === "sandbox" && capaciteEcran.disponible ? (capaciteEcran.modeleEcran ?? undefined) : undefined);
-  const effort = profile.preferredEffort ?? "moyen";
+  const effort = profile.preferredEffort ?? "adaptatif";
   /*
    * L'instance ne confie les outils d'écran qu'à un modèle qui voit les images
    * (chat.ts, `voitLesImages`) ; en mode automatique, une demande de texte ne

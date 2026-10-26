@@ -73,7 +73,7 @@ export function HomePage() {
 
   // Préférences du profil comme valeurs par défaut, surchargeables à la volée.
   const modelUid = profile.preferredModelUid;
-  const effort = profile.preferredEffort ?? "moyen";
+  const effort = profile.preferredEffort ?? "adaptatif";
   const jointes = useAttachments(modelUid);
 
   // Agent sélectionné : ses instructions définissent le rôle, le profil privé

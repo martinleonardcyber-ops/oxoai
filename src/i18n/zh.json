@@ -4211,5 +4211,7 @@
   "y travaille": "参与其中",
   "Zone de danger": "危险区域",
   "{0} est une version modifiée de {1}, logiciel créé par {2}. Les droits d'auteur sur le code d'origine restent les siens.": "{0} 是 {1} 的修改版本，原软件由 {2} 创建。原始代码的著作权仍归其所有。",
-  "Projet d'origine": "原始项目"
+  "Projet d'origine": "原始项目",
+  "Adaptatif": "自适应",
+  "Réfléchit seulement quand la question le demande.": "仅在问题需要时才进行思考。"
 }

@@ -53,6 +53,8 @@ interface ComposerProps {
   onModelChange?: (uid?: string) => void;
   effort?: string;
   onEffortChange?: (effort: string) => void;
+  /** Proposer le niveau de réflexion « Adaptatif » (pas pour l'agent de code). */
+  effortAdaptatif?: boolean;
   /** Pièces jointes en attente d'envoi, et leur gestion. */
   pieces?: Attachment[];
   /** Fichiers dont le texte est en cours d'extraction : l'envoi attend qu'ils soient lus. */
@@ -92,6 +94,7 @@ export function Composer({
   onModelChange,
   effort,
   onEffortChange,
+  effortAdaptatif = true,
   pieces = [],
   piecesEnLecture = [],
   onAjouterFichiers,
@@ -431,7 +434,7 @@ export function Composer({
               {/* Le niveau de réflexion garde son mot court : c'est le nom du modèle qui se raccourcit. */}
               {!sansModele && (
                 <div className="flex shrink-0">
-                  <ReasoningPicker value={effort} onChange={onEffortChange} />
+                  <ReasoningPicker value={effort} onChange={onEffortChange} adaptatif={effortAdaptatif} />
                 </div>
               )}
               {/* Sans champ contrôlé, il n'y aurait nulle part où écrire la dictée. */}

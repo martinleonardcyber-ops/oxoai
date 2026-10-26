@@ -4211,5 +4211,7 @@
   "y travaille": "يعمل عليه",
   "Zone de danger": "منطقة الخطر",
   "{0} est une version modifiée de {1}, logiciel créé par {2}. Les droits d'auteur sur le code d'origine restent les siens.": "{0} نسخة معدّلة من {1}، وهو برنامج أنشأه {2}. تبقى حقوق المؤلف على الشيفرة الأصلية له.",
-  "Projet d'origine": "المشروع الأصلي"
+  "Projet d'origine": "المشروع الأصلي",
+  "Adaptatif": "تكيفي",
+  "Réfléchit seulement quand la question le demande.": "يفكّر فقط عندما يتطلب السؤال ذلك."
 }

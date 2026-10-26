@@ -142,6 +142,7 @@ export function CodePage() {
       modelUid={profile.preferredModelUid}
       onModelChange={(uid) => update({ preferredModelUid: uid })}
       effort={profile.preferredEffort ?? "moyen"}
+      effortAdaptatif={false}
       onEffortChange={(e) =>
         update({ preferredEffort: e as NiveauRaisonnement })
       }

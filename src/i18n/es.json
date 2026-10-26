@@ -4211,5 +4211,7 @@
   "y travaille": "trabaja en ello",
   "Zone de danger": "Zona de peligro",
   "{0} est une version modifiée de {1}, logiciel créé par {2}. Les droits d'auteur sur le code d'origine restent les siens.": "{0} es una versión modificada de {1}, software creado por {2}. Los derechos de autor del código original siguen siendo suyos.",
-  "Projet d'origine": "Proyecto original"
+  "Projet d'origine": "Proyecto original",
+  "Adaptatif": "Adaptativo",
+  "Réfléchit seulement quand la question le demande.": "Solo reflexiona cuando la pregunta lo requiere."
 }

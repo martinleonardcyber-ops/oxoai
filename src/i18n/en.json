@@ -4211,5 +4211,7 @@
   "y travaille": "works on it",
   "Zone de danger": "Danger zone",
   "{0} est une version modifiée de {1}, logiciel créé par {2}. Les droits d'auteur sur le code d'origine restent les siens.": "{0} is a modified version of {1}, software created by {2}. The copyright on the original code remains theirs.",
-  "Projet d'origine": "Original project"
+  "Projet d'origine": "Original project",
+  "Adaptatif": "Adaptive",
+  "Réfléchit seulement quand la question le demande.": "Thinks only when the question calls for it."
 }

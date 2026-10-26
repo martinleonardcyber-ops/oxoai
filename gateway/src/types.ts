@@ -133,7 +133,7 @@ export interface ChatRequest {
   temperature?: number;
   max_tokens?: number;
   /** Extension OxoAI : niveau d'effort de raisonnement issu de l'UI. */
-  effort?: "aucun" | "faible" | "moyen" | "eleve" | "max";
+  effort?: "adaptatif" | "aucun" | "faible" | "moyen" | "eleve" | "max";
   /** Extension OxoAI : autoriser l'agent à utiliser les outils MCP. */
   tools?: boolean;
   [key: string]: unknown;
