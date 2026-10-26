@@ -3,7 +3,7 @@
   "nomAffiche": "OxoAI",
   "depotMisesAJour": "martinleonardcyber-ops/oxoai",
   "private": true,
-  "version": "2026.1026.0",
+  "version": "2026.1026.1",
   "license": "AGPL-3.0-only",
   "description": "OxoAI : ton espace de travail IA local et open source (dérivé de HelixAI)",
   "desktopName": "oxoai-plateforme.desktop",
